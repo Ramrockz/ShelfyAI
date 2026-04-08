@@ -9,6 +9,14 @@
   (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
 </script>
 <link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#06b6d4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <script>
@@ -813,13 +821,19 @@
       <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
     </div>
     
-    <div style="margin-top: 20px; text-align: center;">
+    <div id="screenshotSection" style="margin-top: 20px; text-align: center;">
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
-      <button class="btn btn-secondary" onclick="captureScreenshot()" style="width: 100%;">
+      <button id="captureBtn" class="btn btn-secondary" onclick="captureScreenshot()" style="width: 100%;">
         <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
-        Capture Screenshot
+        <span id="captureBtnLabel">Capture Screenshot</span>
       </button>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" />
     </div>
+    <script>
+      if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
+        document.getElementById('screenshotSection').style.display = 'none';
+      }
+    </script>
     
     <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
@@ -1277,6 +1291,24 @@ function clearUpload() {
 }
 
 async function captureScreenshot() {
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // On mobile: open the rear camera via file input
+    const input = document.getElementById('cameraInput');
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleFile(file);
+        showUploadStatus('Photo captured successfully', 'success');
+      }
+      input.value = '';
+    };
+    input.click();
+    return;
+  }
+
+  // Desktop: use screen capture
   try {
     showUploadStatus('Capturing screenshot...', 'info');
     
@@ -1315,6 +1347,17 @@ async function captureScreenshot() {
     }
   }
 }
+
+// Update button label on mobile
+(function() {
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isMobile) {
+    document.addEventListener('DOMContentLoaded', function() {
+      const label = document.getElementById('captureBtnLabel');
+      if (label) label.textContent = 'Take Photo';
+    });
+  }
+})();
 
 async function processImageUpload() {
   if (!uploadedFile) {

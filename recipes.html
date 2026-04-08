@@ -9,6 +9,14 @@
   (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
 </script>
 <link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#06b6d4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
 <link rel="dns-prefetch" href="https://qakldmfmdlwvehseaksy.supabase.co" />
 <link rel="preconnect" href="https://qakldmfmdlwvehseaksy.supabase.co" crossorigin />
 <link rel="stylesheet" href="styles.css" />
@@ -3303,13 +3311,14 @@ async function handleSwitchSignUp(e) {
       <p style="margin:0;font-size:12px;color:var(--text-muted);">Supports: PNG, JPG, PDF</p>
       <input type="file" id="ingImageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display:none;" />
     </div>
-    <div style="margin-top:20px;text-align:center;">
+    <div id="screenshotSectionRecipes" style="margin-top:20px;text-align:center;">
       <p style="margin:0 0 12px 0;font-size:13px;color:var(--text-muted);">Or</p>
       <button class="btn btn-secondary" onclick="captureScreenshot()" style="width:100%;">
         <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align:middle;margin-right:8px;filter:brightness(0);">
         Capture Screenshot
       </button>
     </div>
+    <script>if(/android|iphone|ipad|ipod/i.test(navigator.userAgent)){document.getElementById('screenshotSectionRecipes').style.display='none';}</script>
     <div id="ingUploadPreview" style="display:none;margin-top:20px;padding:16px;background:var(--bg-panel);border-radius:12px;border:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
         <img id="ingPreviewImage" src="" alt="Preview" style="max-width:80px;max-height:80px;border-radius:8px;object-fit:cover;">
