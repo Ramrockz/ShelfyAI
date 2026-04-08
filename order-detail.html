@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Order Detail</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="notifications.css" />
+<script>
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .breadcrumb { 
+    font-size: 12px; 
+    color: var(--text-muted); 
+    margin-bottom: 8px; 
+    cursor: pointer; 
+  }
+  .breadcrumb:hover { 
+    color: var(--accent); 
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+  }
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header-title h1 {
+    font-size: 32px;
+    margin: 0;
+    color: var(--text-main);
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .status-processed {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  .status-fulfilled {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+
+  .status-shipped {
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+  }
+
+  .status-refunded {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .btn-status {
+    display: none;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    background: var(--bg-panel);
+    color: var(--text-main);
+  }
+
+  .btn-status:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-status.fulfilled {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+
+  .btn-status.fulfilled:hover {
+    background: rgba(34, 197, 94, 0.2);
+  }
+
+  .btn-status.shipped {
+    background: rgba(168, 85, 247, 0.1);
+    border-color: #a855f7;
+    color: #a855f7;
+  }
+
+  .btn-status.shipped:hover {
+    background: rgba(168, 85, 247, 0.2);
+  }
+
+  .btn-status.refunded {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .btn-status.refunded:hover {
+    background: rgba(239, 68, 68, 0.2);
+  }
+
+  .btn-delete {
+    padding: 10px 18px;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  .btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-content h3 {
+    margin: 0 0 16px 0;
+    color: var(--text-main);
+  }
+
+  .modal-content p {
+    margin: 0 0 24px 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .modal-actions button {
+    flex: 1;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+  }
+
+  .btn-secondary {
+    background: var(--bg-panel);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-size: 14px;
+  }
+
+  .notification-toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 10001;
+    display: none;
+    min-width: 300px;
+  }
+
+  .notification-toast.active {
+    display: block;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .notification-toast.success {
+    border-left: 4px solid #10b981;
+  }
+
+  .notification-toast.error {
+    border-left: 4px solid #ef4444;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .info-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .info-card-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .info-card-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .section {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+
+  td {
+    padding: 12px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .recipe-link {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .recipe-link:hover {
+    text-decoration: underline;
+  }
+
+  .no-recipe {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .btn-back {
+    padding: 10px 20px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-back:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .attribute-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 768px) {
+    /* Hide chat and feedback widgets on mobile */
+    #chat-widget,
+    #feedback-widget {
+      display: none !important;
+    }
+
+    .container {
+      padding: 16px 12px;
+    }
+
+    /* Detail header: stack on mobile */
+    .detail-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .header-title {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .header-title h1 {
+      font-size: 24px;
+    }
+
+    .header-actions {
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .header-actions button {
+      width: 100%;
+      padding: 12px 18px;
+    }
+
+    /* Main grid: single column on mobile */
+    .main-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    /* Panel adjustments */
+    .panel {
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    /* Info grid */
+    .info-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* Items table - horizontal scroll */
+    .items-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -16px;
+      padding: 0 16px;
+    }
+
+    table {
+      min-width: 500px;
+      font-size: 13px;
+    }
+
+    table th,
+    table td {
+      padding: 12px 6px;
+    }
+
+    /* Modal adjustments */
+    .modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding: 12px 8px;
+    }
+
+    .panel {
+      padding: 12px;
+    }
+
+    .modal-content {
+      padding: 20px 16px;
+    }
+  }
+</style>
+
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+(function() {
+  const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+  if (cachedEmail) {
+    const emailEl = document.getElementById('userMenuEmail');
+    const avatarEl = document.getElementById('userAvatar');
+    if (emailEl) emailEl.textContent = cachedEmail;
+    if (avatarEl) {
+      if (cachedAvatar && cachedAvatar !== 'null') {
+        avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarEl.textContent = '';
+      } else {
+        avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        avatarEl.style.backgroundImage = 'none';
+      }
+    }
+  }
+})();
+</script>
+
+<div class="container">
+  <div class="breadcrumb" onclick="window.location.href='orders.html'">← Back to Orders</div>
+  
+  <div class="detail-header">
+    <div class="header-title">
+      <h1 id="orderTitle">Order Details</h1>
+      <span id="orderStatus" class="status-badge"></span>
+    </div>
+    <div class="header-actions">
+      <button id="btnFulfilled" class="btn-status fulfilled" onclick="showStatusModal('fulfilled')" title="Mark this order as fulfilled">
+        ✓ Mark as Fulfilled
+      </button>
+      <button id="btnShipped" class="btn-status shipped" onclick="showTrackingModal()" title="Mark this order as shipped">
+        📦 Mark as Shipped
+      </button>
+      <button id="btnRefunded" class="btn-status refunded" onclick="showStatusModal('refunded')" title="Mark this order as refunded">
+        ↩ Mark as Refunded
+      </button>
+      <button class="btn-delete" onclick="showDeleteModal()" title="Delete this order">
+        🗑️ Delete Order
+      </button>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-label">Customer</div>
+      <div class="info-card-value" id="customerName">-</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Sales Channel</div>
+      <div class="info-card-value" id="salesChannel">-</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Order Date</div>
+      <div class="info-card-value" id="orderDate">-</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Order Reference</div>
+      <div class="info-card-value" id="orderReference">-</div>
+    </div>
+    <div class="info-card" id="trackingCard" style="display: none;">
+      <div class="info-card-label">Tracking Number</div>
+      <div class="info-card-value" id="trackingNumber">-</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Total Quantity</div>
+      <div class="info-card-value" id="totalQuantity">-</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">Total Revenue</div>
+      <div class="info-card-value" id="totalRevenue">-</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 class="section-title">Order Items</h3>
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Quantity</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+          <th>Recipe Used</th>
+        </tr>
+      </thead>
+      <tbody id="itemsTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="affectedIngredientsSection" style="display: none;">
+    <h3 class="section-title">Updated Inventory</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Ingredient</th>
+          <th>Old Quantity</th>
+          <th>New Quantity</th>
+          <th>Change</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="affectedIngredientsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="notesSection" style="display: none;">
+    <h3 class="section-title">📝 Notes</h3>
+    <p id="orderNotes" style="margin: 0; color: var(--text-muted);"></p>
+  </div>
+</div>
+
+<!-- Status Confirmation Modal -->
+<div class="modal-overlay" id="statusModal" onclick="if(event.target === this) closeStatusModal()">
+  <div class="modal-content">
+    <h3>Confirm Status Change</h3>
+    <p id="statusModalMessage">Are you sure you want to update this order status?</p>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmStatusChange()">Confirm</button>
+      <button class="btn-secondary" onclick="closeStatusModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tracking Number Modal -->
+<div class="modal-overlay" id="trackingModal" onclick="if(event.target === this) closeTrackingModal()">
+  <div class="modal-content">
+    <h3>Mark as Shipped</h3>
+    <p>Enter tracking number (optional)</p>
+    <div class="form-group">
+      <label for="trackingInput">Tracking Number</label>
+      <input type="text" id="trackingInput" placeholder="e.g., 1Z999AA10123456784">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmShipOrder()">Mark as Shipped</button>
+      <button class="btn-secondary" onclick="closeTrackingModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Toast -->
+<div class="notification-toast" id="notificationToast">
+  <div id="notificationMessage"></div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
+  <div class="modal-content">
+    <h3>Delete Order</h3>
+    <p>Are you sure you want to delete this order? This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background: #ef4444;" onclick="confirmDelete()">Delete</button>
+      <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Use supabaseClient from auth.js
+let orderId = null;
+let orderData = null;
+let recipes = [];
+let notificationsCache = [];
+let notificationCheckInterval = null;
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  orderId = params.get('id');
+  
+  if (!orderId) {
+    showNotification('No order ID provided', 'error');
+    setTimeout(() => window.location.href = 'orders.html', 2000);
+    return;
+  }
+
+  await loadOrder();
+  await loadRecipes();  await loadAffectedIngredients();  displayOrder();
+}
+
+async function loadOrder() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const { data, error } = await window.supabaseClient
+      .from('sales')
+      .select('*')
+      .eq('id', orderId)
+      .eq('profile_id', user.id)
+      .single();
+
+    if (error) throw error;
+    
+    if (!data) {
+      showNotification('Order not found', 'error');
+      setTimeout(() => window.location.href = 'orders.html', 2000);
+      return;
+    }
+
+    orderData = data;
+  } catch (error) {
+    console.error('Error loading order:', error);
+    showNotification('Failed to load order: ' + error.message, 'error');
+    setTimeout(() => window.location.href = 'orders.html', 2000);
+  }
+}
+
+async function loadRecipes() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await window.supabaseClient
+      .from('recipes')
+      .select('id, name, cost, retail_price')
+      .eq('profile_id', user.id);
+
+    if (error) throw error;
+    
+    recipes = data || [];
+  } catch (error) {
+    console.error('Error loading recipes:', error);
+  }
+}
+
+function displayOrder() {
+  if (!orderData) return;
+
+  // Set title and status
+  document.getElementById('orderTitle').textContent = orderData.order_reference || `Order #${orderData.id.substring(0, 8)}`;
+  
+  const statusBadge = document.getElementById('orderStatus');
+  const status = orderData.status || 'processed';
+  statusBadge.textContent = status;
+  statusBadge.className = `status-badge status-${status}`;
+
+  // Set info cards
+  document.getElementById('customerName').textContent = orderData.customer || 'Unknown';
+  document.getElementById('salesChannel').textContent = orderData.source || 'N/A';
+  document.getElementById('orderDate').textContent = new Date(orderData.sale_date).toLocaleString();
+  document.getElementById('orderReference').textContent = orderData.order_reference || 'N/A';
+  document.getElementById('totalQuantity').textContent = orderData.total_quantity || 0;
+  document.getElementById('totalRevenue').textContent = `$${parseFloat(orderData.revenue || 0).toFixed(2)}`;
+  
+  // Display tracking number if present
+  if (orderData.tracking_number) {
+    document.getElementById('trackingCard').style.display = 'block';
+    document.getElementById('trackingNumber').textContent = orderData.tracking_number;
+  }
+
+  // Show/hide status buttons based on current status
+  const btnFulfilled = document.getElementById('btnFulfilled');
+  const btnShipped = document.getElementById('btnShipped');
+  const btnRefunded = document.getElementById('btnRefunded');
+  
+  if (status === 'processed') {
+    // Processed: can be fulfilled, shipped, or refunded
+    btnFulfilled.style.display = 'inline-flex';
+    btnShipped.style.display = 'inline-flex';
+    btnRefunded.style.display = 'inline-flex';
+  } else if (status === 'fulfilled') {
+    // Fulfilled: can only be shipped (not refunded)
+    btnFulfilled.style.display = 'none';
+    btnShipped.style.display = 'inline-flex';
+    btnRefunded.style.display = 'none';
+  } else if (status === 'shipped') {
+    // Shipped: no actions available
+    btnFulfilled.style.display = 'none';
+    btnShipped.style.display = 'none';
+    btnRefunded.style.display = 'none';
+  } else if (status === 'refunded') {
+    // Refunded: no actions available
+    btnFulfilled.style.display = 'none';
+    btnShipped.style.display = 'none';
+    btnRefunded.style.display = 'none';
+  }
+
+  // Display items
+  const items = Array.isArray(orderData.items) ? orderData.items : [];
+  const tableBody = document.getElementById('itemsTableBody');
+  
+  if (items.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No items found</td></tr>';
+  } else {
+    tableBody.innerHTML = items.map(item => {
+      const itemName = item.name || 'Unknown';
+      const quantity = item.quantity || 0;
+      const price = parseFloat(item.price || 0);
+      const total = price * quantity;
+      
+      // Try to match item name to recipe name
+      const matchedRecipe = recipes.find(r => 
+        r.name.toLowerCase() === itemName.toLowerCase() ||
+        itemName.toLowerCase().includes(r.name.toLowerCase()) ||
+        r.name.toLowerCase().includes(itemName.toLowerCase())
+      );
+      
+      let recipeCell = '<span class="no-recipe">No recipe match</span>';
+      if (matchedRecipe) {
+        recipeCell = `<a href="recipe-detail.html?id=${matchedRecipe.id}" class="recipe-link">${matchedRecipe.name}</a>`;
+      }
+      
+      return `
+        <tr>
+          <td>${itemName}</td>
+          <td>${quantity}</td>
+          <td>$${price.toFixed(2)}</td>
+          <td><strong>$${total.toFixed(2)}</strong></td>
+          <td>${recipeCell}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Display notes if present
+  if (orderData.notes) {
+    document.getElementById('notesSection').style.display = 'block';
+    document.getElementById('orderNotes').textContent = orderData.notes;
+  }
+}
+
+async function loadAffectedIngredients() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+
+    // Query ingredient_history for this order
+    const { data: historyEntries, error } = await window.supabaseClient
+      .from('ingredient_history')
+      .select('*, ingredients:ingredient_id(name, unit)')
+      .eq('profile_id', user.id)
+      .eq('reason', 'order')
+      .eq('reference_id', orderId)
+      .order('changed_at', { ascending: false });
+
+    if (error) throw error;
+
+    const section = document.getElementById('affectedIngredientsSection');
+    const tbody = document.getElementById('affectedIngredientsBody');
+    section.style.display = 'block';
+
+    const fmt = n => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
+
+    if (historyEntries && historyEntries.length > 0) {
+      tbody.innerHTML = historyEntries.map(entry => {
+        const ingredientName = entry.ingredients?.name || 'Unknown';
+        const ingredientId = entry.ingredient_id;
+        const unit = entry.ingredients?.unit || '';
+        const oldQty = parseFloat(entry.old_value || 0);
+        const newQty = parseFloat(entry.new_value || 0);
+        const change = newQty - oldQty;
+        const changeColor = change >= 0 ? '#10b981' : '#ef4444';
+        const changeSign = change >= 0 ? '+' : '';
+        const changeDate = new Date(entry.changed_at).toLocaleDateString();
+
+        return `
+          <tr>
+            <td><a href="ingredient-detail.html?id=${ingredientId}" class="recipe-link">${ingredientName}</a></td>
+            <td>${fmt(oldQty)}</td>
+            <td>${fmt(newQty)}</td>
+            <td style="color: ${changeColor}; font-weight: 600;">${changeSign}${fmt(change)}</td>
+            <td>${changeDate}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">No updates on inventory</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error loading affected ingredients:', error);
+  }
+}
+
+let pendingStatus = null;
+
+function showStatusModal(newStatus) {
+  pendingStatus = newStatus;
+  const modal = document.getElementById('statusModal');
+  const message = document.getElementById('statusModalMessage');
+  message.textContent = `Are you sure you want to mark this order as ${newStatus}?`;
+  modal.classList.add('active');
+}
+
+function closeStatusModal() {
+  document.getElementById('statusModal').classList.remove('active');
+  pendingStatus = null;
+}
+
+function showTrackingModal() {
+  document.getElementById('trackingModal').classList.add('active');
+  document.getElementById('trackingInput').value = orderData.tracking_number || '';
+}
+
+function closeTrackingModal() {
+  document.getElementById('trackingModal').classList.remove('active');
+  document.getElementById('trackingInput').value = '';
+}
+
+async function confirmStatusChange() {
+  if (!pendingStatus) return;
+  await updateOrderStatus(pendingStatus, null);
+  closeStatusModal();
+}
+
+async function confirmShipOrder() {
+  const trackingNumber = document.getElementById('trackingInput').value.trim();
+  await updateOrderStatus('shipped', trackingNumber || null);
+  closeTrackingModal();
+}
+
+async function updateOrderStatus(newStatus, trackingNumber = null) {
+  if (!orderId || !orderData) return;
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to update order status', 'error');
+      return;
+    }
+
+    const updateData = { status: newStatus };
+    
+    // Add tracking number if provided (for shipped status)
+    if (trackingNumber !== null) {
+      updateData.tracking_number = trackingNumber;
+    }
+
+    const { error } = await window.supabaseClient
+      .from('sales')
+      .update(updateData)
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    if (error) throw error;
+
+    // Update local data and UI
+    orderData.status = newStatus;
+    if (trackingNumber !== null) {
+      orderData.tracking_number = trackingNumber;
+    }
+    
+    const statusBadge = document.getElementById('orderStatus');
+    statusBadge.textContent = newStatus;
+    statusBadge.className = `status-badge status-${newStatus}`;
+
+    // Update tracking display
+    if (trackingNumber) {
+      document.getElementById('trackingCard').style.display = 'block';
+      document.getElementById('trackingNumber').textContent = trackingNumber;
+    }
+
+    showNotification(`Order status updated to ${newStatus}!`, 'success');
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    showNotification('Failed to update order status: ' + error.message, 'error');
+  }
+}
+
+function showNotification(message, type = 'success') {
+  const toast = document.getElementById('notificationToast');
+  const messageEl = document.getElementById('notificationMessage');
+  
+  messageEl.textContent = message;
+  toast.className = `notification-toast ${type} active`;
+  
+  setTimeout(() => {
+    toast.classList.remove('active');
+  }, 4000);
+}
+
+function showDeleteModal() {
+  document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('active');
+}
+
+async function confirmDelete() {
+  if (!orderId) return;
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to delete orders', 'error');
+      return;
+    }
+
+    const { error } = await window.supabaseClient
+      .from('sales')
+      .delete()
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    if (error) throw error;
+
+    showNotification('Order deleted successfully', 'success');
+    setTimeout(() => {
+      window.location.href = 'orders.html';
+    }, 1500);
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    showNotification('Failed to delete order: ' + error.message, 'error');
+  }
+}
+
+// Notification System
+async function initializeNotifications() {
+  const { data: { session } } = await window.supabaseClient.auth.getSession();
+  if (session) {
+    document.getElementById('notificationBell').style.display = 'flex';
+    await loadNotifications();
+    notificationCheckInterval = setInterval(loadNotifications, 30000);
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { data: notifications, error } = await window.supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) throw error;
+    
+    notificationsCache = notifications || [];
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function renderNotifications() {
+  const listContainer = document.getElementById('notificationList');
+  
+  if (notificationsCache.length === 0) {
+    listContainer.innerHTML = `
+      <div class="notification-empty">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <p>No notifications</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listContainer.innerHTML = notificationsCache.map(notification => `
+    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+         data-notification-id="${notification.id}"
+         onmouseenter="markAsRead('${notification.id}')">
+      <div class="notification-message">${notification.message}</div>
+      <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
+      <div class="notification-actions">
+        ${notification.ingredient_id ? `
+          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
+            Open Ingredient
+          </button>
+          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            Restock
+          </button>
+        ` : ''}
+        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
+          Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateNotificationBadge() {
+  const unreadCount = notificationsCache.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notificationBadge');
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function formatNotificationTime(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diff = Math.floor((now - time) / 1000);
+  
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+  return time.toLocaleDateString();
+}
+
+function toggleNotifications() {
+  const dropdown = document.getElementById('notificationDropdown');
+  dropdown.classList.toggle('active');
+}
+
+document.addEventListener('click', (e) => {
+  const bell = document.getElementById('notificationBell');
+  const dropdown = document.getElementById('notificationDropdown');
+  
+  if (bell && dropdown && !bell.contains(e.target)) {
+    dropdown.classList.remove('active');
+  }
+});
+
+async function markAsRead(notificationId) {
+  const notification = notificationsCache.find(n => n.id === notificationId);
+  if (!notification || notification.is_read) return;
+  
+  try {
+    const { error } = await window.supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notification.is_read = true;
+    updateNotificationBadge();
+    
+    const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+    if (item) {
+      item.classList.remove('unread');
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    
+    const { error } = await window.supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in('id', unreadIds);
+    
+    if (error) throw error;
+    
+    notificationsCache.forEach(n => {
+      if (!n.is_read) n.is_read = true;
+    });
+    
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error marking all as read:', error);
+  }
+}
+
+async function deleteNotification(notificationId) {
+  try {
+    const { error } = await window.supabaseClient
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
+    
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+  }
+}
+
+function openIngredient(ingredientId) {
+  window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+}
+
+async function restockIngredient(ingredientId, notificationId) {
+  window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+});
+
+initializeNotifications();
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

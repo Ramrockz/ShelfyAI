@@ -1,0 +1,29 @@
+<!-- Recipe Builder Modal -->
+<div class="recipe-overlay" id="recipeBuilderOverlay">
+  <div class="recipe-builder">
+    <div class="recipe-panel recipe-panel-left">
+      <div>
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
+      </div>
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your recipe</div></div>
+      <div class="recipe-cost-summary">
+        <label>Total Cost</label>
+        <div class="amount" id="recipeTotalCostDisplay">$0.00</div>
+      </div>
+      <button class="btn btn-primary" id="saveRecipeBtn" onclick="saveRecipe()">Save Recipe</button>
+    </div>
+    <div class="recipe-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <h3 style="margin: 0;">Ingredient Library</h3>
+        <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
+      </div>
+      <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients()" />
+      
+      <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0;">
+        All Ingredients
+      </h4>
+      <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
+    </div>
+  </div>
+</div>

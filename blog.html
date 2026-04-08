@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Blog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="theme.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+
+  header { text-align: center; margin-bottom: 60px; }
+  h1 { font-size: 40px; letter-spacing: -1px; margin-bottom: 16px; }
+  
+  .blog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .blog-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+
+  .blog-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+
+  .blog-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, var(--accent) 0%, #0891b2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+
+  .blog-content {
+    padding: 24px;
+  }
+
+  .blog-date {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .blog-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-main);
+  }
+
+  .blog-excerpt {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .blog-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .blog-tag {
+    padding: 4px 12px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+  }
+
+  .empty-state h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--text-main);
+  }
+
+  .empty-state p {
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+</style>
+
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Blog</h1>
+    <p style="color: var(--text-muted); font-size: 16px;">Insights, tips, and updates from the ShelfyAI team</p>
+  </header>
+
+  <!-- Sample blog posts - replace with real content -->
+  <div class="blog-grid">
+    <div class="blog-card">
+      <div class="blog-image">📊</div>
+      <div class="blog-content">
+        <div class="blog-date">February 15, 2026</div>
+        <h3 class="blog-title">10 Tips for Better Inventory Management</h3>
+        <p class="blog-excerpt">
+          Learn how to optimize your inventory tracking and reduce waste with these proven strategies 
+          that successful businesses use every day.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">Inventory</span>
+          <span class="blog-tag">Tips</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <div class="blog-image">🤖</div>
+      <div class="blog-content">
+        <div class="blog-date">February 10, 2026</div>
+        <h3 class="blog-title">How AI is Transforming Small Business Operations</h3>
+        <p class="blog-excerpt">
+          Discover how artificial intelligence tools can help automate tedious tasks and provide 
+          valuable insights for your business decisions.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">AI</span>
+          <span class="blog-tag">Automation</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <div class="blog-image">💰</div>
+      <div class="blog-content">
+        <div class="blog-date">February 5, 2026</div>
+        <h3 class="blog-title">Expense Tracking Best Practices for 2026</h3>
+        <p class="blog-excerpt">
+          A comprehensive guide to managing your business expenses efficiently and staying on top 
+          of your financial health throughout the year.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">Finance</span>
+          <span class="blog-tag">Best Practices</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <div class="blog-image">📱</div>
+      <div class="blog-content">
+        <div class="blog-date">January 28, 2026</div>
+        <h3 class="blog-title">Mobile-First Business Management</h3>
+        <p class="blog-excerpt">
+          Why mobile accessibility matters for modern businesses and how to make the most of 
+          on-the-go management tools.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">Mobile</span>
+          <span class="blog-tag">Productivity</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <div class="blog-image">🍳</div>
+      <div class="blog-content">
+        <div class="blog-date">January 20, 2026</div>
+        <h3 class="blog-title">Recipe Costing: Calculate Your True Profit Margins</h3>
+        <p class="blog-excerpt">
+          Learn how to accurately calculate recipe costs and set profitable prices for your food 
+          products while maintaining quality.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">Recipes</span>
+          <span class="blog-tag">Pricing</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <div class="blog-image">🚀</div>
+      <div class="blog-content">
+        <div class="blog-date">January 15, 2026</div>
+        <h3 class="blog-title">Getting Started with ShelfyAI</h3>
+        <p class="blog-excerpt">
+          A step-by-step guide for new users to set up their account, add their first ingredients, 
+          and start managing their business efficiently.
+        </p>
+        <div class="blog-tags">
+          <span class="blog-tag">Tutorial</span>
+          <span class="blog-tag">Getting Started</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Uncomment this for empty state
+  <div class="empty-state">
+    <h2>Coming Soon</h2>
+    <p>We're working on exciting content for you. Check back soon for updates!</p>
+  </div>
+  -->
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

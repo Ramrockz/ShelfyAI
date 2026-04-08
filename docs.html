@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Documentation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  .docs-container {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 60px;
+    padding: 40px 24px;
+  }
+
+  /* Sidebar Navigation */
+  .docs-sidebar {
+    position: sticky;
+    top: 90px;
+    height: fit-content;
+    padding: 24px 0;
+  }
+
+  .sidebar-section {
+    margin-bottom: 32px;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-link {
+    display: block;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+  }
+
+  .sidebar-link:hover {
+    background: var(--bg-inner);
+    color: var(--text-main);
+  }
+
+  .sidebar-link.active {
+    background: var(--bg-inner);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Main Content */
+  .docs-content {
+    max-width: 800px;
+    padding: 24px 0;
+  }
+
+  .docs-content h1 {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin: 0 0 16px 0;
+  }
+
+  .docs-content h2 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 48px 0 16px 0;
+    letter-spacing: -0.5px;
+  }
+
+  .docs-content h3 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 32px 0 12px 0;
+  }
+
+  .docs-content p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .docs-content ul, .docs-content ol {
+    margin: 16px 0;
+    padding-left: 24px;
+  }
+
+  .docs-content li {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .docs-content code {
+    background: var(--bg-inner);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  .code-block {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 24px 0;
+    overflow-x: auto;
+  }
+
+  .code-block code {
+    background: none;
+    padding: 0;
+    color: var(--text-main);
+    display: block;
+    white-space: pre;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .note-box {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 24px 0;
+  }
+
+  .note-box p {
+    margin: 0;
+    color: var(--text-main);
+  }
+
+  .btn-signin {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #06b6d4;
+    transition: 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-signin:hover {
+    background: #0891b2;
+  }
+
+  @media (max-width: 1024px) {
+    .docs-container {
+      grid-template-columns: 1fr;
+    }
+
+    .docs-sidebar {
+      position: relative;
+      top: 0;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="index.html" class="nav-link" data-page="index">Home</a>
+    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    <a href="login.html" class="btn-signin" id="authButton">Log In</a>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="docs-container">
+  <!-- Sidebar Navigation -->
+  <aside class="docs-sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Getting Started</div>
+      <a href="#quick-start" class="sidebar-link active">Quick Start</a>
+      <a href="#installation" class="sidebar-link">Installation</a>
+      <a href="#authentication" class="sidebar-link">Authentication</a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Core Features</div>
+      <a href="#ingredients" class="sidebar-link">Ingredient Tracking</a>
+      <a href="#recipes" class="sidebar-link">Recipe Management</a>
+      <a href="#orders" class="sidebar-link">Order Processing</a>
+      <a href="#expenses" class="sidebar-link">Expense Tracking</a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Advanced</div>
+      <a href="#ai-vision" class="sidebar-link">AI Vision Scanning</a>
+      <a href="#analytics" class="sidebar-link">Analytics & Reports</a>
+      <a href="#integrations" class="sidebar-link">Integrations</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="docs-content">
+    <h1>Quick Start Guide</h1>
+    <p>Welcome to ShelfyAI! This guide will help you get started with automated inventory management using AI-powered tracking and computer vision.</p>
+
+    <h2 id="quick-start">What is ShelfyAI?</h2>
+    <p>ShelfyAI is an intelligent inventory management system designed for makers, small businesses, and manufacturers. It uses computer vision and automated workflows to track materials, manage recipes, process orders, and monitor expenses—all in real time.</p>
+
+    <h3>Key Features</h3>
+    <ul>
+      <li><strong>AI Vision Scanning:</strong> Automatically detect and count inventory items using your camera</li>
+      <li><strong>Recipe Composition:</strong> Define product recipes and track component usage</li>
+      <li><strong>Real-time Stock Alerts:</strong> Get notified when materials are running low</li>
+      <li><strong>Cost Intelligence:</strong> Automatic COGS calculation and profit margin analysis</li>
+      <li><strong>Multi-channel Orders:</strong> Manage orders from Etsy, Shopify, and more in one place</li>
+    </ul>
+
+    <h2 id="installation">Getting Started</h2>
+    
+    <h3>1. Create Your Account</h3>
+    <p>Sign up for a free ShelfyAI account at <a href="login.html" style="color: var(--accent);">shelfy-main.vercel.app/login</a>. No credit card required to start.</p>
+
+    <div class="note-box">
+      <p><strong>💡 Tip:</strong> Start with the free tier to track unlimited ingredients and 3 AI vision scans per month.</p>
+    </div>
+
+    <h3>2. Add Your First Ingredient</h3>
+    <p>Navigate to the Ingredients page and click "Add Ingredient". You can manually enter details or use AI Vision to automatically detect and count items.</p>
+
+    <div class="code-block">
+      <code>Example Ingredient Entry:
+Name: Oak Planks
+Quantity: 50
+Unit: pieces
+Cost per Unit: $5.50
+Supplier: Local Lumber Co.
+Reorder Level: 10 pieces</code>
+    </div>
+
+    <h3>3. Use AI Vision Scanning</h3>
+    <p>Point your camera at your inventory and let ShelfyAI automatically count and identify items:</p>
+    <ol>
+      <li>Click the "Scan with AI" button on the Ingredients page</li>
+      <li>Grant camera permissions when prompted</li>
+      <li>Position items clearly in the camera view</li>
+      <li>ShelfyAI will detect and count items in real-time</li>
+      <li>Review and confirm the detected quantities</li>
+    </ol>
+
+    <h2 id="authentication">Authentication</h2>
+    <p>ShelfyAI uses secure email and password authentication. Your data is encrypted and stored securely using Supabase.</p>
+
+    <h2 id="ingredients">Ingredient Tracking</h2>
+    <p>Track all your raw materials with real-time stock levels. Set reorder points to receive alerts when supplies are running low.</p>
+
+    <h3>Features:</h3>
+    <ul>
+      <li>Automatic low-stock alerts</li>
+      <li>Historical cost tracking</li>
+      <li>Supplier management</li>
+      <li>Batch and expiry tracking</li>
+    </ul>
+
+    <h2 id="recipes">Recipe Management</h2>
+    <p>Create product recipes by defining which ingredients are needed and in what quantities. ShelfyAI automatically:</p>
+    <ul>
+      <li>Calculates total material costs</li>
+      <li>Deducts ingredients when recipes are produced</li>
+      <li>Shows which recipes can be made with current stock</li>
+      <li>Computes profit margins</li>
+    </ul>
+
+    <h2 id="orders">Order Processing</h2>
+    <p>Manage customer orders from multiple sales channels in one unified dashboard. Track order status from placement to fulfillment.</p>
+
+    <h2 id="expenses">Expense Tracking</h2>
+    <p>Monitor all business expenses automatically. Categorize costs and maintain accurate financial records for better decision-making.</p>
+
+    <h2 id="ai-vision">AI Vision Scanning</h2>
+    <p>The AI Vision feature uses computer vision to automatically detect and count inventory items, eliminating manual data entry.</p>
+
+    <div class="note-box">
+      <p><strong>📸 Pro Tip:</strong> For best results, ensure good lighting and position items clearly in the camera view.</p>
+    </div>
+
+    <h2 id="analytics">Analytics & Reports</h2>
+    <p>Export detailed reports in PDF or CSV format. Track metrics like inventory turnover, profit margins, and expense trends over time.</p>
+
+    <h2 id="integrations">Integrations</h2>
+    <p>Connect ShelfyAI with your existing tools:</p>
+    <ul>
+      <li>Etsy and Shopify for order import</li>
+      <li>QuickBooks for accounting</li>
+      <li>Google Sheets for custom reporting</li>
+    </ul>
+
+    <h2>Next Steps</h2>
+    <p>Ready to dive deeper? Check out:</p>
+    <ul>
+      <li><a href="sandbox.html" style="color: var(--accent);">Try the Playground</a> - Test features without creating an account</li>
+      <li><a href="pricing.html" style="color: var(--accent);">View Pricing</a> - Upgrade to Pro for unlimited AI scans</li>
+      <li><a href="faq.html" style="color: var(--accent);">Read the FAQ</a> - Common questions answered</li>
+    </ul>
+
+    <p style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      Questions? <a href="mailto:support@shelfyai.com" style="color: var(--accent);">Contact Support</a>
+    </p>
+  </main>
+</div>
+
+<script>
+  // Auto-highlight active page in navigation
+  (function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  })();
+
+  // Update auth button for logged in users
+  if (typeof window.supabaseClient !== 'undefined') {
+    window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      const authButton = document.getElementById('authButton');
+      if (session && authButton) {
+        authButton.href = 'operations.html';
+        authButton.textContent = 'Dashboard';
+      }
+    });
+  }
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

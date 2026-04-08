@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+  .login-container {
+    min-height: calc(100vh - 73px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .login-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .login-box h1 {
+    font-size: 32px;
+    margin: 0 0 8px 0;
+    letter-spacing: -1px;
+  }
+
+  .login-box p {
+    color: var(--text-muted);
+    margin-bottom: 32px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 24px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .links {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .links a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .links a:hover {
+    text-decoration: underline;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+
+  .tab:hover {
+    color: var(--text);
+  }
+
+  .tab.active {
+    color: var(--accent);
+  }
+
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  /* Google Sign-In Button */
+  .google-btn {
+    width: 100%;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-main);
+  }
+
+  .google-btn:hover {
+    background: var(--bg-inner);
+    border-color: var(--accent);
+  }
+
+  [data-theme="dark"] .google-btn {
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+  }
+
+  [data-theme="dark"] .google-btn:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+  }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content-custom { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 450px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.active .modal-content-custom {
+    transform: scale(1);
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="index.html" class="nav-link" data-page="index">Home</a>
+    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="login-container">
+  <div class="login-box">
+    <h1>Welcome to ShelfyAI</h1>
+    <p>Manage your restaurant inventory intelligently</p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-content" class="tab-content active">
+      <button onclick="handleGoogleLogin()" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="divider">or</div>
+
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required />
+        </div>
+
+        <div style="text-align: right; margin-top: -8px; margin-bottom: 16px;">
+          <a href="#" onclick="event.preventDefault(); openForgotPasswordModal();" style="font-size: 13px; color: var(--accent); text-decoration: none;">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Log In
+        </button>
+      </form>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="signup-content" class="tab-content">
+      <button onclick="handleGoogleLogin()" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="divider">or</div>
+
+      <form onsubmit="handleSignUp(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signup-password" placeholder="••••••••" minlength="6" required />
+        </div>
+
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" id="signup-confirm-password" placeholder="••••••••" minlength="6" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+let confirmResolver = null;
+
+// Custom modal functions
+function showAlert(message, title = 'Alert') {
+  document.getElementById('alertTitle').textContent = title;
+  document.getElementById('alertMessage').textContent = message;
+  document.getElementById('alertModal').classList.add('active');
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+}
+
+function showConfirm(message, title = 'Confirm') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
+  // Check if already logged in or handling password reset
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    // Check if this is a password reset callback
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
+
+    if (type === 'recovery' && accessToken) {
+      // User clicked reset password link - show update password modal
+      setTimeout(() => {
+        document.getElementById('updatePasswordModal').classList.add('active');
+      }, 100);
+    } else if (session) {
+      // Already logged in, redirect to dashboard
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      window.location.href = returnUrl;
+    }
+  });
+
+  // Switch between tabs
+  function switchTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(tab + '-content').classList.add('active');
+  }
+
+  // Handle Google Login
+  async function handleGoogleLogin() {
+    try {
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      const baseUrl = 'https://www.shelfyai.com';
+      const { data, error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${baseUrl}/${returnUrl}`
+        }
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      showAlert('Google sign-in failed: ' + error.message, 'Error');
+    }
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) throw error;
+
+      // Success - redirect to intended page or dashboard
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      window.location.href = returnUrl;
+    } catch (error) {
+      showAlert('Login failed: ' + error.message, 'Error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign In';
+    }
+  }
+
+  async function handleSignUp(e) {
+    e.preventDefault();
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+    if (password !== confirmPassword) {
+      showAlert('Passwords do not match!', 'Error');
+      return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating account...';
+
+    try {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+      });
+
+      if (error) throw error;
+
+      showAlert('Account created successfully! Please check your email to confirm your account, then you can log in.', 'Success');
+      
+      // Switch to login tab
+      document.querySelectorAll('.tab')[0].click();
+      document.getElementById('login-email').value = email;
+    } catch (error) {
+      showAlert('Sign up failed: ' + error.message, 'Error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create Account';
+    }
+  }
+
+  async function handleMagicLink(tab) {
+    const emailId = tab === 'login' ? 'login-email' : 'signup-email';
+    const email = document.getElementById(emailId).value;
+
+    if (!email) {
+      showAlert('Please enter your email address', 'Error');
+      return;
+    }
+
+    try {
+      const { error } = await supabaseClient.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/operations.html`
+        }
+      });
+
+      if (error) throw error;
+
+      showAlert('Magic link sent! Check your email.', 'Success');
+    } catch (error) {
+      showAlert('Failed to send magic link: ' + error.message, 'Error');
+    }
+  }
+
+  // Auto-highlight active page in navigation
+  (function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  })();
+
+  // Forgot Password
+  function openForgotPasswordModal() {
+    document.getElementById('forgotPasswordModal').classList.add('active');
+  }
+
+  function closeForgotPasswordModal() {
+    document.getElementById('forgotPasswordModal').classList.remove('active');
+    document.getElementById('forgot-password-email').value = '';
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('forgot-password-email').value;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login.html`
+      });
+
+      if (error) throw error;
+
+      closeForgotPasswordModal();
+      showAlert('Password reset link sent! Please check your email.', 'Success');
+    } catch (error) {
+      showAlert('Failed to send reset link: ' + error.message, 'Error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send Reset Link';
+    }
+  }
+
+  // Update Password (after reset)
+  function closeUpdatePasswordModal() {
+    document.getElementById('updatePasswordModal').classList.remove('active');
+    document.getElementById('update-password-new').value = '';
+    document.getElementById('update-password-confirm').value = '';
+  }
+
+  async function handleUpdatePassword(e) {
+    e.preventDefault();
+    const newPassword = document.getElementById('update-password-new').value;
+    const confirmPassword = document.getElementById('update-password-confirm').value;
+
+    if (newPassword !== confirmPassword) {
+      showAlert('Passwords do not match!', 'Error');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showAlert('Password must be at least 6 characters long.', 'Error');
+      return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+
+    try {
+      const { error } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      closeUpdatePasswordModal();
+      showAlert('Password updated successfully! You can now log in with your new password.', 'Success');
+      
+      // Clear URL hash
+      window.location.hash = '';
+      
+      // Sign out so user can log in with new password
+      await supabaseClient.auth.signOut();
+    } catch (error) {
+      showAlert('Failed to update password: ' + error.message, 'Error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Update Password';
+    }
+  }
+
+  // Escape key listener for modals
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('alertModal').classList.contains('active')) {
+        closeAlert();
+      } else if (document.getElementById('confirmModal').classList.contains('active')) {
+        resolveConfirm(false);
+      } else if (document.getElementById('forgotPasswordModal').classList.contains('active')) {
+        closeForgotPasswordModal();
+      } else if (document.getElementById('updatePasswordModal').classList.contains('active')) {
+        closeUpdatePasswordModal();
+      }
+    }
+  });
+</script>
+
+<!-- Custom Alert Modal -->
+<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+  <div class="modal-content-custom">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="alertTitle">Alert</h3>
+    <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <button style="width: 100%; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content-custom">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
+      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-overlay" id="forgotPasswordModal" onclick="if(event.target === this) closeForgotPasswordModal()">
+  <div class="modal-content-custom">
+    <h3 style="margin-top:0; margin-bottom: 8px; color: var(--text-main);">Reset Password</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">Enter your email address and we'll send you a link to reset your password.</p>
+    <form onsubmit="handleForgotPassword(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="forgot-password-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="closeForgotPasswordModal()">Cancel</button>
+        <button type="submit" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Send Reset Link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Update Password Modal (after reset) -->
+<div class="modal-overlay" id="updatePasswordModal" onclick="if(event.target === this) closeUpdatePasswordModal()">
+  <div class="modal-content-custom">
+    <h3 style="margin-top:0; margin-bottom: 8px; color: var(--text-main);">Set New Password</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">Enter your new password below.</p>
+    <form onsubmit="handleUpdatePassword(event)">
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="update-password-new" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="update-password-confirm" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="closeUpdatePasswordModal()">Cancel</button>
+        <button type="submit" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Update Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

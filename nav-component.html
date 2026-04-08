@@ -1,0 +1,47 @@
+<!-- ShelfyAI Navigation Component -->
+<!-- Copy this into each HTML page right after the opening <body> tag -->
+
+<nav class="navbar">
+  <a href="index.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links">
+    <a href="index.html" class="nav-link" data-page="index">Home</a>
+    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+  </div>
+  
+  <div class="nav-actions">
+    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+    <a href="login.html" class="btn-signin">Log In</a>
+  </div>
+</nav>
+
+<style>
+  .btn-signin {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #06b6d4;
+    transition: 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-signin:hover {
+    background: #0891b2;
+  }
+</style>
+
+<script>
+  // Auto-highlight active page in navigation
+  (function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  })();
+</script>

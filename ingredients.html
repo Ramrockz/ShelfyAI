@@ -1,0 +1,4861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Ingredients Master</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="dns-prefetch" href="https://qakldmfmdlwvehseaksy.supabase.co" />
+<link rel="preconnect" href="https://qakldmfmdlwvehseaksy.supabase.co" crossorigin />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="notifications.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+
+  /* ---------- LAYOUT ---------- */
+  .page { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 65px); }
+  .sidebar { padding: 24px; border-right: 1px solid var(--border); }
+  
+  .cta {
+    background: var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .cta h2 { font-size: 16px; margin: 0 0 8px 0; color: #fff; }
+  .cta p { font-size: 12px; color: rgba(255,255,255,0.9); margin-bottom: 16px; line-height: 1.4; }
+
+  .btn { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .btn-primary { background: #fff; color: var(--accent); }
+  .btn-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .main { padding: 32px 36px; position: relative; }
+  
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+
+  /* VIEW SWITCHER */
+  .view-switcher { display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
+  .view-btn { padding: 6px 14px; font-size: 11px; border-radius: 6px; cursor: pointer; border: none; background: transparent; color: var(--text-muted); transition: 0.2s; }
+  .view-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+
+  .filter-trigger { background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+
+  /* ---------- CARDS (SMALL CARDS) ---------- */
+  .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card-small { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s ease; animation: slideIn 0.3s ease; }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--accent);
+    color: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: default;
+    animation: fadeIn 0.2s ease;
+  }
+  
+  .filter-badge-remove {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 4px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+  
+  .filter-badge-remove:hover {
+    background: rgba(255,255,255,0.2);
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .card-small h4 { margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .card-small h4 { display: flex; align-items: center; gap: 8px; }
+  .card-small h4 .name { flex: 1; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .card-small h4 .name:hover { color: var(--accent); }
+  .star-icon { cursor: pointer; font-size: 18px; transition: 0.2s; }
+  .star-icon:hover { transform: scale(1.2); }
+  .star-icon.favorited { color: #fbbf24; }
+  .star-icon:not(.favorited) { color: var(--text-muted); opacity: 0.5; }
+  .card-small .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .card-small .notes { font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 16px; height: 36px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .card-small .divider { height: 1px; background: var(--border); margin: 0 0 16px 0; }
+  .card-actions { display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
+  .card-actions span { cursor: pointer; text-transform: uppercase; }
+  .card-actions .edit-link { color: var(--accent); }
+  .card-actions .delete-link { color: var(--danger); }
+
+  /* ---------- LIST VIEW (TABLE) ---------- */
+  .table-container { background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  th { padding: 12px 16px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); text-align: left; }
+  th.sortable { cursor: pointer; user-select: none; transition: all 0.2s; }
+  th.sortable:hover { color: var(--accent); background: rgba(255,255,255,0.02); }
+  th.sortable::after { content: '⇅'; margin-left: 6px; opacity: 0.3; font-size: 12px; }
+  th.sortable.asc::after { content: '▲'; opacity: 1; color: var(--accent); }
+  th.sortable.desc::after { content: '▼'; opacity: 1; color: var(--accent); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  
+  .stepper { display: flex; align-items: center; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; width: fit-content; }
+  .stepper button { background: transparent; border: none; color: var(--text-main); width: 28px; height: 28px; cursor: pointer; font-weight: 700; }
+  .stepper span { width: 34px; text-align: center; font-weight: 700; color: var(--text-main); }
+  
+  .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+
+  /* ---------- KANBAN VIEW ---------- */
+  .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .kanban-col { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 16px; border: 1px solid var(--border); min-height: 500px; }
+  .kanban-item { background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; cursor: grab; }
+
+  /* ---------- FILTER DRAWER ---------- */
+  .drawer { position: fixed; top: 0; right: -340px; width: 340px; height: 100vh; background: var(--bg-panel); border-left: 1px solid var(--border); z-index: 1000; padding: 40px 24px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; }
+  .drawer.open { right: 0; }
+  .input-field { width: 100%; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); padding: 12px; border-radius: 8px; margin-bottom: 24px; box-sizing: border-box; }
+
+  /* ---------- MODAL ---------- */
+  .modal { 
+    position: fixed; 
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85); 
+    backdrop-filter: blur(8px); 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, visibility 0.2s;
+  }
+  
+  .modal.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  @keyframes shake-field {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+    20%, 40%, 60%, 80% { transform: translateX(6px); }
+  }
+  .input-invalid {
+    border-color: var(--danger, #ef4444) !important;
+    animation: shake-field 0.45s;
+  }
+
+  .modal-content { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 600px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+
+  /* Custom scrollbar for modal */
+  .modal-content::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .modal-content::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+
+  .modal-content::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+
+  .modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover, var(--accent));
+  }
+  
+  input, textarea, select { width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-panel);
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Method selection cards */
+  .method-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .method-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+  }
+
+  .method-card img {
+    filter: brightness(0) saturate(100%);
+  }
+
+  [data-theme="dark"] .method-card img {
+    filter: brightness(0) invert(1);
+  }
+
+  #dropZone img {
+    filter: brightness(0) saturate(100%) opacity(0.5);
+  }
+
+  [data-theme="dark"] #dropZone img {
+    filter: brightness(0) invert(1) opacity(0.5);
+  }
+
+  /* Notification Bell Styles */
+  .notification-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notification-bell:hover {
+    background: var(--bg-panel);
+  }
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-main);
+  }
+  .notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 10000;
+  }
+  .notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notification-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mark-all-read:hover {
+    text-decoration: underline;
+  }
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  .notification-item:hover {
+    background: var(--bg-inner);
+  }
+  .notification-item.unread {
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+  }
+  .notification-message {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .notification-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .notification-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .notification-actions button:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .notification-actions button.delete-btn {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .notification-actions button.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .notification-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .notification-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  /* Loader Animation */
+  .loader-container {
+    width: 200px;
+    height: 200px;
+    background: var(--bg-panel);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .loader {
+    position: relative;
+    width: 75px;
+    height: 100px;
+    margin-top: -10px;
+  }
+  .loader__bar {
+    position: absolute;
+    bottom: 0;
+    width: 10px;
+    height: 50%;
+    background: #06b6d4;
+    transform-origin: center bottom;
+  }
+  [data-theme="dark"] .loader__bar {
+    background: #fff;
+  }
+  .loader__bar:nth-child(1) {
+    left: 0px;
+    transform: scale(1, 0.2);
+    -webkit-animation: barUp1 4s infinite;
+    animation: barUp1 4s infinite;
+  }
+  .loader__bar:nth-child(2) {
+    left: 15px;
+    transform: scale(1, 0.4);
+    animation: barUp2 4s infinite;
+  }
+  .loader__bar:nth-child(3) {
+    left: 30px;
+    transform: scale(1, 0.6);
+    animation: barUp3 4s infinite;
+  }
+  .loader__bar:nth-child(4) {
+    left: 45px;
+    transform: scale(1, 0.8);
+    animation: barUp4 4s infinite;
+  }
+  .loader__bar:nth-child(5) {
+    left: 60px;
+    transform: scale(1, 1);
+    animation: barUp5 4s infinite;
+  }
+  .loader__ball {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    background: #06b6d4;
+    border-radius: 50%;
+    animation: ball 4s infinite;
+  }
+  [data-theme="dark"] .loader__ball {
+    background: #fff;
+  }
+
+  @keyframes ball {
+    0% { transform: translate(0, 0); }
+    5% { transform: translate(8px, -14px); }
+    10% { transform: translate(15px, -10px); }
+    17% { transform: translate(23px, -24px); }
+    20% { transform: translate(30px, -20px); }
+    27% { transform: translate(38px, -34px); }
+    30% { transform: translate(45px, -30px); }
+    37% { transform: translate(53px, -44px); }
+    40% { transform: translate(60px, -40px); }
+    50% { transform: translate(60px, 0); }
+    57% { transform: translate(53px, -14px); }
+    60% { transform: translate(45px, -10px); }
+    67% { transform: translate(37px, -24px); }
+    70% { transform: translate(30px, -20px); }
+    77% { transform: translate(22px, -34px); }
+    80% { transform: translate(15px, -30px); }
+    87% { transform: translate(7px, -44px); }
+    90% { transform: translate(0, -40px); }
+    100% { transform: translate(0, 0); }
+  }
+
+  @keyframes barUp1 {
+    0% { transform: scale(1, 0.2); }
+    40% { transform: scale(1, 0.2); }
+    50% { transform: scale(1, 1); }
+    90% { transform: scale(1, 1); }
+    100% { transform: scale(1, 0.2); }
+  }
+
+  @keyframes barUp2 {
+    0% { transform: scale(1, 0.4); }
+    40% { transform: scale(1, 0.4); }
+    50% { transform: scale(1, 0.8); }
+    90% { transform: scale(1, 0.8); }
+    100% { transform: scale(1, 0.4); }
+  }
+
+  @keyframes barUp3 {
+    0% { transform: scale(1, 0.6); }
+    100% { transform: scale(1, 0.6); }
+  }
+
+  @keyframes barUp4 {
+    0% { transform: scale(1, 0.8); }
+    40% { transform: scale(1, 0.8); }
+    50% { transform: scale(1, 0.4); }
+    90% { transform: scale(1, 0.4); }
+    100% { transform: scale(1, 0.8); }
+  }
+
+  @keyframes barUp5 {
+    0% { transform: scale(1, 1); }
+    40% { transform: scale(1, 1); }
+    50% { transform: scale(1, 0.2); }
+    90% { transform: scale(1, 0.2); }
+    100% { transform: scale(1, 1); }
+  }
+
+  /* Floating Action Button (hidden by default, shown on mobile) */
+  .fab {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+    cursor: pointer;
+    z-index: 999;
+    transition: all 0.3s ease;
+  }
+  
+  .fab:active {
+    transform: scale(0.95);
+  }
+  
+  .fab::before {
+    content: '+';
+    color: white;
+    font-size: 32px;
+    font-weight: 300;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Mobile Type Filters */
+  .mobile-type-filters {
+    display: none;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: space-between;
+  }
+  
+  .mobile-type-filter {
+    flex: 1;
+    padding: 12px 8px;
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+  
+  .mobile-type-filter.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  
+  .mobile-type-filter img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: invert(var(--icon-invert, 0));
+  }
+  
+  .mobile-type-filter.active img {
+    filter: brightness(0) invert(1);
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 968px) {
+    /* Sidebar + main layout → stack on tablet/mobile */
+    .page {
+      grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 20px 16px;
+    }
+    
+    .main { padding: 24px 16px; }
+  }
+  
+  @media (max-width: 768px) {
+    /* Hide sidebar on mobile */
+    .sidebar {
+      display: none;
+    }
+
+    /* Hide chat and feedback widgets on mobile */
+    #chat-widget,
+    #feedback-widget {
+      display: none !important;
+    }
+
+    /* Single column layout */
+    .page {
+      grid-template-columns: 1fr;
+    }
+
+    /* Reduce main padding */
+    .main {
+      padding: 16px;
+    }
+
+    /* Hide view switcher on mobile */
+    .view-switcher {
+      display: none !important;
+    }
+
+    /* Hide List and Kanban views on mobile */
+    #listView,
+    #kanbanView {
+      display: none !important;
+    }
+
+    /* Force Cards view */
+    #recentView {
+      display: grid !important;
+    }
+
+    /* Show FAB button on mobile */
+    .fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Show mobile type filters */
+    .mobile-type-filters {
+      display: flex;
+    }
+
+    /* Single column card grid */
+    .recent-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    /* Card adjustments */
+    .card-small {
+      padding: 20px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .card-small h4 {
+      font-size: 18px;
+      display: flex !important;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .card-small h4 .name {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .card-small h4 .star-icon {
+      flex-shrink: 0;
+    }
+    
+    /* Mobile search input */
+    #mobileSearchInput {
+      display: block !important;
+    }
+    
+    #searchInput {
+      display: none !important;
+    }
+
+    /* Top bar mobile layout */
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0 !important;
+      margin-bottom: 16px;
+    }
+    
+    /* Modal adjustments */
+    .modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+    
+    /* Hide CSV import on mobile */
+    #csv-method-card {
+      display: none !important;
+    }
+
+    /* Stack method cards vertically on mobile */
+    .method-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Table container - horizontal scroll */
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+      min-width: 600px;
+    }
+    
+    /* Compact view grid */
+    .compact-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .sidebar { padding: 16px 12px; }
+    .main { padding: 20px 12px; }
+    
+    /* Single column cards on very small screens */
+    .recent-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .compact-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .modal-content {
+      padding: 20px 16px;
+    }
+  }
+
+  /* ---------- RESTOCK MODAL (shared with ingredient-detail) ---------- */
+  .restock-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .restock-modal.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .restock-modal-content {
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 600px !important;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+  .restock-modal-content::-webkit-scrollbar { width: 8px; }
+  .restock-modal-content::-webkit-scrollbar-track { background: transparent; border-radius: 10px; }
+  .restock-modal-content::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  .restock-source-url {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 16px;
+  }
+  .restock-source-url:hover { border-color: var(--accent); }
+  .restock-source-url a { color: var(--accent); text-decoration: none; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+  .restock-source-url svg { width: 16px; height: 16px; fill: var(--text-muted); flex-shrink: 0; }
+  .restock-ingredient-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .restock-ingredient-item-content { flex: 1; }
+  .restock-ingredient-item-title { font-weight: 600; font-size: 14px; color: var(--text-main); text-decoration: none; display: block; margin-bottom: 2px; }
+  .restock-ingredient-item-title:hover { color: var(--accent); }
+  .restock-ingredient-item-attrs { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .restock-ingredient-item-qty { font-size: 12px; color: var(--text-muted); }
+  .restock-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .btn-restock {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-restock:hover { opacity: 0.9; }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+  // Load cached user data immediately (inline for instant load before auth.js)
+  (function() {
+    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    
+    if (cachedEmail) {
+      const emailEl = document.getElementById('userMenuEmail');
+      const avatarEl = document.getElementById('userAvatar');
+      
+      if (emailEl) emailEl.textContent = cachedEmail;
+      
+      if (avatarEl) {
+        if (cachedAvatar && cachedAvatar !== 'null') {
+          avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.textContent = '';
+        } else {
+          avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        }
+      }
+    }
+  })();
+</script>
+
+<div class="page">
+  <aside class="sidebar" style="visibility: hidden;">
+    <div class="cta">
+      <h2 style="display: flex; align-items: center; gap: 12px;">
+        <img src="https://cdn-icons-png.flaticon.com/128/17577/17577151.png" alt="ingredient icon" style="width: 32px; height: 32px; filter: brightness(0) invert(1);" />
+        Create ingredient
+      </h2>
+      <p>Add raw materials, supplies, or components required to build your products.</p>
+      <button class="btn btn-primary" onclick="openModal()">+ New Ingredient</button>
+    </div>
+    
+    <!-- Type Filter Cards -->
+    <div id="typeFilterCards" style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;"></div>
+  </aside>
+
+  <main class="main" style="visibility: hidden;">
+    <!-- Mobile Search Bar (visible only on mobile) -->
+    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="render()" />
+    
+    <!-- Mobile Type Filters (visible only on mobile) -->
+    <div class="mobile-type-filters">
+      <div class="mobile-type-filter active" data-type="Production" onclick="filterByTypeMobile('Production')">
+        <img src="https://cdn-icons-png.flaticon.com/512/3501/3501844.png" alt="Production" />
+      </div>
+      <div class="mobile-type-filter" data-type="Shipping" onclick="filterByTypeMobile('Shipping')">
+        <img src="https://cdn-icons-png.flaticon.com/512/1670/1670915.png" alt="Shipping" />
+      </div>
+      <div class="mobile-type-filter" data-type="Freebies" onclick="filterByTypeMobile('Freebies')">
+        <img src="https://cdn-icons-png.flaticon.com/512/726/726532.png" alt="Freebies" />
+      </div>
+    </div>
+
+    <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
+      <div style="display: flex; align-items: center; gap: 24px; flex: 1; min-width: 0;">
+        <div class="view-switcher">
+          <button class="view-btn active" id="recentBtn" onclick="switchView('recent')">Cards</button>
+          <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
+          <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">Kanban</button>
+        </div>
+        <div id="filterBadges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;"></div>
+      </div>
+      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+    </div>
+
+    <div id="recentView" class="recent-grid"></div>
+
+    <div id="listView" class="table-container" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="sortable" onclick="sortTable('name')">Name</th>
+            <th class="sortable" onclick="sortTable('type')">Type</th>
+            <th class="sortable" onclick="sortTable('category')">Category</th>
+            <th>Attributes</th>
+            <th class="sortable" onclick="sortTable('qty')">Quantity</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="paginationContainer" style="display: flex; justify-content: center; align-items: center; gap: 12px; padding: 20px; border-top: 1px solid var(--border);"></div>
+    </div>
+
+    <div id="kanbanView" class="kanban-board" style="display:none">
+        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'in-stock')">
+            <div id="inStockHeader" style="font-size:10px; color:var(--success); font-weight:800; margin-bottom:12px;">IN STOCK</div>
+            <div id="in-stock"></div>
+        </div>
+        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'low-stock')">
+            <div id="lowStockHeader" style="font-size:10px; color:var(--warning); font-weight:800; margin-bottom:12px;">LOW STOCK</div>
+            <div id="low-stock"></div>
+        </div>
+        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'out-of-stock')">
+            <div id="outStockHeader" style="font-size:10px; color:var(--danger); font-weight:800; margin-bottom:12px;">OUT OF STOCK</div>
+            <div id="out-of-stock"></div>
+        </div>
+    </div>
+  </main>
+
+  <!-- Floating Action Button (visible only on mobile) -->
+  <button class="fab" onclick="openModal()" aria-label="Create ingredient"></button>
+</div>
+
+<div class="drawer" id="drawer">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;">
+    <h3>Filters</h3>
+    <span onclick="toggleDrawer()" style="cursor:pointer; font-size:24px">&times;</span>
+  </div>
+  <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:8px;">Name / SKU</label>
+  <input type="text" id="fName" class="input-field" onkeyup="render()">
+  <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:8px;">Category</label>
+  <select id="fCat" class="input-field" onchange="render()">
+    <option value="">All Categories</option>
+    <option value="Materials">Materials</option>
+    <option value="Consumables">Consumables</option>
+  </select>
+  <button class="btn" style="background:transparent; border:1px solid var(--border); color: var(--text-main);" onclick="resetFilters()">Reset All</button>
+</div>
+
+<div class="modal-overlay" id="methodModal" onclick="if(event.target === this) closeMethodModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Ingredient</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+    
+    <div class="method-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="method-card" onclick="selectMethod('manual')">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
+      </div>
+
+      <div class="method-card" onclick="selectMethod('image')">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
+      </div>
+
+      <div id="csv-method-card" class="method-card" onclick="selectMethod('csv')">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/17751/17751513.png" alt="Database" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">CSV Import</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Upload bulk data from Excel</p>
+      </div>
+
+      <div class="method-card" onclick="selectMethod('url')">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/3214/3214746.png" alt="URL" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">URL Import</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Extract from product pages</p>
+      </div>
+    </div>
+
+    <button class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 100%; margin-top: 24px;" onclick="closeMethodModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="manualModal">
+  <div class="modal-content" style="max-width: 700px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Ingredient</h3>
+    
+    <form id="ingredientForm" onsubmit="saveIngredient(event)" novalidate>
+      <div class="form-group">
+        <label for="ing_name">Ingredient Name *</label>
+        <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ing_quantity">Quantity *</label>
+          <input type="number" id="ing_quantity" step="0.01" required placeholder="0">
+        </div>
+
+        <div class="form-group">
+          <label for="ing_unit">Unit *</label>
+          <select id="ing_unit" required>
+            <option value="">Select unit</option>
+            <option value="kg">Kilograms (kg)</option>
+            <option value="g">Grams (g)</option>
+            <option value="l">Liters (l)</option>
+            <option value="ml">Milliliters (ml)</option>
+            <option value="cm">Centimeters (cm)</option>
+            <option value="pcs">Pieces (pcs)</option>
+            <option value="lb">Pounds (lb)</option>
+            <option value="oz">Ounces (oz)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ing_cost">Cost per Unit *</label>
+          <input type="number" id="ing_cost" step="0.01" required placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+          <label for="ing_sku">SKU</label>
+          <input type="text" id="ing_sku" placeholder="Stock Keeping Unit">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ing_min_stock">Minimum Stock Alert *</label>
+          <input type="number" id="ing_min_stock" step="0.01" placeholder="e.g., 10" required>
+        </div>
+
+        <div class="form-group">
+          <label for="ing_estimated_delivery">Estimated Delivery (days)</label>
+          <input type="number" id="ing_estimated_delivery" placeholder="Max days for delivery">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ing_type">Type *</label>
+          <select id="ing_type" required>
+            <option value="">Select type</option>
+            <option value="Production">Production</option>
+            <option value="Shipping">Shipping</option>
+            <option value="Freebies">Freebies</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="ing_category">Category</label>
+          <input type="text" id="ing_category" list="categoryList" placeholder="Type or select category">
+          <datalist id="categoryList"></datalist>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="ing_source_url">Source URL</label>
+        <input type="url" id="ing_source_url" placeholder="https://supplier.com/product">
+      </div>
+
+      <div class="form-group">
+        <label>Custom Attributes</label>
+        <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Dynamic attribute rows will be added here -->
+        </div>
+        <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeManualModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Ingredient</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="csvModal" onclick="if(event.target === this) closeCSVModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin: 0 0 20px 0;">Import Ingredients - CSV</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a CSV file with columns: name, quantity, unit, cost_per_unit, category, notes</p>
+    
+    <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);" onclick="document.getElementById('csvFileInput').click()">
+      <div style="margin-bottom: 16px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/17751/17751513.png" alt="CSV" width="48" height="48" style="opacity: 0.5;">
+      </div>
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your CSV file here</p>
+      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
+      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: CSV files only</p>
+      <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)" />
+    </div>
+    
+    <div id="csvStatus" style="display: none; padding: 12px; border-radius: 8px; margin-top: 16px; font-size: 13px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeCSVModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="quantityModal">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Quantity</h3>
+    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+      <button onclick="adjustModalQuantity(-1)" style="width: 48px; height: 48px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
+      <input type="number" id="newQuantityInput" min="0" style="flex: 1; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; text-align: center; font-weight: 700;" placeholder="0">
+      <button onclick="adjustModalQuantity(1)" style="width: 48px; height: 48px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeQuantityModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="saveQuantityChange()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imageModal" onclick="if(event.target === this) closeImageModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt, invoice, or product image</p>
+    
+    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);" onclick="document.getElementById('imageFileInput').click()">
+      <div style="margin-bottom: 16px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
+      </div>
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
+      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
+      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
+      <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" onchange="handleImageUpload(event)" />
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center;">
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
+      <button class="btn" style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="captureScreenshot()">
+        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
+        Capture Screenshot
+      </button>
+    </div>
+    
+    <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <img id="previewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
+        <div style="flex: 1;">
+          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
+          <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+      </div>
+    </div>
+    
+    <div id="uploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeImageModal()">Cancel</button>
+      <button class="btn btn-primary" id="processImageBtn" style="flex: 1;" onclick="processImageUpload()" disabled>Process</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="urlModal" onclick="if(event.target === this) closeURLModal()">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3 style="margin: 0 0 20px 0;">Import from URL</h3>
+    
+    <div class="form-group">
+      <label for="urlInput">Product URL</label>
+      <input type="url" id="urlInput" placeholder="https://supplier.com/product" style="width: 100%;">
+    </div>
+    
+    <div id="importStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeURLModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" id="processUrlBtn" onclick="handleURLImport()">Process</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="duplicateModal" onclick="if(event.target === this) closeDuplicateModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Ingredient</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated ingredient</p>
+    
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Name</label>
+    <input type="text" id="dupName" placeholder="Ingredient Name" style="margin-bottom: 16px;" />
+    
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Quantity</label>
+    <input id="dupQty" type="number" step="0.01" placeholder="0" style="margin-bottom: 16px;" />
+    
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Source URL</label>
+    <input type="url" id="dupSourceUrl" placeholder="https://" style="margin-bottom: 16px;" />
+    
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Custom Attributes</label>
+    <div id="dupAttributesContainer" style="margin-bottom: 12px;"></div>
+    <button class="btn" style="background: var(--bg-inner); color: var(--text-main); width: 100%; padding: 10px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 16px;" onclick="addDupAttribute()">+ Add Attribute</button>
+    
+    <div style="display: flex; gap: 12px; margin-top: 8px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeDuplicateModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="saveDuplicate(false)">Create Duplicate</button>
+      <button class="btn btn-outline" style="flex: 1;" onclick="saveDuplicate(true)">Create & Add Another</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;" id="alertTitle">Alert</h3>
+    <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <button class="btn btn-primary" style="width: 100%;" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Load saved view preference or default to 'cards'
+let currentView = localStorage.getItem('ingredientsView') || 'recent';
+let ingredients = [];
+let activeAttributeFilters = {};
+let activeCategoryFilter = null;
+let activeStatusFilter = null;
+let activeDeliveryFilter = null;
+let activeTypeFilter = null;
+let sortBy = null;
+let sortOrder = 'asc';
+let listCurrentPage = 1;
+let itemsPerPage = 10;
+let confirmResolver = null;
+let uploadedFile = null;
+
+function showAlert(message, title = 'Alert') {
+  document.getElementById('alertTitle').textContent = title;
+  document.getElementById('alertMessage').textContent = message;
+  document.getElementById('alertModal').classList.add('active');
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+}
+
+function showConfirm(message, title = 'Confirm') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
+// Load ingredients from Supabase on page load
+async function loadIngredients() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    ingredients = data.map(item => ({
+      id: item.id,
+      name: item.name,
+      sku: item.barcode || `SKU-${item.id}`,
+      qty: item.quantity || 0,
+      unit: item.unit || 'units',
+      cost: item.cost_per_unit || 0,
+      category: item.category || 'General',
+      type: item.type || 'Production',
+      delivery: 'In Warehouse',
+      notes: item.notes || '',
+      is_favorite: item.is_favorite || false,
+      custom_attributes: item.custom_attributes || null,
+      min_stock: item.min_stock || 0,
+      reorder_point: item.reorder_point || 10,
+      max_stock: item.max_stock || null,
+      source_url: item.source_url || ''
+    }));
+    
+    // Check URL for view parameter, otherwise use saved or default view
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    
+    // On mobile, force Cards view
+    if (window.innerWidth <= 768) {
+      switchView('recent');
+    } else if (viewParam && ['recent', 'list', 'kanban'].includes(viewParam)) {
+      switchView(viewParam);
+    } else {
+      // Initialize UI for the current view (from localStorage or default)
+      switchView(currentView);
+    }
+  } catch (error) {
+    console.error('Error loading ingredients:', error);
+    showAlert('Failed to load ingredients: ' + error.message, 'Error');
+  }
+}
+
+// Call loadIngredients when page is ready
+loadIngredients().then(() => {
+  // Show sidebar and main content after data is loaded
+  document.querySelector('.sidebar').style.visibility = 'visible';
+  document.querySelector('.main').style.visibility = 'visible';
+  
+  // Check for inventory filter from operations page
+  const inventoryFilter = sessionStorage.getItem('inventoryFilter');
+  if (inventoryFilter) {
+    applyInventoryFilter(inventoryFilter);
+    sessionStorage.removeItem('inventoryFilter'); // Clear after applying
+  }
+});
+
+// Event delegation for star icon clicks
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('star-icon')) {
+    const id = e.target.getAttribute('data-id');
+    if (id) {
+      e.stopPropagation();
+      toggleFavorite(id);
+    }
+  }
+  
+  // Handle attribute badge clicks
+  if (e.target.classList.contains('attr-badge')) {
+    const value = e.target.getAttribute('data-value');
+    if (value) {
+      addAttributeFilter(value);
+    }
+  }
+  
+  // Handle category badge clicks
+  if (e.target.classList.contains('cat-badge')) {
+    const category = e.target.getAttribute('data-category');
+    if (category) {
+      addCategoryFilter(category);
+    }
+  }
+});
+
+function toggleDrawer() { document.getElementById('drawer').classList.toggle('open'); }
+
+let aiUsageStatus = null; // Cache usage status
+
+async function checkAIUsage() {
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) return null;
+
+    const { data: settings } = await window.supabaseClient
+      .from('user_settings')
+      .select('tier')
+      .eq('user_id', session.user.id)
+      .single();
+
+    const tier = settings?.tier || 'free';
+    const limits = {
+      free: { ingredients: 5 },
+      starter: { ingredients: 25 },
+      pro: { ingredients: 50 }
+    };
+
+    const today = new Date().toISOString().split('T')[0];
+    const { data: usage } = await window.supabaseClient
+      .from('ai_usage_tracking')
+      .select('ingredient_count')
+      .eq('user_id', session.user.id)
+      .eq('date', today)
+      .single();
+
+    const used = usage?.ingredient_count || 0;
+    const limit = limits[tier].ingredients;
+
+    aiUsageStatus = {
+      used,
+      limit,
+      tier,
+      limitReached: used >= limit
+    };
+
+    return aiUsageStatus;
+  } catch (error) {
+    console.error('Error checking AI usage:', error);
+    return null;
+  }
+}
+
+async function openModal() {
+  // Check AI usage before opening
+  await checkAIUsage();
+  document.getElementById('methodModal').classList.add('active');
+  updateMethodCardsUI();
+}
+
+function updateMethodCardsUI() {
+  const cards = document.querySelectorAll('.method-card');
+  cards.forEach(card => {
+    const img = card.querySelector('img');
+    if (!img) return;
+    
+    const isAIMethod = img.alt === 'Upload' || img.alt === 'URL';
+    
+    if (isAIMethod && aiUsageStatus && aiUsageStatus.limitReached) {
+      card.style.position = 'relative';
+      card.style.opacity = '0.6';
+      card.style.cursor = 'not-allowed';
+      card.style.pointerEvents = 'none';
+      
+      if (!card.querySelector('.limit-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'limit-badge';
+        badge.style.cssText = 'position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;';
+        badge.textContent = 'LIMIT REACHED';
+        card.appendChild(badge);
+      }
+    }
+  });
+}
+
+function closeMethodModal() {
+  document.getElementById('methodModal').classList.remove('active');
+}
+
+function selectMethod(method) {
+  // Check if AI method and limit reached
+  if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
+    alert(`Daily limit reached: You've used all ${aiUsageStatus.limit} AI extractions for today. Limit resets at midnight. Upgrade your plan for more extractions.`);
+    return;
+  }
+  
+  closeMethodModal();
+  if (method === 'manual') {
+    document.getElementById('manualModal').classList.add('active');
+  } else if (method === 'csv') {
+    document.getElementById('csvModal').classList.add('active');
+  } else if (method === 'image') {
+    document.getElementById('imageModal').classList.add('active');
+  } else if (method === 'url') {
+    document.getElementById('urlModal').classList.add('active');
+  }
+}
+
+function closeManualModal() {
+  document.getElementById('manualModal').classList.remove('active');
+  // Clear form
+  document.getElementById('ing_name').value = '';
+  document.getElementById('ing_quantity').value = '';
+  document.getElementById('ing_unit').value = '';
+  document.getElementById('ing_cost').value = '';
+  document.getElementById('ing_category').value = '';
+  document.getElementById('ing_type').value = '';
+  document.getElementById('ing_min_stock').value = '';
+  document.getElementById('ing_estimated_delivery').value = '';
+  document.getElementById('ing_sku').value = '';
+  document.getElementById('ing_source_url').value = '';
+  document.getElementById('customAttributes').innerHTML = '';
+}
+
+function closeCSVModal() {
+  document.getElementById('csvModal').classList.remove('active');
+}
+
+function closeImageModal() {
+  document.getElementById('imageModal').classList.remove('active');
+}
+
+function closeURLModal() {
+  document.getElementById('urlModal').classList.remove('active');
+  document.getElementById('urlInput').value = '';
+}
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  handleFile(file);
+}
+
+function handleFile(file) {
+  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+  
+  if (!validTypes.includes(file.type)) {
+    showUploadStatus('Please upload a PNG, JPG, or PDF file', 'error');
+    return;
+  }
+  
+  if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    showUploadStatus('File size must be less than 10MB', 'error');
+    return;
+  }
+  
+  uploadedFile = file;
+  
+  // Show preview
+  const preview = document.getElementById('uploadPreview');
+  const previewImage = document.getElementById('previewImage');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  
+  if (fileName) fileName.textContent = file.name;
+  if (fileSize) fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+  
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (previewImage) {
+        previewImage.src = e.target.result;
+        previewImage.style.display = 'block';
+      }
+    };
+    reader.readAsDataURL(file);
+  } else {
+    if (previewImage) {
+      previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
+      previewImage.style.display = 'block';
+    }
+  }
+  
+  if (preview) preview.style.display = 'block';
+  const processBtn = document.getElementById('processImageBtn');
+  if (processBtn) processBtn.disabled = false;
+}
+
+async function captureScreenshot() {
+  try {
+    showUploadStatus('Capturing screenshot...', 'info');
+    
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { mediaSource: 'screen' }
+    });
+    
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.play();
+    
+    await new Promise(resolve => {
+      video.onloadedmetadata = resolve;
+    });
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    stream.getTracks().forEach(track => track.stop());
+    
+    canvas.toBlob((blob) => {
+      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+      showUploadStatus('Screenshot captured successfully. AI extraction coming soon.', 'success');
+      // Enable process button
+      const processBtn = document.getElementById('processImageBtn');
+      if (processBtn) processBtn.disabled = false;
+    }, 'image/png');
+    
+  } catch (error) {
+    if (error.name === 'NotAllowedError') {
+      showUploadStatus('Screenshot permission denied', 'error');
+    } else {
+      console.error('Screenshot error:', error);
+      showUploadStatus('Failed to capture screenshot', 'error');
+    }
+  }
+}
+
+function showUploadStatus(message, type) {
+  const statusDiv = document.getElementById('uploadStatus');
+  if (!statusDiv) return;
+  
+  statusDiv.style.display = 'block';
+  
+  // Show loader animation if extracting
+  if (message.toLowerCase().includes('extracting')) {
+    statusDiv.innerHTML = `
+      <div class="loader-container">
+        <div class="loader">
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__ball"></div>
+        </div>
+      </div>
+    `;
+    statusDiv.style.background = 'transparent';
+    statusDiv.style.border = 'none';
+    statusDiv.style.borderRadius = '0';
+    statusDiv.style.boxShadow = 'none';
+    statusDiv.style.textAlign = 'center';
+    statusDiv.style.padding = '0';
+  } else {
+    statusDiv.textContent = message;
+    statusDiv.style.textAlign = 'left';
+    statusDiv.style.padding = '12px';
+    statusDiv.style.borderRadius = '8px';
+    
+    // Set color based on type
+    if (type === 'success') {
+      statusDiv.style.background = 'var(--success-bg, #d1fae5)';
+      statusDiv.style.color = 'var(--success, #065f46)';
+      statusDiv.style.border = '1px solid var(--success, #10b981)';
+    } else if (type === 'error') {
+      statusDiv.style.background = 'var(--danger-bg, #fee2e2)';
+      statusDiv.style.color = 'var(--danger, #991b1b)';
+      statusDiv.style.border = '1px solid var(--danger, #ef4444)';
+    } else {
+      statusDiv.style.background = 'var(--info-bg, #dbeafe)';
+      statusDiv.style.color = 'var(--info, #1e40af)';
+      statusDiv.style.border = '1px solid var(--info, #3b82f6)';
+    }
+  }
+}
+
+function showImportStatus(message, type) {
+  const statusDiv = document.getElementById('importStatus');
+  if (!statusDiv) return;
+  
+  statusDiv.style.display = 'block';
+  
+  // Show loader animation if extracting
+  if (message.toLowerCase().includes('extracting')) {
+    // Hide form elements
+    const urlModal = document.getElementById('urlModal');
+    const modalContent = urlModal?.querySelector('.modal-content');
+    if (modalContent) {
+      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
+      formElements.forEach(el => {
+        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
+          el.style.display = 'none';
+        }
+      });
+    }
+    
+    statusDiv.innerHTML = `
+      <div class="loader-container">
+        <div class="loader">
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__bar"></div>
+          <div class="loader__ball"></div>
+        </div>
+      </div>
+    `;
+    statusDiv.style.background = 'transparent';
+    statusDiv.style.border = 'none';
+    statusDiv.style.borderRadius = '0';
+    statusDiv.style.boxShadow = 'none';
+    statusDiv.style.textAlign = 'center';
+    statusDiv.style.padding = '0';
+    statusDiv.style.marginTop = '0';
+  } else {
+    // Show form elements again
+    const urlModal = document.getElementById('urlModal');
+    const modalContent = urlModal?.querySelector('.modal-content');
+    if (modalContent) {
+      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
+      formElements.forEach(el => {
+        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
+          el.style.display = '';
+        }
+      });
+    }
+    
+    statusDiv.textContent = message;
+    statusDiv.style.textAlign = 'left';
+    statusDiv.style.padding = '12px';
+    statusDiv.style.borderRadius = '8px';
+    statusDiv.style.marginTop = '16px';
+    
+    // Set color based on type
+    if (type === 'success') {
+      statusDiv.style.background = 'var(--success-bg, #d1fae5)';
+      statusDiv.style.color = 'var(--success, #065f46)';
+      statusDiv.style.border = '1px solid var(--success, #10b981)';
+    } else if (type === 'error') {
+      statusDiv.style.background = 'var(--danger-bg, #fee2e2)';
+      statusDiv.style.color = 'var(--danger, #991b1b)';
+      statusDiv.style.border = '1px solid var(--danger, #ef4444)';
+    } else {
+      statusDiv.style.background = 'var(--info-bg, #dbeafe)';
+      statusDiv.style.color = 'var(--info, #1e40af)';
+      statusDiv.style.border = '1px solid var(--info, #3b82f6)';
+    }
+  }
+}
+
+function clearUpload() {
+  uploadedFile = null;
+  
+  const preview = document.getElementById('uploadPreview');
+  if (preview) preview.style.display = 'none';
+  
+  const fileInput = document.getElementById('imageFileInput');
+  if (fileInput) fileInput.value = '';
+  
+  const processBtn = document.getElementById('processImageBtn');
+  if (processBtn) processBtn.disabled = true;
+  
+  const statusDiv = document.getElementById('uploadStatus');
+  if (statusDiv) statusDiv.style.display = 'none';
+}
+
+async function processImageUpload() {
+  if (!uploadedFile) {
+    showUploadStatus('Please select a file first', 'error');
+    return;
+  }
+  
+  const processBtn = document.getElementById('processImageBtn');
+  const originalText = processBtn.textContent;
+  processBtn.textContent = 'Processing...';
+  processBtn.disabled = true;
+  
+  try {
+    showUploadStatus('Extracting data from document...', 'info');
+    
+    console.log('=== Upload Debug Info ===');
+    console.log('File name:', uploadedFile.name);
+    console.log('File type:', uploadedFile.type);
+    console.log('File size:', uploadedFile.size, 'bytes');
+    
+    // Get user session for authentication
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) {
+      throw new Error('You must be logged in to use this feature');
+    }
+    
+    // Create FormData to send file as multipart/form-data
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
+    formData.append('context', 'ingredient'); // Pass context to API
+    
+    console.log('Sending as multipart/form-data with context: ingredient');
+    
+    const response = await fetch('/api/extract-receipt.js', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: formData // Don't set Content-Type header - browser will set it with boundary
+    });
+    
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      console.log('Error response content-type:', contentType);
+      
+      let errorData;
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json();
+      } else {
+        const errorText = await response.text();
+        console.log('Error response (raw):', errorText);
+        errorData = { error: errorText };
+      }
+      console.log('Error data:', errorData);
+      
+      // If limit reached, update cache and create notification
+      if (response.status === 429) {
+        console.log('[Ingredients Image] 429 error detected - AI limit reached');
+        await checkAIUsage();
+        
+        // Create AI limit notification
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        console.log('[Ingredients Image] Session for notification:', session?.user?.id);
+        if (session && typeof createAILimitNotification === 'function') {
+          console.log('[Ingredients Image] Calling createAILimitNotification');
+          await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
+        } else {
+          console.log('[Ingredients Image] createAILimitNotification not available or no session');
+        }
+        
+        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
+      }
+      
+      throw new Error(errorData.error || 'Failed to extract data from image');
+    }
+    
+    const result = await response.json();
+    console.log('Success response:', result);
+    
+    if (result.success && result.data) {
+      console.log('Mapping extracted data to form fields:', result.data);
+      
+      // Close image modal and open manual entry modal
+      closeImageModal();
+      document.getElementById('manualModal').classList.add('active');
+      
+      // Wait for modal to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Name
+      if (result.data.item?.name || result.data.description) {
+        document.getElementById('ing_name').value = result.data.item?.name || result.data.description;
+      }
+      
+      // Price
+      if (result.data.item?.price || result.data.amount) {
+        const price = result.data.item?.price || result.data.amount;
+        const priceMatch = String(price).match(/[\d.]+/);
+        if (priceMatch) {
+          document.getElementById('ing_cost').value = priceMatch[0];
+        }
+      }
+      
+      // Quantity
+      if (result.data.item?.quantity) {
+        document.getElementById('ing_quantity').value = result.data.item.quantity;
+      }
+      
+      // Unit
+      if (result.data.item?.unit) {
+        const unit = result.data.item.unit.toLowerCase();
+        // Map to form options: kg, g, l, ml, pcs, lb, oz
+        const unitMap = {
+          'kilograms': 'kg',
+          'kg': 'kg',
+          'grams': 'g',
+          'g': 'g',
+          'liters': 'l',
+          'l': 'l',
+          'milliliters': 'ml',
+          'ml': 'ml',
+          'pieces': 'pcs',
+          'piece': 'pcs',
+          'pcs': 'pcs',
+          'stückzahl': 'pcs'
+        };
+        document.getElementById('ing_unit').value = unitMap[unit] || 'pcs';
+      }
+      
+      // SKU
+      if (result.data.item?.SKU) {
+        document.getElementById('ing_sku').value = result.data.item.SKU;
+      }
+      
+      // Category
+      if (result.data.item?.product_category) {
+        document.getElementById('ing_category').value = result.data.item.product_category;
+      }
+      
+      // Shipping Time (Estimated Delivery)
+      if (result.data.item?.shipping_time) {
+        document.getElementById('ing_estimated_delivery').value = result.data.item.shipping_time;
+      }
+      
+      // Vendor (store in source URL)
+      if (result.data.vendor) {
+        document.getElementById('ing_source_url').value = url;
+      }
+      
+      // Add extracted attributes as custom attributes
+      const container = document.getElementById('customAttributes');
+      if (result.data.attributes?.color) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${result.data.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+        `;
+        container.appendChild(row);
+      }
+      if (result.data.attributes?.size) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${result.data.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+        `;
+        container.appendChild(row);
+      }
+      
+      showUploadStatus('Data imported successfully!', 'success');
+      
+      // Check if user just reached their daily limit
+      console.log('[Image Upload - Ingredients] Checking AI usage after successful extraction');
+      const usageResult = await checkAIUsage();
+      console.log('[Image Upload - Ingredients] AI usage result:', usageResult);
+      console.log('[Image Upload - Ingredients] aiUsageStatus:', aiUsageStatus);
+      
+      if (aiUsageStatus && aiUsageStatus.limitReached) {
+        console.log('[Image Upload - Ingredients] User just reached their limit, creating notification');
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        console.log('[Image Upload - Ingredients] Session:', session?.user?.id);
+        console.log('[Image Upload - Ingredients] createAILimitNotification available:', typeof createAILimitNotification);
+        if (session && typeof createAILimitNotification === 'function') {
+          console.log('[Image Upload - Ingredients] Calling createAILimitNotification with userId:', session.user.id, 'tier:', aiUsageStatus.tier);
+          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
+          console.log('[Image Upload - Ingredients] Notification creation completed');
+        } else {
+          console.log('[Image Upload - Ingredients] Cannot create notification - session or function missing');
+        }
+      } else {
+        console.log('[Image Upload - Ingredients] Limit not reached yet. Used:', aiUsageStatus?.used, 'Limit:', aiUsageStatus?.limit);
+      }
+    } else {
+      showUploadStatus('No data could be extracted from the image', 'error');
+    }
+    
+  } catch (error) {
+    console.error('Image upload error:', error);
+    showUploadStatus(error.message || 'Failed to process image', 'error');
+  } finally {
+    processBtn.textContent = originalText;
+    processBtn.disabled = false;
+  }
+}
+
+async function handleURLImport() {
+  const url = document.getElementById('urlInput').value.trim();
+  
+  if (!url) {
+    showImportStatus('Please enter a URL', 'error');
+    return;
+  }
+  
+  // Validate URL format
+  try {
+    new URL(url);
+  } catch (e) {
+    showImportStatus('Please enter a valid URL', 'error');
+    return;
+  }
+  
+  const processBtn = document.getElementById('processUrlBtn');
+  const originalText = processBtn.textContent;
+  processBtn.textContent = 'Processing...';
+  processBtn.disabled = true;
+  
+  try {
+    showImportStatus('Extracting data from URL...', 'info');
+    
+    // Get user session for authentication
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) {
+      throw new Error('You must be logged in to use this feature');
+    }
+    
+    console.log('[URL Import] Calling API with URL:', url);
+    const response = await fetch('/api/extract-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ url })
+    });
+    
+    console.log('[URL Import] Response status:', response.status);
+    
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error('[URL Import] Error response:', responseText);
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = { error: responseText || 'Failed to extract data from URL' };
+      }
+      
+      // If limit reached, update cache and create notification
+      if (response.status === 429) {
+        console.log('[Ingredients URL] 429 error detected - AI limit reached');
+        await checkAIUsage();
+        
+        // Create AI limit notification
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        console.log('[Ingredients URL] Session for notification:', session?.user?.id);
+        if (session && typeof createAILimitNotification === 'function') {
+          console.log('[Ingredients URL] Calling createAILimitNotification');
+          await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
+        } else {
+          console.log('[Ingredients URL] createAILimitNotification not available or no session');
+        }
+        
+        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
+      }
+      
+      throw new Error(errorData.error || 'Failed to extract data from URL');
+    }
+    
+    const result = await response.json();
+    console.log('[URL Import] Full API response:', result);
+    console.log('[URL Import] Extracted data:', result.data);
+    
+    if (result.success && result.data) {
+      // Close URL import modal and open manual entry modal
+      closeURLModal();
+      document.getElementById('manualModal').classList.add('active');
+      
+      // Wait for modal to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Populate form fields with extracted data
+      if (result.data.name) {
+        // Build name with attributes (color, size, etc.)
+        let fullName = result.data.name;
+        const attributes = [];
+        
+        if (result.data.color) attributes.push(result.data.color);
+        if (result.data.size) attributes.push(result.data.size);
+        
+        // Combine name with attributes using bullet separator
+        if (attributes.length > 0) {
+          fullName = `${result.data.name} • ${attributes.join(' • ')}`;
+        }
+        
+        document.getElementById('ing_name').value = fullName;
+      }
+      
+      // Handle price and quantity - calculate cost per unit
+      let costPerUnit = null;
+      if (result.data.price && result.data.quantity && result.data.quantity > 0) {
+        // Calculate cost per unit = total price / quantity
+        costPerUnit = result.data.price / result.data.quantity;
+        document.getElementById('ing_cost').value = costPerUnit.toFixed(2);
+      } else if (result.data.price) {
+        // If no quantity, just use the price as-is
+        document.getElementById('ing_cost').value = result.data.price;
+      }
+      
+      if (result.data.quantity) {
+        document.getElementById('ing_quantity').value = result.data.quantity;
+      }
+      
+      // Handle unit - set default to "pcs" if null or "null"
+      const unitSelect = document.getElementById('ing_unit');
+      if (result.data.unit && result.data.unit !== 'null') {
+        // Try to match the unit to the dropdown options
+        const unitLower = result.data.unit.toLowerCase();
+        // Map common units
+        const unitMap = {
+          'pieces': 'pcs',
+          'piece': 'pcs',
+          'stück': 'pcs',
+          'stückzahl': 'pcs',
+          'blatt': 'pcs',
+          'sheets': 'pcs',
+          'sheet': 'pcs',
+          'kilograms': 'kg',
+          'kilogram': 'kg',
+          'liters': 'l',
+          'liter': 'l'
+        };
+        const mappedUnit = unitMap[unitLower] || result.data.unit;
+        unitSelect.value = mappedUnit;
+      } else {
+        // Default to pieces if unit is null or "null"
+        unitSelect.value = 'pcs';
+      }
+      if (result.data.sku) {
+        document.getElementById('ing_sku').value = result.data.sku;
+      }
+      if (result.data.estimated_delivery) {
+        document.getElementById('ing_estimated_delivery').value = result.data.estimated_delivery;
+      }
+      if (result.data.product_category) {
+        document.getElementById('ing_category').value = result.data.product_category;
+      }
+      if (result.data.vendor || result.data.shipping_time) {
+        // Set source URL (vendor/shipping info will be in custom attributes or other fields)
+        document.getElementById('ing_source_url').value = url;
+      }
+      
+      // Add extracted attributes as custom attributes
+      const container = document.getElementById('customAttributes');
+      if (result.data.color) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${result.data.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+        `;
+        container.appendChild(row);
+      }
+      if (result.data.size) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${result.data.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+        `;
+        container.appendChild(row);
+      }
+      
+      showImportStatus('Data imported successfully!', 'success');
+      
+      // Check if user just reached their daily limit
+      console.log('[URL Import - Ingredients] Checking AI usage after successful extraction');
+      const usageResult = await checkAIUsage();
+      console.log('[URL Import - Ingredients] AI usage result:', usageResult);
+      console.log('[URL Import - Ingredients] aiUsageStatus:', aiUsageStatus);
+      
+      if (aiUsageStatus && aiUsageStatus.limitReached) {
+        console.log('[URL Import - Ingredients] User just reached their limit, creating notification');
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        console.log('[URL Import - Ingredients] Session:', session?.user?.id);
+        console.log('[URL Import - Ingredients] createAILimitNotification available:', typeof createAILimitNotification);
+        if (session && typeof createAILimitNotification === 'function') {
+          console.log('[URL Import - Ingredients] Calling createAILimitNotification with userId:', session.user.id, 'tier:', aiUsageStatus.tier);
+          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
+          console.log('[URL Import - Ingredients] Notification creation completed');
+        } else {
+          console.log('[URL Import - Ingredients] Cannot create notification - session or function missing');
+        }
+      } else {
+        console.log('[URL Import - Ingredients] Limit not reached yet. Used:', aiUsageStatus?.used, 'Limit:', aiUsageStatus?.limit);
+      }
+    } else {
+      showImportStatus('No data could be extracted from the URL', 'error');
+    }
+    
+  } catch (error) {
+    console.error('URL import error:', error);
+    showImportStatus(error.message || 'Failed to import data from URL', 'error');
+  } finally {
+    processBtn.textContent = originalText;
+    processBtn.disabled = false;
+  }
+}
+
+function handleCSVUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        showAlert('You must be logged in', 'Authentication Required');
+        return;
+      }
+
+      const ingredientsToInsert = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        const values = lines[i].split(',').map(v => v.trim());
+        const minStockVal = parseFloat(values[7]);
+        if (isNaN(minStockVal) || minStockVal < 0) {
+          showAlert(`Row ${i}: Minimum Stock Alert is required. Please add a min_stock column (column 8) to your CSV.`, 'Validation Error');
+          return;
+        }
+        const ingredient = {
+          profile_id: user.id,
+          name: values[0] || 'Unnamed',
+          quantity: parseFloat(values[1]) || 0,
+          unit: values[2] || 'units',
+          cost_per_unit: parseFloat(values[3]) || 0,
+          category: values[4] || 'General',
+          sku: values[6] || '',
+          notes: values[5] || '',
+          min_stock: minStockVal
+        };
+        
+        ingredientsToInsert.push(ingredient);
+      }
+
+      if (ingredientsToInsert.length === 0) {
+        showAlert('No valid data found in CSV', 'Invalid File');
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .insert(ingredientsToInsert)
+        .select();
+
+      if (error) throw error;
+
+      showAlert(`Successfully imported ${data.length} ingredients!`, 'Success');
+      closeCSVModal();
+      loadIngredients();
+    } catch (error) {
+      console.error('CSV import error:', error);
+      showAlert('Failed to import CSV: ' + error.message, 'Error');
+    }
+  };
+  
+  reader.readAsText(file);
+}
+
+function switchView(view) {
+  currentView = view;
+  localStorage.setItem('ingredientsView', view); // Save view preference
+  
+  // Update URL to reflect current view (remove query parameter to rely on localStorage)
+  const url = new URL(window.location);
+  url.searchParams.delete('view');
+  window.history.replaceState({}, '', url);
+  
+  listCurrentPage = 1; // Reset to page 1 when switching views
+  ['recentBtn', 'listBtn', 'kanbanBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(view + 'Btn').classList.add('active');
+  
+  // Clean up empty states from other views
+  const emptyStateList = document.getElementById('emptyStateList');
+  const emptyStateKanban = document.getElementById('emptyStateKanban');
+  if (emptyStateList) emptyStateList.remove();
+  if (emptyStateKanban) emptyStateKanban.remove();
+  
+  document.getElementById('recentView').style.display = view === 'recent' ? 'grid' : 'none';
+  document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('kanbanView').style.display = view === 'kanban' ? 'grid' : 'none';
+  render();
+}
+
+// Mobile type filter state
+let activeMobileTypeFilter = 'Production';
+
+function filterByTypeMobile(type) {
+  activeMobileTypeFilter = type;
+  
+  // Update active state on buttons
+  document.querySelectorAll('.mobile-type-filter').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.type === type) {
+      btn.classList.add('active');
+    }
+  });
+  
+  // Re-render with the filter
+  render();
+}
+
+function getStatus(qty, minStock = 0) {
+  if (qty === 0) return { label: 'Out', color: 'var(--danger)', key: 'out' };
+  if (minStock > 0 && qty <= minStock) return { label: 'Low', color: 'var(--warning)', key: 'low' };
+  return { label: 'Active', color: 'var(--success)', key: 'in' };
+}
+
+// Navigation state for drill-down
+let navStack = [];
+let currentNavLevel = 'type'; // type, category, attribute_key, attribute_value
+let currentNavData = {};
+
+function renderTypeFilterCards() {
+  const container = document.getElementById('typeFilterCards');
+  if (!container) return;
+
+  // Render based on current navigation level
+  if (navStack.length === 0) {
+    renderTypeLevel();
+  } else if (currentNavLevel === 'category') {
+    renderCategoryLevel();
+  } else if (currentNavLevel === 'attribute_key') {
+    renderAttributeKeyLevel();
+  } else if (currentNavLevel === 'attribute_value') {
+    renderAttributeValueLevel();
+  }
+}
+
+function renderTypeLevel() {
+  const container = document.getElementById('typeFilterCards');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '12px';
+  container.style.gridTemplateColumns = '';
+  
+  const types = ['Production', 'Shipping', 'Freebies'];
+  const typeIcons = {
+    'Production': 'https://cdn-icons-png.flaticon.com/512/3501/3501844.png',
+    'Shipping': 'https://cdn-icons-png.flaticon.com/512/1670/1670915.png',
+    'Freebies': 'https://cdn-icons-png.flaticon.com/512/726/726532.png'
+  };
+
+  const cards = types.map(type => {
+    return `
+      <div onclick="drillDownToCategories('${type}')" style="
+        background: var(--bg-panel);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <img src="${typeIcons[type]}" alt="${type}" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px; object-fit: contain; display: block; filter: invert(var(--icon-invert, 0));" />
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = cards;
+}
+
+function renderCategoryLevel() {
+  const container = document.getElementById('typeFilterCards');
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = '1fr 1fr';
+  container.style.gap = '12px';
+  
+  const selectedType = currentNavData.type;
+  
+  // Get unique categories for this type (case-insensitive)
+  const categoryMap = new Map();
+  ingredients
+    .filter(i => i.type === selectedType)
+    .forEach(i => {
+      if (i.category) {
+        const lowerCategory = i.category.toLowerCase();
+        if (!categoryMap.has(lowerCategory)) {
+          categoryMap.set(lowerCategory, i.category); // Store first occurrence
+        }
+      }
+    });
+  const categories = Array.from(categoryMap.values());
+
+  const backButton = `
+    <div onclick="navigateBack()" style="
+      grid-column: 1 / -1;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Types</div>
+    </div>
+  `;
+
+  const cards = categories.map(category => {
+    return `
+      <div onclick="drillDownToAttributeKeys('${category}')" style="
+        background: var(--bg-panel);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHtml(category)}</div>
+      </div>
+    `;
+  }).join('');
+
+  if (categories.length === 0) {
+    container.innerHTML = backButton + `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-muted);">
+        <p style="font-size: 14px;">No ingredients for ${escapeHtml(selectedType)} yet</p>
+      </div>
+    `;
+  } else {
+    container.innerHTML = backButton + cards;
+  }
+}
+
+function renderAttributeKeyLevel() {
+  const container = document.getElementById('typeFilterCards');
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = '1fr 1fr';
+  container.style.gap = '12px';
+  
+  const selectedType = currentNavData.type;
+  const selectedCategory = currentNavData.category;
+  const selectedCategoryLower = selectedCategory ? selectedCategory.toLowerCase() : '';
+  
+  // Get all attribute keys for items matching type and category (case-insensitive, normalized)
+  const attributeKeysMap = new Map();
+  ingredients
+    .filter(i => i.type === selectedType && i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
+    .forEach(i => {
+      try {
+        const attrs = typeof i.custom_attributes === 'string' 
+          ? JSON.parse(i.custom_attributes) 
+          : i.custom_attributes;
+        Object.keys(attrs).forEach(key => {
+          const lowerKey = key.toLowerCase();
+          if (!attributeKeysMap.has(lowerKey)) {
+            // Store capitalized version
+            attributeKeysMap.set(lowerKey, capitalizeAttributeKey(key));
+          }
+        });
+      } catch (e) {}
+    });
+
+  const backButton = `
+    <div onclick="navigateBack()" style="
+      grid-column: 1 / -1;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Categories</div>
+    </div>
+  `;
+
+  // Sort attribute keys alphabetically (case-insensitive)
+  const sortedKeys = Array.from(attributeKeysMap.values()).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  
+  const cards = sortedKeys.map(key => {
+    return `
+      <div onclick="drillDownToAttributeValues('${escapeHtml(key)}')" style="
+        background: var(--bg-panel);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHtml(key)}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = backButton + (cards || '<div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--text-muted);">No attributes found</div>');
+}
+
+function renderAttributeValueLevel() {
+  const container = document.getElementById('typeFilterCards');
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = '1fr 1fr';
+  container.style.gap = '12px';
+  
+  const selectedType = currentNavData.type;
+  const selectedCategory = currentNavData.category;
+  const selectedCategoryLower = selectedCategory ? selectedCategory.toLowerCase() : '';
+  const selectedKey = currentNavData.attributeKey;
+  
+  // Get all unique values for this attribute key
+  const values = new Set();
+  ingredients
+    .filter(i => i.type === selectedType && i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
+    .forEach(i => {
+      try {
+        const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
+        if (attrs[selectedKey]) values.add(attrs[selectedKey]);
+      } catch (e) {}
+    });
+
+  const backButton = `
+    <div onclick="navigateBack()" style="
+      grid-column: 1 / -1;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Attributes</div>
+    </div>
+  `;
+
+  const cards = Array.from(values).map(value => {
+    return `
+      <div onclick="applyFullFilter('${escapeHtml(value)}')" style="
+        background: var(--bg-panel);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHtml(value)}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = backButton + cards;
+}
+
+function drillDownToCategories(type) {
+  navStack.push({ level: 'type', data: {} });
+  currentNavLevel = 'category';
+  currentNavData = { type };
+  
+  // Reset all filters before applying new type filter
+  activeTypeFilter = type;
+  activeCategoryFilter = null;
+  activeAttributeFilters = {};
+  activeStatusFilter = null;
+  activeDeliveryFilter = null;
+  listCurrentPage = 1;
+  render();
+  renderTypeFilterCards();
+}
+
+function drillDownToAttributeKeys(category) {
+  navStack.push({ level: 'category', data: currentNavData });
+  currentNavLevel = 'attribute_key';
+  currentNavData = { ...currentNavData, category };
+  
+  // Apply category filter immediately
+  activeCategoryFilter = category;
+  listCurrentPage = 1;
+  render();
+  renderTypeFilterCards();
+}
+
+function drillDownToAttributeValues(key) {
+  navStack.push({ level: 'attribute_key', data: currentNavData });
+  currentNavLevel = 'attribute_value';
+  currentNavData = { ...currentNavData, attributeKey: key };
+  renderTypeFilterCards();
+}
+
+// Capitalize attribute keys consistently
+function capitalizeAttributeKey(key) {
+  const commonKeys = {
+    'color': 'Color',
+    'size': 'Size',
+    'brand': 'Brand',
+    'origin': 'Origin',
+    'material': 'Material',
+    'weight': 'Weight',
+    'style': 'Style',
+    'model': 'Model',
+    'type': 'Type',
+    'variant': 'Variant'
+  };
+  
+  const lowerKey = key.toLowerCase();
+  if (commonKeys[lowerKey]) {
+    return commonKeys[lowerKey];
+  }
+  
+  // Capitalize first letter of each word
+  return key.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ');
+}
+
+function navigateBack() {
+  if (navStack.length === 0) return;
+  
+  const previous = navStack.pop();
+  currentNavLevel = previous.level;
+  currentNavData = previous.data;
+  
+  // Reset all filters when returning to type level
+  if (currentNavLevel === 'type') {
+    activeTypeFilter = null;
+    activeCategoryFilter = null;
+    activeAttributeFilters = {};
+    activeStatusFilter = null;
+    activeDeliveryFilter = null;
+    listCurrentPage = 1;
+    render();
+  }
+  
+  renderTypeFilterCards();
+}
+
+function applyFullFilter(value) {
+  // Apply all filters: type, category, and attribute value
+  activeTypeFilter = currentNavData.type;
+  activeCategoryFilter = currentNavData.category;
+  
+  // Add/replace attribute filter using the current attribute key
+  if (currentNavData.attributeKey) {
+    activeAttributeFilters[currentNavData.attributeKey] = value;
+  }
+  
+  // Don't reset navigation - stay at current level
+  listCurrentPage = 1;
+  render();
+}
+
+// Apply inventory filter from operations page
+function applyInventoryFilter(filterType) {
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  
+  // Clear existing filters first
+  activeStatusFilter = null;
+  activeTypeFilter = null;
+  activeDeliveryFilter = null;
+  activeCategoryFilter = null;
+  activeAttributeFilters = {};
+  activeMobileTypeFilter = null;
+  document.querySelectorAll('.mobile-type-filter').forEach(btn => btn.classList.remove('active'));
+  
+  // Create a custom filter based on type
+  let filteredIngredients = [...ingredients];
+  
+  if (filterType === 'out-of-stock') {
+    filteredIngredients = ingredients.filter(i => (parseFloat(i.qty) || 0) === 0);
+  } else if (filterType === 'low-stock') {
+    filteredIngredients = ingredients.filter(i => {
+      const qty = parseFloat(i.qty) || 0;
+      const minStock = parseFloat(i.min_stock) || 0;
+      return minStock > 0 && qty > 0 && qty <= minStock;
+    });
+  } else if (filterType === 'dead-stock') {
+    filteredIngredients = ingredients.filter(i => {
+      const lastUpdate = new Date(i.updated_at || i.created_at);
+      return lastUpdate < sixMonthsAgo;
+    });
+  }
+  
+  // Temporarily store the filtered list in a global variable
+  window.inventoryFilteredList = filteredIngredients;
+  window.inventoryFilterType = filterType;
+  
+  render();
+}
+
+function render() {
+  const searchQ = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearchInput')?.value || '').toLowerCase();
+  
+  // Start with ingredients or filtered list from inventory status
+  let baseIngredients = window.inventoryFilteredList || ingredients;
+  
+  let filtered = baseIngredients.filter(i => {
+    // Apply search filter
+    if (searchQ) {
+      let matchesSearch = false;
+      
+      // Search in name
+      if (i.name.toLowerCase().includes(searchQ)) matchesSearch = true;
+      
+      // Search in attribute values
+      if (!matchesSearch && i.custom_attributes) {
+        try {
+          const attrs = typeof i.custom_attributes === 'string' 
+            ? JSON.parse(i.custom_attributes) 
+            : i.custom_attributes;
+          const values = Object.values(attrs).filter(v => v && v.trim());
+          if (values.some(v => v.toLowerCase().includes(searchQ))) matchesSearch = true;
+        } catch (e) {
+          console.error('Error parsing attributes:', e);
+        }
+      }
+      
+      if (!matchesSearch) return false;
+    }
+    
+    // Apply attribute filters
+    if (Object.keys(activeAttributeFilters).length > 0) {
+      if (!i.custom_attributes) return false;
+      
+      try {
+        const attrs = typeof i.custom_attributes === 'string' 
+          ? JSON.parse(i.custom_attributes) 
+          : i.custom_attributes;
+        
+        // Check if all active attribute filters match
+        for (const [key, value] of Object.entries(activeAttributeFilters)) {
+          const attrValue = attrs[key];
+          if (!attrValue || attrValue.toLowerCase() !== value.toLowerCase()) {
+            return false;
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+        return false;
+      }
+    }
+    
+    // Apply category filter (case-insensitive)
+    if (activeCategoryFilter && (!i.category || i.category.toLowerCase() !== activeCategoryFilter.toLowerCase())) {
+      return false;
+    }
+    
+    // Apply status filter
+    if (activeStatusFilter) {
+      const status = getStatus(i.qty, i.min_stock);
+      if (status.key !== activeStatusFilter) return false;
+    }
+    
+    // Apply delivery filter
+    if (activeDeliveryFilter && i.delivery !== activeDeliveryFilter) {
+      return false;
+    }
+    
+    // Apply type filter
+    if (activeTypeFilter && i.type !== activeTypeFilter) {
+      return false;
+    }
+    
+    // Apply mobile type filter (only on mobile)
+    if (window.innerWidth <= 768 && activeMobileTypeFilter && i.type !== activeMobileTypeFilter) {
+      return false;
+    }
+    
+    return true;
+  });
+  
+  // Apply sorting
+  if (sortBy) {
+    filtered = [...filtered].sort((a, b) => {
+      let valA, valB;
+      
+      if (sortBy === 'name') {
+        valA = a.name.toLowerCase();
+        valB = b.name.toLowerCase();
+      } else if (sortBy === 'qty') {
+        valA = a.qty;
+        valB = b.qty;
+      } else if (sortBy === 'type') {
+        valA = (a.type || 'Production').toLowerCase();
+        valB = (b.type || 'Production').toLowerCase();
+      } else if (sortBy === 'category') {
+        valA = a.category.toLowerCase();
+        valB = b.category.toLowerCase();
+      }
+      
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+  
+  // Update filter badges
+  renderFilterBadges();
+  
+  // Update type filter cards
+  renderTypeFilterCards();
+
+  if (currentView === 'recent') renderRecent(filtered);
+  if (currentView === 'list') renderList(filtered);
+  if (currentView === 'kanban') renderKanban(filtered);
+}
+
+function addAttributeFilter(value, key = null) {
+  // If key is provided, use it; otherwise find the key from ingredient data
+  if (key) {
+    activeAttributeFilters[key] = value;
+  } else {
+    // For backwards compatibility when clicking badges without key context
+    // Find the first matching key in any ingredient's attributes
+    const matchingKey = Object.keys(ingredients.reduce((acc, ing) => {
+      if (ing.custom_attributes) {
+        try {
+          const attrs = typeof ing.custom_attributes === 'string' 
+            ? JSON.parse(ing.custom_attributes) 
+            : ing.custom_attributes;
+          Object.entries(attrs).forEach(([k, v]) => {
+            if (v && v.toLowerCase() === value.toLowerCase()) {
+              acc[k] = true;
+            }
+          });
+        } catch (e) {}
+      }
+      return acc;
+    }, {})).find(k => !activeAttributeFilters[k]);
+    
+    if (matchingKey) {
+      activeAttributeFilters[matchingKey] = value;
+    }
+  }
+  
+  listCurrentPage = 1;
+  render();
+}
+
+function removeAttributeFilter(key) {
+  delete activeAttributeFilters[key];
+  listCurrentPage = 1;
+  render();
+}
+
+function addCategoryFilter(value) {
+  activeCategoryFilter = value;
+  listCurrentPage = 1;
+  render();
+}
+
+function removeCategoryFilter() {
+  activeCategoryFilter = null;
+  listCurrentPage = 1;
+  render();
+}
+
+function addStatusFilter(value) {
+  activeStatusFilter = value;
+  listCurrentPage = 1;
+  render();
+}
+
+function removeStatusFilter() {
+  activeStatusFilter = null;
+  listCurrentPage = 1;
+  render();
+}
+
+function addDeliveryFilter(value) {
+  activeDeliveryFilter = value;
+  listCurrentPage = 1;
+  render();
+}
+
+function removeDeliveryFilter() {
+  activeDeliveryFilter = null;
+  listCurrentPage = 1;
+  render();
+}
+
+function addTypeFilter(value) {
+  // Toggle filter - if clicking same type, remove it
+  if (activeTypeFilter === value) {
+    activeTypeFilter = null;
+  } else {
+    activeTypeFilter = value;
+  }
+  listCurrentPage = 1;
+  render();
+}
+
+function removeTypeFilter() {
+  activeTypeFilter = null;
+  
+  // Reset navigation stack to go back to type selection level
+  navStack = [];
+  currentNavLevel = 'type';
+  currentNavData = {};
+  
+  listCurrentPage = 1;
+  render();
+}
+
+function renderFilterBadges() {
+  const container = document.getElementById('filterBadges');
+  if (!container) return;
+  
+  let badges = [];
+  
+  // Add attribute filter badges
+  badges.push(...Object.entries(activeAttributeFilters).map(([key, value]) => `
+    <div class="filter-badge">
+      ${escapeHtml(key)}: ${escapeHtml(value)}
+      <span class="filter-badge-remove" onclick="removeAttributeFilter('${escapeHtml(key).replace(/'/g, "&#39;")}')">×</span>
+    </div>
+  `));
+  
+  // Add category filter badge
+  if (activeCategoryFilter) {
+    badges.push(`
+      <div class="filter-badge" style="background: var(--accent);">
+        ${escapeHtml(activeCategoryFilter)}
+        <span class="filter-badge-remove" onclick="removeCategoryFilter()">×</span>
+      </div>
+    `);
+  }
+  
+  // Add status filter badge
+  if (activeStatusFilter) {
+    const statusLabels = { 'in': 'In Stock', 'low': 'Low Stock', 'out': 'Out of Stock' };
+    badges.push(`
+      <div class="filter-badge" style="background: var(--accent);">
+        ${statusLabels[activeStatusFilter]}
+        <span class="filter-badge-remove" onclick="removeStatusFilter()">×</span>
+      </div>
+    `);
+  }
+  
+  // Add delivery filter badge
+  if (activeDeliveryFilter) {
+    badges.push(`
+      <div class="filter-badge" style="background: var(--accent);">
+        ${escapeHtml(activeDeliveryFilter)}
+        <span class="filter-badge-remove" onclick="removeDeliveryFilter()">×</span>
+      </div>
+    `);
+  }
+  
+  // Add type filter badge
+  if (activeTypeFilter) {
+    badges.push(`
+      <div class="filter-badge" style="background: var(--accent);">
+        ${escapeHtml(activeTypeFilter)}
+        <span class="filter-badge-remove" onclick="removeTypeFilter()">×</span>
+      </div>
+    `);
+  }
+  
+  // Add inventory filter badge
+  if (window.inventoryFilterType) {
+    const filterLabels = {
+      'out-of-stock': 'Out of Stock',
+      'low-stock': 'Low on Stock'
+    };
+    const filterColors = {
+      'out-of-stock': '#ef4444',
+      'low-stock': '#f59e0b'
+    };
+    badges.push(`
+      <div class="filter-badge" style="background: ${filterColors[window.inventoryFilterType]};">
+        ${filterLabels[window.inventoryFilterType]}
+        <span class="filter-badge-remove" onclick="removeInventoryFilter()">×</span>
+      </div>
+    `);
+  }
+  
+  container.innerHTML = badges.join('');
+}
+
+// Remove inventory filter
+function removeInventoryFilter() {
+  window.inventoryFilteredList = null;
+  window.inventoryFilterType = null;
+  render();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function renderRecent(data) {
+  const container = document.getElementById('recentView');
+  
+  // Sort by quantity ascending (lowest first)
+  data = [...data].sort((a, b) => {
+    const qtyA = parseFloat(a.qty) || 0;
+    const qtyB = parseFloat(b.qty) || 0;
+    return qtyA - qtyB;
+  });
+  
+  if (data.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px;">
+        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
+      </div>
+    `;
+    return;
+  }
+  
+  // Clear container first to prevent duplicates
+  container.innerHTML = '';
+
+  // Shared card builder
+  const buildIngCard = i => {
+    const starIcon = i.is_favorite ? '★' : '☆';
+    const starClass = i.is_favorite ? 'favorited' : '';
+    const safeName = escapeHtml(i.name);
+    let qtyColor = 'var(--success)';
+    if (i.qty === 0) qtyColor = 'var(--danger)';
+    else if (i.reorder_point && i.qty < i.reorder_point) qtyColor = 'var(--warning)';
+    let attributesText = '';
+    if (i.custom_attributes) {
+      try {
+        const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
+        const groupedAttrs = new Map();
+        for (const [key, value] of Object.entries(attrs)) {
+          const lowerKey = key.toLowerCase();
+          if (!groupedAttrs.has(lowerKey)) groupedAttrs.set(lowerKey, []);
+          const capitalizedKey = capitalizeAttributeKey(key);
+          if (!groupedAttrs.get(lowerKey).some(item => item.value === value)) groupedAttrs.get(lowerKey).push({ key: capitalizedKey, value });
+        }
+        const allEntries = [];
+        for (const entries of groupedAttrs.values()) allEntries.push(...entries);
+        const badges = allEntries
+          .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
+          .filter(({ value }) => value && value.trim())
+          .map(({ value }) => `<span class="attr-badge" data-value="${escapeHtml(value)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(value)}</span>`);
+        if (badges.length > 0) attributesText = badges.join(' • ');
+      } catch (e) { console.error('Error parsing attributes:', e); }
+    }
+    const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
+    attributesText = attributesText ? categoryBadge + ' • ' + attributesText : categoryBadge;
+    return `<div class="card-small">
+        <h4>
+          <span class="name" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
+          <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
+        </h4>
+        ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
+        <div style="font-size: 32px; font-weight: 800; color: ${qtyColor}; margin: 12px 0; line-height: 1; text-align: center;">${i.qty}</div>
+        <div class="divider"></div>
+        <div class="card-actions">
+          <span class="edit-link" onclick="openRestockModal('${i.id}')">Restock</span>
+          <span class="edit-link" onclick="openDuplicateModal('${i.id}')">Duplicate</span>
+          <span class="delete-link" onclick="deleteIng('${i.id}')">Delete</span>
+        </div>
+      </div>`;
+  };
+
+  const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
+
+  const favData = data.filter(i => i.is_favorite);
+  const otherData = data.filter(i => !i.is_favorite).slice(0, 10);
+
+  container.innerHTML = `<div style="grid-column: 1/-1; font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px;">Showing ${data.length} ingredients</div>`;
+
+  if (favData.length > 0) {
+    container.innerHTML += sectionLbl('Favorites');
+    favData.forEach(i => { container.innerHTML += buildIngCard(i); });
+    if (otherData.length > 0) {
+      container.innerHTML += sectionLbl('All Ingredients');
+      otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
+    }
+  } else {
+    otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
+  }
+}
+
+function renderList(data) {
+  const tbody = document.getElementById('tableBody');
+  const tableContainer = document.getElementById('listView');
+  const paginationContainer = document.getElementById('paginationContainer');
+  
+  // Update sort header styling
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('asc', 'desc');
+  });
+  if (sortBy) {
+    const sortHeader = document.querySelector(`th.sortable[onclick*="'${sortBy}'"]`);
+    if (sortHeader) {
+      sortHeader.classList.add(sortOrder);
+    }
+  }
+  
+  if (data.length === 0) {
+    tableContainer.style.display = 'none';
+    paginationContainer.style.display = 'none';
+    // Show empty state
+    if (!document.getElementById('emptyStateList')) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.id = 'emptyStateList';
+      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.innerHTML = `
+        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
+      `;
+      tableContainer.parentElement.appendChild(emptyDiv);
+    }
+    return;
+  }
+  
+  // Remove empty state if it exists
+  const emptyState = document.getElementById('emptyStateList');
+  if (emptyState) emptyState.remove();
+  
+  tableContainer.style.display = 'block';
+  paginationContainer.style.display = 'flex';
+  
+  // Pagination logic
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const startIndex = (listCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = data.slice(startIndex, endIndex);
+  
+  tbody.innerHTML = "";
+  paginatedData.forEach((i, index) => {
+    const actualIndex = startIndex + index + 1;
+    const s = getStatus(i.qty, i.min_stock);
+    const starIcon = i.is_favorite ? '★' : '☆';
+    const starClass = i.is_favorite ? 'favorited' : '';
+    const safeName = escapeHtml(i.name);
+    
+    // Parse custom attributes (case-insensitive grouping and alphabetical sort)
+    let attributesHtml = '<span style="color: var(--text-muted); font-style: italic;">None</span>';
+    if (i.custom_attributes) {
+      try {
+        const attrs = typeof i.custom_attributes === 'string' 
+          ? JSON.parse(i.custom_attributes) 
+          : i.custom_attributes;
+        
+        // Group by lowercase key to handle duplicates, collect all unique values, capitalize keys
+        const groupedAttrs = new Map();
+        for (const [key, value] of Object.entries(attrs)) {
+          const lowerKey = key.toLowerCase();
+          if (!value || !value.trim()) continue;
+          if (!groupedAttrs.has(lowerKey)) {
+            groupedAttrs.set(lowerKey, []);
+          }
+          // Only add if value is unique
+          const capitalizedKey = capitalizeAttributeKey(key);
+          if (!groupedAttrs.get(lowerKey).some(item => item.value === value)) {
+            groupedAttrs.get(lowerKey).push({ key: capitalizedKey, value });
+          }
+        }
+        
+        // Flatten and sort all entries alphabetically by key
+        const allEntries = [];
+        for (const entries of groupedAttrs.values()) {
+          allEntries.push(...entries);
+        }
+        const sortedValues = allEntries
+          .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
+          .map(item => item.value);
+        
+        if (sortedValues.length > 0) {
+          attributesHtml = sortedValues.map(v => 
+            `<span class="attr-badge" data-value="${escapeHtml(v)}" style="cursor: pointer; padding: 2px 6px; background: var(--accent)22; color: var(--accent); border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; margin: 2px;">${escapeHtml(v)}</span>`
+          ).join(' • ');
+        }
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+      }
+    }
+    
+    tbody.innerHTML += `
+      <tr>
+        <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
+            <strong style="cursor: pointer;" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
+          </div>
+        </td>
+        <td><span style="color:var(--text-main); font-weight: 500;">${escapeHtml(i.type || 'Production')}</span></td>
+        <td><span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; color:var(--accent); font-weight: 600;">${escapeHtml(i.category)}</span></td>
+        <td>${attributesHtml}</td>
+        <td><div class="stepper"><button onclick="updateQty('${i.id}', -1)">-</button><span>${i.qty}</span><button onclick="updateQty('${i.id}', 1)">+</button></div></td>
+        <td>
+          <span style="color:var(--accent); font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="editIngredient('${i.id}')">EDIT</span>
+          <span style="color:var(--accent); font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="openDuplicateModal('${i.id}')">DUPLICATE</span>
+          <span style="color:var(--danger); font-weight:700; cursor:pointer; font-size: 11px;" onclick="deleteIng('${i.id}')">DELETE</span>
+        </td>
+      </tr>`;
+  });
+  
+  // Render pagination controls
+  renderPagination(totalPages, data.length);
+}
+
+function renderKanban(data) {
+  const kanbanView = document.getElementById('kanbanView');
+  
+  if (data.length === 0) {
+    kanbanView.style.display = 'none';
+    // Show empty state in main content area
+    const kanbanContainer = kanbanView.parentElement;
+    if (kanbanContainer && !document.getElementById('emptyStateKanban')) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.id = 'emptyStateKanban';
+      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.innerHTML = `
+        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
+      `;
+      kanbanContainer.appendChild(emptyDiv);
+    }
+    return;
+  }
+  
+  // Remove empty state if it exists
+  const emptyState = document.getElementById('emptyStateKanban');
+  if (emptyState) emptyState.remove();
+  
+  kanbanView.style.display = 'grid';
+  
+  ['in-stock', 'low-stock', 'out-of-stock'].forEach(id => {
+    const elem = document.getElementById(id);
+    const status = id === 'in-stock' ? 'in' : (id === 'low-stock' ? 'low' : 'out');
+    let filtered = data.filter(i => getStatus(i.qty, i.min_stock).key === status);
+    
+    // Apply filters
+    if (activeCategoryFilter) {
+      filtered = filtered.filter(i => i.category === activeCategoryFilter);
+    }
+    if (activeDeliveryFilter) {
+      filtered = filtered.filter(i => i.delivery === activeDeliveryFilter);
+    }
+    if (Object.keys(activeAttributeFilters).length > 0) {
+      filtered = filtered.filter(i => {
+        if (!i.custom_attributes) return false;
+        try {
+          const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
+          // Check if all active attribute filters match
+          return Object.entries(activeAttributeFilters).every(([key, value]) => {
+            const attrValue = attrs[key];
+            return attrValue && attrValue.toLowerCase() === value.toLowerCase();
+          });
+        } catch (e) {
+          return false;
+        }
+      });
+    }
+    
+    // Update header with count
+    const headerMap = {
+      'in-stock': { id: 'inStockHeader', label: 'IN STOCK' },
+      'low-stock': { id: 'lowStockHeader', label: 'LOW STOCK' },
+      'out-of-stock': { id: 'outStockHeader', label: 'OUT OF STOCK' }
+    };
+    const header = document.getElementById(headerMap[id].id);
+    if (header) {
+      header.textContent = `${headerMap[id].label} (${filtered.length})`;
+    }
+    
+    if (filtered.length === 0) {
+      elem.innerHTML = `<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No items</div>`;
+    } else {
+      elem.innerHTML = "";
+      filtered.forEach(i => {
+        const starIcon = i.is_favorite ? '★' : '☆';
+        const starClass = i.is_favorite ? 'favorited' : '';
+        const safeName = escapeHtml(i.name);
+        
+        // Build attributes text (case-insensitive grouping and alphabetical sort)
+        let attributesText = '';
+        if (i.custom_attributes) {
+          try {
+            const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
+            
+            // Group by lowercase key to handle duplicates, collect all unique values, capitalize keys
+            const groupedAttrs = new Map();
+            for (const [key, value] of Object.entries(attrs)) {
+              const lowerKey = key.toLowerCase();
+              if (!value || !value.trim()) continue;
+              if (!groupedAttrs.has(lowerKey)) {
+                groupedAttrs.set(lowerKey, []);
+              }
+              // Only add if value is unique
+              const capitalizedKey = capitalizeAttributeKey(key);
+              if (!groupedAttrs.get(lowerKey).some(item => item.value === value)) {
+                groupedAttrs.get(lowerKey).push({ key: capitalizedKey, value });
+              }
+            }
+            
+            // Flatten and sort all entries alphabetically by key
+            const allEntries = [];
+            for (const entries of groupedAttrs.values()) {
+              allEntries.push(...entries);
+            }
+            const sortedValues = allEntries
+              .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
+              .map(item => item.value);
+            
+            if (sortedValues.length > 0) {
+              attributesText = sortedValues.map(v => `<span class="attr-badge" data-value="${escapeHtml(v)}" style="cursor: pointer;">${escapeHtml(v)}</span>`).join(' • ');
+            }
+          } catch (e) {
+            console.error('Error parsing attributes:', e);
+          }
+        }
+        
+        const categoryText = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; color: var(--accent); font-weight: 600;">${escapeHtml(i.category)}</span>`;
+        
+        if (attributesText) {
+          attributesText = categoryText + ' • ' + attributesText;
+        } else {
+          attributesText = categoryText;
+        }
+        
+        elem.innerHTML += `<div class="kanban-item" draggable="true" ondragstart="dragStart(event, '${i.id}')" data-id="${i.id}">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span class="star-icon ${starClass}" data-id="${i.id}" style="font-size: 16px; cursor: pointer;">${starIcon}</span>
+            <h5 style="flex: 1; margin: 0; cursor: pointer;" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</h5>
+          </div>
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Qty: ${i.qty}</div>
+          <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${attributesText}</div>
+        </div>`;
+      });
+    }
+  });
+}
+
+async function toggleFavorite(id) {
+  const item = ingredients.find(i => i.id === id || i.id == id);
+  
+  if (!item) return;
+  
+  const newState = !item.is_favorite;
+  
+  // Optimistically update UI
+  item.is_favorite = newState;
+  
+  // Re-render to update favorites section
+  render();
+  
+  // Update database in background
+  try {
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .update({ is_favorite: newState })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    // Revert on error
+    item.is_favorite = !newState;
+    render();
+    showAlert('Failed to update favorite status', 'Error');
+  }
+}
+
+async function updateQty(id, delta) {
+  const item = ingredients.find(i => i.id == id);
+  if (!item) return;
+  
+  const oldQty = item.qty;
+  const newQty = Math.max(0, item.qty + delta);
+  
+  if (oldQty === newQty) return;
+  
+  try {
+    // Update quantity in database
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .update({ quantity: newQty })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Update local state
+    item.qty = newQty;
+    
+    // Create history entry
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        await supabaseClient
+          .from('ingredient_history')
+          .insert([{
+            ingredient_id: id,
+            profile_id: user.id,
+            field_name: 'quantity',
+            old_value: String(oldQty),
+            new_value: String(newQty),
+            reason: 'manual',
+            reference_id: null,
+            reference_text: 'Manual adjustment'
+          }]);
+      }
+    } catch (historyError) {
+      console.error('Error creating history entry:', historyError);
+      // Don't show error to user, history is non-critical
+    }
+    
+    render();
+  } catch (error) {
+    showAlert('Failed to update: ' + error.message, 'Error');
+  }
+}
+
+function renderPagination(totalPages, totalItems) {
+  const container = document.getElementById('paginationContainer');
+  if (!container) return;
+  
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  let html = `<div style="color: var(--text-muted); font-size: 13px;">Page ${listCurrentPage} of ${totalPages} (${totalItems} items)</div>`;
+  
+  html += '<div style="display: flex; gap: 8px;">';
+  
+  // Previous button
+  if (listCurrentPage > 1) {
+    html += `<button onclick="changePage(${listCurrentPage - 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">← Prev</button>`;
+  }
+  
+  // Page numbers
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= listCurrentPage - 1 && i <= listCurrentPage + 1)) {
+      const isActive = i === listCurrentPage;
+      html += `<button onclick="changePage(${i})" style="padding: 8px 12px; background: ${isActive ? 'var(--accent)' : 'var(--bg-inner)'}; border: 1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}; color: ${isActive ? '#fff' : 'var(--text-main)'}; border-radius: 6px; cursor: pointer; font-weight: 600;">${i}</button>`;
+    } else if (i === listCurrentPage - 2 || i === listCurrentPage + 2) {
+      html += '<span style="padding: 8px 4px; color: var(--text-muted);">...</span>';
+    }
+  }
+  
+  // Next button
+  if (listCurrentPage < totalPages) {
+    html += `<button onclick="changePage(${listCurrentPage + 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">Next →</button>`;
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function changePage(page) {
+  listCurrentPage = page;
+  render();
+}
+
+function editIngredient(id) {
+  window.location.href = `ingredient-detail.html?id=${id}&from=${currentView}`;
+}
+
+async function deleteIng(id) { 
+  const confirmed = await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient');
+  if (!confirmed) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      showAlert('Failed to delete: ' + error.message, 'Error');
+    } else {
+      ingredients = ingredients.filter(i => i.id !== id);
+      render();
+    }
+  } catch (err) {
+    showAlert('Error deleting ingredient: ' + err.message, 'Error');
+  }
+}
+
+let currentDuplicateIngredient = null;
+let duplicateAttributes = {};
+
+function openDuplicateModal(id) {
+  const ingredient = ingredients.find(i => i.id === id || i.id == id);
+  if (!ingredient) {
+    showAlert('Ingredient not found', 'Error');
+    return;
+  }
+  
+  currentDuplicateIngredient = ingredient;
+  
+  // Load ingredient data from Supabase to get full details
+  supabaseClient
+    .from('ingredients')
+    .select('*')
+    .eq('id', id)
+    .single()
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Error loading ingredient:', error);
+        return;
+      }
+      
+      // Populate modal fields
+      document.getElementById('dupName').value = `${data.name} (Copy)`;
+      document.getElementById('dupQty').value = data.quantity || 0;
+      document.getElementById('dupSourceUrl').value = data.source_url || '';
+      
+      // Parse and display custom attributes
+      duplicateAttributes = {};
+      if (data.custom_attributes) {
+        try {
+          duplicateAttributes = typeof data.custom_attributes === 'string' 
+            ? JSON.parse(data.custom_attributes) 
+            : data.custom_attributes;
+        } catch (e) {
+          console.error('Error parsing attributes:', e);
+        }
+      }
+      renderDupAttributes();
+      
+      // Show modal
+      document.getElementById('duplicateModal').classList.add('active');
+    });
+}
+
+function closeDuplicateModal() {
+  document.getElementById('duplicateModal').classList.remove('active');
+  currentDuplicateIngredient = null;
+  duplicateAttributes = {};
+}
+
+function renderDupAttributes() {
+  const container = document.getElementById('dupAttributesContainer');
+  container.innerHTML = '';
+  
+  for (const [key, value] of Object.entries(duplicateAttributes)) {
+    const attrDiv = document.createElement('div');
+    attrDiv.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+    attrDiv.innerHTML = `
+      <input type="text" value="${key}" onchange="updateDupAttributeKey(this, '${key}')" placeholder="Key" style="flex: 1; margin-bottom: 0; padding: 10px;" />
+      <input type="text" value="${value}" onchange="updateDupAttributeValue('${key}', this.value)" placeholder="Value" style="flex: 1; margin-bottom: 0; padding: 10px;" />
+      <button onclick="removeDupAttribute('${key}')" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 600;">×</button>
+    `;
+    container.appendChild(attrDiv);
+  }
+}
+
+function addDupAttribute() {
+  const newKey = `Attribute ${Object.keys(duplicateAttributes).length + 1}`;
+  duplicateAttributes[newKey] = '';
+  renderDupAttributes();
+}
+
+function updateDupAttributeKey(input, oldKey) {
+  const newKey = input.value.trim();
+  if (!newKey || newKey === oldKey) return;
+  
+  const value = duplicateAttributes[oldKey];
+  delete duplicateAttributes[oldKey];
+  duplicateAttributes[newKey] = value;
+  renderDupAttributes();
+}
+
+function updateDupAttributeValue(key, value) {
+  duplicateAttributes[key] = value;
+}
+
+function removeDupAttribute(key) {
+  delete duplicateAttributes[key];
+  renderDupAttributes();
+}
+
+async function saveDuplicate(keepOpen = false) {
+  const name = document.getElementById('dupName').value.trim();
+  const qty = parseFloat(document.getElementById('dupQty').value) || 0;
+  const sourceUrl = document.getElementById('dupSourceUrl').value.trim();
+  
+  if (!name) {
+    showAlert('Please enter a name', 'Required');
+    return;
+  }
+  
+  if (!currentDuplicateIngredient) return;
+  
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      showAlert('Please log in to duplicate ingredients', 'Authentication Required');
+      return;
+    }
+    
+    // Load full ingredient data to get unit
+    const { data: fullData, error: loadError } = await supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('id', currentDuplicateIngredient.id)
+      .single();
+    
+    if (loadError) throw loadError;
+    
+    // Create copy of ingredient
+    const { data, error } = await supabaseClient
+      .from('ingredients')
+      .insert({
+        name: name,
+        quantity: qty,
+        unit: fullData.unit,
+        cost_per_unit: fullData.cost_per_unit,
+        category: fullData.category,
+        type: fullData.type,
+        min_stock: fullData.min_stock,
+        estimated_delivery: fullData.estimated_delivery,
+        notes: fullData.notes || '',
+        sku: fullData.sku || '',
+        source_url: sourceUrl || '',
+        custom_attributes: Object.keys(duplicateAttributes).length > 0 ? JSON.stringify(duplicateAttributes) : null,
+        profile_id: user.id
+      })
+      .select();
+    
+    if (error) throw error;
+    
+    // Add to local array
+    const newIng = data[0];
+    ingredients.unshift({
+      id: newIng.id,
+      name: newIng.name,
+      qty: parseFloat(newIng.quantity) || 0,
+      unit: newIng.unit,
+      cost: parseFloat(newIng.cost_per_unit) || 0,
+      category: newIng.category || 'General',
+      type: newIng.type,
+      delivery: 'Pending',
+      sku: newIng.sku || '',
+      notes: newIng.notes || '',
+      is_favorite: false,
+      reorder_point: newIng.reorder_point,
+      max_stock: newIng.max_stock,
+      min_stock: newIng.min_stock || 0,
+      estimated_delivery: newIng.estimated_delivery,
+      custom_attributes: newIng.custom_attributes
+    });
+    
+    render();
+    
+    if (keepOpen) {
+      // Reset form for next duplicate but keep modal open
+      document.getElementById('dupName').value = `${currentDuplicateIngredient.name} (Copy)`;
+      document.getElementById('dupQty').value = currentDuplicateIngredient.qty || 0;
+      document.getElementById('dupName').focus();
+      document.getElementById('dupName').select();
+    } else {
+      closeDuplicateModal();
+    }
+  } catch (error) {
+    console.error('Error duplicating ingredient:', error);
+    showAlert('Failed to duplicate ingredient: ' + error.message, 'Error');
+  }
+}
+
+function addAttributeRow() {
+  const container = document.getElementById('customAttributes');
+  const row = document.createElement('div');
+  row.style.cssText = 'display: flex; gap: 8px;';
+  row.innerHTML = `
+    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+    <input type="text" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+    <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+  `;
+  container.appendChild(row);
+}
+
+// Extract domain from URL for consistent restocking (e.g., https://www.textil-grosshandel.eu)
+function stripUrlParams(url) {
+  if (!url || !url.trim()) return url;
+  try {
+    const urlObj = new URL(url);
+    return urlObj.origin;
+  } catch {
+    // If URL is invalid, just return it as-is and let validation handle it
+    return url;
+  }
+}
+
+async function saveIngredient(event) {
+  if (event) event.preventDefault();
+  
+  // Get current authenticated user
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  
+  if (!user) {
+    showAlert('You must be logged in to add ingredients', 'Authentication Required');
+    return;
+  }
+
+  // Shake-validate all required fields
+  const invalidFields = [];
+  document.querySelectorAll('#ingredientForm [required]').forEach(el => {
+    const val = el.value.trim();
+    const isEmpty = val === '' || (el.tagName === 'SELECT' && val === '');
+    if (isEmpty) invalidFields.push(el);
+  });
+  // Also validate min_stock separately (required but value "" would pass parseFloat as NaN)
+  const minStockEl = document.getElementById('ing_min_stock');
+  if (minStockEl && minStockEl.value.trim() === '') {
+    if (!invalidFields.includes(minStockEl)) invalidFields.push(minStockEl);
+  }
+  if (invalidFields.length > 0) {
+    invalidFields.forEach(el => {
+      el.classList.remove('input-invalid');
+      void el.offsetWidth; // reflow to restart animation
+      el.classList.add('input-invalid');
+      setTimeout(() => el.classList.remove('input-invalid'), 1500);
+    });
+    invalidFields[0].focus();
+    return;
+  }
+
+  // Ensure a profiles row exists — required by the ingredients_profile_id_fkey constraint
+  await supabaseClient
+    .from('profiles')
+    .upsert(
+      { id: user.id, name: user.email.split('@')[0], role: 'user' },
+      { onConflict: 'id', ignoreDuplicates: true }
+    );
+  
+  // Capitalize attribute keys consistently
+  function capitalizeAttributeKey(key) {
+    const commonKeys = {
+      'color': 'Color',
+      'size': 'Size',
+      'brand': 'Brand',
+      'origin': 'Origin',
+      'material': 'Material',
+      'weight': 'Weight',
+      'style': 'Style',
+      'model': 'Model',
+      'type': 'Type',
+      'variant': 'Variant'
+    };
+    
+    const lowerKey = key.toLowerCase();
+    if (commonKeys[lowerKey]) {
+      return commonKeys[lowerKey];
+    }
+    
+    // Capitalize first letter of each word
+    return key.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  }
+  
+  // Collect custom attributes
+  const customAttrs = {};
+  const attrRows = document.querySelectorAll('#customAttributes > div');
+  attrRows.forEach(row => {
+    const inputs = row.querySelectorAll('input:not([type="hidden"])');
+    if (inputs.length >= 2) {
+      const key = capitalizeAttributeKey(inputs[0].value.trim());
+      const value = inputs[1].value.trim();
+      if (key && value) {
+        customAttrs[key] = value;
+      }
+    }
+  });
+  
+  const formData = {
+    profile_id: user.id,
+    name: document.getElementById('ing_name').value,
+    quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
+    unit: document.getElementById('ing_unit').value,
+    cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
+    category: document.getElementById('ing_category').value,
+    type: document.getElementById('ing_type').value,
+    min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
+    estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
+    sku: document.getElementById('ing_sku').value || '',
+    source_url: stripUrlParams(document.getElementById('ing_source_url').value) || '',
+    notes: '',
+    custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null
+  };
+
+  const submitBtn = document.querySelector('#ingredientForm button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('ingredients')
+      .insert([formData]);
+
+    if (error) throw error;
+
+    closeManualModal();
+    // Reload ingredients
+    await loadIngredients();
+  } catch (error) {
+    console.error('Error saving ingredient:', error);
+    showAlert(error.message || 'Failed to save ingredient', 'Error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Ingredient';
+    }
+  }
+}
+
+async function saveIngredientOld() {
+  const name = document.getElementById('ingName').value;
+  const qty = parseFloat(document.getElementById('ingQty').value) || 0;
+  const unit = document.getElementById('ingUnit').value || 'units';
+  const cost = parseFloat(document.getElementById('ingCost').value) || 0;
+  const category = document.getElementById('ingCat').value || 'General';
+  const notes = document.getElementById('ingNotes').value;
+
+  if (!name) {
+    showAlert('Please enter an ingredient name', 'Required');
+    return;
+  }
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      showAlert('You must be logged in', 'Authentication Required');
+      return;
+    }
+
+    const submitBtn = document.querySelector('#modal button[onclick="saveIngredient()"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    // Ensure profile exists
+    const { data: existingProfile } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!existingProfile) {
+      // Create profile if it doesn't exist
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name: user.email.split('@')[0],
+          role: 'user'
+        });
+      
+      if (profileError) throw profileError;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('ingredients')
+      .insert({
+        profile_id: user.id,
+        name: name,
+        quantity: qty,
+        unit: unit,
+        cost_per_unit: cost,
+        category: category,
+        notes: notes
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Add to local array
+    ingredients.unshift({
+      id: data.id,
+      name: data.name,
+      sku: data.barcode || `SKU-${data.id}`,
+      qty: data.quantity || 0,
+      unit: data.unit,
+      cost: data.cost_per_unit,
+      category: data.category,
+      delivery: 'In Warehouse',
+      notes: data.notes || ''
+    });
+
+    render();
+    closeManualModal();
+    showAlert('Ingredient added successfully!', 'Success');
+  } catch (error) {
+    console.error('Error saving ingredient:', error);
+    showAlert('Failed to save ingredient: ' + error.message, 'Error');
+    
+    const submitBtn = document.querySelector('#manualModal button[onclick="saveIngredient()"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Ingredient';
+    }
+  }
+}
+
+function sortTable(column) {
+  if (sortBy === column) {
+    // Toggle sort order if clicking the same column
+    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    // New column, default to ascending
+    sortBy = column;
+    sortOrder = 'asc';
+  }
+  render();
+}
+
+let draggedItemId = null;
+let dropTargetColumn = null;
+
+function dragStart(ev, id) {
+  draggedItemId = id;
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/html', ev.target.innerHTML);
+}
+
+function drop(ev, col) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  
+  if (!draggedItemId) return;
+  
+  const item = ingredients.find(i => i.id === draggedItemId);
+  if (!item) return;
+  
+  dropTargetColumn = col;
+  
+  // Open modal to ask for quantity
+  const modal = document.getElementById('quantityModal');
+  const input = document.getElementById('newQuantityInput');
+  
+  input.value = item.qty;
+  
+  modal.classList.add('active');
+  setTimeout(() => input.focus(), 100);
+}
+
+function adjustModalQuantity(delta) {
+  const input = document.getElementById('newQuantityInput');
+  const currentVal = parseInt(input.value) || 0;
+  const newVal = Math.max(0, currentVal + delta);
+  input.value = newVal;
+}
+
+function closeQuantityModal() {
+  const modal = document.getElementById('quantityModal');
+  modal.classList.remove('active');
+  draggedItemId = null;
+  dropTargetColumn = null;
+}
+
+async function saveQuantityChange() {
+  const input = document.getElementById('newQuantityInput');
+  const newQty = parseInt(input.value);
+  
+  if (isNaN(newQty) || newQty < 0) {
+    showAlert('Please enter a valid quantity', 'Error');
+    return;
+  }
+  
+  const item = ingredients.find(i => i.id === draggedItemId);
+  if (!item) return;
+  
+  const oldQty = item.qty;
+  
+  try {
+    // Update quantity in database
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .update({ quantity: newQty })
+      .eq('id', draggedItemId);
+    
+    if (error) throw error;
+    
+    // Update local state
+    item.qty = newQty;
+    
+    // Create history entry
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        await supabaseClient
+          .from('ingredient_history')
+          .insert([{
+            ingredient_id: draggedItemId,
+            profile_id: user.id,
+            field_name: 'quantity',
+            old_value: String(oldQty),
+            new_value: String(newQty),
+            reason: 'manual',
+            reference_id: null,
+            reference_text: 'Manual adjustment'
+          }]);
+      }
+    } catch (historyError) {
+      console.error('Error creating history entry:', historyError);
+    }
+    
+    closeQuantityModal();
+    render();
+  } catch (error) {
+    showAlert('Failed to update: ' + error.message, 'Error');
+  }
+}
+
+function resetFilters() { 
+  document.getElementById('fName').value = ""; 
+  document.getElementById('fCat').value = ""; 
+  activeAttributeFilters = {};
+  activeCategoryFilter = null;
+  activeStatusFilter = null;
+  activeDeliveryFilter = null;
+  sortBy = null;
+  sortOrder = 'asc';
+  render(); 
+}
+window.onclick = (e) => { 
+  if (e.target.id === 'modal') closeModal();
+  if (e.target.id === 'quantityModal') closeQuantityModal();
+};
+
+// Enter key support for quantity modal
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('newQuantityInput');
+  if (input) {
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        saveQuantityChange();
+      }
+    });
+  }
+});
+
+// Auto-highlight active page in navigation
+(function() {
+  const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+  const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+})();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1">
+          <div class="emoji-face">😡</div>
+          <div class="emoji-label">Hate</div>
+        </div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2">
+          <div class="emoji-face">😟</div>
+          <div class="emoji-label">Bad</div>
+        </div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3">
+          <div class="emoji-face">😐</div>
+          <div class="emoji-label">Okay</div>
+        </div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4">
+          <div class="emoji-face">😊</div>
+          <div class="emoji-label">Good</div>
+        </div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5">
+          <div class="emoji-face">🤩</div>
+          <div class="emoji-label">Love</div>
+        </div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+// Show feedback button for logged in users
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      document.getElementById('feedbackButton').classList.add('show');
+    }
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    showAlert('Please select a rating', 'Required');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  
+  if (!text.trim()) {
+    showAlert('Please provide some feedback', 'Required');
+    return;
+  }
+  
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert({
+            score: feedbackRating,
+            comment: text,
+            user_id: session.user.id
+          })
+          .select();
+        
+        if (error) {
+          console.error('Error saving feedback:', error);
+          showAlert('Failed to submit feedback. Please try again.', 'Error');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+  
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+
+// Escape key listener for modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('methodModal').classList.contains('active')) {
+      closeMethodModal();
+    } else if (document.getElementById('manualModal').classList.contains('active')) {
+      closeManualModal();
+    } else if (document.getElementById('csvModal').classList.contains('active')) {
+      closeCSVModal();
+    } else if (document.getElementById('imageModal').classList.contains('active')) {
+      closeImageModal();
+    } else if (document.getElementById('urlModal').classList.contains('active')) {
+      closeURLModal();
+    } else if (document.getElementById('duplicateModal').classList.contains('active')) {
+      closeDuplicateModal();
+    } else if (document.getElementById('alertModal').classList.contains('active')) {
+      closeAlert();
+    } else if (document.getElementById('confirmModal').classList.contains('active')) {
+      resolveConfirm(false);
+    }
+  }
+});
+
+</script>
+
+<!-- Switch Account Modal -->
+<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
+  <div class="modal-content-custom" style="max-width: 450px;">
+    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
+      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="switch-login-content" class="switch-account-content" style="display: block;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchSignUp(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
+          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.switch-account-tab.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.switch-account-tab:hover {
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchAccountTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
+  document.getElementById('switch-' + tab + '-content').style.display = 'block';
+}
+
+function closeSwitchAccountModal() {
+  document.getElementById('switchAccountModal').classList.remove('active');
+  // Reset forms
+  document.getElementById('switch-login-email').value = '';
+  document.getElementById('switch-login-password').value = '';
+  document.getElementById('switch-signup-email').value = '';
+  document.getElementById('switch-signup-password').value = '';
+  document.getElementById('switch-signup-confirm-password').value = '';
+}
+
+async function handleSwitchGoogleLogin() {
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    alert('Google sign-in failed: ' + error.message);
+  }
+}
+
+async function handleSwitchLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-login-email').value;
+  const password = document.getElementById('switch-login-password').value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Switching...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign in with new credentials
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    // Reload page to refresh UI with new user
+    window.location.reload();
+  } catch (error) {
+    alert('Login failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+}
+
+async function handleSwitchSignUp(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-signup-email').value;
+  const password = document.getElementById('switch-signup-password').value;
+  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign up with new credentials
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    alert('Account created successfully! Please check your email to confirm your account.');
+    
+    // Switch to login tab and set email
+    switchAccountTab('login');
+    document.getElementById('switch-login-email').value = email;
+  } catch (error) {
+    alert('Sign up failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<!-- Restock Modal -->
+<div class="restock-modal" id="restockModal" onclick="if(event.target === this) closeRestockModal()">
+  <div class="restock-modal-content">
+    <button class="restock-modal-close" onclick="closeRestockModal()">×</button>
+    <div style="margin-bottom: 24px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 20px;">Restock from Source</h3>
+      <div class="restock-source-url" id="restockSourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
+        <a href="#" id="restockSourceUrlLink">No source URL</a>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/></svg>
+      </div>
+      <div style="margin-top: 16px;">
+        <button class="btn-restock" onclick="markAsRestocked()" id="markRestockedBtn" style="width: 100%; padding: 12px 32px;">Mark as Restocked</button>
+      </div>
+      <h4 style="font-size: 13px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; color: var(--text-muted);">Ingredients from same source</h4>
+    </div>
+    <div id="restockIngredientsList">
+      <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
+    </div>
+  </div>
+</div>
+
+<!-- No Source URL Modal (Restock) -->
+<div class="modal-overlay" id="restockNoSourceModal" onclick="if(event.target === this) closeRestockNoSourceModal()">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">📍 Source URL Missing</h3>
+    <p style="color: var(--text-main); font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
+      We don't know where to restock this ingredient from yet.
+    </p>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
+      💡 <strong>Tip:</strong> Add a source URL on the ingredient detail page to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
+    </p>
+    <div style="display: flex; gap: 12px;">
+      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="closeRestockNoSourceModal()">Cancel</button>
+      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="goToIngredientDetail()">Open Detail Page</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let _restockCurrentIngredientId = null;
+  let _restockAbortController = null;
+
+  function openRestockModal(id) {
+    const ing = ingredients.find(i => i.id === id);
+    if (!ing) return;
+
+    _restockCurrentIngredientId = id;
+
+    if (!ing.source_url || !ing.source_url.trim()) {
+      document.getElementById('restockNoSourceModal').classList.add('active');
+      return;
+    }
+
+    const display = document.getElementById('restockSourceUrlDisplay');
+    const link = document.getElementById('restockSourceUrlLink');
+    link.textContent = ing.source_url;
+    display.dataset.url = ing.source_url;
+
+    const btn = document.getElementById('markRestockedBtn');
+    btn.textContent = 'Mark as Restocked';
+    btn.disabled = false;
+
+    document.getElementById('restockModal').classList.add('active');
+    loadRestockIngredients(ing.source_url, id);
+  }
+
+  function closeRestockModal() {
+    if (_restockAbortController) {
+      _restockAbortController.abort();
+      _restockAbortController = null;
+    }
+    document.getElementById('restockModal').classList.remove('active');
+    _restockCurrentIngredientId = null;
+  }
+
+  function closeRestockNoSourceModal() {
+    document.getElementById('restockNoSourceModal').classList.remove('active');
+  }
+
+  function goToIngredientDetail() {
+    if (_restockCurrentIngredientId) {
+      window.location.href = `ingredient-detail.html?id=${_restockCurrentIngredientId}`;
+    }
+    closeRestockNoSourceModal();
+  }
+
+  async function loadRestockIngredients(sourceUrl, currentId) {
+    if (_restockAbortController) _restockAbortController.abort();
+    _restockAbortController = new AbortController();
+
+    const container = document.getElementById('restockIngredientsList');
+    container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>';
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const strippedUrl = stripUrlParams(sourceUrl);
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .select('id, name, quantity, unit, min_stock, custom_attributes')
+        .eq('profile_id', user.id)
+        .like('source_url', strippedUrl + '%')
+        .neq('id', currentId)
+        .order('name')
+        .abortSignal(_restockAbortController.signal);
+
+      if (error) {
+        if (error.name === 'AbortError') return;
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No other ingredients from this source</p>';
+        return;
+      }
+
+      container.innerHTML = data.map(ing => {
+        const qty = ing.quantity || 0;
+        const minStock = ing.min_stock || 0;
+        let stockBadge, stockColor;
+        if (qty === 0) {
+          stockBadge = 'Out of Stock';
+          stockColor = 'background: rgba(239,68,68,0.1); color: var(--danger);';
+        } else if (minStock > 0 && qty < minStock) {
+          stockBadge = 'Low on Stock';
+          stockColor = 'background: rgba(245,158,11,0.1); color: var(--warning);';
+        } else {
+          stockBadge = 'In Stock';
+          stockColor = 'background: rgba(16,185,129,0.1); color: var(--success);';
+        }
+
+        let attrs = '';
+        if (ing.custom_attributes) {
+          try {
+            const ca = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+            const vals = Object.values(ca).filter(v => v && String(v).trim());
+            if (vals.length) attrs = vals.join(', ');
+          } catch (e) {}
+        }
+
+        return `<div class="restock-ingredient-item">
+          <div class="restock-ingredient-item-content">
+            <a href="ingredient-detail.html?id=${ing.id}" target="_blank" class="restock-ingredient-item-title">${escapeHtml(ing.name)}</a>
+            ${attrs ? `<div class="restock-ingredient-item-attrs">${escapeHtml(attrs)}</div>` : ''}
+            <div class="restock-ingredient-item-qty">${qty} ${ing.unit || 'units'}</div>
+          </div>
+          <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+        </div>`;
+      }).join('');
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+    }
+  }
+
+  async function markAsRestocked() {
+    if (!_restockCurrentIngredientId) return;
+
+    const btn = document.getElementById('markRestockedBtn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: true })
+        .eq('id', _restockCurrentIngredientId);
+
+      if (error) throw error;
+
+      // Update local cache
+      const ing = ingredients.find(i => i.id === _restockCurrentIngredientId);
+      if (ing) ing.reorder_pending = true;
+
+      closeRestockModal();
+    } catch (err) {
+      console.error('Error marking as restocked:', err);
+      btn.textContent = 'Mark as Restocked';
+      btn.disabled = false;
+      showAlert('Failed to mark as restocked. Please try again.');
+    }
+  }
+</script>
+
+</body>
+</html>

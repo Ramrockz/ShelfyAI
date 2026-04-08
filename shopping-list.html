@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Shopping List</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+
+  .page {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ---------- LEFT: ACTIVE LIST ---------- */
+  .list-container {
+    padding: 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+  .header h1 { margin: 0; font-size: 28px; letter-spacing: -1px; }
+
+  #shopping-list {
+    flex-grow: 1;
+    border: 2px dashed var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.01);
+    transition: all 0.2s ease;
+  }
+
+  #shopping-list.drag-over {
+    background: rgba(59, 130, 246, 0.05);
+    border-color: var(--accent);
+  }
+
+  .list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    animation: slideIn 0.2s ease-out;
+  }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+
+  .item-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  
+  .qty-controls { display: flex; align-items: center; gap: 12px; }
+  .qty-btn {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  /* ---------- RIGHT: SUGGESTIONS ---------- */
+  .sidebar {
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .sidebar h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: 0; }
+
+  .suggested-card {
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 12px;
+    cursor: grab;
+    transition: transform 0.2s;
+  }
+  .suggested-card:hover { transform: translateX(-5px); border-color: var(--accent); }
+  .suggested-card:active { cursor: grabbing; }
+
+  .reason-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .critical { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+  .predicted { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+  .btn-full {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+
+  /* ---------- MODAL SYSTEM ---------- */
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 600px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Notification Bell Styles */
+  .notification-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notification-bell:hover {
+    background: var(--bg-panel);
+  }
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-main);
+  }
+  .notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 10000;
+  }
+  .notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notification-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mark-all-read:hover {
+    text-decoration: underline;
+  }
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  .notification-item:hover {
+    background: var(--bg-inner);
+  }
+  .notification-item.unread {
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+  }
+  .notification-message {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .notification-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .notification-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .notification-actions button:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .notification-actions button.delete-btn {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .notification-actions button.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .notification-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .notification-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 768px) {
+    .container { padding: 24px 16px; }
+    
+    /* Header actions: wrap on mobile */
+    .header-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    /* Modal adjustments */
+    .modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+    
+    /* Shopping list items - better mobile spacing */
+    .shopping-item {
+      padding: 12px;
+    }
+    
+    /* Category groups */
+    .category-group {
+      padding: 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .container { padding: 20px 12px; }
+    
+    .modal-content {
+      padding: 20px 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+  // Load cached user data immediately (inline for instant load before auth.js)
+  (function() {
+    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    
+    if (cachedEmail) {
+      const emailEl = document.getElementById('userMenuEmail');
+      const avatarEl = document.getElementById('userAvatar');
+      
+      if (emailEl) emailEl.textContent = cachedEmail;
+      
+      if (avatarEl) {
+        if (cachedAvatar && cachedAvatar !== 'null') {
+          avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.textContent = '';
+        } else {
+          avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        }
+      }
+    }
+  })();
+</script>
+
+<main class="page">
+  <section class="list-container">
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h1>Shopping List</h1>
+        <button class="btn-full" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--accent);" onclick="downloadPDF()" title="Download PDF">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <button class="btn-full" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-panel); border: 1px solid var(--border);" onclick="window.print()" title="Print">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </button>
+        <p style="color:var(--text-muted); font-size: 14px; margin: 0;">Drag suggestions or search ingredients to add.</p>
+      </div>
+      <div style="padding: 16px 24px; background: var(--bg-inner); border-radius: 12px; border: 1px solid var(--border);">
+        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Estimated Total</div>
+        <div id="total-display" style="font-size: 24px; font-weight: 800; margin-top: 4px; color: var(--accent);">$0.00</div>
+      </div>
+    </div>
+
+    <div id="shopping-list">
+      <div style="text-align: center; padding: 80px 40px; color: var(--text-muted);">
+        <p style="font-size: 18px; margin-bottom: 8px;">Your shopping list is empty</p>
+        <p>Drag items from suggestions or search to add ingredients</p>
+      </div>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="search-wrap">
+        <input type="text" placeholder="Search all ingredients..." style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); padding: 12px 20px; border-radius: 24px; font-size: 14px;">
+    </div>
+
+    <div>
+      <h3>All Ingredients</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin: 8px 0 16px 0;">Sorted by stock level: out of stock first.</p>
+      
+      <div id="suggestions-pool" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: calc(100vh - 250px);">
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
+          Loading ingredients...
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script>
+  // Modal System
+  let confirmResolver = null;
+
+  function showAlert(message, title = 'Alert') {
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertMessage').textContent = message;
+    document.getElementById('alertModal').classList.add('active');
+  }
+
+  function closeAlert() {
+    document.getElementById('alertModal').classList.remove('active');
+  }
+
+  function showConfirm(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+      confirmResolver = resolve;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmModal').classList.add('active');
+    });
+  }
+
+  function resolveConfirm(result) {
+    document.getElementById('confirmModal').classList.remove('active');
+    if (confirmResolver) {
+      confirmResolver(result);
+      confirmResolver = null;
+    }
+  }
+
+  // Download PDF function
+  function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPosition = margin;
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text('Shopping List', margin, yPosition);
+    yPosition += 10;
+    
+    // Date
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(100);
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    doc.text(dateStr, margin, yPosition);
+    yPosition += 15;
+    
+    if (shoppingListItems.length === 0) {
+      doc.setFontSize(12);
+      doc.setTextColor(150);
+      doc.text('Your shopping list is empty', margin, yPosition);
+    } else {
+      // Group items by source
+      const grouped = {};
+      shoppingListItems.forEach(item => {
+        const source = item.source || 'Other';
+        if (!grouped[source]) {
+          grouped[source] = [];
+        }
+        grouped[source].push(item);
+      });
+
+      // Sort sources alphabetically
+      const sortedSources = Object.keys(grouped).sort();
+
+      // Table header
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0);
+      doc.text('Item', margin, yPosition);
+      doc.text('Qty', pageWidth - margin - 60, yPosition);
+      doc.text('Price', pageWidth - margin - 30, yPosition);
+      yPosition += 2;
+      
+      // Line under header
+      doc.setDrawColor(200);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+      
+      // Items grouped by source
+      doc.setFont(undefined, 'normal');
+      sortedSources.forEach(source => {
+        // Source header
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        
+        const sourceName = formatSourceName(source);
+        doc.text(sourceName.toUpperCase(), margin, yPosition);
+        yPosition += 7;
+        
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        
+        grouped[source].forEach(item => {
+          if (yPosition > pageHeight - 30) {
+            doc.addPage();
+            yPosition = margin;
+          }
+          
+          const itemName = item.attributes ? `${item.name} (${item.attributes})` : item.name;
+          const maxWidth = pageWidth - margin - 80;
+          const lines = doc.splitTextToSize(itemName, maxWidth);
+          
+          doc.text(lines, margin, yPosition);
+          doc.text(`${item.quantity} ${item.unit}`, pageWidth - margin - 60, yPosition, { align: 'left' });
+          doc.text(`$${(item.price * item.quantity).toFixed(2)}`, pageWidth - margin - 30, yPosition, { align: 'left' });
+          
+          yPosition += lines.length * 7;
+        });
+        
+        yPosition += 5; // Space between sources
+      });
+      
+      // Total
+      doc.setDrawColor(200);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+      
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(12);
+      const total = shoppingListItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      doc.text('Total:', pageWidth - margin - 60, yPosition);
+      doc.text(`$${total.toFixed(2)}`, pageWidth - margin - 30, yPosition, { align: 'left' });
+    }
+    
+    // Save the PDF
+    doc.save(`shopping-list-${new Date().toISOString().split('T')[0]}.pdf`);
+  }
+
+  const shoppingList = document.getElementById('shopping-list');
+  let allIngredients = [];
+  let shoppingListItems = [];
+
+  // Load ingredients from Supabase
+  async function loadIngredients() {
+    try {
+      const { data: { user } } = await window.supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await window.supabaseClient
+        .from('ingredients')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+
+      allIngredients = data || [];
+      renderSuggestions();
+    } catch (error) {
+      console.error('Error loading ingredients:', error);
+    }
+  }
+
+  // Render smart suggestions (all ingredients ordered by stock status)
+  function renderSuggestions() {
+    const suggestionsPool = document.getElementById('suggestions-pool');
+    
+    if (allIngredients.length === 0) {
+      suggestionsPool.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No ingredients found</div>';
+      return;
+    }
+
+    // Filter out ingredients already in shopping list
+    const shoppingListIds = new Set(shoppingListItems.map(item => item.id));
+    const availableIngredients = allIngredients.filter(ing => !shoppingListIds.has(ing.id));
+    
+    if (availableIngredients.length === 0) {
+      suggestionsPool.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">All ingredients added to list</div>';
+      return;
+    }
+
+    // Sort ingredients: out of stock -> low stock -> in stock
+    const sortedIngredients = availableIngredients.sort((a, b) => {
+      const aStock = a.quantity || 0;
+      const bStock = b.quantity || 0;
+      const aMinStock = a.min_stock || 10;
+      const bMinStock = b.min_stock || 10;
+      
+      // Categorize stock levels
+      const getStockLevel = (qty, minStock) => {
+        if (qty === 0) return 0; // Out of stock
+        if (qty <= minStock) return 1; // Low stock
+        return 2; // In stock
+      };
+      
+      const aLevel = getStockLevel(aStock, aMinStock);
+      const bLevel = getStockLevel(bStock, bMinStock);
+      
+      // Sort by stock level first
+      if (aLevel !== bLevel) {
+        return aLevel - bLevel;
+      }
+      
+      // Within same level, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+
+    suggestionsPool.innerHTML = sortedIngredients.map(ing => {
+      const stockColor = ing.quantity === 0 ? '#ef4444' : ing.quantity <= (ing.min_stock || 10) ? '#f59e0b' : '#10b981';
+      const stockShadow = ing.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : ing.quantity <= (ing.min_stock || 10) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
+      
+      let attributes = '';
+      if (ing.custom_attributes) {
+        try {
+          const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+          attributes = Object.values(parsed).filter(v => v).join(' · ');
+        } catch (e) {}
+      }
+      
+      return `
+        <div class="suggested-card" draggable="true" data-id="${ing.id}" data-name="${ing.name}" data-price="${ing.cost_per_unit || 0}" data-unit="${ing.unit || 'unit'}" data-attributes="${attributes.replace(/"/g, '&quot;')}" data-source="${ing.source_url || 'Other'}">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <div style="font-weight: 700; flex: 1;">${ing.name}</div>
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow};"></div>
+          </div>
+          ${attributes ? `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">${attributes}</div>` : ''}
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Stock: ${ing.quantity} ${ing.unit || 'units'}
+            ${ing.reorder_pending ? '<span style="color: var(--accent);"> • Pending delivery</span>' : ''}
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 8px;">$${(ing.cost_per_unit || 0).toFixed(2)}/${ing.unit || 'unit'}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Add drag event listeners to new cards
+    document.querySelectorAll('.suggested-card').forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('id', card.dataset.id);
+        e.dataTransfer.setData('name', card.dataset.name);
+        e.dataTransfer.setData('price', card.dataset.price);
+        e.dataTransfer.setData('unit', card.dataset.unit);
+        e.dataTransfer.setData('attributes', card.dataset.attributes || '');
+        e.dataTransfer.setData('source', card.dataset.source || 'Other');
+      });
+    });
+  }
+
+  // Search functionality
+  const searchInput = document.querySelector('input[placeholder="Search all ingredients..."]');
+  let searchResults = null;
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (query === '') {
+      // Clear search results and show suggestions
+      if (searchResults) {
+        searchResults.remove();
+        searchResults = null;
+      }
+      renderSuggestions();
+      return;
+    }
+
+    // Filter out ingredients already in shopping list
+    const shoppingListIds = new Set(shoppingListItems.map(item => item.id));
+    const availableIngredients = allIngredients.filter(ing => !shoppingListIds.has(ing.id));
+
+    const filtered = availableIngredients.filter(ing => {
+      // Search in name
+      if (ing.name.toLowerCase().includes(query)) return true;
+      
+      // Search in custom attributes
+      if (ing.custom_attributes) {
+        try {
+          const parsed = typeof ing.custom_attributes === 'string' 
+            ? JSON.parse(ing.custom_attributes) 
+            : ing.custom_attributes;
+          const attributeValues = Object.values(parsed).filter(v => v).join(' ').toLowerCase();
+          if (attributeValues.includes(query)) return true;
+        } catch (e) {}
+      }
+      
+      return false;
+    });
+
+    const suggestionsPool = document.getElementById('suggestions-pool');
+    
+    if (filtered.length === 0) {
+      suggestionsPool.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No ingredients found</div>';
+      return;
+    }
+
+    // Sort filtered results by stock status
+    const sortedFiltered = filtered.sort((a, b) => {
+      const aStock = a.quantity || 0;
+      const bStock = b.quantity || 0;
+      const aMinStock = a.min_stock || 10;
+      const bMinStock = b.min_stock || 10;
+      
+      const getStockLevel = (qty, minStock) => {
+        if (qty === 0) return 0;
+        if (qty <= minStock) return 1;
+        return 2;
+      };
+      
+      const aLevel = getStockLevel(aStock, aMinStock);
+      const bLevel = getStockLevel(bStock, bMinStock);
+      
+      if (aLevel !== bLevel) {
+        return aLevel - bLevel;
+      }
+      
+      return a.name.localeCompare(b.name);
+    });
+
+    suggestionsPool.innerHTML = sortedFiltered.map(ing => {
+      const stockColor = ing.quantity === 0 ? '#ef4444' : ing.quantity <= (ing.min_stock || 10) ? '#f59e0b' : '#10b981';
+      const stockShadow = ing.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : ing.quantity <= (ing.min_stock || 10) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
+      
+      let attributes = '';
+      if (ing.custom_attributes) {
+        try {
+          const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+          attributes = Object.values(parsed).filter(v => v).join(' · ');
+        } catch (e) {}
+      }
+      
+      return `
+        <div class="suggested-card" draggable="true" data-id="${ing.id}" data-name="${ing.name}" data-price="${ing.cost_per_unit || 0}" data-unit="${ing.unit || 'unit'}" data-attributes="${attributes.replace(/"/g, '&quot;')}" data-source="${ing.source_url || 'Other'}">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <div style="font-weight: 700; flex: 1;">${ing.name}</div>
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow};"></div>
+          </div>
+          ${attributes ? `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">${attributes}</div>` : ''}
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Stock: ${ing.quantity} ${ing.unit || 'units'}
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 8px;">$${(ing.cost_per_unit || 0).toFixed(2)}/${ing.unit || 'unit'}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Add drag event listeners
+    document.querySelectorAll('.suggested-card').forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('id', card.dataset.id);
+        e.dataTransfer.setData('name', card.dataset.name);
+        e.dataTransfer.setData('price', card.dataset.price);
+        e.dataTransfer.setData('unit', card.dataset.unit);
+        e.dataTransfer.setData('attributes', card.dataset.attributes || '');
+        e.dataTransfer.setData('source', card.dataset.source || 'Other');
+      });
+    });
+  });
+
+  // Handle Dropzone
+  shoppingList.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    shoppingList.classList.add('drag-over');
+  });
+
+  shoppingList.addEventListener('dragleave', () => {
+    shoppingList.classList.remove('drag-over');
+  });
+
+  shoppingList.addEventListener('drop', (e) => {
+    e.preventDefault();
+    shoppingList.classList.remove('drag-over');
+    
+    const id = e.dataTransfer.getData('id');
+    const name = e.dataTransfer.getData('name');
+    const price = e.dataTransfer.getData('price');
+    const unit = e.dataTransfer.getData('unit');
+    const attributes = e.dataTransfer.getData('attributes');
+    const source = e.dataTransfer.getData('source');
+    
+    if (name) addItemToList(id, name, price, unit, attributes, source);
+  });
+
+  function addItemToList(id, name, price, unit, attributes = '', source = 'Other') {
+    // Check if already in list
+    if (shoppingListItems.find(item => item.id === id)) {
+      return;
+    }
+
+    const item = {
+      id: id,
+      name: name,
+      price: parseFloat(price),
+      unit: unit,
+      quantity: 1,
+      attributes: attributes,
+      source: source
+    };
+
+    shoppingListItems.push(item);
+    renderShoppingList();
+    updateTotal();
+    renderSuggestions();
+  }
+
+  function formatSourceName(source) {
+    if (!source || source === 'Other') return 'Other';
+    
+    try {
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        const url = new URL(source);
+        return url.hostname.replace('www.', '');
+      }
+    } catch (e) {
+      // If URL parsing fails, return as-is
+    }
+    
+    return source;
+  }
+
+  function renderShoppingList() {
+    if (shoppingListItems.length === 0) {
+      shoppingList.innerHTML = `
+        <div style="text-align: center; padding: 80px 40px; color: var(--text-muted);">
+          <p style="font-size: 18px; margin-bottom: 8px;">Your shopping list is empty</p>
+          <p>Drag items from suggestions or search to add ingredients</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Group items by source
+    const grouped = {};
+    shoppingListItems.forEach((item, index) => {
+      const source = item.source || 'Other';
+      if (!grouped[source]) {
+        grouped[source] = [];
+      }
+      grouped[source].push({ ...item, originalIndex: index });
+    });
+
+    // Sort sources alphabetically
+    const sortedSources = Object.keys(grouped).sort();
+
+    shoppingList.innerHTML = sortedSources.map(source => {
+      const items = grouped[source];
+      const displayName = formatSourceName(source);
+      return `
+        <div style="margin-bottom: 32px;">
+          <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: 0 0 16px 0; font-weight: 800;">${displayName}</h3>
+          ${items.map(item => `
+            <div class="list-item" data-index="${item.originalIndex}">
+              <div>
+                <div style="font-weight: 700;">${item.name}</div>
+                ${item.attributes ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 4px;">${item.attributes}</div>` : ''}
+                <div class="item-meta" data-item-meta="${item.originalIndex}">$${item.price.toFixed(2)}/${item.unit} • Subtotal: $${(item.price * item.quantity).toFixed(2)}</div>
+              </div>
+              <div class="qty-controls">
+                <button class="qty-btn" onclick="decreaseQuantity(${item.originalIndex})">-</button>
+                <span data-qty="${item.originalIndex}" style="font-weight: 800; width: 30px; text-align: center;">${item.quantity}</span>
+                <button class="qty-btn" onclick="increaseQuantity(${item.originalIndex})">+</button>
+                <span class="remove-btn" style="color: var(--danger); cursor: pointer; margin-left: 10px; font-size: 24px;" onclick="removeItem(${item.originalIndex})">&times;</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function increaseQuantity(index) {
+    shoppingListItems[index].quantity++;
+    const item = shoppingListItems[index];
+    document.querySelector(`[data-qty="${index}"]`).textContent = item.quantity;
+    document.querySelector(`[data-item-meta="${index}"]`).textContent = `$${item.price.toFixed(2)}/${item.unit} • Subtotal: $${(item.price * item.quantity).toFixed(2)}`;
+    updateTotal();
+  }
+
+  function decreaseQuantity(index) {
+    if (shoppingListItems[index].quantity > 1) {
+      shoppingListItems[index].quantity--;
+      const item = shoppingListItems[index];
+      document.querySelector(`[data-qty="${index}"]`).textContent = item.quantity;
+      document.querySelector(`[data-item-meta="${index}"]`).textContent = `$${item.price.toFixed(2)}/${item.unit} • Subtotal: $${(item.price * item.quantity).toFixed(2)}`;
+      updateTotal();
+    }
+  }
+
+  function removeItem(index) {
+    shoppingListItems.splice(index, 1);
+    renderShoppingList();
+    updateTotal();
+    renderSuggestions();
+  }
+
+  function updateTotal() {
+    const total = shoppingListItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.getElementById('total-display').textContent = `$${total.toFixed(2)}`;
+  }
+
+  // Load ingredients when Supabase is ready
+  if (typeof window.supabaseClient !== 'undefined') {
+    window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        loadIngredients();
+      }
+    });
+  }
+
+  // Auto-highlight active page in navigation
+  (function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  })();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal" onclick="if(event.target === this) closeFeedback()">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1">
+          <div class="emoji-face">😡</div>
+          <div class="emoji-label">Hate</div>
+        </div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2">
+          <div class="emoji-face">😟</div>
+          <div class="emoji-label">Bad</div>
+        </div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3">
+          <div class="emoji-face">😐</div>
+          <div class="emoji-label">Okay</div>
+        </div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4">
+          <div class="emoji-face">😊</div>
+          <div class="emoji-label">Good</div>
+        </div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5">
+          <div class="emoji-face">🤩</div>
+          <div class="emoji-label">Love</div>
+        </div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+// Show feedback button for logged in users
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      document.getElementById('feedbackButton').classList.add('show');
+    }
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    showAlert('Please select a rating');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  
+  if (!text.trim()) {
+    showAlert('Please provide some feedback');
+    return;
+  }
+  
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert({
+            score: feedbackRating,
+            comment: text,
+            user_id: session.user.id
+          })
+          .select();
+        
+        if (error) {
+          console.error('Error saving feedback:', error);
+          showAlert('Failed to submit feedback. Please try again.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+  
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+
+// Escape key listener for modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('alertModal').classList.contains('active')) {
+      closeAlert();
+    } else if (document.getElementById('confirmModal').classList.contains('active')) {
+      resolveConfirm(false);
+    } else if (document.getElementById('feedbackModal').classList.contains('active')) {
+      closeFeedback();
+    }
+  }
+});
+
+// === Notification System ===
+let notificationsCache = [];
+let notificationCheckInterval = null;
+
+async function initializeNotifications() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    document.getElementById('notificationBell').style.display = 'flex';
+    await loadNotifications();
+    notificationCheckInterval = setInterval(loadNotifications, 30000);
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { data: notifications, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) throw error;
+    
+    notificationsCache = notifications || [];
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function renderNotifications() {
+  const listContainer = document.getElementById('notificationList');
+  
+  if (notificationsCache.length === 0) {
+    listContainer.innerHTML = `
+      <div class="notification-empty">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <p>No notifications</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listContainer.innerHTML = notificationsCache.map(notification => `
+    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+         data-notification-id="${notification.id}"
+         onmouseenter="markAsRead('${notification.id}')">
+      <div class="notification-message">${notification.message}</div>
+      <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
+      <div class="notification-actions">
+        ${notification.ingredient_id ? `
+          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
+            Open Ingredient
+          </button>
+          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            Restock
+          </button>
+        ` : ''}
+        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
+          Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateNotificationBadge() {
+  const unreadCount = notificationsCache.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notificationBadge');
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function formatNotificationTime(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diff = Math.floor((now - time) / 1000);
+  
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+  return time.toLocaleDateString();
+}
+
+function toggleNotifications() {
+  const dropdown = document.getElementById('notificationDropdown');
+  dropdown.classList.toggle('active');
+}
+
+document.addEventListener('click', (e) => {
+  const bell = document.getElementById('notificationBell');
+  const dropdown = document.getElementById('notificationDropdown');
+  
+  if (bell && dropdown && !bell.contains(e.target)) {
+    dropdown.classList.remove('active');
+  }
+});
+
+async function markAsRead(notificationId) {
+  const notification = notificationsCache.find(n => n.id === notificationId);
+  if (!notification || notification.is_read) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notification.is_read = true;
+    updateNotificationBadge();
+    
+    const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+    if (item) {
+      item.classList.remove('unread');
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in('id', unreadIds);
+    
+    if (error) throw error;
+    
+    notificationsCache.forEach(n => {
+      if (!n.is_read) n.is_read = true;
+    });
+    
+    renderNotifications();
+    updateNotificationBadge();
+    
+    if (typeof showNotification === 'function') {
+      showNotification('All notifications marked as read', 'success');
+    }
+  } catch (error) {
+    console.error('Error marking all as read:', error);
+  }
+}
+
+async function deleteNotification(notificationId) {
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
+    
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+  }
+}
+
+function openIngredient(ingredientId) {
+  window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+}
+
+async function restockIngredient(ingredientId, notificationId) {
+  // Navigate to ingredient detail page with openReorder parameter
+  window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+}
+
+async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
+  try {
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('ingredient_id', ingredientId)
+      .eq('type', 'ingredient_out_of_stock')
+      .eq('is_read', false);
+    
+    if (checkError) throw checkError;
+    
+    if (existing && existing.length > 0) return;
+    
+    const { error: insertError } = await supabaseClient
+      .from('notifications')
+      .insert([{
+        profile_id: userId,
+        type: 'ingredient_out_of_stock',
+        ingredient_id: ingredientId,
+        message: `Ingredient ${ingredientName} has run out of stock`,
+        is_read: false
+      }]);
+    
+    if (insertError) throw insertError;
+    
+    await loadNotifications();
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+}
+
+async function checkIngredientStock(ingredientId, quantity, ingredientName, userId) {
+  if (quantity <= 0) {
+    await createOutOfStockNotification(ingredientId, ingredientName, userId);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', initializeNotifications);
+}
+</script>
+
+<!-- Alert Modal -->
+<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;" id="alertTitle">Alert</h3>
+    <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <button class="btn btn-primary" style="width: 100%;" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Switch Account Modal -->
+<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
+  <div class="modal-content-custom" style="max-width: 450px;">
+    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
+      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="switch-login-content" class="switch-account-content" style="display: block;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchSignUp(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
+          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.switch-account-tab.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.switch-account-tab:hover {
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchAccountTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
+  document.getElementById('switch-' + tab + '-content').style.display = 'block';
+}
+
+function closeSwitchAccountModal() {
+  document.getElementById('switchAccountModal').classList.remove('active');
+  // Reset forms
+  document.getElementById('switch-login-email').value = '';
+  document.getElementById('switch-login-password').value = '';
+  document.getElementById('switch-signup-email').value = '';
+  document.getElementById('switch-signup-password').value = '';
+  document.getElementById('switch-signup-confirm-password').value = '';
+}
+
+async function handleSwitchGoogleLogin() {
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    alert('Google sign-in failed: ' + error.message);
+  }
+}
+
+async function handleSwitchLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-login-email').value;
+  const password = document.getElementById('switch-login-password').value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Switching...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign in with new credentials
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    // Reload page to refresh UI with new user
+    window.location.reload();
+  } catch (error) {
+    alert('Login failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+}
+
+async function handleSwitchSignUp(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-signup-email').value;
+  const password = document.getElementById('switch-signup-password').value;
+  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign up with new credentials
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    alert('Account created successfully! Please check your email to confirm your account.');
+    
+    // Switch to login tab and set email
+    switchAccountTab('login');
+    document.getElementById('switch-login-email').value = email;
+  } catch (error) {
+    alert('Sign up failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

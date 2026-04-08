@@ -1,0 +1,3451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Orders</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="notifications.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+
+  /* ---------- LAYOUT ---------- */
+  .page { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 65px); }
+  .sidebar { padding: 24px; border-right: 1px solid var(--border); }
+  
+  .cta {
+    background: var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .cta h2 { font-size: 16px; margin: 0 0 8px 0; color: #fff; }
+  .cta p { font-size: 12px; color: rgba(255,255,255,0.9); margin-bottom: 16px; line-height: 1.4; }
+
+  .cta .btn { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .cta .btn-primary { background: #fff; color: var(--accent); }
+  .cta .btn-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .main { padding: 32px 36px; position: relative; }
+  
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+
+  /* VIEW SWITCHER */
+  .view-switcher { display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
+  .view-btn { padding: 6px 14px; font-size: 11px; border-radius: 6px; cursor: pointer; border: none; background: transparent; color: var(--text-muted); transition: 0.2s; }
+  .view-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+
+  /* ---------- CARDS VIEW (CARDS) ---------- */
+  .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card-small { 
+    background: var(--bg-panel); 
+    border: 1px solid var(--border); 
+    border-radius: 16px; 
+    padding: 20px; 
+    transition: all 0.3s ease; 
+    animation: slideIn 0.3s ease;
+    cursor: pointer;
+  }
+  .card-small:hover { 
+    border-color: var(--accent); 
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .card-small .order-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .card-small .order-date { font-size: 12px; color: var(--text-muted); }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .status-processed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+  .status-fulfilled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+  .status-shipped { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+  .status-refunded { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+  /* ---------- LIST VIEW (TABLE) ---------- */
+  .table-container {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th { 
+    padding: 16px 24px; 
+    font-size: 11px; 
+    text-transform: uppercase; 
+    color: var(--text-muted); 
+    border-bottom: 1px solid var(--border); 
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+  }
+  th.sortable:hover { background: var(--bg-inner); }
+  td { padding: 18px 24px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: var(--bg-inner); cursor: pointer; }
+
+  .btn-action {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-inner);
+    color: var(--text-main);
+    transition: 0.2s;
+  }
+  .btn-action:hover { border-color: var(--accent); background: var(--bg-panel); }
+
+  /* ---------- KANBAN VIEW ---------- */
+  .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  .kanban-col {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    min-height: 500px;
+  }
+  .kanban-card {
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: grab;
+    transition: 0.2s;
+  }
+  .kanban-card:active {
+    cursor: grabbing;
+  }
+  .kanban-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .kanban-card h5 { margin: 0 0 8px 0; font-size: 14px; }
+  .kanban-card p { margin: 4px 0; font-size: 12px; color: var(--text-muted); }
+
+  /* ---------- MODALS ---------- */
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 600px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-panel);
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Items list in form */
+  .items-list {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--bg-panel);
+    margin-bottom: 20px;
+  }
+  .item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 40px;
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .item-row:last-child { margin-bottom: 0; }
+  .item-row input {
+    margin-bottom: 0;
+  }
+  .remove-item {
+    cursor: pointer;
+    color: var(--danger);
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* Attributes display */
+  .attributes-display {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .attribute-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Notification Bell Styles */
+  .notification-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notification-bell:hover {
+    background: var(--bg-panel);
+  }
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-main);
+  }
+  .notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 10000;
+  }
+  .notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notification-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mark-all-read:hover {
+    text-decoration: underline;
+  }
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  .notification-item:hover {
+    background: var(--bg-inner);
+  }
+  .notification-item.unread {
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+  }
+  .notification-message {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .notification-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .notification-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .notification-actions button:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .notification-actions button.delete-btn {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .notification-actions button.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .notification-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .notification-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  /* Floating Action Button (hidden by default, shown on mobile) */
+  .fab {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+    cursor: pointer;
+    z-index: 999;
+    transition: all 0.3s ease;
+  }
+  
+  .fab:active {
+    transform: scale(0.95);
+  }
+  
+  .fab::before {
+    content: '+';
+    color: white;
+    font-size: 32px;
+    font-weight: 300;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ---------- METHOD CARD (for order creation modal) ---------- */
+  .method-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .method-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2);
+  }
+  .method-card img {
+    filter: brightness(0) saturate(100%);
+  }
+  [data-theme="dark"] .method-card img {
+    filter: brightness(0) invert(1);
+  }
+
+  /* Loader animation for AI processing */
+  .loader-container { display:flex; align-items:center; justify-content:center; padding:48px 0; }
+  .loader { display:flex; gap:6px; align-items:flex-end; height:40px; }
+  .loader__bar { width:6px; border-radius:4px; background:var(--accent); animation:loader-bar 1.2s ease-in-out infinite; }
+  .loader__bar:nth-child(1){animation-delay:0s;}
+  .loader__bar:nth-child(2){animation-delay:.1s;}
+  .loader__bar:nth-child(3){animation-delay:.2s;}
+  .loader__bar:nth-child(4){animation-delay:.3s;}
+  .loader__bar:nth-child(5){animation-delay:.4s;}
+  .loader__ball { width:10px; height:10px; border-radius:50%; background:var(--accent); animation:loader-ball 1.2s ease-in-out infinite; align-self:center; }
+  @keyframes loader-bar { 0%,100%{height:10px}50%{height:36px} }
+  @keyframes loader-ball { 0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)} }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ---------- RECIPE PICKER MODAL ---------- */
+  .recipe-picker-modal .modal-content {
+    max-width: 880px !important;
+    width: calc(100% - 32px) !important;
+    height: auto !important;
+    max-height: 88vh !important;
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  .recipe-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .recipe-picker-search {
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .recipe-picker-search input {
+    width: 100%;
+    padding: 12px 42px 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+  .recipe-picker-search input:focus { border-color: var(--accent); }
+  .recipe-picker-search .search-clear {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: var(--text-muted);
+    color: var(--bg-main);
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+  .recipe-picker-search .search-clear:hover { opacity: 1; }
+  .recipe-picker-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 28px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+  .recipe-picker-body::-webkit-scrollbar { width: 6px; }
+  .recipe-picker-body::-webkit-scrollbar-track { background: transparent; }
+  .recipe-picker-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  .recipe-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0 0 12px 0;
+  }
+  .recipe-picker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .recipe-pick-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+  }
+  .recipe-pick-card:hover { border-color: var(--accent); }
+  .recipe-pick-card.selected { border-color: #06b6d4; background: rgba(6,182,212,0.07); }
+  .recipe-pick-card .card-name { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; margin: 0; padding-right: 0; }
+  .recipe-pick-card .card-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
+  .recipe-pick-card .card-status { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block; flex-shrink: 0; }
+  .picker-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  .picker-dot.green  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+  .picker-dot.orange { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+  .picker-dot.red    { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+  /* Step 2 shrinks to content, no blank space */
+  #manualStep2 { height: auto !important; }
+  /* Inventory toggle switch */
+  .inv-toggle { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+  .inv-toggle input { opacity:0; width:0; height:0; position:absolute; }
+  .inv-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--border); border-radius:24px; transition:.2s; }
+  .inv-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,0.18); }
+  .inv-toggle input:checked + .inv-slider { background:var(--accent); }
+  .inv-toggle input:checked + .inv-slider:before { transform:translateX(20px); }
+  .recipe-pick-card .fav-btn {
+    font-size: 16px; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
+    color: var(--text-muted); opacity: 0.5; transition: opacity 0.2s, color 0.2s, transform 0.2s;
+  }
+  .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
+  .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
+  .recipe-pick-card.cant-build { opacity: 0.6; cursor: pointer; }
+  .added-recipes-section { margin-bottom: 8px; min-width: 0; overflow: hidden; }
+  .added-recipe-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    background: rgba(6,182,212,0.07);
+    border: 2px solid #06b6d4;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .added-recipe-row .ar-name { flex: 1; font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; word-break: normal !important; overflow-wrap: normal !important; }
+  .added-recipe-row .ar-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .added-recipe-row .ar-qty-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 1px solid rgba(6,182,212,0.4); background: var(--bg-main);
+    cursor: pointer; font-size: 15px; line-height: 1; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: var(--text-main);
+  }
+  .added-recipe-row .ar-qty { min-width: 18px; text-align: center; font-weight: 700; font-size: 14px; }
+  .added-recipe-row .ar-remove { opacity: 0.35; font-size: 20px; cursor: pointer; background: none; border: none; color: var(--text-main); padding: 0; line-height: 1; transition: opacity 0.2s; flex-shrink: 0; }
+  .added-recipe-row .ar-remove:hover { opacity: 1; }
+  .recipe-picker-footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 28px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+    20%, 40%, 60%, 80% { transform: translateX(8px); }
+  }
+  .input-invalid {
+    border-color: var(--danger, #ef4444) !important;
+    animation: shake 0.45s;
+  }
+  #manualStep2 {
+    padding: 0 !important;
+    overflow: hidden !important;
+    flex-direction: column;
+    max-height: 88vh;
+  }
+  .recipe-pills-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .recipe-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.3);
+    border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .recipe-pill .pill-qty-btn {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid rgba(6,182,212,0.4); background: var(--bg-panel);
+    cursor: pointer; font-size: 13px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; color: var(--text-main);
+  }
+  .recipe-pill .pill-remove {
+    opacity: 0.45; transition: opacity 0.2s; font-size: 15px;
+    cursor: pointer; background: none; border: none; padding: 0; color: var(--text-main);
+  }
+  .recipe-pill .pill-remove:hover { opacity: 1; }
+  @media (max-width: 768px) {
+    .recipe-picker-modal .modal-content { height: auto !important; max-height: 95vh !important; }
+    .recipe-picker-header, .recipe-picker-search, .recipe-picker-body, .recipe-picker-footer { padding-left: 16px; padding-right: 16px; }
+    .recipe-picker-search .search-icon { left: 32px; }
+    .recipe-picker-body { flex: 1; min-height: 0; }
+  }
+
+  /* ── Flatpickr theme overrides ──────────────────────────────── */
+  .flatpickr-calendar { background: var(--bg-panel) !important; border: 1px solid var(--border) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important; font-family: inherit !important; }
+  .flatpickr-months .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday { background: var(--bg-panel) !important; color: var(--text-muted) !important; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; background: transparent !important; }
+  .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
+  .flatpickr-day:hover { background: var(--bg-main) !important; border-color: var(--accent) !important; }
+  .flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+  .flatpickr-day.today { border-color: var(--accent) !important; }
+  .flatpickr-day.today:hover { background: rgba(6,182,212,0.12) !important; }
+  .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: var(--text-muted) !important; opacity: 0.35; }
+  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--text-main) !important; }
+  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
+  .flatpickr-input { cursor: pointer !important; }
+
+  /* ── Order Success Screen ───────────────────────────────── */
+  #manualStep3 { max-width: 520px; }
+  .order-success-icon { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 38px; color: #fff; line-height: 1; animation: successPop 0.55s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+  @keyframes successPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .order-success-title { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
+  .order-success-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .order-success-badge.inv-updated { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+  .inv-warning-tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+  .inv-warning-tag.oos { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+  .inv-warning-tag.low { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+  .inv-changes-list { text-align: left; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 4px; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+  .inv-change-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--border); animation: fadeSlideIn 0.3s ease both; }
+  .inv-change-row:last-child { border-bottom: none; }
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+  .inv-change-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .inv-change-dot.oos { background: #ef4444; } .inv-change-dot.low { background: #f59e0b; } .inv-change-dot.ok { background: #10b981; }
+  .inv-change-name { flex: 1; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; cursor: pointer; color: inherit; text-decoration: none; }
+  .inv-change-name:hover { color: var(--accent); text-decoration: underline; }
+  .inv-change-qty { font-size: 12px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .inv-change-qty .old { color: var(--text-muted); text-decoration: line-through; } .inv-change-qty .arrow { color: var(--text-muted); font-size: 10px; }
+  .inv-change-qty .new-ok { font-weight: 700; color: #10b981; } .inv-change-qty .new-low { font-weight: 700; color: #f59e0b; } .inv-change-qty .new-oos { font-weight: 700; color: #ef4444; }
+  .inv-change-pill { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+  .inv-change-pill.oos { background: rgba(239,68,68,0.1); color: #ef4444; } .inv-change-pill.low { background: rgba(245,158,11,0.1); color: #f59e0b; }
+  .recipe-oos-toast { position: fixed; z-index: 99999; background: #1e293b; color: #f87171; font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 8px; border: 1px solid rgba(248,113,113,0.35); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.28); animation: oosToastIn 0.18s ease both; }
+  @keyframes oosToastIn { from { opacity: 0; transform: translateY(6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .recipe-oos-toast.hiding { animation: oosToastOut 0.22s ease forwards; }
+  @keyframes oosToastOut { to { opacity: 0; transform: translateY(-4px) scale(0.94); } }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 768px) {
+    /* Hide sidebar on mobile */
+    .sidebar {
+      display: none;
+    }
+
+    /* Hide chat and feedback widgets on mobile */
+    #chat-widget,
+    #feedback-widget {
+      display: none !important;
+    }
+
+    /* Single column layout */
+    .page {
+      grid-template-columns: 1fr;
+    }
+
+    /* Reduce main padding */
+    .main {
+      padding: 16px;
+    }
+
+    /* Hide view switcher on mobile */
+    .view-switcher {
+      display: none !important;
+    }
+
+    /* Hide List and Kanban views on mobile */
+    #listView,
+    #kanbanView {
+      display: none !important;
+    }
+
+    /* Force Cards view */
+    #recentView {
+      display: grid !important;
+    }
+
+    /* Show FAB button on mobile */
+    .fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Single column card grid */
+    .recent-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    /* Card adjustments */
+    .card-small {
+      padding: 20px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .card-small h4 {
+      font-size: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Mobile search input */
+    #mobileSearchInput {
+      display: block !important;
+    }
+    
+    #searchInput {
+      display: none !important;
+    }
+
+    /* Top bar mobile layout */
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0 !important;
+      margin-bottom: 16px;
+    }
+    
+    .container { padding: 24px 16px; }
+    
+    /* Header actions: wrap on mobile */
+    .header-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    /* Modal adjustments */
+    .modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+    
+    /* Table container - horizontal scroll */
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+      min-width: 600px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .container { padding: 20px 12px; }
+    
+    .modal-content {
+      padding: 20px 16px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+  // Load cached user data immediately (inline for instant load before auth.js)
+  (function() {
+    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    
+    if (cachedEmail) {
+      const emailEl = document.getElementById('userMenuEmail');
+      const avatarEl = document.getElementById('userAvatar');
+      
+      if (emailEl) emailEl.textContent = cachedEmail;
+      
+      if (avatarEl) {
+        if (cachedAvatar && cachedAvatar !== 'null') {
+          avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.textContent = '';
+        } else {
+          avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        }
+      }
+    }
+  })();
+</script>
+
+<div class="page">
+  <aside class="sidebar" style="visibility: hidden;">
+    <div class="cta">
+      <h2 style="display: flex; align-items: center; gap: 12px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/9422/9422482.png" alt="order icon" style="width: 32px; height: 32px; filter: brightness(0) invert(1);" />
+        Create Order
+      </h2>
+      <p>Track sales orders, customer purchases, and revenue from all your sales channels.</p>
+      <button class="btn btn-primary" onclick="openAddOrderModal()">+ New Order</button>
+    </div>
+  </aside>
+
+  <main class="main" style="visibility: hidden;">
+    <!-- Mobile Search Bar (visible only on mobile) -->
+    <input type="text" id="mobileSearchInput" placeholder="Search orders..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="render()" />
+    
+    <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
+      <div style="display: flex; align-items: center; gap: 24px;">
+        <div class="view-switcher">
+          <button class="view-btn active" id="recentBtn" onclick="switchView('recent')">Cards</button>
+          <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
+          <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">Kanban</button>
+        </div>
+      </div>
+      <input type="text" id="searchInput" placeholder="Search orders..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+    </div>
+
+    <div id="recentView" class="recent-grid"></div>
+
+    <div id="listView" class="table-container" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="sortable" onclick="sortTable('date')">Date</th>
+            <th class="sortable" onclick="sortTable('customer')">Customer</th>
+            <th class="sortable" onclick="sortTable('source')">Source</th>
+            <th class="sortable" onclick="sortTable('revenue')">Revenue</th>
+            <th>Order Ref</th>
+            <th>Tracking</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="kanbanView" class="kanban-board" style="display:none">
+      <div class="kanban-col">
+        <div style="font-size:10px; color:#3b82f6; font-weight:800; margin-bottom:12px;">PROCESSED</div>
+        <div id="processed"></div>
+      </div>
+      <div class="kanban-col">
+        <div style="font-size:10px; color:#f59e0b; font-weight:800; margin-bottom:12px;">FULFILLED</div>
+        <div id="fulfilled"></div>
+      </div>
+      <div class="kanban-col">
+        <div style="font-size:10px; color:#10b981; font-weight:800; margin-bottom:12px;">SHIPPED</div>
+        <div id="shipped"></div>
+      </div>
+      <div class="kanban-col">
+        <div style="font-size:10px; color:#ef4444; font-weight:800; margin-bottom:12px;">REFUNDED</div>
+        <div id="refunded"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Action Button (visible only on mobile) -->
+  <button class="fab" onclick="openAddOrderModal()" aria-label="Create order"></button>
+</div>
+
+<!-- Add/Edit Order Modal -->
+<div class="modal-overlay" id="orderModal" onclick="if(event.target === this) closeOrderModal()">
+  <div class="modal-content" style="max-width: 700px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Order</h3>
+    
+    <form id="orderForm" onsubmit="saveOrder(event)">
+      <input type="hidden" id="order_id">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="order_customer">Customer Name *</label>
+          <input type="text" id="order_customer" required placeholder="Enter customer name">
+        </div>
+
+        <div class="form-group">
+          <label for="order_source">Sales Channel *</label>
+          <select id="order_source" required>
+            <option value="">Select source</option>
+            <option value="Website">Website</option>
+            <option value="Etsy">Etsy</option>
+            <option value="Amazon">Amazon</option>
+            <option value="In-Store">In-Store</option>
+            <option value="Manual Upload">Manual Upload</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="order_date">Order Date *</label>
+          <input type="date" id="order_date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="order_reference">Order Reference</label>
+          <input type="text" id="order_reference" placeholder="Order ID / Transaction #">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Order Items *</label>
+        <div class="items-list" id="itemsList">
+          <div class="item-row">
+            <input type="text" placeholder="Item name" class="item-name" required>
+            <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
+            <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
+            <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">×</span>
+          </div>
+        </div>
+        <button type="button" class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); margin-top: 12px;" onclick="addItemRow()">+ Add Item</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="order_revenue">Total Revenue *</label>
+          <input type="number" id="order_revenue" step="0.01" required placeholder="0.00" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="order_total_quantity">Total Quantity</label>
+          <input type="number" id="order_total_quantity" readonly placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="order_attributes">Product Attributes (JSON)</label>
+        <textarea id="order_attributes" placeholder='{"color": "Blue", "size": "M"}'></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="order_notes">Notes</label>
+        <textarea id="order_notes" placeholder="Additional order details..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Order</button>
+        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0;">Delete Order</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">Are you sure you want to delete this order? This action cannot be undone.</p>
+    
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
+      <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let orders = [];
+let currentView = 'recent';
+let sortColumn = 'date';
+let sortDirection = 'desc';
+let orderToDelete = null;
+let editingOrderId = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadOrders();
+  
+  // On mobile, force Cards view
+  if (window.innerWidth <= 768) {
+    switchView('recent');
+  } else {
+    render();
+  }
+  
+  // Calculate totals as items change
+  document.getElementById('itemsList').addEventListener('input', calculateTotals);
+  
+  // Show the page
+  document.querySelector('.sidebar').style.visibility = 'visible';
+  document.querySelector('.main').style.visibility = 'visible';
+  document.documentElement.style.visibility = 'visible';
+});
+
+async function loadOrders() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabaseClient
+      .from('sales')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('sale_date', { ascending: false });
+
+    if (error) throw error;
+    
+    orders = data || [];
+    console.log('Loaded orders:', orders);
+  } catch (error) {
+    console.error('Error loading orders:', error);
+    alert('Failed to load orders: ' + error.message);
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  
+  document.getElementById('recentBtn').classList.toggle('active', view === 'recent');
+  document.getElementById('listBtn').classList.toggle('active', view === 'list');
+  document.getElementById('kanbanBtn').classList.toggle('active', view === 'kanban');
+  
+  document.getElementById('recentView').style.display = view === 'recent' ? 'grid' : 'none';
+  document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('kanbanView').style.display = view === 'kanban' ? 'grid' : 'none';
+  
+  render();
+}
+
+function render() {
+  const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearchInput')?.value || '').toLowerCase();
+  
+  let filtered = orders.filter(order => {
+    const searchString = `${order.customer || ''} ${order.source || ''} ${order.order_reference || ''} ${order.notes || ''}`.toLowerCase();
+    return searchString.includes(searchTerm);
+  });
+
+  if (currentView === 'recent') renderRecent(filtered);
+  else if (currentView === 'list') renderList(filtered);
+  else if (currentView === 'kanban') renderKanban(filtered);
+}
+
+function renderRecent(filtered) {
+  const container = document.getElementById('recentView');
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No orders yet</p><p style="margin-bottom: 20px;">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ New Order</button></div>';
+    return;
+  }
+  
+  container.innerHTML = filtered.map(order => {
+    const date = new Date(order.sale_date).toLocaleDateString();
+    const status = order.status || 'processed';
+    const trackingHTML = order.tracking_number ? 
+      `<div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; pointer-events: none;">📦 ${order.tracking_number}</div>` : '';
+    
+    return `
+      <div class="card-small" onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}" style="cursor: pointer;">
+        <h4>${order.customer || 'Unknown Customer'}</h4>
+        <div class="order-info">
+          <span>Source: ${order.source || 'N/A'}</span>
+          <span class="status-badge status-${status}">${status}</span>
+        </div>
+        <div class="order-info">
+          <span><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></span>
+          <span>${order.order_reference || ''}</span>
+        </div>
+        ${trackingHTML}
+        <div class="order-date">${date}</div>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          ${status === 'processed' ? `
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e; flex: 1;">Fulfilled</button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; flex: 1;">Shipped</button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444; flex: 1;">Refunded</button>
+          ` : status === 'fulfilled' ? `
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; width: 100%;">Shipped</button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderList(filtered) {
+  const tbody = document.getElementById('tableBody');
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No orders yet</p><p style="margin-bottom: 20px;">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ New Order</button></td></tr>';
+    return;
+  }
+  
+  // Sort
+  filtered.sort((a, b) => {
+    let valA, valB;
+    
+    if (sortColumn === 'date') {
+      valA = new Date(a.sale_date);
+      valB = new Date(b.sale_date);
+    } else if (sortColumn === 'customer') {
+      valA = (a.customer || '').toLowerCase();
+      valB = (b.customer || '').toLowerCase();
+    } else if (sortColumn === 'source') {
+      valA = (a.source || '').toLowerCase();
+      valB = (b.source || '').toLowerCase();
+    } else if (sortColumn === 'quantity') {
+      valA = a.total_quantity || 0;
+      valB = b.total_quantity || 0;
+    } else if (sortColumn === 'revenue') {
+      valA = parseFloat(a.revenue || 0);
+      valB = parseFloat(b.revenue || 0);
+    }
+    
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  tbody.innerHTML = filtered.map((order, idx) => {
+    const date = new Date(order.sale_date).toLocaleDateString();
+    const status = order.status || 'processed';
+    const statusColors = {
+      'processed': { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
+      'fulfilled': { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' },
+      'shipped': { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981' },
+      'refunded': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }
+    };
+    const statusStyle = statusColors[status] || statusColors.processed;
+    const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
+    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">📦 ${order.tracking_number}</span>` : '-';
+    
+    // Show buttons based on status
+    let actionButtons = '';
+    if (status === 'processed') {
+      actionButtons = `
+        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e;">Fulfilled</button>
+        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7;">Shipped</button>
+        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444;">Refunded</button>
+      `;
+    } else if (status === 'fulfilled') {
+      actionButtons = `<button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7;">Shipped</button>`;
+    }
+    
+    return `
+      <tr onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}" style="cursor: pointer;">
+        <td>${idx + 1}</td>
+        <td>${date}</td>
+        <td>${order.customer || 'Unknown'}</td>
+        <td>${order.source || 'N/A'}</td>
+        <td><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></td>
+        <td>${order.order_reference || '-'}</td>
+        <td>${trackingDisplay}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            ${actionButtons}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderKanban(filtered) {
+  const processed = document.getElementById('processed');
+  const fulfilled = document.getElementById('fulfilled');
+  const shipped = document.getElementById('shipped');
+  const refunded = document.getElementById('refunded');
+  
+  processed.innerHTML = '';
+  fulfilled.innerHTML = '';
+  shipped.innerHTML = '';
+  refunded.innerHTML = '';
+  
+  filtered.forEach(order => {
+    const status = order.status || 'processed';
+    const date = new Date(order.sale_date).toLocaleDateString();
+    const trackingInfo = order.tracking_number ? `<p style="font-size: 10px; color: var(--accent); margin-top: 4px;">📦 ${order.tracking_number}</p>` : '';
+    const card = `
+      <div class="kanban-card" draggable="true" data-order-id="${order.id}" 
+           ondragstart="handleDragStart(event)" 
+           ondragend="event.currentTarget.style.opacity = '1'"
+           onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}">
+        <h5>${order.customer || 'Unknown'}</h5>
+        <p><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></p>
+        <p>Source: ${order.source || 'N/A'}</p>
+        <p>Qty: ${order.total_quantity || 0}</p>
+        <p style="font-size: 11px; margin-top: 8px;">${date}</p>
+        ${trackingInfo}
+      </div>
+    `;
+    
+    if (status === 'processed') processed.innerHTML += card;
+    else if (status === 'fulfilled') fulfilled.innerHTML += card;
+    else if (status === 'shipped') shipped.innerHTML += card;
+    else if (status === 'refunded') refunded.innerHTML += card;
+  });
+  
+  // Setup drop zones
+  setupDropZones();
+}
+
+function getOrderStatus(order) {
+  // Return the status from the database, default to 'processed'
+  return order.status || 'processed';
+}
+
+// Drag and drop functionality for kanban
+let draggedOrderId = null;
+
+function handleDragStart(event) {
+  draggedOrderId = event.currentTarget.getAttribute('data-order-id');
+  event.currentTarget.style.opacity = '0.5';
+}
+
+function setupDropZones() {
+  const zones = ['processed', 'fulfilled', 'shipped', 'refunded'];
+  
+  zones.forEach(zoneId => {
+    const zone = document.getElementById(zoneId);
+    if (!zone) return;
+    
+    zone.ondragover = (e) => {
+      e.preventDefault();
+      zone.style.background = 'rgba(6, 182, 212, 0.1)';
+    };
+    
+    zone.ondragleave = (e) => {
+      zone.style.background = '';
+    };
+    
+    zone.ondrop = async (e) => {
+      e.preventDefault();
+      zone.style.background = '';
+      
+      if (!draggedOrderId) return;
+      
+      const newStatus = zoneId;
+      
+      try {
+        const { error } = await supabase
+          .from('sales')
+          .update({ status: newStatus })
+          .eq('id', draggedOrderId);
+        
+        if (error) throw error;
+        
+        // Update local data
+        const order = orders.find(o => o.id === draggedOrderId);
+        if (order) order.status = newStatus;
+        
+        // Re-render
+        render();
+        
+        showNotification(`Order moved to ${newStatus}`, 'success');
+      } catch (err) {
+        console.error('Error updating order status:', err);
+        showNotification('Failed to update order status', 'error');
+      }
+      
+      draggedOrderId = null;
+    };
+  });
+}
+
+function sortTable(column) {
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = column;
+    sortDirection = 'asc';
+  }
+  render();
+}
+
+function openAddOrderModal() {
+  // Open method selection modal (manual search or AI upload)
+  openOrderMethodModal();
+}
+
+// Legacy: direct CRUD modal for editing — called by editOrder()
+function openEditOrderModal() {
+  editingOrderId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Order';
+  document.getElementById('orderForm').reset();
+  document.getElementById('order_id').value = '';
+  document.getElementById('order_date').valueAsDate = new Date();
+  document.getElementById('itemsList').innerHTML = `
+    <div class="item-row">
+      <input type="text" placeholder="Item name" class="item-name" required>
+      <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
+      <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
+      <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">×</span>
+    </div>
+  `;
+  calculateTotals();
+  document.getElementById('orderModal').classList.add('active');
+}
+
+function closeOrderModal() {
+  document.getElementById('orderModal').classList.remove('active');
+}
+
+function editOrder(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+  
+  editingOrderId = orderId;
+  document.getElementById('modalTitle').textContent = 'Edit Order';
+  document.getElementById('order_id').value = order.id;
+  document.getElementById('order_customer').value = order.customer || '';
+  document.getElementById('order_source').value = order.source || '';
+  document.getElementById('order_date').value = order.sale_date ? order.sale_date.split('T')[0] : '';
+  document.getElementById('order_reference').value = order.order_reference || '';
+  document.getElementById('order_revenue').value = order.revenue || 0;
+  document.getElementById('order_total_quantity').value = order.total_quantity || 0;
+  document.getElementById('order_attributes').value = order.custom_attributes ? JSON.stringify(order.custom_attributes, null, 2) : '';
+  document.getElementById('order_notes').value = order.notes || '';
+  
+  // Populate items
+  const itemsList = document.getElementById('itemsList');
+  itemsList.innerHTML = '';
+  
+  const items = Array.isArray(order.items) ? order.items : [];
+  if (items.length === 0) {
+    items.push({ name: '', quantity: 1, price: 0 });
+  }
+  
+  items.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Item name" class="item-name" value="${item.name || ''}" required>
+      <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="${item.quantity || 1}" required>
+      <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="${item.price || 0}" required>
+      <span class="remove-item" onclick="removeItem(this)" style="visibility: ${items.length > 1 ? 'visible' : 'hidden'};">×</span>
+    `;
+    itemsList.appendChild(row);
+  });
+  
+  document.getElementById('orderModal').classList.add('active');
+}
+
+function addItemRow() {
+  const itemsList = document.getElementById('itemsList');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Item name" class="item-name" required>
+    <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
+    <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
+    <span class="remove-item" onclick="removeItem(this)">×</span>
+  `;
+  itemsList.appendChild(row);
+  updateRemoveButtons();
+}
+
+function removeItem(element) {
+  const itemsList = document.getElementById('itemsList');
+  const rows = itemsList.querySelectorAll('.item-row');
+  
+  if (rows.length > 1) {
+    element.parentElement.remove();
+    updateRemoveButtons();
+    calculateTotals();
+  }
+}
+
+function updateRemoveButtons() {
+  const itemsList = document.getElementById('itemsList');
+  const rows = itemsList.querySelectorAll('.item-row');
+  const removeButtons = itemsList.querySelectorAll('.remove-item');
+  
+  removeButtons.forEach((btn, idx) => {
+    btn.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+  });
+}
+
+function calculateTotals() {
+  const rows = document.querySelectorAll('.item-row');
+  let totalRevenue = 0;
+  let totalQuantity = 0;
+  
+  rows.forEach(row => {
+    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+    
+    totalRevenue += qty * price;
+    totalQuantity += qty;
+  });
+  
+  document.getElementById('order_revenue').value = totalRevenue.toFixed(2);
+  document.getElementById('order_total_quantity').value = totalQuantity;
+}
+
+async function saveOrder(event) {
+  event.preventDefault();
+  
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    
+    // Collect items
+    const rows = document.querySelectorAll('.item-row');
+    const items = [];
+    rows.forEach(row => {
+      const name = row.querySelector('.item-name').value;
+      const quantity = parseFloat(row.querySelector('.item-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.item-price').value) || 0;
+      
+      if (name) {
+        items.push({ name, quantity, price });
+      }
+    });
+    
+    // Parse attributes
+    let customAttributes = null;
+    const attributesText = document.getElementById('order_attributes').value.trim();
+    if (attributesText) {
+      try {
+        customAttributes = JSON.parse(attributesText);
+      } catch (e) {
+        alert('Invalid JSON in attributes field');
+        return;
+      }
+    }
+    
+    const orderData = {
+      profile_id: user.id,
+      sale_date: document.getElementById('order_date').value,
+      customer: document.getElementById('order_customer').value,
+      source: document.getElementById('order_source').value,
+      items: items,
+      total_quantity: parseInt(document.getElementById('order_total_quantity').value) || 0,
+      revenue: parseFloat(document.getElementById('order_revenue').value) || 0,
+      order_reference: document.getElementById('order_reference').value || null,
+      custom_attributes: customAttributes,
+      notes: document.getElementById('order_notes').value || null
+    };
+    
+    let result;
+    if (editingOrderId) {
+      // Update existing order
+      result = await supabaseClient
+        .from('sales')
+        .update(orderData)
+        .eq('id', editingOrderId)
+        .select();
+    } else {
+      // Insert new order
+      result = await supabaseClient
+        .from('sales')
+        .insert([orderData])
+        .select();
+    }
+    
+    if (result.error) throw result.error;
+    
+    // Update inventory for new orders (not edits)
+    if (!editingOrderId && result.data && result.data[0]) {
+      await updateInventoryForOrder(items, user.id, result.data[0].id, result.data[0].order_reference || `Order #${result.data[0].id.substring(0, 8)}`);
+    }
+    
+    await loadOrders();
+    render();
+    closeOrderModal();
+    
+    alert(editingOrderId ? 'Order updated successfully!' : 'Order created successfully!');
+  } catch (error) {
+    console.error('Error saving order:', error);
+    alert('Failed to save order: ' + error.message);
+  }
+}
+
+async function updateInventoryForOrder(items, userId, saleId, orderReference) {
+  try {
+    // Fetch all recipes to match against items
+    const { data: recipes, error: recipesError } = await supabaseClient
+      .from('recipes')
+      .select('*')
+      .eq('profile_id', userId);
+    
+    if (recipesError) throw recipesError;
+    if (!recipes || recipes.length === 0) return;
+    
+    // Match items to recipes
+    const matchedRecipes = [];
+    items.forEach(item => {
+      const itemName = item.name.toLowerCase();
+      const matchedRecipe = recipes.find(r => 
+        r.name.toLowerCase() === itemName ||
+        itemName.includes(r.name.toLowerCase()) ||
+        r.name.toLowerCase().includes(itemName)
+      );
+      
+      if (matchedRecipe && matchedRecipe.components) {
+        matchedRecipes.push({
+          recipe: matchedRecipe,
+          quantity: item.quantity
+        });
+      }
+    });
+    
+    if (matchedRecipes.length === 0) return;
+    
+    // Calculate ingredient deductions
+    const ingredientDeductions = {};
+    
+    matchedRecipes.forEach(({ recipe, quantity }) => {
+      if (!recipe.components) return;
+      
+      recipe.components.forEach(component => {
+        const ingredientId = component.ingredient_id || component.id;
+        const quantityNeeded = parseFloat(component.quantity) || 0;
+        const totalDeduction = quantityNeeded * quantity;
+        
+        if (!ingredientDeductions[ingredientId]) {
+          ingredientDeductions[ingredientId] = 0;
+        }
+        ingredientDeductions[ingredientId] += totalDeduction;
+      });
+    });
+    
+    // Fetch current ingredient quantities
+    const ingredientIds = Object.keys(ingredientDeductions);
+    if (ingredientIds.length === 0) return;
+    
+    const { data: ingredients, error: ingredientsError } = await supabaseClient
+      .from('ingredients')
+      .select('id, quantity, name')
+      .eq('profile_id', userId)
+      .in('id', ingredientIds);
+    
+    if (ingredientsError) throw ingredientsError;
+    
+    // Update each ingredient quantity and create history entries
+    const updatePromises = ingredients.map(async ingredient => {
+      const deduction = ingredientDeductions[ingredient.id] || 0;
+      const oldQuantity = parseFloat(ingredient.quantity) || 0;
+      const newQuantity = Math.max(0, oldQuantity - deduction);
+      
+      // Update quantity
+      await supabaseClient
+        .from('ingredients')
+        .update({ quantity: newQuantity })
+        .eq('id', ingredient.id);
+      
+      // Create history entry
+      try {
+        await supabaseClient
+          .from('ingredient_history')
+          .insert([{
+            ingredient_id: ingredient.id,
+            profile_id: userId,
+            field_name: 'quantity',
+            old_value: String(oldQuantity),
+            new_value: String(newQuantity),
+            reason: 'order',
+            reference_id: saleId,
+            reference_text: orderReference
+          }]);
+      } catch (historyError) {
+        console.error('Error creating history entry:', historyError);
+      }
+      
+      // Check for out-of-stock
+      if (newQuantity === 0 && oldQuantity > 0) {
+        await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
+      }
+    });
+    
+    await Promise.all(updatePromises);
+    console.log('Inventory updated for order:', saleId);
+  } catch (error) {
+    console.error('Error updating inventory for order:', error);
+  }
+}
+
+async function checkIngredientStock(ingredientId, quantity, ingredientName, userId) {
+  if (quantity <= 0) {
+    await createOutOfStockNotification(ingredientId, ingredientName, userId);
+  }
+}
+
+async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
+  try {
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('ingredient_id', ingredientId)
+      .eq('type', 'ingredient_out_of_stock')
+      .eq('is_read', false);
+    
+    if (checkError) throw checkError;
+    if (existing && existing.length > 0) return;
+    
+    const { error: insertError } = await supabaseClient
+      .from('notifications')
+      .insert([{
+        profile_id: userId,
+        type: 'ingredient_out_of_stock',
+        ingredient_id: ingredientId,
+        message: `Ingredient ${ingredientName} has run out of stock`,
+        is_read: false
+      }]);
+    
+    if (insertError) throw insertError;
+    
+    await loadNotifications();
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+}
+
+async function updateStatusFromList(orderId, newStatus) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabaseClient
+      .from('sales')
+      .update({ status: newStatus })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    if (error) throw error;
+
+    await loadOrders();
+    render();
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    alert('Failed to update order status: ' + error.message);
+  }
+}
+
+function deleteOrder(orderId) {
+  orderToDelete = orderId;
+  document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+  orderToDelete = null;
+  document.getElementById('deleteModal').classList.remove('active');
+}
+
+async function confirmDelete() {
+  if (!orderToDelete) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('sales')
+      .delete()
+      .eq('id', orderToDelete);
+    
+    if (error) throw error;
+    
+    await loadOrders();
+    render();
+    closeDeleteModal();
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    alert('Failed to delete order: ' + error.message);
+  }
+}
+
+// Escape key listener for modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('orderModal').classList.contains('active')) {
+      closeOrderModal();
+    } else if (document.getElementById('deleteModal').classList.contains('active')) {
+      closeDeleteModal();
+    }
+  }
+});
+
+</script>
+
+<!-- Order Method Selection Modal -->
+<div class="modal-overlay" id="orderMethodModal">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">How would you like to add an order?</h3>
+    <div style="display: grid; gap: 16px;">
+      <div class="method-card" onclick="selectOrderMethod('manual')">
+        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for recipe" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0;">Search for recipe</h4>
+        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add recipes to order</p>
+      </div>
+      <div class="method-card" onclick="selectOrderMethod('upload')">
+        <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0;">Upload Screenshot</h4>
+        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Scan an order screenshot with AI</p>
+      </div>
+    </div>
+    <button type="button" class="btn" style="width: 100%; margin-top: 24px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderMethodModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Manual Order Creation Modal (2-step recipe picker) -->
+<div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
+
+  <!-- Step 1: Recipe Picker -->
+  <div class="modal-content" id="manualStep1">
+    <div class="recipe-picker-header">
+      <div>
+        <h3 style="margin:0;font-size:20px;">Add Recipes to Order</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more recipes to include in this order</p>
+      </div>
+      <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">×</button>
+    </div>
+
+    <div class="recipe-picker-search">
+      <input id="orderRecipeSearchInput" type="text" placeholder="Search recipes by name or ingredient..."
+             autocomplete="off"
+             oninput="filterOrderRecipes(this.value)"
+             onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('')}">
+      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');" title="Clear search">×</button>
+    </div>
+
+    <div class="recipe-picker-body" id="orderRecipePickerBody">
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading recipes…</div>
+    </div>
+
+    <div class="recipe-picker-footer" style="padding:10px 28px;">
+      <button id="orderContinueBtn" class="btn btn-primary" style="width:100%;padding:10px;opacity:0.4;cursor:not-allowed;" disabled onclick="proceedToOrderDetails()">Continue</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Order Details -->
+  <div class="modal-content" id="manualStep2" style="display:none;max-width:560px;">
+
+    <!-- Scrollable body -->
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:20px 24px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
+
+      <!-- Recipe summary -->
+      <div style="margin-bottom:10px;">
+        <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Selected Recipes</p>
+        <div id="step2RecipeSummary" style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
+      </div>
+
+      <!-- Total Revenue (injected by JS only when >1 recipe) -->
+      <div id="step2TotalWrapper"></div>
+
+      <form id="manualOrderForm" onsubmit="saveManualOrder(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="new_order_customer">Customer <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="new_order_customer" placeholder="e.g., John Smith">
+          </div>
+          <div class="form-group">
+            <label for="new_order_date">Order Date <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="new_order_date" readonly placeholder="Select date...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="new_order_reference">Reference <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="new_order_reference" placeholder="e.g., ORD-12345">
+          </div>
+          <div class="form-group">
+            <label for="new_order_status">Status</label>
+            <select id="new_order_status" onchange="_updateStatusRestriction()">
+              <option value="processed" selected>Processed</option>
+              <option value="fulfilled">Fulfilled</option>
+              <option value="shipped">Shipped</option>
+            </select>
+            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some ingredients are out of stock</div>
+          </div>
+        </div>
+
+        <!-- Inventory update toggle -->
+        <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
+          <div>
+            <div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct ingredient quantities based on recipe components</div>
+          </div>
+          <label class="inv-toggle">
+            <input type="checkbox" id="order_update_inventory" checked>
+            <span class="inv-slider"></span>
+          </label>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="backToRecipePicker()">Back</button>
+          <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeManualOrderModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex:2;">Create Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Step 3: Success Screen -->
+  <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;text-align:center;">
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:32px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
+      <div class="order-success-icon">✓</div>
+      <h2 class="order-success-title" id="successOrderTitle">Order Created!</h2>
+      <div id="successBadgesRow" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
+      <div id="successInvSection"></div>
+    </div>
+    <div class="recipe-picker-footer" style="padding:14px 24px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-primary" style="flex:1;min-width:80px;">View</button>
+      <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="startAnotherOrder()">New</button>
+      <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeManualOrderModal()">Done</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Recipe Mapping Modal (AI upload result) -->
+<div class="modal-overlay" id="recipeMappingModal">
+  <div class="modal-content" style="max-width: 700px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched recipes. You can change the recipe selection for each item.</p>
+    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;"></div>
+    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="mapped_customer">Customer Name</label>
+        <input type="text" id="mapped_customer" placeholder="e.g., John Smith, ABC Company">
+      </div>
+      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="mapped_reference">Order Reference</label>
+          <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="mapped_status">Status</label>
+          <select id="mapped_status">
+            <option value="processed" selected>Processed</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="shipped">Shipped</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600;">Total Revenue:</span>
+        <span id="mappedTotalRevenue" style="font-size: 20px; font-weight: 700; color: var(--accent);">$0.00</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image / PDF Upload Modal -->
+<div class="modal-overlay" id="orderImageUploadModal">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
+    <p id="orderUploadDescription" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload an order screenshot or invoice</p>
+    <div id="orderDropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
+      <div style="margin-bottom: 16px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
+      </div>
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
+      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
+      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
+      <input type="file" id="orderImageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
+      <button class="btn btn-secondary" onclick="captureOrderScreenshot()" style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);">
+        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
+        Capture Screenshot
+      </button>
+    </div>
+    <div id="orderUploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <img id="orderPreviewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
+        <div style="flex: 1;">
+          <p id="orderFileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
+          <p id="orderFileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="clearOrderUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+      </div>
+    </div>
+    <div id="orderUploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderImageUploadModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="processOrderImageUpload()" id="processOrderImageBtn" style="flex: 1;" disabled>Process</button>
+    </div>
+  </div>
+</div>
+
+<!-- Switch Account Modal -->
+<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
+  <div class="modal-content-custom" style="max-width: 450px;">
+    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
+      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="switch-login-content" class="switch-account-content" style="display: block;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchSignUp(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
+          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.switch-account-tab.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.switch-account-tab:hover {
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchAccountTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
+  document.getElementById('switch-' + tab + '-content').style.display = 'block';
+}
+
+function closeSwitchAccountModal() {
+  document.getElementById('switchAccountModal').classList.remove('active');
+  // Reset forms
+  document.getElementById('switch-login-email').value = '';
+  document.getElementById('switch-login-password').value = '';
+  document.getElementById('switch-signup-email').value = '';
+  document.getElementById('switch-signup-password').value = '';
+  document.getElementById('switch-signup-confirm-password').value = '';
+}
+
+async function handleSwitchGoogleLogin() {
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    alert('Google sign-in failed: ' + error.message);
+  }
+}
+
+async function handleSwitchLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-login-email').value;
+  const password = document.getElementById('switch-login-password').value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Switching...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign in with new credentials
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    // Reload page to refresh UI with new user
+    window.location.reload();
+  } catch (error) {
+    alert('Login failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+}
+
+async function handleSwitchSignUp(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-signup-email').value;
+  const password = document.getElementById('switch-signup-password').value;
+  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign up with new credentials
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    alert('Account created successfully! Please check your email to confirm your account.');
+    
+    // Switch to login tab and set email
+    switchAccountTab('login');
+    document.getElementById('switch-login-email').value = email;
+  } catch (error) {
+    alert('Sign up failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<script>
+// =========================================================
+// ORDER CREATION — method modal + manual recipe + AI upload
+// =========================================================
+
+// State
+let orderRecipes = [];
+let orderUploadedFile = null;
+let mappedOrderData = null;
+let mappedRecipes = [];
+let orderAIUsageStatus = null;
+
+// --- Method Modal ---
+function openOrderMethodModal() {
+  document.getElementById('orderMethodModal').classList.add('active');
+}
+function closeOrderMethodModal() {
+  document.getElementById('orderMethodModal').classList.remove('active');
+}
+function selectOrderMethod(method) {
+  closeOrderMethodModal();
+  if (method === 'manual') {
+    openManualOrderModal();
+  } else if (method === 'upload') {
+    openOrderImageUploadModal();
+  }
+}
+
+// --- Manual Order Modal ---
+// ─── RECIPE PICKER STATE ─────────────────────────────────────────────────────
+let orderRecipeCache = null;
+let orderFavoriteIds = new Set(); // populated from DB on load
+let orderStockMap = {};
+let orderMinMap = {};
+
+async function loadOrderRecipeData() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return;
+  const [{ data: recipes }, { data: ingredients }] = await Promise.all([
+    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).order('name'),
+    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id)
+  ]);
+  orderStockMap = {}; orderMinMap = {};
+  if (ingredients) ingredients.forEach(i => {
+    orderStockMap[i.id] = parseFloat(i.quantity) || 0;
+    orderMinMap[i.id] = parseFloat(i.min_stock) || 0;
+  });
+  orderRecipeCache = recipes || [];
+  // Populate favoriteIds from DB data
+  orderFavoriteIds = new Set((recipes || []).filter(r => r.is_favorite).map(r => r.id));
+}
+
+function _recipeStockStatus(recipe) {
+  const comps = recipe.components || [];
+  if (!comps.length) return 'in';
+  let hasZero = false, hasLow = false;
+  for (const c of comps) {
+    const ingId = c.ingredient_id || c.id;
+    const stock = orderStockMap[ingId] || 0;
+    const min   = orderMinMap[ingId]   || 0;
+    const needed = parseFloat(c.quantity) || 0;
+    if (needed > 0 && stock === 0)        { hasZero = true; }  // completely out
+    else if (stock < needed)              { hasLow  = true; }  // insufficient but > 0
+    else if (min > 0 && stock <= min)     { hasLow  = true; }  // at/below reorder point
+  }
+  if (hasZero) return 'out';  // red
+  if (hasLow)  return 'low';  // orange
+  return 'in';                // green
+}
+
+function _stockBadge(status) {
+  if (status === 'in')  return '<span class="picker-dot green"></span>';
+  if (status === 'low') return '<span class="picker-dot orange"></span>';
+  return '<span class="picker-dot red"></span>';
+}
+
+async function _getLastUsedRecipes() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return [];
+    const { data: sales } = await supabaseClient.from('sales').select('items').eq('profile_id', user.id)
+      .not('items', 'is', null).order('sale_date', { ascending: false }).limit(20);
+    if (!sales) return [];
+    const seen = new Set(), names = [];
+    for (const sale of sales) {
+      for (const item of (sale.items || [])) {
+        if (item.name && !seen.has(item.name)) { seen.add(item.name); names.push(item.name); }
+        if (names.length >= 6) break;
+      }
+      if (names.length >= 6) break;
+    }
+    return (orderRecipeCache || []).filter(r => names.includes(r.name)).slice(0, 6);
+  } catch { return []; }
+}
+
+function _renderRecipeCard(recipe) {
+  const price = recipe.retail_price || (recipe.cost ? recipe.cost * 1.6 : 0);
+  const status = _recipeStockStatus(recipe);
+  const badge = _stockBadge(status);
+  const isFav = orderFavoriteIds.has(recipe.id);
+  const esc = recipe.name.replace(/'/g, "\\'");
+  const cantBuild = status === 'out';
+  return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
+      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price});${cantBuild ? 'showOosToast(event)' : ''}">
+    <button class="fav-btn${isFav ? ' is-fav' : ''}"
+      onclick="event.stopPropagation();toggleOrderFavorite('${recipe.id}')"
+      style="pointer-events:auto"
+      title="Favorite">${isFav ? '★' : '☆'}</button>
+    <div class="card-name">${recipe.name}</div>
+    <div class="card-price">$${price.toFixed(2)}</div>
+    ${badge}
+  </div>`;
+}
+
+function _renderAddedSection() {
+  if (!orderRecipes.length) return '';
+  return `<div class="added-recipes-section">
+    <div class="recipe-section-title">Added Recipes</div>
+    ${orderRecipes.map(r => `
+      <div class="added-recipe-row" id="arr-${r.id}">
+        <span class="ar-name">${r.name}</span>
+        <span class="ar-price" id="arp-${r.id}">$${(r.price * r.quantity).toFixed(2)}</span>
+        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">−</button>
+        <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
+        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
+        <button class="ar-remove" type="button" onclick="removeOrderRecipe('${r.id}')">×</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+async function renderOrderRecipeSections(filtered) {
+  const body = document.getElementById('orderRecipePickerBody');
+  const isSearch = filtered !== null;
+  const addedIds = new Set(orderRecipes.map(r => r.id));
+  const fullList = isSearch ? filtered : (orderRecipeCache || []);
+  const list = fullList.filter(r => !addedIds.has(r.id));
+  let html = _renderAddedSection();
+
+  if (isSearch) {
+    if (list.length) {
+      html += `<div class="recipe-section-title">Search Results</div>
+        <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
+    } else if (!orderRecipes.length) {
+      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">No recipes match your search</div>';
+    }
+    body.innerHTML = html;
+    return;
+  }
+
+  const favs = list.filter(r => orderFavoriteIds.has(r.id));
+  const favIds = new Set(favs.map(r => r.id));
+  const nonFavList = list.filter(r => !favIds.has(r.id));
+
+  const lastUsed = await _getLastUsedRecipes();
+  const recentList = (lastUsed || []).filter(r => !addedIds.has(r.id) && !favIds.has(r.id));
+  const recentIds = new Set(recentList.map(r => r.id));
+  const allOnly = nonFavList.filter(r => !recentIds.has(r.id));
+
+  if (favs.length) html += `<div class="recipe-section-title">Favorites</div>
+    <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
+  if (recentList.length) html += `<div class="recipe-section-title">Recently Used</div>
+    <div class="recipe-picker-grid">${recentList.map(_renderRecipeCard).join('')}</div>`;
+  if (allOnly.length) html += `<div class="recipe-section-title">All Recipes</div>
+    <div class="recipe-picker-grid">${allOnly.map(_renderRecipeCard).join('')}</div>`;
+
+  if (!favs.length && !recentList.length && !allOnly.length && orderRecipes.length) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All recipes have been added</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function filterOrderRecipes(query) {
+  const clearBtn = document.getElementById('orderSearchClear');
+  if (clearBtn) clearBtn.style.display = (query && query.trim()) ? 'flex' : 'none';
+  if (!query || !query.trim()) { renderOrderRecipeSections(null); return; }
+  const term = query.trim().toLowerCase();
+  const filtered = (orderRecipeCache || []).filter(r => {
+    if ((r.name || '').toLowerCase().includes(term)) return true;
+    if (Array.isArray(r.components)) {
+      return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(term));
+    }
+    return false;
+  });
+  renderOrderRecipeSections(filtered);
+}
+
+function toggleOrderRecipeSelect(id, name, price) {
+  const idx = orderRecipes.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    orderRecipes[idx].quantity += 1;
+  } else {
+    const recipe = (orderRecipeCache || []).find(r => r.id === id);
+    const isOos = recipe ? _recipeStockStatus(recipe) === 'out' : false;
+    orderRecipes.push({ id, name, price: parseFloat(price), quantity: 1, oos: isOos });
+  }
+  const inp = document.getElementById('orderRecipeSearchInput');
+  const query = inp ? inp.value.trim() : '';
+  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
+  updatePickerFooter();
+}
+
+function toggleOrderFavorite(id) {
+  const newVal = !orderFavoriteIds.has(id);
+  if (newVal) orderFavoriteIds.add(id);
+  else orderFavoriteIds.delete(id);
+  // Update in cache so re-renders reflect it
+  const cached = (orderRecipeCache || []).find(r => r.id === id);
+  if (cached) cached.is_favorite = newVal;
+  // Persist to DB
+  supabaseClient.from('recipes').update({ is_favorite: newVal }).eq('id', id)
+    .then(({ error }) => { if (error) console.error('Error saving recipe favorite:', error); });
+  // Invalidate recipes.html cache if on same session
+  if (typeof recipes !== 'undefined') {
+    const r = recipes.find(r => r.id === id);
+    if (r) r.is_favorite = newVal;
+  }
+  // Re-render picker (not in search mode check)
+  const inp = document.getElementById('orderRecipeSearchInput');
+  if (!inp || !inp.value.trim()) renderOrderRecipeSections(null);
+}
+
+function updatePickerFooter() {
+  const btn = document.getElementById('orderContinueBtn');
+  if (!btn) return;
+  if (orderRecipes.length) {
+    btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+  } else {
+    btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
+  }
+}
+
+function removeOrderRecipe(id) {
+  const idx = orderRecipes.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  orderRecipes.splice(idx, 1);
+  const inp = document.getElementById('orderRecipeSearchInput');
+  const query = inp ? inp.value.trim() : '';
+  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
+  updatePickerFooter();
+}
+
+function adjustPickerQtyById(id, delta) {
+  const idx = orderRecipes.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  orderRecipes[idx].quantity = Math.max(1, orderRecipes[idx].quantity + delta);
+  const qtyEl = document.getElementById('arq-' + id);
+  if (qtyEl) qtyEl.textContent = orderRecipes[idx].quantity;
+  const priceEl = document.getElementById('arp-' + id);
+  if (priceEl) priceEl.textContent = `$${(orderRecipes[idx].price * orderRecipes[idx].quantity).toFixed(2)}`;
+  updatePickerFooter();
+}
+
+function adjustPickerQty(index, delta) {
+  if (!orderRecipes[index]) return;
+  orderRecipes[index].quantity = Math.max(1, orderRecipes[index].quantity + delta);
+  updatePickerFooter();
+}
+
+function proceedToOrderDetails() {
+  if (!orderRecipes.length) { showOrderNotification('Please select at least one recipe', 'warning'); return; }
+  document.getElementById('manualStep1').style.display = 'none';
+  document.getElementById('manualStep2').style.display = 'flex';
+  updateOrderTotal();
+  _updateStatusRestriction();
+  // Default date to today
+  const dateEl = document.getElementById('new_order_date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  // Recipe summary rows
+  document.getElementById('step2RecipeSummary').innerHTML =
+    orderRecipes.map((r, i) => `<div style="display:flex;align-items:center;padding:11px 16px;${i < orderRecipes.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
+      <span style="min-width:36px;color:var(--text-muted);font-weight:500;font-size:13px;flex-shrink:0;">${r.quantity}×</span>
+      <span style="flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</span>
+      <span style="color:var(--accent);font-weight:700;flex-shrink:0;">$${(r.price * r.quantity).toFixed(2)}</span>
+    </div>`).join('');
+  // Conditionally show total only when >1 recipe
+  const totalWrapper = document.getElementById('step2TotalWrapper');
+  if (orderRecipes.length > 1) {
+    const total = orderRecipes.reduce((s, r) => s + r.price * r.quantity, 0);
+    totalWrapper.innerHTML = `<div style="border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 0;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Total Revenue</span>
+      <span style="font-size:20px;font-weight:800;color:var(--accent);">$${total.toFixed(2)}</span>
+    </div>`;
+  } else {
+    totalWrapper.innerHTML = '';
+  }
+}
+
+function backToRecipePicker() {
+  document.getElementById('manualStep2').style.display = 'none';
+  document.getElementById('manualStep1').style.display = 'flex';
+}
+
+// ─── MODAL OPEN / CLOSE ───────────────────────────────────────────────────────
+function openManualOrderModal() {
+  orderRecipes = [];
+  document.getElementById('manualStep1').style.display = 'flex';
+  document.getElementById('manualStep2').style.display = 'none';
+  document.getElementById('manualStep3').style.display = 'none';
+  // Reset form
+  const refEl  = document.getElementById('new_order_reference');
+  const invToggle = document.getElementById('order_update_inventory');
+  if (refEl) refEl.value = '';
+  if (invToggle) invToggle.checked = true;
+  if (window._orderDatePicker) window._orderDatePicker.setDate(new Date(), true);
+  else {
+    const dateEl = document.getElementById('new_order_date');
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  }
+  _populateCustomerSuggestionsOrders();
+  document.getElementById('orderRecipeSearchInput').value = '';
+  updatePickerFooter();
+  document.getElementById('manualOrderModal').classList.add('active');
+  if (!window._orderDatePicker) {
+    window._orderDatePicker = flatpickr('#new_order_date', { dateFormat: 'Y-m-d', defaultDate: new Date(), allowInput: false, disableMobile: true });
+  }
+  if (orderRecipeCache) {
+    renderOrderRecipeSections(null);
+  } else {
+    loadOrderRecipeData().then(() => renderOrderRecipeSections(null));
+  }
+}
+
+function closeManualOrderModal() {
+  document.getElementById('manualOrderModal').classList.remove('active');
+  document.getElementById('manualStep3').style.display = 'none';
+  document.getElementById('manualStep2').style.display = 'none';
+  document.getElementById('manualStep1').style.display = 'flex';
+  orderRecipes = [];
+}
+
+function _escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showOosToast(event) {
+  event.stopPropagation();
+  document.querySelectorAll('.recipe-oos-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'recipe-oos-toast';
+  toast.textContent = 'Can be processed but not produced.';
+  document.body.appendChild(toast);
+  const btn = document.getElementById('orderContinueBtn');
+  const tw = toast.offsetWidth || 260;
+  let x, y;
+  if (btn) {
+    const r = btn.getBoundingClientRect();
+    x = r.left + r.width / 2 - tw / 2;
+    y = r.top - toast.offsetHeight - 10;
+  } else {
+    x = window.innerWidth / 2 - tw / 2;
+    y = event.clientY - 46;
+  }
+  x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
+  y = Math.max(8, y);
+  toast.style.left = x + 'px';
+  toast.style.top  = y + 'px';
+  const remove = () => { toast.classList.add('hiding'); setTimeout(() => toast.remove(), 240); };
+  const timer = setTimeout(remove, 1500);
+  const clickaway = () => { clearTimeout(timer); remove(); document.removeEventListener('click', clickaway); };
+  setTimeout(() => document.addEventListener('click', clickaway), 60);
+}
+
+function _updateStatusRestriction() {
+  const hasOos = orderRecipes.some(r => r.oos);
+  const sel = document.getElementById('new_order_status');
+  const note = document.getElementById('statusOosNote');
+  if (!sel) return;
+  if (hasOos) {
+    sel.value = 'processed';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+  }
+  if (note) note.style.display = hasOos ? 'block' : 'none';
+}
+
+async function _populateCustomerSuggestionsOrders() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    const { data } = await supabaseClient.from('sales').select('customer').eq('profile_id', user.id).not('customer', 'is', null).order('sale_date', { ascending: false }).limit(100);
+    if (!data) return;
+    const unique = [...new Set(data.map(r => r.customer).filter(Boolean))];
+    let dl = document.getElementById('customerSuggestionsOrders');
+    if (!dl) {
+      dl = document.createElement('datalist');
+      dl.id = 'customerSuggestionsOrders';
+      document.body.appendChild(dl);
+      const custEl = document.getElementById('new_order_customer');
+      if (custEl) custEl.setAttribute('list', 'customerSuggestionsOrders');
+    }
+    dl.innerHTML = unique.map(c => `<option value="${_escapeHtml(c)}"></option>`).join('');
+  } catch (e) { /* ignore */ }
+}
+
+function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
+  document.getElementById('manualStep2').style.display = 'none';
+  const step3 = document.getElementById('manualStep3');
+  step3.style.display = 'flex';
+  const ref = order.order_reference || ('Order #' + order.id);
+  document.getElementById('successOrderTitle').textContent = 'Order ' + ref + ' Created!';
+  const badgesRow = document.getElementById('successBadgesRow');
+  let badgesHtml = '';
+  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">✓ Inventory Updated</span>';
+  if (inventoryUpdated && inventoryChanges && inventoryChanges.length > 0) {
+    const oosCount = inventoryChanges.filter(i => i.status === 'out_of_stock').length;
+    const lowCount = inventoryChanges.filter(i => i.status === 'low_stock').length;
+    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">⚠ ${oosCount} Out of Stock</span>`;
+    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">↓ ${lowCount} Running Low</span>`;
+  }
+  badgesRow.innerHTML = badgesHtml;
+  const sectionEl = document.getElementById('successInvSection');
+  sectionEl.innerHTML = '';
+  if (!inventoryUpdated || !inventoryChanges || inventoryChanges.length === 0) return;
+  const priority = { out_of_stock: 0, low_stock: 1, ok: 2 };
+  const sorted = [...inventoryChanges].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
+  const rowsHtml = sorted.map((item, idx) => {
+    const s = item.status === 'out_of_stock' ? 'oos' : item.status === 'low_stock' ? 'low' : 'ok';
+    const fmt = v => v % 1 === 0 ? String(v) : v.toFixed(2);
+    const pillHtml = s === 'oos' ? '<span class="inv-change-pill oos">OUT OF STOCK</span>' : s === 'low' ? '<span class="inv-change-pill low">LOW</span>' : '';
+    const detailUrl = item.id ? `ingredient-detail.html?id=${encodeURIComponent(item.id)}` : null;
+    const nameEl = detailUrl
+      ? `<a class="inv-change-name" href="${detailUrl}" target="_blank" rel="noopener" onclick="event.ctrlKey||event.metaKey||event.button===1?null:window.open('${detailUrl}','_blank');event.preventDefault();">${_escapeHtml(item.name)}</a>`
+      : `<span class="inv-change-name">${_escapeHtml(item.name)}</span>`;
+    return `<div class="inv-change-row" style="animation-delay:${idx * 0.04}s">
+      <div class="inv-change-dot ${s}"></div>
+      ${nameEl}
+      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">→</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
+      ${pillHtml}
+    </div>`;
+  }).join('');
+  sectionEl.innerHTML = '<div class="inv-changes-list">' + rowsHtml + '</div>';
+}
+
+function startAnotherOrder() {
+  const lastCustomer = document.getElementById('new_order_customer')?.value.trim() || '';
+  document.getElementById('manualStep3').style.display = 'none';
+  orderRecipes = [];
+  const custEl = document.getElementById('new_order_customer');
+  const refEl  = document.getElementById('new_order_reference');
+  if (custEl) custEl.value = lastCustomer;
+  if (refEl)  refEl.value = '';
+  if (window._orderDatePicker) window._orderDatePicker.setDate(new Date(), true);
+  const invToggle = document.getElementById('order_update_inventory');
+  if (invToggle) invToggle.checked = true;
+  document.getElementById('manualStep1').style.display = 'flex';
+  const inp = document.getElementById('orderRecipeSearchInput');
+  if (inp) inp.value = '';
+  updatePickerFooter();
+  if (orderRecipeCache) renderOrderRecipeSections(null);
+  else loadOrderRecipeData().then(() => renderOrderRecipeSections(null));
+}
+
+// kept for compatibility (no-op in new flow)
+function closeRecipeDropdown() {}
+function handleOrderRecipeDropdownClickOutside() {}
+function showLastUsedRecipes() {}
+function searchRecipesForOrder() {}
+function selectRecipeForOrder() {}
+function renderSelectedRecipes() {}
+function updateRecipeQuantity() {}
+function removeRecipeFromOrder() {}
+
+function updateOrderTotal() {
+  const total = orderRecipes.reduce((s, r) => s + r.price * r.quantity, 0);
+  const el = document.getElementById('newOrderTotalRevenue');
+  if (el) el.textContent = `$${total.toFixed(2)}`;
+}
+
+// --- Save manual order ---
+async function saveManualOrder(event) {
+  event.preventDefault();
+  // Shake-validate required fields
+  const invalidFields = [];
+  const customerEl = document.getElementById('new_order_customer');
+  const referenceEl = document.getElementById('new_order_reference');
+  const dateEl2 = document.getElementById('new_order_date');
+  if (!dateEl2.value) invalidFields.push(dateEl2);
+  if (!customerEl.value.trim()) invalidFields.push(customerEl);
+  if (!referenceEl.value.trim()) invalidFields.push(referenceEl);
+  if (invalidFields.length > 0) {
+    invalidFields.forEach(el => {
+      el.classList.remove('input-invalid');
+      void el.offsetWidth;
+      el.classList.add('input-invalid');
+      setTimeout(() => el.classList.remove('input-invalid'), 1500);
+    });
+    invalidFields[0].focus();
+    return;
+  }
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    if (orderRecipes.length === 0) { showOrderNotification('Please select at least one recipe', 'warning'); return; }
+    const customer = document.getElementById('new_order_customer').value.trim();
+    const status = document.getElementById('new_order_status').value;
+    const orderReference = document.getElementById('new_order_reference').value.trim();
+    const orderDateVal = document.getElementById('new_order_date').value;
+    const saleDate = orderDateVal ? new Date(orderDateVal).toISOString() : new Date().toISOString();
+    const shouldUpdateInventory = document.getElementById('order_update_inventory')?.checked !== false;
+    const totalQuantity = orderRecipes.reduce((sum, r) => sum + r.quantity, 0);
+    const totalRevenue = orderRecipes.reduce((sum, r) => sum + (r.price * r.quantity), 0);
+    const items = orderRecipes.map(recipe => ({ name: recipe.name, quantity: recipe.quantity, price: recipe.price }));
+    const salesRecord = {
+      profile_id: user.id,
+      sale_date: saleDate,
+      customer: customer || 'Unknown Customer',
+      source: 'Manual Entry',
+      items: items,
+      total_quantity: totalQuantity,
+      revenue: totalRevenue,
+      order_reference: orderReference || null,
+      status: status
+    };
+    const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
+    if (error) throw error;
+    let inventoryChanges = null;
+    if (shouldUpdateInventory && data && data[0]) {
+      inventoryChanges = await updateInventoryForNewOrder(orderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
+    }
+    await loadOrders();
+    render();
+    showOrderSuccessScreen(data[0], shouldUpdateInventory, inventoryChanges);
+  } catch (error) {
+    console.error('Error saving order:', error);
+    showOrderNotification('Failed to save order: ' + error.message, 'error');
+  }
+}
+
+// Inventory update that takes recipe IDs (used by the new methods)
+async function updateInventoryForNewOrder(selectedRecipes, userId, saleId = null, orderReference = null) {
+  try {
+    const recipeIds = selectedRecipes.map(r => r.id);
+    const { data: fullRecipes, error: fetchError } = await supabaseClient.from('recipes').select('*').in('id', recipeIds);
+    if (fetchError) throw fetchError;
+    const ingredientDeductions = {};
+    selectedRecipes.forEach(orderRecipe => {
+      const fullRecipe = fullRecipes.find(r => r.id === orderRecipe.id);
+      if (!fullRecipe || !fullRecipe.components) return;
+      fullRecipe.components.forEach(component => {
+        const ingredientId = component.ingredient_id || component.id;
+        const totalDeduction = (parseFloat(component.quantity) || 0) * orderRecipe.quantity;
+        if (!ingredientDeductions[ingredientId]) ingredientDeductions[ingredientId] = 0;
+        ingredientDeductions[ingredientId] += totalDeduction;
+      });
+    });
+    const ingredientIds = Object.keys(ingredientDeductions);
+    if (ingredientIds.length === 0) return;
+    const { data: ingredients, error: ingredientsError } = await supabaseClient
+      .from('ingredients').select('id, quantity, name, unit').eq('profile_id', userId).in('id', ingredientIds);
+    if (ingredientsError) throw ingredientsError;
+    const changesSummary = [];
+    const updatePromises = ingredients.map(async ingredient => {
+      const deduction = ingredientDeductions[ingredient.id] || 0;
+      const oldQuantity = parseFloat(ingredient.quantity) || 0;
+      const newQuantity = Math.max(0, oldQuantity - deduction);
+      await supabaseClient.from('ingredients').update({ quantity: newQuantity }).eq('id', ingredient.id);
+      try {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: ingredient.id,
+          profile_id: userId,
+          field_name: 'quantity',
+          old_value: String(oldQuantity),
+          new_value: String(newQuantity),
+          reason: 'order',
+          reference_id: String(saleId),
+          reference_text: orderReference
+        }]);
+      } catch (historyError) { console.error('Error creating history entry:', historyError); }
+      let status = 'ok';
+      if (newQuantity === 0 && oldQuantity > 0) {
+        status = 'out_of_stock';
+        await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
+      } else if (newQuantity > 0 && oldQuantity > 0 && newQuantity <= oldQuantity * 0.25 && oldQuantity >= 4) {
+        status = 'low_stock';
+      }
+      changesSummary.push({ id: ingredient.id, name: ingredient.name, oldQty: oldQuantity, newQty: newQuantity, status });
+    });
+    await Promise.all(updatePromises);
+    return changesSummary;
+  } catch (error) {
+    console.error('Error updating inventory:', error);
+    return null;
+  }
+}
+
+// --- Image Upload ---
+function openOrderImageUploadModal() {
+  document.getElementById('orderImageUploadModal').classList.add('active');
+  setupOrderDropZone();
+}
+function closeOrderImageUploadModal() {
+  document.getElementById('orderImageUploadModal').classList.remove('active');
+  clearOrderUpload();
+}
+function setupOrderDropZone() {
+  const dropZone = document.getElementById('orderDropZone');
+  const fileInput = document.getElementById('orderImageFileInput');
+  dropZone.onclick = () => fileInput.click();
+  fileInput.onchange = (e) => { const file = e.target.files[0]; if (file) handleOrderFile(file); };
+  dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; dropZone.style.background = 'rgba(6,182,212,0.05)'; };
+  dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = 'var(--bg-panel)'; };
+  dropZone.ondrop = (e) => {
+    e.preventDefault(); dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = 'var(--bg-panel)';
+    const file = e.dataTransfer.files[0]; if (file) handleOrderFile(file);
+  };
+}
+function handleOrderFile(file) {
+  if (!['image/png','image/jpeg','image/jpg','application/pdf'].includes(file.type)) {
+    showOrderUploadStatus('Please upload a PNG, JPG, or PDF file', 'error'); return;
+  }
+  if (file.size > 10 * 1024 * 1024) { showOrderUploadStatus('File size must be less than 10MB', 'error'); return; }
+  orderUploadedFile = file;
+  const preview = document.getElementById('orderUploadPreview');
+  const previewImage = document.getElementById('orderPreviewImage');
+  document.getElementById('orderFileName').textContent = file.name;
+  document.getElementById('orderFileSize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e) => { previewImage.src = e.target.result; previewImage.style.display = 'block'; };
+    reader.readAsDataURL(file);
+  } else {
+    previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png'; previewImage.style.display = 'block';
+  }
+  preview.style.display = 'block';
+  document.getElementById('processOrderImageBtn').disabled = false;
+}
+function clearOrderUpload() {
+  orderUploadedFile = null;
+  document.getElementById('orderUploadPreview').style.display = 'none';
+  document.getElementById('orderImageFileInput').value = '';
+  document.getElementById('processOrderImageBtn').disabled = true;
+  document.getElementById('orderUploadStatus').style.display = 'none';
+}
+async function captureOrderScreenshot() {
+  try {
+    showOrderUploadStatus('Capturing screenshot...', 'info');
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { mediaSource: 'screen' } });
+    const video = document.createElement('video');
+    video.srcObject = stream; video.play();
+    await new Promise(resolve => { video.onloadedmetadata = resolve; });
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    stream.getTracks().forEach(track => track.stop());
+    canvas.toBlob((blob) => {
+      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+      handleOrderFile(file);
+      showOrderUploadStatus('Screenshot captured successfully', 'success');
+    }, 'image/png');
+  } catch (error) {
+    showOrderUploadStatus(error.name === 'NotAllowedError' ? 'Screenshot permission denied' : 'Failed to capture screenshot', 'error');
+  }
+}
+function showOrderUploadStatus(message, type) {
+  const statusDiv = document.getElementById('orderUploadStatus');
+  statusDiv.style.display = 'block';
+  if (message.toLowerCase().includes('extracting') || message.toLowerCase().includes('matching')) {
+    const imageModal = document.getElementById('orderImageUploadModal');
+    const modalContent = imageModal?.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.querySelectorAll('h3, .form-group, button, p').forEach(el => {
+        if (el.id !== 'orderUploadStatus' && !el.closest('#orderUploadStatus')) el.style.display = 'none';
+      });
+    }
+    const dropZone = document.getElementById('orderDropZone');
+    if (dropZone) dropZone.style.display = 'none';
+    const preview = document.getElementById('orderUploadPreview');
+    if (preview) preview.style.display = 'none';
+    statusDiv.innerHTML = '<div class="loader-container"><div class="loader"><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__ball"></div></div></div>';
+    statusDiv.style.cssText = 'display:block;background:transparent;border:none;text-align:center;padding:0;margin-top:0;';
+  } else {
+    statusDiv.textContent = message;
+    statusDiv.style.cssText = `display:block;font-size:13px;padding:12px;border-radius:8px;margin-top:16px;border:none;background:${type==='error'?'rgba(239,68,68,0.1)':type==='success'?'rgba(16,185,129,0.1)':'rgba(59,130,246,0.1)'};color:${type==='error'?'var(--danger)':type==='success'?'var(--success)':'#3b82f6'};`;
+  }
+}
+async function processOrderImageUpload() {
+  if (!orderUploadedFile) { showOrderUploadStatus('Please select a file first', 'error'); return; }
+  const processBtn = document.getElementById('processOrderImageBtn');
+  const originalText = processBtn.textContent;
+  processBtn.textContent = 'Processing...';
+  processBtn.disabled = true;
+  try {
+    showOrderUploadStatus('Extracting data from document...', 'info');
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) throw new Error('You must be logged in to use this feature');
+    const formData = new FormData();
+    formData.append('file', orderUploadedFile);
+    formData.append('context', 'order');
+    const response = await fetch('/api/extract-receipt.js', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+      body: formData
+    });
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorData;
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json();
+      } else {
+        errorData = { error: await response.text() };
+      }
+      if (response.status === 429) {
+        if (typeof createAILimitNotification === 'function') {
+          await createAILimitNotification(session.user.id, 'free');
+        }
+        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
+      }
+      throw new Error(errorData.error || 'Failed to extract data from image');
+    }
+    const result = await response.json();
+    if (result.success && result.data) {
+      showOrderUploadStatus('Matching recipes...', 'info');
+      try {
+        closeOrderImageUploadModal();
+        await showRecipeMappingModal(result.data);
+      } catch (error) {
+        console.error('Failed to process order:', error);
+        showOrderUploadStatus('Failed to process order: ' + error.message, 'error');
+      }
+    } else {
+      showOrderUploadStatus('No data could be extracted from the image', 'error');
+    }
+  } catch (error) {
+    console.error('Image upload error:', error);
+    showOrderUploadStatus(error.message || 'Failed to process image', 'error');
+  } finally {
+    processBtn.textContent = originalText;
+    processBtn.disabled = false;
+  }
+}
+
+// --- Recipe Mapping (AI result) ---
+function calculateSimilarity(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  if (s1 === s2) return 1.0;
+  if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+  const words1 = s1.split(/\s+/), words2 = s2.split(/\s+/);
+  const commonWords = words1.filter(w => words2.includes(w));
+  if (commonWords.length > 0) return 0.5 + (commonWords.length / Math.max(words1.length, words2.length)) * 0.3;
+  return 0;
+}
+
+async function matchItemToRecipes(itemData) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return [];
+    const { data: recipes, error } = await supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+    if (error) throw error;
+    if (!recipes || recipes.length === 0) return [];
+    const itemAttributes = itemData.attributes || {};
+    if (Object.keys(itemAttributes).length === 0) return [];
+    const allIngredientIds = new Set();
+    recipes.forEach(recipe => {
+      if (recipe.components && Array.isArray(recipe.components)) {
+        recipe.components.forEach(comp => { if (comp.ingredient_id) allIngredientIds.add(comp.ingredient_id); });
+      }
+    });
+    const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, custom_attributes').in('id', Array.from(allIngredientIds));
+    const ingredientMap = {};
+    if (ingredients) ingredients.forEach(ing => { ingredientMap[ing.id] = ing; });
+    const scoredRecipes = recipes.map(recipe => {
+      if (!recipe.components || recipe.components.length === 0) return { recipe, score: 0, matchReason: 'No ingredients' };
+      let score = 0;
+      for (const comp of recipe.components) {
+        const ingredient = ingredientMap[comp.ingredient_id];
+        if (!ingredient || !ingredient.custom_attributes) continue;
+        try {
+          const ingAttrs = typeof ingredient.custom_attributes === 'string' ? JSON.parse(ingredient.custom_attributes) : ingredient.custom_attributes;
+          const ingAttrsLower = {};
+          Object.entries(ingAttrs).forEach(([key, value]) => { ingAttrsLower[key.toLowerCase()] = value; });
+          let attrMatches = 0, attrTotal = Object.keys(itemAttributes).length;
+          for (const [key, value] of Object.entries(itemAttributes)) {
+            const ingValue = ingAttrsLower[key.toLowerCase()];
+            if (ingValue && ingValue.toString().toLowerCase() === value.toString().toLowerCase()) attrMatches++;
+          }
+          const ingredientScore = attrMatches / attrTotal;
+          if (ingredientScore > score) score = ingredientScore;
+        } catch (e) { console.warn('Error parsing ingredient attributes:', e); }
+      }
+      return { recipe, score, matchReason: score === 1 ? 'Perfect match' : score >= 0.5 ? 'Partial match' : 'Low match' };
+    });
+    return scoredRecipes.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+  } catch (error) {
+    console.error('Error matching item to recipes:', error);
+    return [];
+  }
+}
+
+async function showRecipeMappingModal(orderData) {
+  mappedOrderData = orderData;
+  mappedRecipes = [];
+  const itemsList = document.getElementById('mappedItemsList');
+  itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching recipes...</div>';
+  document.getElementById('mapped_customer').value = orderData.customer || '';
+  document.getElementById('mapped_reference').value = orderData.order_reference || orderData.item?.SKU || '';
+  document.getElementById('mapped_status').value = 'processed';
+  document.getElementById('recipeMappingModal').classList.add('active');
+  const itemData = {
+    name: orderData.item?.name || orderData.description || 'Unknown Item',
+    quantity: orderData.item?.quantity || 1,
+    price: orderData.item?.price || 0,
+    attributes: orderData.attributes || {}
+  };
+  const matches = await matchItemToRecipes(itemData);
+  const bestMatch = matches.length > 0 ? matches[0].recipe : null;
+  mappedRecipes = [{ itemData, selectedRecipe: bestMatch, matches, quantity: itemData.quantity || 1 }];
+  renderMappedItems();
+  updateMappedTotal();
+}
+
+function renderMappedItems() {
+  const container = document.getElementById('mappedItemsList');
+  container.innerHTML = mappedRecipes.map((mapping, index) => {
+    const item = mapping.itemData;
+    const selected = mapping.selectedRecipe;
+    const matches = mapping.matches || [];
+    return `
+      <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${item.name}</div>
+            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')||'No attributes'}</div>
+          </div>
+          <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${(item.price||0).toFixed(2)}</div></div>
+        </div>
+        <div style="margin-bottom:12px;position:relative;">
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-muted);">Matched Recipe:</label>
+          <input type="text" id="recipeSearchInput_${index}" placeholder="Search recipes or leave empty for custom item..."
+            value="${selected ? selected.name : ''}" autocomplete="off"
+            oninput="searchRecipesForMapping(${index}, this.value)"
+            onfocus="showMappingRecipeDropdown(${index})"
+            onkeydown="if(event.key==='Escape') hideMappingRecipeDropdown(${index})"
+            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;" />
+          <div id="recipeDropdown_${index}" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+            ${matches.map(m=>`<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
+              <div style="font-weight:600;font-size:13px;">${m.recipe.name}</div>
+              <div style="font-size:12px;color:var(--text-muted);">${m.matchReason} (${(m.score*100).toFixed(0)}% match)</div></div>`).join('')}
+            ${matches.length===0?'<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching recipes found</div>':''}
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Quantity:</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" onclick="adjustMappedQuantity(${index},-1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">−</button>
+            <span style="font-weight:600;min-width:40px;text-align:center;">${mapping.quantity}</span>
+            <button type="button" onclick="adjustMappedQuantity(${index},1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">+</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  setTimeout(() => {
+    document.addEventListener('click', handleMappingDropdownClickOutside);
+  }, 100);
+}
+
+function handleMappingDropdownClickOutside(event) {
+  mappedRecipes.forEach((mapping, index) => {
+    const dropdown = document.getElementById(`recipeDropdown_${index}`);
+    const input = document.getElementById(`recipeSearchInput_${index}`);
+    if (dropdown && input && !dropdown.contains(event.target) && !input.contains(event.target)) {
+      hideMappingRecipeDropdown(index);
+    }
+  });
+}
+
+function showMappingRecipeDropdown(index) {
+  const d = document.getElementById(`recipeDropdown_${index}`);
+  if (d) d.style.display = 'block';
+}
+function hideMappingRecipeDropdown(index) {
+  const d = document.getElementById(`recipeDropdown_${index}`);
+  if (d) d.style.display = 'none';
+}
+
+async function searchRecipesForMapping(index, searchTerm) {
+  const dropdown = document.getElementById(`recipeDropdown_${index}`);
+  if (!searchTerm.trim()) {
+    const matches = mappedRecipes[index].matches || [];
+    dropdown.innerHTML = matches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);">No matching recipes found</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    const { data: allRecipes } = await supabaseClient.from('recipes').select('id, name, cost').eq('profile_id', user.id).ilike('name', `%${searchTerm}%`).limit(10);
+    if (!allRecipes || allRecipes.length === 0) {
+      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recipes found</div>';
+      dropdown.style.display = 'block';
+      return;
+    }
+    dropdown.innerHTML = allRecipes.map(recipe => `<div onclick="selectRecipeForMappingById(${index},'${recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${recipe.name}</div></div>`).join('');
+    dropdown.style.display = 'block';
+  } catch (error) {
+    console.error('Error searching recipes:', error);
+  }
+}
+
+function selectRecipeForMapping(index, recipeId) {
+  const match = mappedRecipes[index].matches.find(m => m.recipe.id === recipeId);
+  if (match) {
+    mappedRecipes[index].selectedRecipe = match.recipe;
+    document.getElementById(`recipeSearchInput_${index}`).value = match.recipe.name;
+  }
+  hideMappingRecipeDropdown(index);
+  updateMappedTotal();
+}
+
+async function selectRecipeForMappingById(index, recipeId) {
+  try {
+    const { data: recipe } = await supabaseClient.from('recipes').select('*').eq('id', recipeId).single();
+    if (recipe) {
+      mappedRecipes[index].selectedRecipe = recipe;
+      document.getElementById(`recipeSearchInput_${index}`).value = recipe.name;
+    }
+    hideMappingRecipeDropdown(index);
+    updateMappedTotal();
+  } catch (error) { console.error('Error selecting recipe:', error); }
+}
+
+function adjustMappedQuantity(index, delta) {
+  mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
+  renderMappedItems();
+  updateMappedTotal();
+}
+
+function updateMappedTotal() {
+  const total = mappedRecipes.reduce((sum, mapping) => {
+    if (mapping.selectedRecipe) {
+      const recipeCost = parseFloat(mapping.selectedRecipe.cost) || 0;
+      const retailPrice = mapping.selectedRecipe.retail_price || (recipeCost * 1.6);
+      return sum + (retailPrice * mapping.quantity);
+    }
+    return sum + ((mapping.itemData.price || 0) * mapping.quantity);
+  }, 0);
+  document.getElementById('mappedTotalRevenue').textContent = `$${total.toFixed(2)}`;
+}
+
+function closeRecipeMappingModal() {
+  document.getElementById('recipeMappingModal').classList.remove('active');
+  mappedOrderData = null;
+  mappedRecipes = [];
+  document.removeEventListener('click', handleMappingDropdownClickOutside);
+}
+
+async function confirmMappedOrder() {
+  try {
+    const customer = document.getElementById('mapped_customer').value.trim();
+    if (!customer) { showOrderNotification('Please enter a customer name', 'error'); return; }
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    const items = [], selectedOrderRecipes = [];
+    mappedRecipes.forEach(mapping => {
+      if (mapping.selectedRecipe) {
+        const retailPrice = mapping.selectedRecipe.retail_price || ((parseFloat(mapping.selectedRecipe.cost) || 0) * 1.6);
+        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: retailPrice });
+        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: retailPrice });
+      } else {
+        items.push({ name: mapping.itemData.name, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
+      }
+    });
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalRevenue = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    const orderReference = document.getElementById('mapped_reference').value || null;
+    const salesRecord = {
+      profile_id: user.id,
+      sale_date: new Date().toISOString(),
+      customer: customer,
+      source: 'Image Upload',
+      items: items,
+      total_quantity: totalQuantity,
+      revenue: totalRevenue,
+      order_reference: orderReference,
+      status: document.getElementById('mapped_status').value,
+      custom_attributes: mappedOrderData?.attributes || {}
+    };
+    const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
+    if (error) throw error;
+    if (selectedOrderRecipes.length > 0 && data && data[0]) {
+      await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
+    }
+    closeRecipeMappingModal();
+    showOrderNotification('Order created successfully!', 'success');
+    await loadOrders();
+    render();
+  } catch (error) {
+    console.error('Error creating order:', error);
+    showOrderNotification('Failed to create order: ' + error.message, 'error');
+  }
+}
+
+// --- Notification helper for this page ---
+function showOrderNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
+  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.style.animation = 'slideInRight 0.3s ease reverse';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+</script>
+
+<script>
+// Auto-highlight active page in navigation
+(function() {
+  const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+  const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+  if (activeLink) activeLink.classList.add('active');
+})();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1"><div class="emoji-face">😡</div><div class="emoji-label">Hate</div></div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2"><div class="emoji-face">😟</div><div class="emoji-label">Bad</div></div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3"><div class="emoji-face">😐</div><div class="emoji-label">Okay</div></div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4"><div class="emoji-face">😊</div><div class="emoji-label">Good</div></div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5"><div class="emoji-face">🤩</div><div class="emoji-label">Love</div></div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) document.getElementById('feedbackButton').classList.add('show');
+  });
+}
+
+function openFeedback() { document.getElementById('feedbackModal').classList.add('active'); }
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1; feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) { alert('Please select a rating'); return; }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  if (!text.trim()) { alert('Please provide some feedback'); return; }
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (session) {
+        await window.supabaseClient.from('feedback').insert({ score: feedbackRating, comment: text, user_id: session.user.id });
+      }
+    } catch (e) { console.error('Error submitting feedback:', e); }
+  }
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+</script>
+
+</body>
+</html>
+</html>

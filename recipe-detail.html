@@ -1,0 +1,2745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Recipe Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+  :root {
+    --profit: #8b5cf6;
+  }
+  
+  .profit { color: #8b5cf6; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; cursor: pointer; }
+  .breadcrumb:hover { color: var(--accent); }
+
+  /* ---------- HEADER ---------- */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: 0.2s; }
+  .btn-primary { background: #fff; color: #000; }
+  .btn-outline { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+  .btn-outline:hover { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-success { background: var(--accent); color: #fff; border: none; }
+  .btn-success:hover { background: #2980b9; }
+
+  /* ---------- GRID ---------- */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+  }
+
+  /* ---------- FINANCIALS ---------- */
+  .margin-card {
+    background: var(--bg-inner);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+
+  .margin-bar-container {
+    height: 12px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 99px;
+    margin: 20px 0;
+    overflow: hidden;
+    display: flex;
+    position: relative;
+  }
+
+  .bar-cost { background: var(--accent); height: 100%; flex-shrink: 0; }
+  .bar-profit { background: var(--profit); height: 100%; flex-shrink: 0; }
+
+  /* ---------- TABLE & STOCK STATUS ---------- */
+  .comp-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .comp-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 12px 8px; border-bottom: 1px solid var(--border); }
+  .comp-table td { padding: 16px 8px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+
+  .status-pill {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-left: 8px;
+  }
+  .status-low { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+  .status-out { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+  /* REORDER BUTTON */
+  .btn-reorder {
+    padding: 6px 12px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-reorder:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* ---------- STATS ---------- */
+  .stat-group { margin-bottom: 24px; }
+  .stat-group label { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 800; }
+
+  /* ---------- RECIPE BUILDER MODAL ---------- */
+  .recipe-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .recipe-overlay.active { display: flex; }
+  .recipe-builder { background: var(--bg-main); border-radius: 24px; width: 90%; max-width: 1400px; height: 85vh; display: grid; grid-template-columns: 1fr 1.2fr; gap: 0; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .recipe-panel { padding: 32px; overflow-y: auto; }
+  .recipe-panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 24px; }
+  .recipe-name-input { width: 100%; padding: 14px 20px; background: var(--bg-panel); border: 2px solid var(--border); color: var(--text-main); border-radius: 12px; font-size: 15px; box-sizing: border-box; }
+  .recipe-name-input:focus { outline: none; border-color: var(--accent); }
+  .recipe-name-input.shake { border-color: var(--danger); animation: shake 0.5s; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+  #recipeDropzone { flex-grow: 1; border: 2px solid var(--border); border-radius: 16px; padding: 20px; overflow-y: auto; background: var(--bg-inner); min-height: 0; }
+  .recipe-drop-placeholder { display: flex; height: 100%; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; pointer-events: none; flex-direction: column; gap: 12px; }
+  .drop-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 12px; font-size: 15px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .drop-item:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .recipe-cost-summary { background: var(--bg-inner); border: 2px solid var(--border); padding: 20px; border-radius: 14px; text-align: center; }
+  .recipe-cost-summary label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; display: block; margin-bottom: 8px; }
+  .recipe-cost-summary .amount { font-size: 36px; font-weight: 800; color: var(--text-main); }
+  .recipe-search-input { width: 100%; padding: 12px 20px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); border-radius: 24px; font-size: 14px; box-sizing: border-box; }
+  .recipe-ingredient-scroll { overflow-y: auto; flex-grow: 1; min-height: 0; padding-right: 8px; max-height: calc(85vh - 200px); }
+  .recipe-ingredient { padding: 16px; border-radius: 12px; margin-bottom: 8px; cursor: grab; background: var(--bg-panel); border: 1px solid var(--border); transition: all 0.2s; }
+  .recipe-ingredient:hover { background: rgba(255,255,255,0.06); border-color: var(--accent); transform: translateX(2px); }
+  .recipe-ingredient.disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
+  
+  /* Ingredient Cards */
+  .ingredient-card { background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 12px; font-size: 15px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .ingredient-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .ingredient-card > div > div:first-child { min-width: 0; }
+  .ingredient-card > div > div:first-child > div:first-child { min-width: 0; }
+  .ingredient-card > div > div:first-child > div:first-child > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+
+  /* ---------- CUSTOM MODALS ---------- */
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10000 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 450px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.active .modal-content {
+    transform: scale(1);
+  }
+
+  /* Notification Bell Styles */
+  .notification-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notification-bell:hover {
+    background: var(--bg-panel);
+  }
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-main);
+  }
+  .notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 10000;
+  }
+  .notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notification-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mark-all-read:hover {
+    text-decoration: underline;
+  }
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  .notification-item:hover {
+    background: var(--bg-inner);
+  }
+  .notification-item.unread {
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+  }
+  .notification-message {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .notification-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .notification-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .notification-actions button:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .notification-actions button.delete-btn {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .notification-actions button.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .notification-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .notification-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 968px) {
+    .container { padding: 24px 16px; }
+    
+    /* Grid layouts: stack on tablet/mobile */
+    .layout-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    /* Hide chat and feedback widgets on mobile */
+    #chat-widget,
+    #feedback-widget {
+      display: none !important;
+    }
+
+    /* Hide Duplicate button on mobile */
+    button[onclick="duplicateRecipe()"] {
+      display: none !important;
+    }
+
+    /* Hide Financial Breakdown section on mobile */
+    .panel h3:first-of-type,
+    #financialCard {
+      display: none !important;
+    }
+
+    /* Hide recipe count text on mobile */
+    #recipeCount {
+      display: none !important;
+    }
+
+    .container { 
+      padding: 16px 12px;
+      padding-bottom: 180px;
+    }
+    
+    /* Header: stack buttons on mobile */
+    .header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    /* Buttons section - fixed to bottom */
+    .header > div:last-child {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Hide Save button on mobile */
+    .header button[onclick="saveRecipe()"] {
+      display: none !important;
+    }
+
+    .header .btn {
+      padding: 10px 8px;
+      font-size: 14px;
+      white-space: nowrap;
+      width: 100%;
+    }
+
+    .header h1,
+    #recipeName {
+      font-size: 24px !important;
+    }
+
+    /* Main grid: single column on mobile */
+    .main-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    /* Panel adjustments */
+    .panel {
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    /* Margin card */
+    .margin-card {
+      padding: 16px;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    /* Ingredient cards - mobile friendly */
+    .ingredient-card {
+      padding: 16px;
+      position: relative;
+    }
+
+    .ingredient-card > div {
+      flex-direction: column !important;
+      gap: 16px !important;
+    }
+
+    .ingredient-card > div > div:first-child {
+      width: 100%;
+      padding-right: 24px;
+    }
+
+    /* Stock indicator - always top right corner */
+    .ingredient-card > div > div:first-child > div:first-child > div {
+      position: absolute !important;
+      top: 16px;
+      right: 16px;
+      margin: 0 !important;
+    }
+
+    /* Truncate ingredient name on mobile */
+    .ingredient-card > div > div:first-child > div:first-child > strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(100% - 30px);
+    }
+
+    /* Hide cost on mobile - target the span with font-weight in first child */
+    .ingredient-card > div > div:first-child > div:first-child > span[style*="font-weight: 600"] {
+      display: none !important;
+    }
+
+    .ingredient-card > div > div:last-child {
+      width: 100%;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 8px !important;
+    }
+
+    /* Quantity controls - centered */
+    .ingredient-card > div > div:last-child > div {
+      flex: 1;
+      max-width: 180px;
+      margin: 0 auto;
+    }
+
+    /* Remove and Reorder buttons - smaller icons */
+    .ingredient-card button[onclick*="removeIngredient"],
+    .ingredient-card button[onclick*="reorderIngredient"] {
+      flex: 1;
+      max-width: 60px;
+      padding: 8px !important;
+      height: 32px;
+      font-size: 12px;
+    }
+
+    /* Make reorder icon smaller */
+    .ingredient-card button[onclick*="reorderIngredient"] img {
+      width: 12px !important;
+      height: 12px !important;
+    }
+
+    /* Add Ingredient Modal - mobile optimizations */
+    #availableIngredientsList > div {
+      padding: 12px 16px !important;
+    }
+
+    /* Container with padding for stock indicator */
+    #availableIngredientsList > div > div[style*="padding-right"] {
+      padding-right: 30px !important;
+    }
+
+    /* Force flex container to constrain width */
+    #availableIngredientsList > div > div > div[style*="flex: 1"] {
+      min-width: 0 !important;
+      max-width: calc(100% - 30px) !important;
+    }
+
+    /* Truncate ingredient name in modal */
+    #availableIngredientsList div[style*="font-weight: 700"][style*="font-size: 16px"] {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+
+    /* Hide price and quantity in add ingredient modal */
+    #availableIngredientsList > div > div:last-child {
+      display: none !important;
+    }
+
+    /* Ensure Ingredients h3 is visible */
+    .panel h3:not(:first-of-type) {
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+
+    /* Add Ingredient card - make prominent on mobile */
+    .ingredient-card[onclick*="openAddIngredientModal"] {
+      padding: 24px;
+      text-align: center;
+      border-width: 2px;
+    }
+
+    /* Ingredients table - make scrollable */
+    .comp-table-wrapper,
+    .ingredients-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -16px;
+      padding: 0 16px;
+    }
+
+    .comp-table,
+    table {
+      min-width: 500px;
+    }
+
+    .comp-table td,
+    .comp-table th {
+      padding: 12px 6px;
+      font-size: 13px;
+    }
+    
+    /* Header actions: wrap on mobile */
+    .header-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    /* Builder overlay */
+    .recipe-overlay {
+      padding: 16px;
+    }
+    
+    .recipe-builder {
+      width: calc(100% - 32px);
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    
+    .recipe-panel {
+      padding: 20px;
+      max-height: none;
+    }
+    
+    .recipe-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    /* Drop items */
+    .drop-item {
+      padding: 16px;
+    }
+    
+    /* Modal adjustments */
+    .modal-content,
+    .production-modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+    
+    /* Ingredients table - horizontal scroll */
+    .ingredients-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+      min-width: 500px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .container { padding: 16px 8px; }
+    
+    .header h1 { font-size: 24px; }
+    
+    /* Stats: single column on very small screens */
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .recipe-builder {
+      padding: 20px 16px;
+    }
+    
+    .modal-content,
+    .production-modal-content {
+      padding: 20px 16px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+(function() {
+  const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+  if (cachedEmail) {
+    const emailEl = document.getElementById('userMenuEmail');
+    const avatarEl = document.getElementById('userAvatar');
+    if (emailEl) emailEl.textContent = cachedEmail;
+    if (avatarEl) {
+      if (cachedAvatar && cachedAvatar !== 'null') {
+        avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarEl.textContent = '';
+      } else {
+        avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        avatarEl.style.backgroundImage = 'none';
+      }
+    }
+  }
+})();
+</script>
+
+<div class="container">
+  <div class="breadcrumb" onclick="window.history.back()">← Back to Recipes</div>
+
+  <div class="header">
+    <div style="flex: 1;">
+      <input type="text" id="recipeName" value="Loading..." style="margin:0; font-size: 32px; font-weight: 700; background: transparent; border: none; color: var(--text-main); width: 100%; padding: 4px 8px; border-radius: 6px;" onfocus="this.style.background='var(--bg-inner)'; this.style.border='1px solid var(--accent)'" onblur="this.style.background='transparent'; this.style.border='none'; saveRecipeName()" />
+      <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+        <span id="recipeStatus" style="font-size: 11px; padding: 5px 10px; border-radius: 6px; font-weight: 700; text-transform: uppercase; display: inline-block;"></span>
+        <span id="recipeCount" style="font-size: 13px; color: var(--text-muted);"></span>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; align-items: flex-start;">
+      <button class="btn btn-success" onclick="saveRecipe()">Save</button>
+      <button class="btn btn-outline" onclick="duplicateRecipe()">Duplicate</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+
+  <div style="max-width: 100%;">
+    
+    <div class="panel">
+      <h3>Financial Breakdown</h3>
+      <div class="margin-card" id="financialCard">
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading financial data...</div>
+      </div>
+
+      <h3>Ingredients</h3>
+      <div id="ingredientsList" style="margin-top: 16px;">
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let recipeId = null;
+let recipe = null;
+let confirmResolver = null;
+
+// Custom modal functions
+function showAlert(message, title = 'Alert') {
+  document.getElementById('alertTitle').textContent = title;
+  document.getElementById('alertMessage').textContent = message;
+  document.getElementById('alertModal').classList.add('active');
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+}
+
+function showConfirm(message, title = 'Confirm') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
+// Load recipe data
+async function loadRecipe() {
+  const params = new URLSearchParams(window.location.search);
+  recipeId = params.get('id');
+  
+  if (!recipeId) {
+    showAlert('No recipe ID provided');
+    setTimeout(() => window.location.href = 'recipes.html', 1500);
+    return;
+  }
+
+  try {
+    if (typeof window.supabaseClient === 'undefined') {
+      console.error('Supabase client not initialized');
+      return;
+    }
+
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    const { data, error } = await window.supabaseClient
+      .from('recipes')
+      .select('*')
+      .eq('id', recipeId)
+      .eq('profile_id', user.id)
+      .single();
+
+    if (error) throw error;
+    
+    if (!data) {
+      showAlert('Recipe not found');
+      setTimeout(() => {
+        window.location.href = 'recipes.html';
+      }, 1500);
+      return;
+    }
+
+    // Fetch ingredient details with attributes
+    if (data.components && data.components.length > 0) {
+      const ingredientIds = data.components.map(c => c.ingredient_id || c.id).filter(Boolean);
+      if (ingredientIds.length > 0) {
+        const { data: ingredients } = await window.supabaseClient
+          .from('ingredients')
+          .select('id, name, custom_attributes')
+          .eq('profile_id', user.id)
+          .in('id', ingredientIds);
+        
+        if (ingredients) {
+          const ingredientMap = {};
+          ingredients.forEach(ing => {
+            ingredientMap[ing.id] = ing;
+          });
+          
+          data.components = data.components.map(comp => {
+            const ingId = comp.ingredient_id || comp.id;
+            return {
+              ...comp,
+              ingredient_id: ingId, // Ensure ingredient_id is set
+              attributes: ingredientMap[ingId]?.custom_attributes || comp.attributes || ''
+            };
+          });
+        }
+      }
+    }
+
+    recipe = data;
+    renderRecipe();
+  } catch (error) {
+    console.error('Error loading recipe:', error);
+    showAlert('Failed to load recipe');
+  }
+}
+
+async function renderRecipe() {
+  if (!recipe) return;
+
+  // Header
+  document.getElementById('recipeName').value = recipe.name || 'Unnamed Recipe';
+
+  // Financial breakdown
+  const cost = parseFloat(recipe.cost) || 0;
+  const retailPrice = parseFloat(recipe.retail_price) || (cost * 1.6); // Default retail price (60% markup)
+  const profit = retailPrice - cost;
+  const margin = retailPrice > 0 ? ((profit / retailPrice) * 100).toFixed(0) : 0;
+  const costPercent = retailPrice > 0 ? ((cost / retailPrice) * 100).toFixed(0) : 0;
+  const profitPercent = 100 - costPercent;
+
+  document.getElementById('financialCard').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 16px;">
+      <div>
+        <label style="font-size:11px; color:var(--text-muted)">PRODUCTION COST</label>
+        <div style="font-size:32px; font-weight:800">$${cost.toFixed(2)}</div>
+      </div>
+      <div style="text-align:center;">
+        <label style="font-size:11px; color:var(--accent)">RETAIL PRICE</label>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-size:32px; font-weight:800; color:var(--accent)">$</span><input type="number" id="retailPriceInput" value="${retailPrice.toFixed(2)}" step="0.01" min="0" style="font-size:32px; font-weight:800; color:var(--accent); background: transparent; border: none; width: 100px; padding: 4px;" onfocus="this.style.background='var(--bg-inner)'; this.style.border='1px solid var(--accent)'; this.style.borderRadius='6px'" onblur="this.style.background='transparent'; this.style.border='none'; updateRetailPrice()" onchange="updateRetailPrice()" />
+        </div>
+      </div>
+      <div style="text-align:right">
+        <label style="font-size:11px; color:var(--profit)">PROFIT</label>
+        <div style="font-size:32px; font-weight:800; color:var(--profit)">$${profit.toFixed(2)}</div>
+      </div>
+    </div>
+
+    <div class="margin-bar-container" style="position: relative;">
+      <div class="bar-cost" style="width: ${costPercent}%"></div>
+      <div class="bar-profit" style="width: ${profitPercent}%"></div>
+    </div>
+  `;
+
+  // Ingredients List
+  const components = recipe.components || [];
+  let canProduce = true;
+  
+  // Fetch ingredient stock info
+  const ingredientIds = components.map(c => c.ingredient_id || c.id).filter(Boolean);
+  let ingredientStockMap = {};
+  
+  if (ingredientIds.length > 0) {
+    try {
+      const { data: { user } } = await window.supabaseClient.auth.getUser();
+      if (!user) {
+        console.error('No user found when fetching stock');
+      } else {
+        console.log('Fetching stock for ingredient IDs:', ingredientIds);
+        const { data: ingredients, error: stockError } = await window.supabaseClient
+          .from('ingredients')
+          .select('id, quantity')
+          .eq('profile_id', user.id)
+          .in('id', ingredientIds);
+        
+        if (stockError) {
+          console.error('Supabase error fetching stock:', stockError);
+        }
+        
+        if (ingredients) {
+          console.log('Fetched ingredient stock data:', ingredients);
+          ingredients.forEach(ing => {
+            ingredientStockMap[ing.id] = {
+              quantity: ing.quantity || 0
+            };
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading ingredient stock:', error);
+    }
+  }
+  
+  // Sort by price descending but keep track of original index
+  const sortedComponents = components.map((comp, origIndex) => ({ comp, origIndex }))
+    .sort((a, b) => (b.comp.cost || 0) - (a.comp.cost || 0));
+  
+  let maxRecipeCount = Infinity;
+  
+  const ingredientsHtml = sortedComponents.map(({ comp, origIndex }) => {
+    let attributes = comp.attributes || comp.custom_attributes || '';
+    
+    // Parse attributes if it's a JSON string
+    if (attributes && typeof attributes === 'string') {
+      try {
+        const parsed = JSON.parse(attributes);
+        if (typeof parsed === 'object' && parsed !== null) {
+          attributes = Object.values(parsed).filter(v => v).join(' · ');
+        }
+      } catch (e) {
+        // If it's not JSON, use as is
+      }
+    } else if (attributes && typeof attributes === 'object') {
+      attributes = Object.values(attributes).filter(v => v).join(' · ');
+    }
+    
+    const ingredientId = comp.ingredient_id || comp.id || '';
+    const stockInfo = ingredientStockMap[ingredientId] || { quantity: 0 };
+    const stock = parseFloat(stockInfo.quantity) || 0;
+    const requiredQty = parseFloat(comp.quantity) || 0;
+    
+    // Calculate how many times this ingredient allows recipe to be made
+    if (requiredQty > 0) {
+      const timesForThisIngredient = Math.floor(stock / requiredQty);
+      maxRecipeCount = Math.min(maxRecipeCount, timesForThisIngredient);
+    }
+    
+    // Debug logging
+    console.log('Ingredient:', comp.ingredient_name || comp.name, 'ID:', ingredientId, 'Stock:', stock, 'Required:', requiredQty);
+    
+    // Recipe can't be produced if required quantity exceeds available stock
+    if (stock < requiredQty) canProduce = false;
+    
+    let indicatorColor = '';
+    let indicatorShadow = '';
+    
+    if (stock === 0) {
+      indicatorColor = '#ef4444';
+      indicatorShadow = '0 0 12px rgba(239, 68, 68, 0.5)';
+    } else if (stock < requiredQty) {
+      indicatorColor = '#f59e0b';
+      indicatorShadow = '0 0 12px rgba(245, 158, 11, 0.5)';
+    } else {
+      indicatorColor = '#10b981';
+      indicatorShadow = '0 0 12px rgba(16, 185, 129, 0.5)';
+    }
+    
+    const statusIndicator = `<div style="width: 12px; height: 12px; border-radius: 50%; background: ${indicatorColor}; box-shadow: ${indicatorShadow};"></div>`;
+    
+    return `
+      <div class="ingredient-card">
+        <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+              <strong style="font-size: 16px; cursor: pointer; color: var(--accent);" onclick="window.location.href='ingredient-detail.html?id=${ingredientId}'" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${comp.ingredient_name || comp.name || 'Unknown ingredient'}</strong>
+              ${statusIndicator}
+              <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">$${(comp.cost || 0).toFixed(2)}</span>
+            </div>
+            ${attributes ? `<div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">${attributes}</div>` : ''}
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; background: var(--card-bg); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);">
+              <button onclick="decreaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" title="Decrease quantity">−</button>
+              <span style="color: var(--text-main); font-size: 14px; font-weight: 600; min-width: 60px; text-align: center;">${comp.quantity || 0}</span>
+              <button onclick="increaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" title="Increase quantity">+</button>
+            </div>
+            <button onclick="removeIngredientFromRecipe(${origIndex})" style="background: var(--danger); border: none; color: white; cursor: pointer; font-size: 14px; padding: 8px 12px; border-radius: 6px; font-weight: 600; height: 38px;" title="Remove from recipe">✕</button>
+            <button onclick="reorderIngredient('${ingredientId}')" style="background: var(--accent); border: none; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; height: 38px;" title="Reorder ingredient"><img src="https://cdn-icons-png.flaticon.com/512/12067/12067684.png" style="width: 16px; height: 16px; filter: brightness(0) invert(1);" alt="Reorder"></button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Update recipe status badge
+  const statusEl = document.getElementById('recipeStatus');
+  const countEl = document.getElementById('recipeCount');
+  
+  // Ensure maxRecipeCount is valid
+  if (maxRecipeCount === Infinity || maxRecipeCount < 0) {
+    maxRecipeCount = 0;
+  }
+  
+  if (canProduce && maxRecipeCount > 0) {
+    statusEl.textContent = 'Can Produce';
+    statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
+    statusEl.style.color = 'var(--success)';
+    countEl.textContent = `Enough ingredients to create this recipe ${maxRecipeCount} time${maxRecipeCount !== 1 ? 's' : ''}`;
+    countEl.style.color = 'var(--success)';
+  } else {
+    statusEl.textContent = 'Cannot Produce';
+    statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+    statusEl.style.color = 'var(--danger)';
+    countEl.textContent = '';
+  }
+  
+  const addButtonHtml = `
+    <div class="ingredient-card" style="border: 2px dashed var(--border); background: transparent; cursor: pointer; transition: all 0.2s;" onclick="openAddIngredientModal()" onmouseover="this.style.borderColor='var(--accent)'; this.style.background='rgba(52, 152, 219, 0.05)'" onmouseout="this.style.borderColor='var(--border)'; this.style.background='transparent'">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;">
+        <span style="font-size: 24px; color: var(--accent);">+</span>
+        <span style="color: var(--accent); font-size: 15px; font-weight: 600;">Add Ingredient</span>
+      </div>
+    </div>
+  `;
+  
+  if (components.length === 0) {
+    document.getElementById('ingredientsList').innerHTML = addButtonHtml;
+  } else {
+    document.getElementById('ingredientsList').innerHTML = ingredientsHtml + addButtonHtml;
+  }
+}
+
+// Recipe Builder Variables
+let ingredientData = [];
+let currentRecipe = {};
+let favoriteIngredients = new Set();
+
+async function editRecipe() {
+  // Open the builder modal
+  document.getElementById('recipeBuilderOverlay').classList.add('active');
+  document.getElementById('recipeNameInput').value = recipe.name || '';
+  
+  // Setup dropzone first
+  setupDropzone();
+  
+  // Load ingredients for drag and drop
+  await loadIngredientsForBuilder();
+  
+  // Pre-populate the dropzone with existing recipe components
+  currentRecipe = {};
+  const dropzone = document.getElementById('recipeDropzone');
+  dropzone.innerHTML = '';
+  
+  let totalCost = 0;
+  if (recipe.components && Array.isArray(recipe.components)) {
+    recipe.components.forEach(comp => {
+      const ingredientId = comp.ingredient_id || comp.id;
+      
+      currentRecipe[ingredientId] = {
+        name: comp.ingredient_name || comp.name,
+        price: (comp.cost || 0) / (comp.quantity || 1),
+        unit: comp.unit || 'kg',
+        quantity: comp.quantity || 1
+      };
+      
+      const itemCost = comp.cost || 0;
+      totalCost += itemCost;
+      
+      // Get ingredient attributes
+      const fullIng = ingredientData.find(i => i.id === ingredientId);
+      let attributesText = '';
+      if (fullIng && fullIng.attributes && typeof fullIng.attributes === 'object') {
+        const attrs = Object.entries(fullIng.attributes).slice(0, 3);
+        if (attrs.length > 0) {
+          attributesText = '<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">' + 
+            attrs.map(([key, val]) => val).join(' · ') + 
+            '</div>';
+        }
+      }
+      
+      const row = document.createElement('div');
+      row.className = 'drop-item';
+      row.dataset.id = ingredientId;
+      row.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1;">
+          <div style="flex: 1;">
+            <strong style="display: block; font-size: 16px; margin-bottom: 2px;">${comp.ingredient_name || comp.name}</strong>
+            ${attributesText}
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;" data-cost="${ingredientId}">$${itemCost.toFixed(2)}</span>
+            <button onclick="adjustQuantity('${ingredientId}', -1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">-</button>
+            <span style="color: var(--text-main); font-size: 16px; min-width: 60px; text-align: center; font-weight: 700;" data-qty="${ingredientId}">${comp.quantity} ${comp.unit}</span>
+            <button onclick="adjustQuantity('${ingredientId}', 1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">+</button>
+            <span style="color: var(--danger); font-size: 24px; cursor: pointer; font-weight: 300; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onclick="removeIngredient('${ingredientId}')">&times;</span>
+          </div>
+        </div>
+      `;
+      dropzone.appendChild(row);
+    });
+  }
+  
+  document.getElementById('recipeTotalCostDisplay').textContent = `$${totalCost.toFixed(2)}`;
+  updateDisabledState();
+}
+
+function closeRecipeBuilder() {
+  document.getElementById('recipeBuilderOverlay').classList.remove('active');
+}
+
+async function loadIngredientsForBuilder() {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await window.supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    ingredientData = (data || []).map(ing => {
+      let attributes = null;
+      try {
+        if (ing.custom_attributes) {
+          attributes = typeof ing.custom_attributes === 'string' 
+            ? JSON.parse(ing.custom_attributes) 
+            : ing.custom_attributes;
+        }
+      } catch (e) {
+        console.warn('Failed to parse attributes:', e);
+      }
+      
+      return {
+        id: ing.id,
+        name: ing.name,
+        price: parseFloat(ing.cost_per_unit) || 0,
+        unit: ing.unit || 'kg',
+        quantity: parseFloat(ing.quantity) || 0,
+        min_stock: parseFloat(ing.min_stock) || 0,
+        attributes: attributes,
+        is_favorite: ing.is_favorite || false
+      };
+    });
+    
+    favoriteIngredients.clear();
+    ingredientData.forEach(ing => {
+      if (ing.is_favorite) {
+        favoriteIngredients.add(ing.id);
+      }
+    });
+
+    renderIngredientList();
+  } catch (error) {
+    console.error('Error loading ingredients:', error);
+  }
+}
+
+function renderIngredientList() {
+  const ingredientList = document.getElementById('recipeIngredientList');
+  const searchInput = document.getElementById('recipeSearchIng');
+  
+  if (!ingredientList) return;
+  
+  const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+  const filtered = ingredientData.filter(item => item.name.toLowerCase().includes(searchQuery));
+  
+  ingredientList.innerHTML = '';
+  
+  const favorites = filtered.filter(item => favoriteIngredients.has(item.id));
+  const nonFavorites = filtered.filter(item => !favoriteIngredients.has(item.id));
+  
+  if (favorites.length > 0) {
+    const favHeader = document.createElement('h4');
+    favHeader.style.cssText = 'font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0; font-weight: 700; letter-spacing: 0.05em;';
+    favHeader.textContent = 'Favorites';
+    ingredientList.appendChild(favHeader);
+    
+    favorites.forEach(item => ingredientList.appendChild(createIngredientElement(item)));
+    
+    if (nonFavorites.length > 0) {
+      const allHeader = document.createElement('h4');
+      allHeader.style.cssText = 'font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0; font-weight: 700; letter-spacing: 0.05em;';
+      allHeader.textContent = 'All Ingredients';
+      ingredientList.appendChild(allHeader);
+    }
+  }
+  
+  nonFavorites.forEach(item => ingredientList.appendChild(createIngredientElement(item)));
+}
+
+function createIngredientElement(item) {
+  const el = document.createElement('div');
+  el.className = 'recipe-ingredient';
+  el.dataset.id = item.id;
+  
+  const isDisabled = currentRecipe[item.id] !== undefined;
+  if (isDisabled) el.classList.add('disabled');
+  
+  let attributesHtml = '';
+  if (item.attributes && typeof item.attributes === 'object') {
+    const attrs = Object.entries(item.attributes).slice(0, 3);
+    if (attrs.length > 0) {
+      attributesHtml = '<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">' + 
+        attrs.map(([key, val]) => val).join(' · ') + 
+        '</div>';
+    }
+  }
+  
+  const minStock = item.min_stock || 0;
+  const stockColor = item.quantity === 0 ? 'var(--danger)' : (minStock > 0 && item.quantity <= minStock) ? 'var(--warning)' : 'var(--success)';
+  const isFavorite = favoriteIngredients.has(item.id);
+  const starFill = isFavorite ? 'var(--warning)' : 'none';
+  const starStroke = isFavorite ? 'var(--warning)' : 'var(--text-muted)';
+  
+  el.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name}</div>
+        ${attributesHtml}
+        <div style="font-size: 11px; margin-top: 4px;">
+          <span style="color: ${stockColor}; font-weight: 600;">${item.quantity.toFixed(1)} ${item.unit}</span>
+          <span style="color: var(--text-muted);"> in stock</span>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  if (!isDisabled) {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text', JSON.stringify({ id: item.id, name: item.name, price: item.price, unit: item.unit }));
+    });
+    
+    // Add click/tap support for mobile
+    el.addEventListener('click', (e) => {
+      addIngredientToRecipeViaClick({ id: item.id, name: item.name, price: item.price, unit: item.unit });
+    });
+    
+    el.style.cursor = 'pointer';
+  }
+  
+  return el;
+}
+
+// Function to add ingredient to recipe via click (for mobile)
+function addIngredientToRecipeViaClick(item) {
+  const dz = document.getElementById('recipeDropzone');
+  if (!dz) return;
+  
+  // Check if already added
+  if (currentRecipe[item.id]) {
+    // Flash the existing item to show it's already added
+    const existingItem = dz.querySelector(`[data-id="${item.id}"]`);
+    if (existingItem) {
+      existingItem.style.background = 'rgba(6, 182, 212, 0.1)';
+      setTimeout(() => {
+        existingItem.style.background = '';
+      }, 300);
+    }
+    return;
+  }
+  
+  const qty = 1;
+  const placeholder = dz.querySelector('.recipe-drop-placeholder');
+  if (placeholder) placeholder.remove();
+  
+  currentRecipe[item.id] = {
+    name: item.name,
+    price: item.price,
+    unit: item.unit,
+    quantity: qty
+  };
+  
+  updateDisabledState();
+  
+  const fullIng = ingredientData.find(i => i.id === item.id);
+  let attributesText = '';
+  if (fullIng && fullIng.attributes && typeof fullIng.attributes === 'object') {
+    const attrs = Object.entries(fullIng.attributes).slice(0, 3);
+    if (attrs.length > 0) {
+      attributesText = '<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">' + 
+        attrs.map(([key, val]) => val).join(' · ') + 
+        '</div>';
+    }
+  }
+  
+  const row = document.createElement('div');
+  row.className = 'drop-item';
+  row.dataset.id = item.id;
+  row.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1;">
+      <div style="flex: 1;">
+        <strong style="display: block; font-size: 16px; margin-bottom: 2px;">${item.name}</strong>
+        ${attributesText}
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;" data-cost="${item.id}">$${(item.price * qty).toFixed(2)}</span>
+        <button onclick="adjustQuantity('${item.id}', -1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">-</button>
+        <span style="color: var(--text-main); font-size: 16px; min-width: 60px; text-align: center; font-weight: 700;" data-qty="${item.id}">${qty} ${item.unit}</span>
+        <button onclick="adjustQuantity('${item.id}', 1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">+</button>
+        <span style="color: var(--danger); font-size: 24px; cursor: pointer; font-weight: 300; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onclick="removeIngredient('${item.id}')">&times;</span>
+      </div>
+    </div>
+  `;
+  
+  dz.appendChild(row);
+  updateCost();
+}
+
+function setupDropzone() {
+  const dz = document.getElementById('recipeDropzone');
+  if (!dz) return;
+  
+  dz.ondragover = e => {
+    e.preventDefault();
+    dz.style.borderColor = 'var(--accent)';
+    dz.style.background = 'rgba(6, 182, 212, 0.05)';
+  };
+  
+  dz.ondragleave = e => {
+    e.preventDefault();
+    dz.style.borderColor = 'var(--border)';
+    dz.style.background = 'transparent';
+  };
+  
+  dz.ondrop = async e => {
+    e.preventDefault();
+    dz.style.borderColor = 'var(--border)';
+    dz.style.background = 'transparent';
+    
+    const dataStr = e.dataTransfer.getData('text');
+    if (!dataStr) return;
+    
+    const item = JSON.parse(dataStr);
+    addIngredientToRecipeViaClick(item);
+  };
+}
+
+function adjustQuantity(id, delta) {
+  if (!currentRecipe[id]) return;
+  
+  const newQty = currentRecipe[id].quantity + delta;
+  if (newQty <= 0) {
+    removeIngredient(id);
+    return;
+  }
+  
+  currentRecipe[id].quantity = newQty;
+  
+  const qtySpan = document.querySelector(`[data-qty="${id}"]`);
+  const costSpan = document.querySelector(`[data-cost="${id}"]`);
+  
+  if (qtySpan) qtySpan.textContent = `${newQty} ${currentRecipe[id].unit}`;
+  if (costSpan) costSpan.textContent = `$${(currentRecipe[id].price * newQty).toFixed(2)}`;
+  
+  updateCost();
+}
+
+function removeIngredient(id) {
+  delete currentRecipe[id];
+  updateDisabledState();
+  updateCost();
+  
+  const row = document.querySelector(`#recipeDropzone .drop-item[data-id="${id}"]`);
+  if (row) row.remove();
+  
+  const dz = document.getElementById('recipeDropzone');
+  if (dz && Object.keys(currentRecipe).length === 0) {
+    dz.innerHTML = '<div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your recipe</div>';
+  }
+}
+
+function updateDisabledState() {
+  renderIngredientList();
+}
+
+function updateCost() {
+  let total = 0;
+  for (const id in currentRecipe) {
+    const item = currentRecipe[id];
+    total += item.price * item.quantity;
+  }
+  const display = document.getElementById('recipeTotalCostDisplay');
+  if (display) display.textContent = `$${total.toFixed(2)}`;
+}
+
+function filterRecipeIngredients() {
+  renderIngredientList();
+}
+
+async function saveRecipeChanges() {
+  const nameInput = document.getElementById('recipeNameInput');
+  const name = nameInput.value.trim();
+  
+  if (!name) {
+    nameInput.classList.add('shake');
+    nameInput.focus();
+    setTimeout(() => nameInput.classList.remove('shake'), 500);
+    return;
+  }
+  
+  if (Object.keys(currentRecipe).length === 0) {
+    showAlert('Please add at least one ingredient');
+    return;
+  }
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) {
+      showAlert('Please log in to save changes');
+      return;
+    }
+    
+    let totalCost = 0;
+    const components = [];
+    
+    for (const id in currentRecipe) {
+      const item = currentRecipe[id];
+      totalCost += item.price * item.quantity;
+      components.push({
+        ingredient_id: id,
+        ingredient_name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        cost: item.price * item.quantity
+      });
+    }
+    
+    const { error } = await window.supabaseClient
+      .from('recipes')
+      .update({
+        name: name,
+        components: components,
+        cost: totalCost
+      })
+      .eq('id', recipeId);
+    
+    if (error) throw error;
+    
+    closeRecipeBuilder();
+    showAlert('Recipe updated successfully!');
+    await loadRecipe();
+    
+  } catch (error) {
+    console.error('Error saving recipe:', error);
+    showAlert('Failed to save recipe. Please try again.');
+  }
+}
+
+async function duplicateRecipe() {
+  if (await showConfirm('Create a duplicate of this recipe?')) {
+    window.location.href = `recipes.html?duplicate=${recipeId}`;
+  }
+}
+
+async function saveRecipeName() {
+  const newName = document.getElementById('recipeName').value.trim();
+  if (!newName || newName === recipe.name) return;
+  
+  try {
+    const { error } = await window.supabaseClient
+      .from('recipes')
+      .update({ name: newName })
+      .eq('id', recipeId);
+    
+    if (error) throw error;
+    recipe.name = newName;
+  } catch (error) {
+    console.error('Error updating recipe name:', error);
+    showAlert('Failed to update recipe name');
+  }
+}
+
+async function updateRetailPrice() {
+  const priceInput = document.getElementById('retailPriceInput');
+  const newPrice = parseFloat(priceInput.value) || 0;
+  
+  if (newPrice < 0) {
+    priceInput.value = (recipe.retail_price || (recipe.cost * 1.6)).toFixed(2);
+    return;
+  }
+  
+  try {
+    const { error } = await window.supabaseClient
+      .from('recipes')
+      .update({ retail_price: newPrice })
+      .eq('id', recipeId);
+    
+    if (error) throw error;
+    recipe.retail_price = newPrice;
+    renderRecipe();
+  } catch (error) {
+    console.error('Error updating retail price:', error);
+    showAlert('Failed to update retail price');
+  }
+}
+
+async function saveRecipe() {
+  await saveRecipeName();
+  showAlert('Recipe saved successfully!');
+}
+
+async function increaseIngredientQuantity(index) {
+  const comp = recipe.components[index];
+  const pricePerUnit = (comp.cost || 0) / (comp.quantity || 1);
+  comp.quantity += 1;
+  comp.cost = pricePerUnit * comp.quantity;
+  await updateRecipeInDatabase();
+  renderRecipe();
+}
+
+async function decreaseIngredientQuantity(index) {
+  const comp = recipe.components[index];
+  if (comp.quantity > 1) {
+    const pricePerUnit = (comp.cost || 0) / (comp.quantity || 1);
+    comp.quantity -= 1;
+    comp.cost = pricePerUnit * comp.quantity;
+    await updateRecipeInDatabase();
+    renderRecipe();
+  }
+}
+
+async function removeIngredientFromRecipe(index) {
+  recipe.components.splice(index, 1);
+  await updateRecipeInDatabase();
+  renderRecipe();
+  renderAvailableIngredients();
+}
+
+async function updateRecipeInDatabase() {
+  const totalCost = recipe.components.reduce((sum, comp) => sum + (comp.cost || 0), 0);
+  recipe.cost = totalCost;
+  
+  try {
+    const { error } = await window.supabaseClient
+      .from('recipes')
+      .update({
+        components: recipe.components,
+        cost: totalCost
+      })
+      .eq('id', recipeId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error updating recipe:', error);
+    showAlert('Failed to update recipe');
+  }
+}
+
+async function confirmDelete() {
+  if (!await showConfirm("Are you sure you want to delete this recipe? This action cannot be undone.")) return;
+  
+  try {
+    const { error } = await window.supabaseClient
+      .from('recipes')
+      .delete()
+      .eq('id', recipeId);
+
+    if (error) throw error;
+    
+    showAlert('Recipe deleted successfully');
+    setTimeout(() => {
+      window.location.href = "recipes.html";
+    }, 1500);
+  } catch (error) {
+    console.error('Error deleting recipe:', error);
+    showAlert('Failed to delete recipe');
+  }
+}
+
+let currentReorderIngredient = null;
+
+async function reorderIngredient(ingredientId) {
+  try {
+    const { data: ingredient, error } = await window.supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('id', ingredientId)
+      .single();
+    
+    if (error) throw error;
+    
+    currentReorderIngredient = ingredient;
+    openReorderModal();
+  } catch (error) {
+    console.error('Error loading ingredient:', error);
+    showAlert('Failed to load ingredient details');
+  }
+}
+
+function openReorderModal() {
+  if (!currentReorderIngredient) return;
+  
+  const modal = document.getElementById('reorderModal');
+  const link = document.getElementById('sourceUrlLink');
+  const display = document.getElementById('sourceUrlDisplay');
+  const ingredientName = document.getElementById('reorderIngredientName');
+  
+  ingredientName.textContent = currentReorderIngredient.name;
+  
+  if (currentReorderIngredient.source_url) {
+    link.textContent = currentReorderIngredient.source_url;
+    display.dataset.url = currentReorderIngredient.source_url;
+    display.style.display = 'flex';
+  } else {
+    display.style.display = 'none';
+  }
+  
+  modal.classList.add('active');
+  
+  if (currentReorderIngredient.source_url) {
+    loadReorderIngredients(currentReorderIngredient.source_url);
+  } else {
+    document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No source URL available</p>';
+  }
+}
+
+function closeReorderModal() {
+  document.getElementById('reorderModal').classList.remove('active');
+  currentReorderIngredient = null;
+}
+
+async function loadReorderIngredients(sourceUrl) {
+  const list = document.getElementById('reorderIngredientsList');
+  list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>';
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { data, error } = await window.supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('profile_id', user.id)
+      .eq('source_url', sourceUrl);
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No other ingredients from this source</p>';
+      return;
+    }
+    
+    list.innerHTML = data.map(ing => {
+      const stock = ing.quantity || 0;
+      const minStock = ing.min_stock || 10;
+      
+      let indicatorColor = '';
+      let indicatorShadow = '';
+      
+      if (stock === 0) {
+        indicatorColor = '#ef4444';
+        indicatorShadow = '0 0 12px rgba(239, 68, 68, 0.5)';
+      } else if (stock <= minStock) {
+        indicatorColor = '#f59e0b';
+        indicatorShadow = '0 0 12px rgba(245, 158, 11, 0.5)';
+      } else {
+        indicatorColor = '#10b981';
+        indicatorShadow = '0 0 12px rgba(16, 185, 129, 0.5)';
+      }
+      
+      return `
+        <div style="padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; position: relative;">
+          <div style="position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; border-radius: 50%; background: ${indicatorColor}; box-shadow: ${indicatorShadow};"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 24px;">
+            <div>
+              <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Stock: ${stock.toFixed(1)} ${ing.unit || 'units'}</div>
+            </div>
+            <div style="font-size: 14px; font-weight: 700; color: var(--accent);">$${(ing.cost_per_unit || 0).toFixed(2)}/${ing.unit || 'unit'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error loading ingredients:', error);
+    list.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Failed to load ingredients</p>';
+  }
+}
+
+async function markAsReordered() {
+  if (!currentReorderIngredient) return;
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await window.supabaseClient
+      .from('ingredients')
+      .update({ reorder_pending: true })
+      .eq('id', currentReorderIngredient.id)
+      .eq('profile_id', user.id);
+    
+    if (error) throw error;
+
+    showAlert(`${currentReorderIngredient.name} marked as reordered`);
+    closeReorderModal();
+  } catch (error) {
+    console.error('Error creating reorder:', error);
+    showAlert('Failed to mark as reordered');
+  }
+}
+
+// Add Ingredient Modal Functions
+let availableIngredients = [];
+
+async function openAddIngredientModal() {
+  document.getElementById('addIngredientModal').classList.add('active');
+  document.getElementById('ingredientSearchInput').value = '';
+  
+  // Hide bottom buttons on mobile
+  if (window.innerWidth <= 768) {
+    const headerButtons = document.querySelector('.header > div:last-child');
+    if (headerButtons) headerButtons.style.display = 'none';
+  }
+  
+  // Load ingredients if not already loaded
+  if (availableIngredients.length === 0) {
+    try {
+      const { data: { user } } = await window.supabaseClient.auth.getUser();
+      if (!user) return;
+      
+      const { data, error } = await window.supabaseClient
+        .from('ingredients')
+        .select('*')
+        .eq('profile_id', user.id);
+      
+      if (error) throw error;
+      availableIngredients = data || [];
+    } catch (error) {
+      console.error('Error loading ingredients:', error);
+      showAlert('Failed to load ingredients');
+      return;
+    }
+  }
+  
+  renderAvailableIngredients();
+}
+
+function closeAddIngredientModal() {
+  document.getElementById('addIngredientModal').classList.remove('active');
+  
+  // Show bottom buttons on mobile
+  if (window.innerWidth <= 768) {
+    const headerButtons = document.querySelector('.header > div:last-child');
+    if (headerButtons) headerButtons.style.display = 'flex';
+  }
+}
+
+function filterAvailableIngredients() {
+  renderAvailableIngredients();
+}
+
+function renderAvailableIngredients() {
+  const searchTerm = document.getElementById('ingredientSearchInput').value.toLowerCase();
+  const container = document.getElementById('availableIngredientsList');
+  
+  // Filter out ingredients already in the recipe
+  const existingIds = new Set((recipe.components || []).map(c => c.ingredient_id));
+  const notInRecipe = availableIngredients.filter(ing => !existingIds.has(ing.id));
+  
+  const filtered = notInRecipe.filter(ing => {
+    // Search in name
+    if (ing.name.toLowerCase().includes(searchTerm)) return true;
+    
+    // Search in custom attributes
+    if (ing.custom_attributes) {
+      try {
+        const parsed = typeof ing.custom_attributes === 'string' 
+          ? JSON.parse(ing.custom_attributes) 
+          : ing.custom_attributes;
+        const attributeValues = Object.values(parsed).filter(v => v).join(' ').toLowerCase();
+        if (attributeValues.includes(searchTerm)) return true;
+      } catch (e) {}
+    }
+    
+    return false;
+  });
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">No ingredients found</div>';
+    return;
+  }
+  
+  container.innerHTML = filtered.map(ing => {
+    let attributes = '';
+    if (ing.custom_attributes) {
+      try {
+        const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+        attributes = Object.values(parsed).filter(v => v).join(' · ');
+      } catch (e) {}
+    }
+    
+    const stockColor = ing.quantity === 0 ? '#ef4444' : ing.quantity <= (ing.min_stock || 10) ? '#f59e0b' : '#10b981';
+    const stockShadow = ing.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : ing.quantity <= (ing.min_stock || 10) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
+    
+    return `
+      <div style="
+        padding: 16px 20px; 
+        border: 2px solid var(--border); 
+        border-radius: 12px; 
+        cursor: pointer; 
+        transition: all 0.2s; 
+        background: var(--bg-panel);
+        position: relative;
+      " onclick="addIngredientToRecipe('${ing.id}')" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'">
+        
+        <div style="position: absolute; top: 16px; right: 20px; width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow};"></div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding-right: 24px;">
+          <div style="flex: 1; min-width: 0; overflow: hidden;">
+            <div style="font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
+            ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">${attributes}</div>` : ''}
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; font-weight: 700;">Price</div>
+              <div style="font-size: 15px; font-weight: 700; color: var(--accent);">$${(ing.cost_per_unit || 0).toFixed(2)}<span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">/${ing.unit || 'unit'}</span></div>
+            </div>
+            <div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; font-weight: 700;">Quantity</div>
+              <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">${(ing.quantity || 0).toFixed(1)} ${ing.unit || 'units'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function addIngredientToRecipe(ingredientId) {
+  const ingredient = availableIngredients.find(i => i.id === ingredientId);
+  if (!ingredient) return;
+  
+  // Add to recipe components
+  const newComponent = {
+    ingredient_id: ingredientId,
+    ingredient_name: ingredient.name,
+    quantity: 1,
+    unit: ingredient.unit || 'kg',
+    cost: (ingredient.price || 0) * 1, // Cost per quantity
+    attributes: ingredient.custom_attributes || ''
+  };
+  
+  recipe.components = recipe.components || [];
+  recipe.components.push(newComponent);
+  
+  await updateRecipeInDatabase();
+  renderRecipe();
+  renderAvailableIngredients();
+}
+
+// Wait for auth to be ready, then load recipe
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      loadRecipe();
+    }
+  });
+  // Also try loading immediately if already logged in
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      loadRecipe();
+    }
+  });
+}
+
+// Auto-highlight active page in navigation
+(function() {
+  const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+  const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+})();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal" onclick="if(event.target === this) closeFeedback()">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1">
+          <div class="emoji-face">😡</div>
+          <div class="emoji-label">Hate</div>
+        </div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2">
+          <div class="emoji-face">😟</div>
+          <div class="emoji-label">Bad</div>
+        </div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3">
+          <div class="emoji-face">😐</div>
+          <div class="emoji-label">Okay</div>
+        </div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4">
+          <div class="emoji-face">😊</div>
+          <div class="emoji-label">Good</div>
+        </div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5">
+          <div class="emoji-face">🤩</div>
+          <div class="emoji-label">Love</div>
+        </div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+// Show feedback button for logged in users
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      document.getElementById('feedbackButton').classList.add('show');
+    }
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    showAlert('Please select a rating');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  
+  if (!text.trim()) {
+    showAlert('Please provide some feedback');
+    return;
+  }
+  
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert({
+            score: feedbackRating,
+            comment: text,
+            user_id: session.user.id
+          })
+          .select();
+        
+        if (error) {
+          console.error('Error saving feedback:', error);
+          showAlert('Failed to submit feedback. Please try again.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+  
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+
+// Escape key listener for modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('alertModal').classList.contains('active')) {
+      closeAlert();
+    } else if (document.getElementById('confirmModal').classList.contains('active')) {
+      resolveConfirm(false);
+    } else if (document.getElementById('recipeBuilderOverlay').classList.contains('active')) {
+      closeRecipeBuilder();
+    } else if (document.getElementById('addIngredientModal').classList.contains('active')) {
+      closeAddIngredientModal();
+    } else if (document.getElementById('reorderModal').classList.contains('active')) {
+      closeReorderModal();
+    } else if (document.getElementById('feedbackModal').classList.contains('active')) {
+      closeFeedback();
+    }
+  }
+});
+
+// === Notification System ===
+let notificationsCache = [];
+let notificationCheckInterval = null;
+
+async function initializeNotifications() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    document.getElementById('notificationBell').style.display = 'flex';
+    await loadNotifications();
+    notificationCheckInterval = setInterval(loadNotifications, 30000);
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { data: notifications, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) throw error;
+    
+    notificationsCache = notifications || [];
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function renderNotifications() {
+  const listContainer = document.getElementById('notificationList');
+  
+  if (notificationsCache.length === 0) {
+    listContainer.innerHTML = `
+      <div class="notification-empty">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <p>No notifications</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listContainer.innerHTML = notificationsCache.map(notification => `
+    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+         data-notification-id="${notification.id}"
+         onmouseenter="markAsRead('${notification.id}')">
+      <div class="notification-message">${notification.message}</div>
+      <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
+      <div class="notification-actions">
+        ${notification.ingredient_id ? `
+          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
+            Open Ingredient
+          </button>
+          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            Restock
+          </button>
+        ` : ''}
+        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
+          Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateNotificationBadge() {
+  const unreadCount = notificationsCache.filter(n => !n.is_read).length;
+  const badge = document.getElementById('notificationBadge');
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function formatNotificationTime(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diff = Math.floor((now - time) / 1000);
+  
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+  return time.toLocaleDateString();
+}
+
+function toggleNotifications() {
+  const dropdown = document.getElementById('notificationDropdown');
+  dropdown.classList.toggle('active');
+}
+
+document.addEventListener('click', (e) => {
+  const bell = document.getElementById('notificationBell');
+  const dropdown = document.getElementById('notificationDropdown');
+  
+  if (bell && dropdown && !bell.contains(e.target)) {
+    dropdown.classList.remove('active');
+  }
+});
+
+async function markAsRead(notificationId) {
+  const notification = notificationsCache.find(n => n.id === notificationId);
+  if (!notification || notification.is_read) return;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notification.is_read = true;
+    updateNotificationBadge();
+    
+    const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+    if (item) {
+      item.classList.remove('unread');
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in('id', unreadIds);
+    
+    if (error) throw error;
+    
+    notificationsCache.forEach(n => {
+      if (!n.is_read) n.is_read = true;
+    });
+    
+    renderNotifications();
+    updateNotificationBadge();
+    
+    if (typeof showNotification === 'function') {
+      showNotification('All notifications marked as read', 'success');
+    }
+  } catch (error) {
+    console.error('Error marking all as read:', error);
+  }
+}
+
+async function deleteNotification(notificationId) {
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    
+    notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
+    
+    renderNotifications();
+    updateNotificationBadge();
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+  }
+}
+
+function openIngredient(ingredientId) {
+  window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+}
+
+async function restockIngredient(ingredientId, notificationId) {
+  // Navigate to ingredient detail page with openReorder parameter
+  window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+}
+
+async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
+  try {
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('ingredient_id', ingredientId)
+      .eq('type', 'ingredient_out_of_stock')
+      .eq('is_read', false);
+    
+    if (checkError) throw checkError;
+    
+    if (existing && existing.length > 0) return;
+    
+    const { error: insertError } = await supabaseClient
+      .from('notifications')
+      .insert([{
+        profile_id: userId,
+        type: 'ingredient_out_of_stock',
+        ingredient_id: ingredientId,
+        message: `Ingredient ${ingredientName} has run out of stock`,
+        is_read: false
+      }]);
+    
+    if (insertError) throw insertError;
+    
+    await loadNotifications();
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+}
+
+async function checkIngredientStock(ingredientId, quantity, ingredientName, userId) {
+  if (quantity <= 0) {
+    await createOutOfStockNotification(ingredientId, ingredientName, userId);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', initializeNotifications);
+}
+</script>
+
+<!-- Recipe Builder Modal -->
+<div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target === this) closeRecipeBuilder()">
+  <div class="recipe-builder">
+    <div class="recipe-panel recipe-panel-left">
+      <div>
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
+      </div>
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your recipe</div></div>
+      <div class="recipe-cost-summary">
+        <label>Total Cost</label>
+        <div class="amount" id="recipeTotalCostDisplay">$0.00</div>
+      </div>
+      <button class="btn btn-primary" id="saveRecipeBtn" onclick="saveRecipeChanges()">Save Changes</button>
+    </div>
+    <div class="recipe-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <h3 style="margin: 0;">Ingredient Library</h3>
+        <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
+      </div>
+      <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients()" />
+      
+      <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0;">
+        All Ingredients
+      </h4>
+      <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Ingredient Modal -->
+<div class="recipe-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()">
+  <div class="recipe-builder" style="display: block; max-width: 600px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 85vh; overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Add Ingredient to Recipe</h3>
+      <span onclick="closeAddIngredientModal()" style="cursor: pointer; color: var(--text-muted); font-size: 32px; line-height: 1; font-weight: 300; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
+    </div>
+    
+    <input 
+      type="text" 
+      id="ingredientSearchInput" 
+      placeholder="Search by name..." 
+      oninput="filterAvailableIngredients()" 
+      style="width: 100%; padding: 14px 18px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-inner); color: var(--text-main); font-size: 14px; margin-bottom: 20px; box-sizing: border-box; transition: all 0.2s;"
+      onfocus="this.style.borderColor='var(--accent)'"
+      onblur="this.style.borderColor='var(--border)'"
+      autocomplete="off"
+    />
+    
+    <div id="availableIngredientsList" style="max-height: 450px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Reorder Modal -->
+<div class="recipe-overlay" id="reorderModal" onclick="if(event.target === this) closeReorderModal()">
+  <div class="recipe-builder" style="display: block; max-width: 600px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 85vh; overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Reorder Ingredient</h3>
+        <p id="reorderIngredientName" style="color: var(--accent); font-weight: 600; font-size: 18px; margin: 8px 0 0 0;"></p>
+      </div>
+      <span onclick="closeReorderModal()" style="cursor: pointer; color: var(--text-muted); font-size: 32px; line-height: 1; font-weight: 300; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
+    </div>
+    
+    <div id="sourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')" style="padding: 12px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <a id="sourceUrlLink" style="color: var(--accent); text-decoration: none; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No source URL</a>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: var(--text-muted); flex-shrink: 0; margin-left: 8px;">
+        <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
+      </svg>
+    </div>
+    
+    <button onclick="markAsReordered()" style="width: 100%; padding: 12px 32px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Mark as Reordered</button>
+    
+    <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 0 0 12px 0; font-weight: 700; letter-spacing: 0.05em;">Ingredients from same source</h4>
+    
+    <div id="reorderIngredientsList" style="max-height: 300px; overflow-y: auto;">
+      <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Alert Modal -->
+<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="alertTitle">Alert</h3>
+    <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <button style="width: 100%; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
+      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Switch Account Modal -->
+<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
+  <div class="modal-content-custom" style="max-width: 450px;">
+    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
+      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="switch-login-content" class="switch-account-content" style="display: block;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchSignUp(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
+          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.switch-account-tab.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.switch-account-tab:hover {
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchAccountTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
+  document.getElementById('switch-' + tab + '-content').style.display = 'block';
+}
+
+function closeSwitchAccountModal() {
+  document.getElementById('switchAccountModal').classList.remove('active');
+  // Reset forms
+  document.getElementById('switch-login-email').value = '';
+  document.getElementById('switch-login-password').value = '';
+  document.getElementById('switch-signup-email').value = '';
+  document.getElementById('switch-signup-password').value = '';
+  document.getElementById('switch-signup-confirm-password').value = '';
+}
+
+async function handleSwitchGoogleLogin() {
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    alert('Google sign-in failed: ' + error.message);
+  }
+}
+
+async function handleSwitchLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-login-email').value;
+  const password = document.getElementById('switch-login-password').value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Switching...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign in with new credentials
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    // Reload page to refresh UI with new user
+    window.location.reload();
+  } catch (error) {
+    alert('Login failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+}
+
+async function handleSwitchSignUp(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-signup-email').value;
+  const password = document.getElementById('switch-signup-password').value;
+  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign up with new credentials
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    alert('Account created successfully! Please check your email to confirm your account.');
+    
+    // Switch to login tab and set email
+    switchAccountTab('login');
+    document.getElementById('switch-login-email').value = email;
+  } catch (error) {
+    alert('Sign up failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – AI Inventory Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="cookie-consent.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  /* Page-specific styles */
+
+  .section-container { max-width: 1200px; margin: 0 auto; padding: 60px 24px 100px; }
+
+  /* ---------- HERO ---------- */
+  .hero { display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; align-items: center; }
+  h1 { font-size: 64px; font-weight: 800; line-height: 1.05; margin: 0 0 24px; letter-spacing: -1.5px; }
+  .sub { font-size: 19px; line-height: 1.6; color: var(--text-muted); max-width: 540px; margin-bottom: 40px; }
+  .btn { padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; text-align: center; text-decoration: none; display: inline-block; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--bg-inner); color: var(--text-main); border: 1px solid var(--border); margin-left: 12px; }
+
+  /* ---------- INTERACTIVE PANEL (MODIFIED) ---------- */
+  .panel { 
+    position: relative; 
+    background: transparent; /* Removed background */
+    border-radius: 32px; 
+    padding: 0px; /* Reduced padding */
+    border: none; /* Removed border */
+    min-height: 650px; 
+    overflow: visible; 
+  }
+
+  .tabs { 
+    position: relative; 
+    display: flex; 
+    gap: 10px; 
+    margin-bottom: 15px; /* Reduced from 30px */
+    padding-bottom: 15px; /* Reduced from 20px */
+    border-bottom: 1px solid var(--border); 
+    z-index: 100;
+    justify-content: flex-end;
+  }
+
+  .tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted); transition: 0.2s; }
+  .tab.active { background: var(--accent); color: #fff; font-weight: 700; }
+  .pro-badge { font-size: 9px; padding: 2px 6px; background: var(--premium); border-radius: 4px; margin-left: 4px; font-weight: 800; color: #fff; }
+  
+  .tab-description { 
+    font-size: 13px; 
+    color: var(--text-muted); 
+    margin-bottom: 6px; 
+    line-height: 1.5; 
+    transition: opacity 0.2s; 
+  }
+
+  .btn-signin {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #06b6d4;
+    transition: 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-signin:hover {
+    background: #0891b2;
+  }
+
+  /* ---------- TRIPLE OVERLAP STAGE ---------- */
+  .insights-stage { position: relative; display: flex; align-items: center; min-height: 500px; }
+
+  .window-mock {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1), border-color 0.3s, opacity 0.3s;
+    cursor: default;
+  }
+
+  .window-mock:hover {
+    z-index: 100 !important;
+    border-color: rgba(255,255,255,0.4);
+  }
+
+  /* Foundation - Kanban */
+  .kanban-window {
+    position: absolute;
+    left: 0; width: 540px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 24px; padding: 24px; z-index: 10;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .kanban-window:hover { transform: scale(1.03); }
+
+  /* Overlapping Right Stack */
+  .card-column { margin-left: auto; width: 400px; display: flex; flex-direction: column; gap: -40px; z-index: 20; position: relative; pointer-events: none; }
+  .card-column .window-mock { pointer-events: auto; position: relative; }
+  .stack-window { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+
+  /* Recent Detection - Middle */
+  .window-recent {
+    background: var(--bg-panel); backdrop-filter: blur(20px);
+    transform: translateX(-80px) translateY(15px); z-index: 15; /* Kept Original Position */
+  }
+  .window-recent:hover { transform: translateX(-80px) translateY(15px) scale(1.03) !important; }
+
+  /* Operational Insight - Front */
+  .window-operational { z-index: 25; border-color: var(--border); }
+  .window-operational:hover { transform: scale(1.03); }
+
+  /* Component Styles */
+  .window-header { padding: 12px 18px; font-size: 10px; font-weight: 700; border-bottom: 1px solid var(--border); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .window-content { padding: 20px; }
+  .kb-col { display: flex; flex-direction: column; gap: 12px; }
+  .kb-header { font-size: 9px; font-weight: 800; color: var(--text-main); letter-spacing: 1.2px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .kb-card { background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .kb-line-sm { height: 3px; background: var(--accent); opacity: 0.6; border-radius: 2px; width: 40%; margin-bottom: 6px; }
+  .kb-line-lg { height: 3px; background: var(--border); border-radius: 2px; width: 85%; }
+  
+  .recent-flex { display: flex; align-items: center; gap: 14px; }
+  .recent-thumb { width: 50px; height: 50px; border-radius: 10px; background-size: cover; border: 1px solid var(--border); flex-shrink: 0; }
+  
+  .insight-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .insight-table th { text-align: left; padding-bottom: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .insight-table td { padding: 10px 0; border-bottom: 1px solid var(--border); }
+
+  .locked-overlay {
+    position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px); z-index: 200; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 32px;
+  }
+
+  @media (max-width: 1000px) {
+    .insights-stage { flex-direction: column; height: auto; }
+    .window-mock, .window-recent, .window-operational { position: relative !important; width: 100% !important; left: 0 !important; top: 0 !important; transform: none !important; margin-bottom: 20px; }
+  }
+
+  /* ===== MOBILE RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    /* Section */
+    .section-container {
+      padding: 32px 16px 60px;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 40px;
+    }
+
+    /* Hero text */
+    .hero-text { text-align: center; }
+    h1 { font-size: 36px; letter-spacing: -0.5px; margin-bottom: 16px; }
+    .sub { font-size: 16px; max-width: 100%; margin-bottom: 28px; }
+    .cta-group { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+    .btn { width: 100%; max-width: 320px; padding: 15px 24px; font-size: 16px; }
+    .btn-secondary { margin-left: 0; }
+
+    /* Panel */
+    .panel { min-height: auto; }
+
+    /* Tabs — scrollable row */
+    .tabs {
+      justify-content: flex-start;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
+      gap: 8px;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 14px; font-size: 13px; }
+
+    /* Hide the heavy kanban layer on mobile */
+    .kanban-window { display: none !important; }
+
+    /* Simplify card column */
+    .card-column {
+      width: 100% !important;
+      margin-left: 0;
+      gap: 12px;
+    }
+    .insights-stage {
+      flex-direction: column;
+      min-height: auto;
+      gap: 12px;
+    }
+    .window-mock,
+    .window-recent,
+    .window-operational {
+      position: relative !important;
+      width: 100% !important;
+      left: 0 !important;
+      top: 0 !important;
+      transform: none !important;
+      margin-bottom: 0;
+    }
+    .stack-window { border-radius: 14px; }
+    .insight-table { font-size: 13px; }
+    .insight-table td, .insight-table th { padding: 8px 4px; }
+
+    /* Footer */
+    footer > div > div:first-child {
+      grid-template-columns: 1fr !important;
+      gap: 24px !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 30px; }
+    .sub { font-size: 15px; }
+    .section-container { padding: 24px 14px 48px; }
+  }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="index.html" class="nav-link" data-page="index">Home</a>
+    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    <a href="login.html" class="btn-signin" id="authButton">Log In</a>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<section class="section-container hero">
+  <div class="hero-text">
+    <h1>AI-powered inventory,<br>from stock to output</h1>
+    <p class="sub">Eliminate manual logging forever. ShelfyAI uses computer vision and automated recipes to track components in real time.</p>
+    <div class="cta-group">
+      <button class="btn btn-primary" onclick="startTutorial()">Get Started</button>
+      <a href="login.html" class="btn btn-secondary">Sign up</a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" onclick="setTab('ingredients', this)">Ingredients</div>
+      <div class="tab" onclick="setTab('recipes', this)">Recipes</div>
+      <div class="tab" onclick="setTab('orders', this)">Orders</div>
+      <div class="tab" onclick="setTab('expenses', this)">Expenses</div>
+    </div>
+
+    <div class="tab-description" id="tabDescription">Track and monitor your raw materials with real-time stock levels and automatic alerts.</div>
+
+    <div class="insights-stage" id="panel-stage">
+      <div class="window-mock kanban-window" id="kanbanLayer"></div>
+
+      <div class="card-column">
+        <div class="window-mock stack-window window-recent">
+          <div class="window-header">Recent Detection</div>
+          <div class="window-content" id="recentContent"></div>
+        </div>
+
+        <div class="window-mock stack-window window-operational">
+          <div class="window-header" id="operationalHeader">Operational Insight</div>
+          <div class="window-content" id="insightContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const data = {
+  ingredients: {
+    description: "Track and monitor your raw materials with real-time stock levels and automatic alerts.",
+    thumb: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?q=80&w=200",
+    recent: { name: "M8 Steel Bolts", meta: "482 Units Detected" },
+    opHeader: "Stock Status",
+    list: `<table class="insight-table"><thead><tr><th>Item</th><th>Stock</th><th>Status</th></tr></thead><tbody><tr><td>Steel Bolts</td><td>482</td><td style="color:var(--success)">Healthy</td></tr><tr><td>Oak Planks</td><td>12</td><td style="color:var(--warning)">Low</td></tr></tbody></table>`,
+    kanban: [
+        { label: "IN STOCK", color: "var(--success)", items: ["M8 Bolts", "Glue"] },
+        { label: "LOW STOCK", color: "var(--warning)", items: ["Planks"] },
+        { label: "OUT", color: "var(--danger)", items: ["Varnish"] }
+    ]
+  },
+  recipes: {
+    description: "Manage production recipes, calculate profitability, and optimize your manufacturing workflow.",
+    thumb: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=200",
+    recent: { name: "Wooden Box", meta: "Batch Ready for Assembly" },
+    opHeader: "Recipe Production",
+    list: `<table class="insight-table"><thead><tr><th>Recipe</th><th>Profit</th><th>Stock</th></tr></thead><tbody><tr><td>Wooden Box</td><td style="color:var(--success)">+$32.60</td><td>Ready</td></tr><tr><td>Acrylic Tray</td><td style="color:var(--success)">+$14.00</td><td>Ready</td></tr></tbody></table>`,
+    kanban: [
+        { label: "READY", color: "var(--success)", items: ["Box", "Tray"] },
+        { label: "INCOMPLETE", color: "var(--warning)", items: ["Desk"] },
+        { label: "PLANNING", color: "var(--text-muted)", items: ["Shelf"] }
+    ]
+  },
+  orders: {
+    description: "Process and fulfill customer orders from multiple sales channels in one unified dashboard.",
+    thumb: "https://images.unsplash.com/photo-1585079542156-2755d9c8a094?q=80&w=200",
+    recent: { name: "Order #48291", meta: "Etsy Store • Priority 1" },
+    opHeader: "Active Orders",
+    list: `<table class="insight-table"><thead><tr><th>Order ID</th><th>Source</th><th>Total</th></tr></thead><tbody><tr><td>#48291</td><td>Etsy</td><td>$45.00</td></tr><tr><td>#48290</td><td>Wix</td><td>$120.00</td></tr></tbody></table>`,
+    kanban: [
+        { label: "NEW", color: "var(--accent)", items: ["#48291", "#48292"] },
+        { label: "PICKING", color: "var(--warning)", items: ["#48290"] },
+        { label: "SHIPPED", color: "var(--success)", items: ["#48288"] }
+    ]
+  },
+  expenses: {
+    description: "Monitor business expenses, categorize costs, and maintain accurate financial records automatically.",
+    thumb: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=200",
+    recent: { name: "Material Cost", meta: "$284.50 • Oak Planks Purchase" },
+    opHeader: "Recent Expenses",
+    list: `<table class="insight-table"><thead><tr><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody><tr><td>Oak Planks</td><td>Materials</td><td style="color:var(--danger)">-$284.50</td></tr><tr><td>Shipping Labels</td><td>Supplies</td><td style="color:var(--danger)">-$42.00</td></tr></tbody></table>`,
+    kanban: [
+        { label: "MATERIALS", color: "var(--accent)", items: ["Oak Planks", "Steel Bolts"] },
+        { label: "SUPPLIES", color: "var(--warning)", items: ["Labels"] },
+        { label: "OVERHEAD", color: "var(--text-muted)", items: ["Utilities"] }
+    ]
+  }
+};
+
+function setTab(key, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const item = data[key];
+  const stage = document.getElementById('panel-stage');
+  
+  // Update description
+  document.getElementById('tabDescription').textContent = item.description;
+  
+  const existingLock = stage.querySelector('.locked-overlay');
+  if (existingLock) existingLock.remove();
+
+  if (item.locked) {
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="locked-overlay">
+        <h3 style="margin:0 0 10px 0;">Pro Feature</h3>
+        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Automate COGS and ledger tracking.</p>
+        <button class="btn btn-primary">Upgrade to Pro</button>
+      </div>
+    `);
+    return;
+  }
+
+  document.getElementById('kanbanLayer').innerHTML = item.kanban.map(col => `
+    <div class="kb-col">
+      <div class="kb-header"><span class="dot" style="background:${col.color}"></span>${col.label}</div>
+      ${col.items.map(i => `
+        <div class="kb-card">
+          <div style="font-size:11px; font-weight:700; margin-bottom:8px;">${i}</div>
+          <div class="kb-line-sm"></div><div class="kb-line-lg"></div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  document.getElementById('recentContent').innerHTML = `
+    <div class="recent-flex">
+      <div class="recent-thumb" style="background-image:url('${item.thumb}')"></div>
+      <div>
+        <div style="font-size:14px; font-weight:700">${item.recent.name}</div>
+        <div style="font-size:11px; color:var(--text-muted)">${item.recent.meta}</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('operationalHeader').innerText = item.opHeader;
+  document.getElementById('insightContent').innerHTML = item.list;
+}
+
+setTab('ingredients', document.querySelector('.tab'));
+
+// Auto-highlight active page in navigation
+(function() {
+  const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+  const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+})();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1">
+          <div class="emoji-face">😡</div>
+          <div class="emoji-label">Hate</div>
+        </div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2">
+          <div class="emoji-face">😟</div>
+          <div class="emoji-label">Bad</div>
+        </div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3">
+          <div class="emoji-face">😐</div>
+          <div class="emoji-label">Okay</div>
+        </div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4">
+          <div class="emoji-face">😊</div>
+          <div class="emoji-label">Good</div>
+        </div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5">
+          <div class="emoji-face">🤩</div>
+          <div class="emoji-label">Love</div>
+        </div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+// Check if user is logged in and show feedback button
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      document.getElementById('feedbackButton').classList.add('show');
+    }
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    alert('Please select a rating');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  
+  if (!text.trim()) {
+    alert('Please provide some feedback');
+    return;
+  }
+  
+  // Save to Supabase
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert({
+            score: feedbackRating,
+            comment: text,
+            user_id: session.user.id
+          })
+          .select();
+        
+        if (error) {
+          console.error('Error saving feedback:', error);
+          alert('Failed to submit feedback. Please try again.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+  
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════
+     INTERACTIVE TUTORIAL OVERLAY
+     ═══════════════════════════════════════════════ -->
+<div id="tutorialOverlay" style="display:none;">
+
+  <!-- dark backdrop -->
+  <div id="tutorialBackdrop"></div>
+
+  <!-- main card -->
+  <div id="tutorialCard">
+
+    <!-- header row: close + step dots -->
+    <div id="tutorialMeta">
+      <div id="tutorialDots"></div>
+      <button id="tutorialSkipBtn" onclick="closeTutorial()">✕</button>
+    </div>
+
+    <!-- content area -->
+    <div id="tutorialContent"></div>
+
+    <!-- footer nav -->
+    <div id="tutorialFooter">
+      <button id="tutorialBackBtn" onclick="tutorialBack()">Back</button>
+      <button id="tutorialNextBtn" onclick="tutorialNext()">Let's start</button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* ═══ Tutorial overlay ═══════════════════════════════════ */
+#tutorialOverlay {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#tutorialBackdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(4px);
+  animation: tBdIn 0.3s ease both;
+}
+@keyframes tBdIn { from { opacity:0; } to { opacity:1; } }
+
+#tutorialCard {
+  position: relative; z-index: 1;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%; max-width: 560px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+  animation: tCardIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  transition: max-width 0.35s ease;
+}
+@media (min-width: 780px) {
+  #tutorialCard.t-wide { max-width: 740px; }
+}
+@keyframes tCardIn { from { opacity:0; transform:scale(0.88) translateY(24px); } to { opacity:1; transform:none; } }
+
+/* progress bar - removed, using dots now */
+#tutorialProgressWrap { display: none; }
+
+/* meta row */
+#tutorialMeta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--border);
+}
+#tutorialDots {
+  display: flex; align-items: center; gap: 6px;
+}
+.t-dot {
+  height: 8px; border-radius: 4px;
+  background: #d1d5db;
+  transition: all 0.35s ease;
+  flex-shrink: 0;
+}
+.t-dot.active {
+  background: var(--accent);
+  width: 24px !important;
+}
+.t-dot.done {
+  background: rgba(6,182,212,0.45);
+}
+[data-theme="dark"] .t-dot {
+  background: #1e3a5f;
+}
+[data-theme="dark"] .t-dot.done {
+  background: rgba(6,182,212,0.4);
+}
+#tutorialSkipBtn {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+  padding: 4px 8px; border-radius: 6px;
+  transition: 0.15s;
+}
+#tutorialSkipBtn:hover { background: var(--bg-inner); color: var(--text-main); }
+
+/* content */
+#tutorialContent {
+  padding: 20px 24px 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 160px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+/* footer */
+#tutorialFooter {
+  display: flex; gap: 10px;
+  padding: 12px 24px 18px;
+  border-top: 1px solid var(--border);
+}
+#tutorialBackBtn {
+  flex: 1; padding: 10px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-inner); color: var(--text-main);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: 0.15s;
+}
+#tutorialBackBtn:hover { border-color: var(--accent); color: var(--accent); }
+#tutorialNextBtn {
+  flex: 2; padding: 10px;
+  border-radius: 10px; border: none;
+  background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: 0.15s; letter-spacing: 0.01em;
+}
+#tutorialNextBtn:hover { filter: brightness(1.1); }
+#tutorialNextBtn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+/* ═══ Step content helpers ═══════════════════════════════ */
+.t-screen {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 14px 0;
+}
+.t-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  transition: 0.2s;
+}
+.t-row.highlight {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(6,182,212,0.18);
+  animation: tPulse 1.2s ease-in-out infinite;
+}
+@keyframes tPulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(6,182,212,0.18); }
+  50%      { box-shadow: 0 0 0 6px rgba(6,182,212,0.32); }
+}
+.t-icon { font-size: 22px; flex-shrink: 0; }
+.t-label { flex: 1; font-weight: 600; font-size: 14px; }
+.t-badge {
+  font-size: 11px; font-weight: 700; padding: 3px 8px;
+  border-radius: 6px;
+}
+.t-badge.ok { background: rgba(16,185,129,0.12); color: #10b981; }
+.t-badge.low { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.t-badge.oos { background: rgba(239,68,68,0.1); color: #ef4444; }
+.t-badge.accent { background: rgba(6,182,212,0.12); color: var(--accent); }
+.t-form-row {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 10px;
+}
+.t-input {
+  flex: 1; padding: 8px 12px;
+  background: var(--bg-inner); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text-main);
+  font-size: 13px; font-weight: 500;
+}
+.t-input.typing { border-color: var(--accent); }
+.t-btn {
+  padding: 8px 14px; border-radius: 8px; border: none;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 700; cursor: default;
+  flex-shrink: 0;
+}
+.t-btn.ghost {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+.t-cursor {
+  display: inline-block;
+  width: 2px; height: 1em;
+  background: var(--accent);
+  animation: tBlink 0.9s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+@keyframes tBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+.t-section-title {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin: 14px 0 8px;
+}
+.t-inventory-change {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  margin-bottom: 6px; font-size: 13px;
+}
+.t-inv-name { flex: 1; font-weight: 600; }
+.t-inv-old { color: var(--text-muted); text-decoration: line-through; }
+.t-inv-arrow { color: var(--text-muted); font-size: 11px; }
+.t-inv-new.ok  { font-weight: 700; color: #10b981; }
+.t-inv-new.low { font-weight: 700; color: #f59e0b; }
+.t-inv-new.oos  { font-weight: 700; color: #ef4444; }
+.t-callout {
+  background: rgba(6,182,212,0.08);
+  border: 1px solid rgba(6,182,212,0.25);
+  border-radius: 10px; padding: 12px 14px;
+  font-size: 13px; line-height: 1.5; color: var(--text-main);
+  margin-top: 10px;
+}
+.t-callout strong { color: var(--accent); }
+.t-emoji-big { font-size: 48px; text-align: center; display: block; margin-bottom: 12px; }
+.t-final-cta {
+  display: flex; gap: 10px; margin-top: 18px;
+}
+.t-final-cta a {
+  flex: 1; padding: 12px; border-radius: 10px;
+  text-align: center; text-decoration: none;
+  font-size: 14px; font-weight: 700;
+  transition: 0.15s;
+}
+.t-final-cta .t-cta-primary {
+  background: var(--accent); color: #fff;
+}
+.t-final-cta .t-cta-secondary {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+.t-cta-primary:hover { filter: brightness(1.1); }
+.t-cta-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* step intro */
+.t-step-intro { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+.t-step-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 16px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.t-step-text h3 { margin: 0 0 4px; font-size: 17px; font-weight: 800; }
+.t-step-text p  { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+/* animated check */
+.t-check {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg,#10b981,#06b6d4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: #fff; margin: 0 auto 12px;
+  animation: tPop 0.45s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes tPop { from{transform:scale(0);opacity:0} to{transform:none;opacity:1} }
+
+/* ═══ Tutorial ingredient form ═══════════════════════════ */
+.tut-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+@media (max-width: 520px) {
+  .tut-form-row { grid-template-columns: 1fr; }
+  #tutorialCard {
+    max-height: 96vh;
+    border-radius: 16px;
+  }
+  #tutorialContent {
+    max-height: calc(96vh - 148px);
+    padding: 16px 16px 12px;
+  }
+  #tutorialFooter {
+    padding: 10px 16px 14px;
+  }
+
+  /* Recipe builder: stack vertically on mobile */
+  #trec-layout {
+    flex-direction: column !important;
+  }
+  /* Left panel: drop border-right, add border-bottom */
+  #trec-left {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    gap: 8px !important;
+    padding-bottom: 12px !important;
+  }
+  /* Right panel (library): hidden on mobile — swipe cards replace it */
+  #trec-right { display: none !important; }
+  /* Mobile swipe cards */
+  #trec-mobile-swiper { display: block !important; }
+  /* Library items: bigger tap targets */
+  #trec-lib-1, #trec-lib-2 {
+    padding: 14px 16px !important;
+    border-radius: 12px !important;
+    margin-bottom: 10px !important;
+    font-size: 14px !important;
+  }
+  /* Dropzone shorter on mobile */
+  #trec-dropzone {
+    min-height: 70px !important;
+  }
+}
+
+/* typing animation */
+.t-typewriter { display: inline; }
+
+/* Tutorial swipe card animations */
+.tut-swipe-card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: pan-x;
+  opacity: 0;
+  overflow: hidden;
+}
+.tut-swipe-card.active { opacity: 1; }
+.tut-swipe-card:active { transform: scale(0.98); }
+.tut-swipe-card.tut-slide-out-left  { animation: tutSlideOutLeft  0.3s cubic-bezier(0.4,0,1,1)   forwards; }
+.tut-swipe-card.tut-slide-out-right { animation: tutSlideOutRight 0.3s cubic-bezier(0.4,0,1,1)   forwards; }
+.tut-swipe-card.tut-slide-in-left   { animation: tutSlideInLeft   0.3s cubic-bezier(0,0,0.2,1)   forwards; }
+.tut-swipe-card.tut-slide-in-right  { animation: tutSlideInRight  0.3s cubic-bezier(0,0,0.2,1)   forwards; }
+@keyframes tutSlideOutLeft  { from{transform:translateX(0);opacity:1} to{transform:translateX(-120%);opacity:0} }
+@keyframes tutSlideOutRight { from{transform:translateX(0);opacity:1} to{transform:translateX(120%);opacity:0} }
+@keyframes tutSlideInLeft   { from{transform:translateX(-120%);opacity:0} to{transform:translateX(0);opacity:1} }
+@keyframes tutSlideInRight  { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+</style>
+
+<script>
+// ═══════════════════════════════════════════════
+// TUTORIAL ENGINE
+// ═══════════════════════════════════════════════
+let _tutStep = 0;
+let _tutIngr = null;
+let _tutRecipeName = null;
+let _tutRecipeQty = null;
+let _tutOrdResult = null;
+
+function _readTutIngredients() {
+  const readAttrs = (containerId) => {
+    const c = document.getElementById(containerId);
+    if (!c) return '';
+    const pairs = [];
+    c.querySelectorAll('div').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const k = (inputs[0]?.value || '').trim();
+      const v = (inputs[1]?.value || '').trim();
+      if (k && v) pairs.push(v);
+    });
+    return pairs.join(' · ');
+  };
+  return {
+    1: {
+      name: (document.getElementById('tif-name')?.value || 'Ingredient 1').trim(),
+      stock: parseFloat(document.getElementById('tif-qty')?.value) || 0,
+      unit: document.getElementById('tif-unit')?.value || 'pcs',
+      minRestock: parseFloat(document.getElementById('tif-min')?.value) || 0,
+      attrs: readAttrs('tif1-attrs'),
+    },
+    2: {
+      name: (document.getElementById('tif2-name')?.value || 'Ingredient 2').trim(),
+      stock: parseFloat(document.getElementById('tif2-qty')?.value) || 0,
+      unit: document.getElementById('tif2-unit')?.value || 'pcs',
+      minRestock: parseFloat(document.getElementById('tif2-min')?.value) || 0,
+      attrs: readAttrs('tif2-attrs'),
+    }
+  };
+}
+
+const _tutSteps = [
+  // ── Step 0: Welcome / typewriter ──────────────
+  {
+    label: 'Introduction',
+    title: '',
+    render() {
+      return `<div id="tutTypewriterWrap" style="min-height:180px;">
+        <p id="tutTypewriterText" style="font-size:15px;line-height:1.75;color:var(--text-main);margin:0;white-space:pre-wrap;"></p>
+      </div>`;
+    },
+    onEnter() {
+      const full = "Welcome to ShelfyAI. In the next two minutes we show you how easy and convenient it can be to keep your inventory up to date.\n\nFrom setting up your actual inventory by creating what we call 'Ingredients' to defining your 'Recipe' which holds all Ingredients necessary for creating your product.\n\nBringing it all together by simple order processing that updates your stock based on your recipes.";
+      const el   = document.getElementById('tutTypewriterText');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (!el) return;
+      nextBtn.textContent = 'Skip';
+      nextBtn.disabled = false;
+      let i = 0; let done = false;
+      const finish = () => {
+        if (done) return; done = true;
+        el.textContent = full;
+        nextBtn.textContent = "Let's start";
+        nextBtn.onclick = () => tutorialNext();
+        const content = document.getElementById('tutorialContent');
+        if (content) { content.style.cursor = ''; content.onclick = null; }
+      };
+      nextBtn.onclick = () => tutorialNext();
+      const content = document.getElementById('tutorialContent');
+      if (content) { content.style.cursor = 'pointer'; content.onclick = (e) => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return; finish(); }; }
+      const speed = 35;
+      const tick = () => {
+        if (done) return;
+        if (!document.getElementById('tutTypewriterText')) return;
+        if (i < full.length) { el.textContent = full.slice(0, ++i); setTimeout(tick, speed); }
+        else { finish(); }
+      };
+      setTimeout(tick, 300);
+    },
+    onBack() {
+      const full = "Welcome to ShelfyAI. In the next two minutes we show you how easy and convenient it can be to keep your inventory up to date.\n\nFrom setting up your actual inventory by creating what we call 'Ingredients' to defining your 'Recipe' which holds all Ingredients necessary for creating your product.\n\nBringing it all together by simple order processing that updates your stock based on your recipes.";
+      const el = document.getElementById('tutTypewriterText');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (el) el.textContent = full;
+      nextBtn.textContent = "Let's start"; nextBtn.disabled = false; nextBtn.onclick = () => tutorialNext();
+      const content = document.getElementById('tutorialContent');
+      if (content) { content.style.cursor = ''; content.onclick = null; }
+    }
+  },
+  {
+    label: 'Step 1 · Ingredients',
+    title: '',
+    render() {
+      const iStyle = 'width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-main);font-size:14px;color:#6b7280;outline:none;font-family:inherit;transition:border-color 0.2s,color 0.15s;';
+      const sStyle = 'width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-main);font-size:14px;color:#6b7280;outline:none;font-family:inherit;transition:border-color 0.2s,color 0.15s;';
+      const iEvt  = `oninput="this.style.color='var(--text-main)'" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor=''"`;
+      const sEvt  = `onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor=''"`;
+      const lbl   = (t) => `<div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:6px;">${t}</div>`;
+      const inp   = (id, ph='') => `<input id="${id}" type="text" autocomplete="off" placeholder="${ph}" style="${iStyle}" ${iEvt}>`;
+      const sel   = (id) => `<select id="${id}" style="${sStyle}" ${sEvt}><option value="">Select unit</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option><option value="m">m</option><option value="cm">cm</option><option value="pcs">pcs</option><option value="lb">lb</option><option value="oz">oz</option></select>`;
+      const row   = (a, b) => `<div class="tut-form-row"><div>${a}</div><div>${b}</div></div>`;
+      const fg    = (content) => `<div style="margin-bottom:14px;">${content}</div>`;
+      const card  = (num, ids, prefix) => `
+        <div id="tif-card-${num}" style="background:var(--bg-inner);border:1px solid var(--border);border-radius:16px;padding:20px 18px 16px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px;">Ingredient ${num}</div>
+          ${fg(lbl('Ingredient Name *')+inp(ids[0]))}
+          ${row(lbl('Quantity *')+inp(ids[1]), lbl('Unit *')+sel(ids[2]))}
+          ${row(lbl('Cost per Unit')+inp(ids[3]), lbl('Min. Stock Alert')+inp(ids[4]))}
+          ${fg(lbl('Source URL')+inp(ids[5],'https://supplier.com/product'))}
+          <div>
+            ${lbl('Custom Attributes')}
+            <div id="${prefix}-attrs" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+            <button type="button" onclick="tutAddAttr('${prefix}-attrs')" style="width:100%;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:13px;padding:9px;cursor:pointer;font-family:inherit;">+ Add Attribute</button>
+          </div>
+        </div>`;
+      return `
+        <div id="tutTypewriterWrap2" style="cursor:pointer;">
+          <p id="tutTypewriterText2" style="font-size:15px;line-height:1.8;color:var(--text-main);margin:0;white-space:pre-wrap;"></p>
+        </div>
+        <div id="tutIngFormWrap" style="opacity:0;transform:translateY(12px);transition:opacity 0.45s,transform 0.45s;margin-top:18px;pointer-events:none;">
+          ${card(1, ['tif-name','tif-qty','tif-unit','tif-cost','tif-min','tif-url'], 'tif1')}
+          <div id="tif-card-2-wrap" style="margin-top:10px;opacity:0;transform:translateY(10px);transition:opacity 0.4s,transform 0.4s;pointer-events:none;">
+            ${card(2, ['tif2-name','tif2-qty','tif2-unit','tif2-cost','tif2-min','tif2-url'], 'tif2')}
+          </div>
+        </div>`;
+    },
+    onEnter() {
+      const full = "Let's say you create handmade jewellery and need to keep your inventory on track. A simple example: a necklace made of beads.\n\nWhat are all the single items you need to create one necklace? Those are your Ingredients.";
+      const el = document.getElementById('tutTypewriterText2');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (!el) return;
+
+      const ing1 = [
+        { id: 'tif-name', val: 'Yellow Beads' },
+        { id: 'tif-qty',  val: '15' },
+        { id: 'tif-unit', val: 'pcs' },
+        { id: 'tif-cost', val: '0.03' },
+        { id: 'tif-min',  val: '20' },
+        { id: 'tif-url',  val: 'https://beadshop.com/yellow' },
+      ];
+      const ing2 = [
+        { id: 'tif2-name', val: 'String' },
+        { id: 'tif2-qty',  val: '50' },
+        { id: 'tif2-unit', val: 'm' },
+        { id: 'tif2-cost', val: '0.10' },
+        { id: 'tif2-min',  val: '5' },
+        { id: 'tif2-url',  val: 'https://craftstore.com/string' },
+      ];
+
+      const attrs1 = [{key:'color',val:'yellow'},{key:'material',val:'wood'}];
+      const attrs2 = [{key:'material',val:'wool'}];
+
+      const setReady = () => {
+        nextBtn.textContent = 'Next';
+        nextBtn.disabled = false;
+        nextBtn.onclick = () => tutorialNext();
+      };
+
+      let stopIng1 = null, stopIng2 = null, stopAttrs1 = null, stopAttrs2 = null, userStopped = false;
+
+      const addAttrsInstant = (containerId, attrs) => {
+        const c = document.getElementById(containerId);
+        if (!c) return;
+        c.innerHTML = '';
+        attrs.forEach(({key, val}) => {
+          window.tutAddAttr(containerId);
+          const inputs = c.lastElementChild.querySelectorAll('input');
+          if (inputs[0]) inputs[0].value = key;
+          if (inputs[1]) inputs[1].value = val;
+        });
+      };
+
+      const typeAttrs = (containerId, attrs, cb) => {
+        let ai = 0, done = false;
+        const finish = () => {
+          if (done) return; done = true;
+          addAttrsInstant(containerId, attrs);
+          if (cb) cb();
+        };
+        const nextAttr = () => {
+          if (done) return;
+          if (ai >= attrs.length) { if (cb) cb(); return; }
+          window.tutAddAttr(containerId);
+          const c = document.getElementById(containerId);
+          const row = c.lastElementChild;
+          const inputs = row.querySelectorAll('input');
+          const keyIn = inputs[0], valIn = inputs[1];
+          const {key, val} = attrs[ai++];
+          let ci = 0;
+          const typeKey = () => { if (done) return; if (ci < key.length) { keyIn.value = key.slice(0,++ci); setTimeout(typeKey,65); } else { ci=0; setTimeout(typeVal,200); } };
+          const typeVal = () => { if (done) return; if (ci < val.length) { valIn.value = val.slice(0,++ci); setTimeout(typeVal,65); } else { setTimeout(nextAttr,350); } };
+          setTimeout(typeKey, 150);
+        };
+        nextAttr();
+        return finish;
+      };
+
+      const fillInstant = () => {
+        userStopped = true;
+        if (stopIng1) stopIng1();
+        if (stopIng2) stopIng2();
+        if (stopAttrs1) stopAttrs1();
+        if (stopAttrs2) stopAttrs2();
+        [...ing1, ...ing2].forEach(({ id, val }) => { const f = document.getElementById(id); if (f) { f.value = val; f.style.borderColor = ''; } });
+        const wrap = document.getElementById('tutIngFormWrap');
+        if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+        const card2 = document.getElementById('tif-card-2-wrap');
+        if (card2) { card2.style.opacity='1'; card2.style.transform='translateY(0)'; card2.style.pointerEvents='auto'; }
+        addAttrsInstant('tif1-attrs', attrs1);
+        addAttrsInstant('tif2-attrs', attrs2);
+      };
+
+      const typeFields = (fields, cb) => {
+        let fi = 0, ci = 0, done = false;
+        const finish = () => {
+          if (done) return; done = true;
+          fields.forEach(({ id, val }) => {
+            const f = document.getElementById(id);
+            if (f) { f.value = val; f.style.borderColor = ''; }
+          });
+          if (cb) cb();
+        };
+        const go = () => {
+          if (done) return;
+          if (fi >= fields.length) { finish(); return; }
+          const { id, val } = fields[fi];
+          const f = document.getElementById(id);
+          if (!f) { fi++; ci = 0; setTimeout(go, 50); return; }
+          f.style.borderColor = 'var(--accent)';
+          if (f.tagName === 'SELECT') {
+            setTimeout(() => { f.value = val; f.style.borderColor = ''; fi++; ci = 0; setTimeout(go, 350); }, 400);
+          } else if (ci < val.length) { f.value = val.slice(0, ++ci); setTimeout(go, 65); }
+          else { f.style.borderColor = ''; fi++; ci = 0; setTimeout(go, 300); }
+        };
+        setTimeout(go, 300);
+        return finish;
+      };
+
+      window.tutAddAttr = (containerId) => {
+        const c = document.getElementById(containerId);
+        if (!c) return;
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex;gap:6px;width:100%;';
+        r.innerHTML = `<input placeholder="Key" style="flex:1;min-width:0;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);padding:0 8px;font-size:13px;color:var(--text-main);outline:none;"><input placeholder="Value" style="flex:1;min-width:0;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);padding:0 8px;font-size:13px;color:var(--text-main);outline:none;"><button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>`;
+        c.appendChild(r);
+      };
+
+      const fillForm = () => {
+        const wrap = document.getElementById('tutIngFormWrap');
+        if (!wrap) return;
+        wrap.style.opacity = '1'; wrap.style.transform = 'translateY(0)'; wrap.style.pointerEvents = 'auto';
+        stopIng1 = typeFields(ing1, () => {
+          if (userStopped) return;
+          stopAttrs1 = typeAttrs('tif1-attrs', attrs1, () => {
+            if (userStopped) return;
+            const card2 = document.getElementById('tif-card-2-wrap');
+            if (card2) { card2.style.opacity='1'; card2.style.transform='translateY(0)'; card2.style.pointerEvents='auto'; }
+            stopIng2 = typeFields(ing2, () => {
+              if (userStopped) return;
+              stopAttrs2 = typeAttrs('tif2-attrs', attrs2, () => { if (!userStopped) setReady(); });
+            });
+          });
+        });
+      };
+
+      let textDone = false;
+      const finishText = (instant) => {
+        if (textDone) return; textDone = true;
+        el.textContent = full;
+        nextBtn.textContent = 'Skip';
+        nextBtn.onclick = () => { fillInstant(); tutorialNext(); };
+        const content = document.getElementById('tutorialContent');
+        if (instant) {
+          fillInstant();
+          if (content) { content.style.cursor = ''; content.onclick = null; }
+          setReady();
+          return;
+        }
+        if (content) {
+          content.onclick = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
+            fillInstant();
+            content.style.cursor = ''; content.onclick = null;
+            setReady();
+          };
+        }
+        setTimeout(fillForm, 200);
+      };
+
+      nextBtn.textContent = 'Skip';
+      nextBtn.disabled = false;
+      nextBtn.onclick = () => { fillInstant(); tutorialNext(); };
+      const content = document.getElementById('tutorialContent');
+      if (content) { content.style.cursor = 'pointer'; content.onclick = (e) => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return; finishText(true); }; }
+
+      let i = 0;
+      const tick = () => {
+        if (textDone) return;
+        if (!document.getElementById('tutTypewriterText2')) return;
+        if (i < full.length) { el.textContent = full.slice(0, ++i); setTimeout(tick, 35); }
+        else { finishText(false); }
+      };
+      setTimeout(tick, 200);
+    },
+    onBack() {
+      const full = "Let's say you create handmade jewellery and need to keep your inventory on track. A simple example: a necklace made of beads.\n\nWhat are all the single items you need to create one necklace? Those are your Ingredients.";
+      const el = document.getElementById('tutTypewriterText2');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (el) el.textContent = full;
+      const ing1 = [
+        { id: 'tif-name', val: 'Yellow Beads' }, { id: 'tif-qty', val: '15' }, { id: 'tif-unit', val: 'pcs' },
+        { id: 'tif-cost', val: '0.03' }, { id: 'tif-min', val: '20' }, { id: 'tif-url', val: 'https://beadshop.com/yellow' },
+      ];
+      const ing2 = [
+        { id: 'tif2-name', val: 'String' }, { id: 'tif2-qty', val: '50' }, { id: 'tif2-unit', val: 'm' },
+        { id: 'tif2-cost', val: '0.10' }, { id: 'tif2-min', val: '5' }, { id: 'tif2-url', val: 'https://craftstore.com/string' },
+      ];
+      [...ing1, ...ing2].forEach(({ id, val }) => { const f = document.getElementById(id); if (f) { f.value = val; f.style.borderColor = ''; } });
+      const wrap = document.getElementById('tutIngFormWrap');
+      if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; wrap.style.transition='none'; }
+      const card2 = document.getElementById('tif-card-2-wrap');
+      if (card2) { card2.style.opacity='1'; card2.style.transform='translateY(0)'; card2.style.pointerEvents='auto'; card2.style.transition='none'; }
+      const addAttrsInstant = (containerId, attrs) => {
+        const c = document.getElementById(containerId);
+        if (!c) return;
+        c.innerHTML = '';
+        attrs.forEach(({key, val}) => {
+          window.tutAddAttr(containerId);
+          const inputs = c.lastElementChild.querySelectorAll('input');
+          if (inputs[0]) inputs[0].value = key;
+          if (inputs[1]) inputs[1].value = val;
+        });
+      };
+      addAttrsInstant('tif1-attrs', [{key:'color',val:'yellow'},{key:'material',val:'wood'}]);
+      addAttrsInstant('tif2-attrs', [{key:'material',val:'wool'}]);
+      nextBtn.textContent = 'Next'; nextBtn.disabled = false; nextBtn.onclick = () => tutorialNext();
+    }
+  },
+
+  // ── Step 3: Create recipe (live demo) ─────────
+  {
+    label: 'Step 2 · Create Recipe',
+    title: '',
+    render() {
+      const nameStyle = 'width:100%;box-sizing:border-box;height:36px;border:2px solid var(--border);border-radius:8px;background:var(--bg-main);padding:0 11px;font-size:14px;font-weight:600;color:#6b7280;outline:none;transition:border-color 0.2s;';
+      const searchStyle = 'width:100%;box-sizing:border-box;height:32px;border:1px solid var(--border);border-radius:20px;background:var(--bg-inner);padding:0 12px;font-size:12px;color:var(--text-main);outline:none;';
+      const ingStyle = 'padding:10px 12px;border-radius:10px;background:var(--bg-panel);border:1px solid var(--border);margin-bottom:7px;font-size:13px;transition:all 0.2s;box-sizing:border-box;cursor:pointer;';
+      const sectionLabel = (t) => `<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--text-muted);padding:8px 0 5px;">${t}</div>`;
+      const ingr = _tutIngr || {1:{name:'Yellow Beads',attrs:'Color: yellow · Material: wood',stock:15,unit:'pcs',minRestock:20},2:{name:'String',attrs:'Material: wool',stock:30,unit:'m',minRestock:10}};
+      const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const libDotColor = (n) => { const {stock,minRestock}=ingr[n]; return stock<=0?'#ef4444':stock<=minRestock?'#f59e0b':'#22c55e'; };
+      const libItem = (n, isFav) => {
+        const {name,attrs,stock,unit} = ingr[n];
+        const dc = libDotColor(n);
+        const starSpan = isFav ? `<span style="color:#f59e0b;font-size:14px;line-height:1.3;flex-shrink:0;">&#9733;</span>` : `<span style="color:var(--text-muted);font-size:14px;line-height:1.3;flex-shrink:0;">&#9734;</span>`;
+        return `<div id="trec-lib-${n}" data-name="${esc(name).toLowerCase()}" data-added="0" style="${ingStyle}" onclick="tutRecLibClick(${n})"><div style="display:flex;align-items:flex-start;gap:7px;">${starSpan}<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;line-height:1.3;">${esc(name)}</div>${attrs?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${esc(attrs)}</div>`:''}<div style="font-size:11px;color:var(--text-muted);">${parseFloat(stock).toFixed(1)} ${esc(unit)} in stock</div></div><span id="trec-dot-${n}" style="width:9px;height:9px;border-radius:50%;background:${dc};flex-shrink:0;margin-top:4px;display:inline-block;"></span></div></div>`;
+      };
+      return `
+        <div id="tutTypewriterWrap3">
+          <p id="tutTypewriterText3" style="font-size:15px;line-height:1.8;color:var(--text-main);margin:0;white-space:pre-wrap;"></p>
+        </div>
+        <div id="tutRecipeFormWrap" style="opacity:0;transform:translateY(12px);transition:opacity 0.45s,transform 0.45s;margin-top:18px;pointer-events:none;">
+          <div id="trec-layout" style="display:flex;gap:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+            <div id="trec-left" style="flex:1;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px;border-right:1px solid var(--border);">
+              <div>
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Recipe Name *</div>
+                <input id="trec-name" type="text" autocomplete="off" placeholder="Enter recipe name..." style="${nameStyle}">
+              </div>
+              <div id="trec-mobile-swiper" style="display:none;">
+                <div id="trec-swipe-wrap" style="position:relative;height:170px;overflow:hidden;border-radius:16px;"></div>
+                <div id="trec-swipe-dots" style="display:flex;justify-content:center;align-items:center;gap:8px;padding:8px 0 4px;"></div>
+              </div>
+              <div id="trec-dropzone" style="flex:1;min-height:96px;border:2px dashed var(--border);border-radius:10px;padding:10px;background:var(--bg-inner);box-sizing:border-box;transition:border-color 0.2s;">
+                <div id="trec-placeholder" style="color:var(--text-muted);font-size:12px;text-align:center;padding-top:22px;line-height:1.5;">Select ingredients from<br>the list to add them.</div>
+              </div>
+            </div>
+            <div id="trec-right" style="width:230px;flex-shrink:0;display:flex;flex-direction:column;">
+              <div style="padding:13px 14px 9px;border-bottom:1px solid var(--border);">
+                <div style="font-size:14px;font-weight:700;color:var(--text-main);">Ingredient Library</div>
+              </div>
+              <div style="padding:10px 12px 6px;">
+                <input id="trec-search" type="text" autocomplete="off" placeholder="Search ingredients..." style="${searchStyle}" oninput="tutRecSearch(this.value)">
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:0 12px 12px;">
+                ${sectionLabel('All Ingredients')}
+                ${libItem(1, true)}
+                ${libItem(2, false)}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    },
+    onEnter() {
+      const full = "Now let's create our recipe by adding all the ingredients necessary.";
+      const el = document.getElementById('tutTypewriterText3');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (!el) return;
+
+      let stopped = false, animDone = false;
+      const setReady = () => { animDone = true; nextBtn.textContent = 'Next'; nextBtn.disabled = false; nextBtn.onclick = () => tutorialNext(); };
+
+      const checkReady = () => {
+        const has1 = !!document.getElementById('trec-drop-1');
+        const has2 = !!document.getElementById('trec-drop-2');
+        const name = (document.getElementById('trec-name')||{}).value || '';
+        if (has1 && has2 && name.trim()) setReady();
+      };
+
+      const hlLib = (id, on) => {
+        const e = document.getElementById(id); if (!e) return;
+        e.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+        e.style.background = on ? 'rgba(6,182,212,0.1)' : 'rgba(255,255,255,0.03)';
+        e.style.boxShadow = on ? '0 0 0 3px rgba(6,182,212,0.18)' : '';
+        e.style.transform = on ? 'translateX(2px)' : '';
+      };
+
+      const hideLib = (id) => {
+        const e = document.getElementById(id); if (!e) return;
+        e.style.display = 'none'; e.dataset.added = '1';
+      };
+      const showLib = (id) => {
+        const e = document.getElementById(id); if (!e) return;
+        const search = (document.getElementById('trec-search')||{}).value || '';
+        const matches = !search || e.dataset.name.includes(search.toLowerCase());
+        e.style.display = matches ? '' : 'none';
+        e.dataset.added = '0';
+      };
+
+      const INGR = _tutIngr || {1:{name:'Yellow Beads',attrs:'Color: yellow · Material: wood',stock:15,unit:'pcs',minRestock:20},2:{name:'String',attrs:'Material: wool',stock:30,unit:'m',minRestock:10}};
+
+      const getDotColor = (num) => {
+        const {stock, minRestock} = INGR[num];
+        const qtyEl = document.getElementById(`trec-qty-${num}`);
+        const used = parseFloat(qtyEl ? qtyEl.textContent : '0') || 0;
+        const rem = stock - used;
+        if (rem <= 0) return '#ef4444';
+        if (rem <= minRestock) return '#f59e0b';
+        return '#22c55e';
+      };
+      const updateDot = (num) => {
+        const dot = document.getElementById(`trec-dot-${num}`);
+        if (dot) dot.style.background = getDotColor(num);
+      };
+
+      const makeDropItem = (num, attrs, qty) => {
+        const name = INGR[num].name;
+        const item = document.createElement('div');
+        item.id = `trec-drop-${num}`;
+        item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:8px;background:var(--bg-panel);border:1px solid var(--accent);margin-bottom:6px;';
+        const btnStyle = 'width:24px;height:24px;border:1px solid var(--border);border-radius:5px;background:var(--bg-inner);color:var(--text-main);cursor:pointer;font-size:15px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;';
+        item.innerHTML = `<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${name}</div>${attrs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px;">${attrs}</div>`:''}</div><div style="display:flex;align-items:center;gap:5px;flex-shrink:0;"><button type="button" onclick="tutRecQty(${num},-1)" style="${btnStyle}">−</button><span id="trec-qty-${num}" style="min-width:26px;text-align:center;font-size:13px;font-weight:600;color:var(--text-main);">${qty}</span><button type="button" onclick="tutRecQty(${num},1)" style="${btnStyle}">+</button><button type="button" onclick="tutRecRemove(${num})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:17px;padding:0 3px;line-height:1;margin-left:2px;">×</button></div>`;
+        return item;
+      };
+
+      window.tutRecQty = (num, delta) => {
+        const el = document.getElementById(`trec-qty-${num}`);
+        if (!el) return;
+        const cur = parseFloat(el.textContent) || 0;
+        const next = Math.max(0, cur + delta);
+        el.textContent = Number.isInteger(next) ? String(next) : next.toFixed(1);
+        updateDot(num);
+      };
+
+      window.tutRecSearch = (val) => {
+        const v = val.toLowerCase();
+        [1, 2].forEach(n => {
+          const e = document.getElementById(`trec-lib-${n}`); if (!e || e.dataset.added === '1') return;
+          e.style.display = (e.dataset.name||'').includes(v) ? '' : 'none';
+        });
+      };
+
+      window.tutRecLibClick = (num) => {
+        const lib = document.getElementById(`trec-lib-${num}`);
+        if (!lib || lib.dataset.added === '1') return;
+        const dropzone = document.getElementById('trec-dropzone');
+        const placeholder = document.getElementById('trec-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        hideLib(`trec-lib-${num}`);
+        const item = makeDropItem(num, INGR[num].attrs, '1');
+        item.style.cssText += ';opacity:0;transition:opacity 0.3s,transform 0.3s;transform:translateY(6px);';
+        if (dropzone) dropzone.appendChild(item);
+        requestAnimationFrame(() => requestAnimationFrame(() => { item.style.opacity='1'; item.style.transform='translateY(0)'; }));
+        updateDot(num);
+        checkReady();
+        window._tutMobileRefresh && window._tutMobileRefresh();
+      };
+
+      window.tutRecRemove = (num) => {
+        const item = document.getElementById(`trec-drop-${num}`);
+        if (item) item.remove();
+        showLib(`trec-lib-${num}`);
+        updateDot(num);
+        const dropzone = document.getElementById('trec-dropzone');
+        const placeholder = document.getElementById('trec-placeholder');
+        if (dropzone && !dropzone.querySelector('[id^="trec-drop-"]') && placeholder) placeholder.style.display = '';
+        if (animDone) {
+          const has1 = !!document.getElementById('trec-drop-1');
+          const has2 = !!document.getElementById('trec-drop-2');
+          const name = (document.getElementById('trec-name')||{}).value || '';
+          if (has1 && has2 && name.trim()) { nextBtn.textContent = 'Next'; nextBtn.disabled = false; }
+          else { nextBtn.textContent = 'Next'; nextBtn.disabled = true; }
+          nextBtn.onclick = () => tutorialNext();
+        }
+        window._tutMobileRefresh && window._tutMobileRefresh();
+      };
+
+      // ── Mobile swipe cards (≤520 px) ──────────────────────
+      {
+        const htmlEsc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        let swipeIdx = 0;
+        let swipeAnimating = false;
+        const isAdded = (n) => { const e = document.getElementById(`trec-lib-${n}`); return !!(e && e.dataset.added === '1'); };
+        const remaining = () => [1,2].filter(n => !isAdded(n));
+
+        const renderDots = () => {
+          const el = document.getElementById('trec-swipe-dots'); if (!el) return;
+          const rem = remaining();
+          el.innerHTML = rem.map((_n,i) => {
+            const active = i === swipeIdx;
+            return `<div onclick="window._tutSwipeGo(${i})" style="height:8px;width:${active?'24px':'8px'};border-radius:4px;background:${active?'var(--accent)':'var(--border)'};transition:all 0.3s;cursor:pointer;flex-shrink:0;"></div>`;
+          }).join('');
+        };
+
+        const makeCard = (n) => {
+          const { name, attrs } = INGR[n];
+          const dc = getDotColor(n);
+          const tags = attrs ? attrs.split(' · ').map(a => `<span style="display:inline-block;padding:3px 10px;background:var(--bg-inner);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-muted);margin:2px;">${htmlEsc(a)}</span>`).join('') : '';
+          const card = document.createElement('div');
+          card.className = 'tut-swipe-card active';
+          card.innerHTML = `<div style="position:absolute;top:12px;right:12px;width:10px;height:10px;border-radius:50%;background:${dc};box-shadow:0 0 0 3px var(--bg-panel);"></div><div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${htmlEsc(name)}</div><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px;">${tags}</div>`;
+          card.onclick = () => window._tutMobileAdd(n);
+          // touch swipe navigation
+          let tx = 0, ty = 0;
+          card.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+          card.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - tx;
+            const dy = e.changedTouches[0].clientY - ty;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+              const r = remaining();
+              if (dx < 0 && swipeIdx < r.length - 1) _tutSwipeNavigate('next');
+              else if (dx > 0 && swipeIdx > 0) _tutSwipeNavigate('prev');
+            }
+          }, { passive: true });
+          return card;
+        };
+
+        const renderCard = (inClass) => {
+          const wrap = document.getElementById('trec-swipe-wrap'); if (!wrap) return;
+          const rem = remaining();
+          wrap.innerHTML = '';
+          if (rem.length === 0) {
+            const done = document.createElement('div');
+            done.className = 'tut-swipe-card active';
+            done.style.cssText = 'border-color:var(--accent);justify-content:center;align-items:center;text-align:center;gap:6px;';
+            done.innerHTML = `<div style="font-size:32px;">✓</div><div style="font-size:14px;font-weight:700;color:var(--text-main);">All ingredients added!</div>`;
+            wrap.appendChild(done);
+            renderDots();
+            return;
+          }
+          if (swipeIdx >= rem.length) swipeIdx = rem.length - 1;
+          const card = makeCard(rem[swipeIdx]);
+          if (inClass) card.classList.add(inClass);
+          wrap.appendChild(card);
+          renderDots();
+        };
+
+        const _tutSwipeNavigate = (dir) => {
+          if (swipeAnimating) return;
+          const wrap = document.getElementById('trec-swipe-wrap'); if (!wrap) return;
+          const card = wrap.querySelector('.tut-swipe-card');
+          if (!card) return;
+          swipeAnimating = true;
+          card.classList.add(dir === 'next' ? 'tut-slide-out-left' : 'tut-slide-out-right');
+          setTimeout(() => {
+            swipeIdx += dir === 'next' ? 1 : -1;
+            renderCard(dir === 'next' ? 'tut-slide-in-right' : 'tut-slide-in-left');
+            swipeAnimating = false;
+          }, 300);
+        };
+
+        window._tutSwipeGo = (i) => {
+          if (swipeAnimating) return;
+          const wrap = document.getElementById('trec-swipe-wrap'); if (!wrap) return;
+          const card = wrap.querySelector('.tut-swipe-card');
+          if (!card || i === swipeIdx) return;
+          const dir = i > swipeIdx ? 'next' : 'prev';
+          swipeAnimating = true;
+          card.classList.add(dir === 'next' ? 'tut-slide-out-left' : 'tut-slide-out-right');
+          setTimeout(() => { swipeIdx = i; renderCard(dir === 'next' ? 'tut-slide-in-right' : 'tut-slide-in-left'); swipeAnimating = false; }, 300);
+        };
+
+        window._tutMobileAdd = (n) => {
+          if (swipeAnimating) return;
+          const wrap = document.getElementById('trec-swipe-wrap'); if (!wrap) return;
+          const card = wrap.querySelector('.tut-swipe-card');
+          if (!card) return;
+          swipeAnimating = true;
+          card.classList.add('tut-slide-out-left');
+          setTimeout(() => {
+            window.tutRecLibClick(n); // marks as added; also calls _tutMobileRefresh but swipeAnimating blocks it
+            swipeIdx = 0;
+            renderCard('tut-slide-in-right');
+            swipeAnimating = false;
+          }, 300);
+        };
+
+        // Called by demo automation (tutRecLibClick already marked item as added)
+        window._tutMobileRefresh = () => {
+          if (swipeAnimating) return;
+          const wrap = document.getElementById('trec-swipe-wrap'); if (!wrap) return;
+          const card = wrap.querySelector('.tut-swipe-card');
+          if (card) {
+            swipeAnimating = true;
+            card.classList.add('tut-slide-out-left');
+            setTimeout(() => { swipeIdx = 0; renderCard('tut-slide-in-right'); swipeAnimating = false; }, 300);
+          } else {
+            renderCard();
+          }
+        };
+
+        renderCard();
+      }
+
+      const fillInstant = () => {
+        stopped = true;
+        const wrap = document.getElementById('tutRecipeFormWrap');
+        if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+        const placeholder = document.getElementById('trec-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        const dropzone = document.getElementById('trec-dropzone');
+        if (dropzone) {
+          [[1,'15'],[2,'0.5']].forEach(([n,qty]) => {
+            if (!document.getElementById(`trec-drop-${n}`)) dropzone.appendChild(makeDropItem(n, INGR[n].attrs, qty));
+            else { const qi = document.getElementById(`trec-qty-${n}`); if (qi) qi.textContent = qty; }
+          });
+        }
+        hideLib('trec-lib-1'); hideLib('trec-lib-2');
+        updateDot(1); updateDot(2);
+        const nameF = document.getElementById('trec-name');
+        if (nameF) { nameF.value = 'Handmade Necklace'; nameF.style.borderColor = ''; }
+        setReady();
+      };
+
+      const addDropAnimated = (num, qtyVal, cb) => {
+        if (stopped) { cb && cb(); return; }
+        const dropzone = document.getElementById('trec-dropzone');
+        const placeholder = document.getElementById('trec-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+        hideLib(`trec-lib-${num}`);
+        const item = makeDropItem(num, INGR[num].attrs, '');
+        item.style.cssText += ';opacity:0;transition:opacity 0.3s,transform 0.3s;transform:translateY(6px);';
+        if (dropzone) dropzone.appendChild(item);
+        requestAnimationFrame(() => requestAnimationFrame(() => { item.style.opacity='1'; item.style.transform='translateY(0)'; }));
+        window._tutMobileRefresh && window._tutMobileRefresh();
+        setTimeout(() => {
+          if (stopped) { const qi = document.getElementById(`trec-qty-${num}`); if (qi) qi.textContent = qtyVal; if (cb) cb(); return; }
+          const qi = document.getElementById(`trec-qty-${num}`);
+          if (!qi) { if (cb) cb(); return; }
+          let ci = 0;
+          const go = () => {
+            if (stopped) { qi.textContent = qtyVal; if (cb) cb(); return; }
+            if (ci < qtyVal.length) { qi.textContent = qtyVal.slice(0,++ci); setTimeout(go, 80); }
+            else { setTimeout(cb||(() =>{}), 300); }
+          };
+          go();
+        }, 400);
+      };
+
+      const typeRecipeName = (cb) => {
+        if (stopped) { if (cb) cb(); return; }
+        const nameF = document.getElementById('trec-name');
+        if (!nameF) { if (cb) cb(); return; }
+        nameF.style.borderColor = 'var(--accent)';
+        const val = 'Handmade Necklace'; let ci = 0;
+        const go = () => {
+          if (stopped) { nameF.value = val; nameF.style.borderColor=''; if (cb) cb(); return; }
+          if (ci < val.length) { nameF.value = val.slice(0,++ci); setTimeout(go, 65); }
+          else { nameF.style.borderColor=''; if (cb) cb(); }
+        };
+        setTimeout(go, 150);
+      };
+
+      const startFormAnim = () => {
+        const wrap = document.getElementById('tutRecipeFormWrap');
+        if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+        if (stopped) return;
+        hlLib('trec-lib-1', true);
+        setTimeout(() => {
+          if (stopped) return;
+          hlLib('trec-lib-1', false);
+          addDropAnimated(1, '15', () => {
+            if (stopped) return;
+            setTimeout(() => {
+              if (stopped) return;
+              hlLib('trec-lib-2', true);
+              setTimeout(() => {
+                if (stopped) return;
+                hlLib('trec-lib-2', false);
+                addDropAnimated(2, '0.5', () => {
+                  if (stopped) return;
+                  setTimeout(() => {
+                    typeRecipeName(() => { if (!stopped) setReady(); });
+                  }, 400);
+                });
+              }, 500);
+            }, 400);
+          });
+        }, 600);
+      };
+
+      let textDone = false;
+      const finishText = (instant) => {
+        if (textDone) return; textDone = true;
+        el.textContent = full;
+        nextBtn.textContent = 'Skip';
+        nextBtn.onclick = () => tutorialNext();
+        const content = document.getElementById('tutorialContent');
+        if (instant) {
+          fillInstant();
+          if (content) { content.style.cursor=''; content.onclick=null; }
+          return;
+        }
+        if (content) {
+          content.onclick = (e) => {
+            if (e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON') return;
+            fillInstant(); content.style.cursor=''; content.onclick=null;
+          };
+        }
+        setTimeout(startFormAnim, 200);
+      };
+
+      const card = document.getElementById('tutorialCard');
+      if (card) card.classList.add('t-wide');
+      nextBtn.textContent = 'Skip'; nextBtn.disabled = false; nextBtn.onclick = () => tutorialNext();
+      const content = document.getElementById('tutorialContent');
+      if (content) { content.style.cursor='pointer'; content.onclick=(e)=>{ if (e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON') return; finishText(true); }; }
+      let i = 0;
+      const tick = () => {
+        if (textDone) return;
+        if (!document.getElementById('tutTypewriterText3')) return;
+        if (i < full.length) { el.textContent = full.slice(0,++i); setTimeout(tick, 35); }
+        else { finishText(false); }
+      };
+      setTimeout(tick, 200);
+    },
+    onBack() {
+      const full = "Now let's create our recipe by adding all the ingredients necessary.";
+      const el = document.getElementById('tutTypewriterText3');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (el) el.textContent = full;
+      const wrap = document.getElementById('tutRecipeFormWrap');
+      if (wrap) { wrap.style.cssText += ';opacity:1;transform:translateY(0);pointer-events:auto;transition:none;'; }
+      const placeholder = document.getElementById('trec-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
+      const dropzone = document.getElementById('trec-dropzone');
+      if (dropzone) {
+        const INGR_B = _tutIngr || {1:{name:'Yellow Beads',attrs:'Color: yellow · Material: wood',stock:15,minRestock:20},2:{name:'String',attrs:'Material: wool',stock:30,minRestock:10}};
+        const btnStyle = 'width:24px;height:24px;border:1px solid var(--border);border-radius:5px;background:var(--bg-inner);color:var(--text-main);cursor:pointer;font-size:15px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;';
+        [[1,'15'],[2,'0.5']].forEach(([n,qty]) => {
+          const {name,attrs} = INGR_B[n];
+          const item = document.createElement('div');
+          item.id = `trec-drop-${n}`;
+          item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border-radius:8px;background:var(--bg-panel);border:1px solid var(--accent);margin-bottom:6px;';
+          item.innerHTML = `<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${name}</div><div style="font-size:11px;color:#9ca3af;margin-top:2px;">${attrs}</div></div><div style="display:flex;align-items:center;gap:5px;flex-shrink:0;"><button type="button" onclick="tutRecQty(${n},-1)" style="${btnStyle}">−</button><span id="trec-qty-${n}" style="min-width:26px;text-align:center;font-size:13px;font-weight:600;color:var(--text-main);">${qty}</span><button type="button" onclick="tutRecQty(${n},1)" style="${btnStyle}">+</button><button type="button" onclick="tutRecRemove(${n})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:17px;padding:0 3px;line-height:1;margin-left:2px;">×</button></div>`;
+          dropzone.appendChild(item);
+        });
+      }
+      [1,2].forEach(n => { const e=document.getElementById(`trec-lib-${n}`); if(!e) return; e.style.display='none'; e.dataset.added='1'; });
+      // update dots based on restored qty
+      [[1,'15'],[2,'0.5']].forEach(([n,qty]) => {
+        const dot = document.getElementById(`trec-dot-${n}`);
+        if (!dot) return;
+        const {stock,minRestock} = INGR_B[n];
+        const rem = stock;
+        dot.style.background = rem <= 0 ? '#ef4444' : rem <= minRestock ? '#f59e0b' : '#22c55e';
+      });
+      const nameF = document.getElementById('trec-name');
+      if (nameF) { nameF.value = 'Handmade Necklace'; nameF.style.borderColor=''; }
+      const card = document.getElementById('tutorialCard');
+      if (card) card.classList.add('t-wide');
+      nextBtn.textContent='Next'; nextBtn.disabled=false; nextBtn.onclick=()=>tutorialNext();
+      const swipeWrap = document.getElementById('trec-swipe-wrap');
+      if (swipeWrap) {
+        swipeWrap.innerHTML = '';
+        const doneCard = document.createElement('div');
+        doneCard.className = 'tut-swipe-card active';
+        doneCard.style.cssText = 'border-color:var(--accent);justify-content:center;align-items:center;text-align:center;gap:6px;';
+        doneCard.innerHTML = '<div style="font-size:32px;">✓</div><div style="font-size:14px;font-weight:700;color:var(--text-main);">All ingredients added!</div>';
+        swipeWrap.appendChild(doneCard);
+      }
+      const swipeDots = document.getElementById('trec-swipe-dots');
+      if (swipeDots) swipeDots.innerHTML = '';
+    }
+  },
+
+  // ── Step 3: Process Order (interactive) ────────
+  {
+    label: 'Step 3 · Process Order',
+    title: '',
+    render() {
+      const recipeName = _tutRecipeName || 'Handmade Necklace';
+      const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const today = new Date().toISOString().slice(0,10);
+      const iStyle = 'width:100%;box-sizing:border-box;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg-main);padding:0 11px;font-size:14px;color:var(--text-main);outline:none;font-family:inherit;transition:border-color 0.2s;';
+      const lbl = (t, req) => `<div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:5px;">${t}${req?' <span style="color:var(--danger);">*</span>':''}</div>`;
+      // Compute stock dot from ingredient data: orange if any low, green otherwise
+      const ingr = _tutIngr || {1:{stock:15,minRestock:20},2:{stock:30,minRestock:10}};
+      const anyLow = [1,2].some(n => { const {stock,minRestock} = ingr[n]||{}; return (stock||0) <= (minRestock||0); });
+      const dotColor = anyLow ? '#f59e0b' : '#10b981';
+      const dotShadow = anyLow ? 'rgba(245,158,11,0.5)' : 'rgba(16,185,129,0.5)';
+      const dotEl = `<span style="width:9px;height:9px;border-radius:50%;background:${dotColor};box-shadow:0 0 6px ${dotShadow};flex-shrink:0;display:inline-block;"></span>`;
+      const PRICE = '$9.99';
+      return `
+        <div id="tutTypewriterWrap4">
+          <p id="tutTypewriterText4" style="font-size:15px;line-height:1.8;color:var(--text-main);margin:0;white-space:pre-wrap;"></p>
+        </div>
+        <div id="tutOrderWrap" style="opacity:0;transform:translateY(12px);transition:opacity 0.45s,transform 0.45s;margin-top:18px;pointer-events:none;">
+
+          <div id="tord-step1" style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+            <div style="padding:16px 18px 12px;border-bottom:1px solid var(--border);">
+              <div style="font-size:16px;font-weight:700;color:var(--text-main);">Add Recipes to Order</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Select one or more recipes to include in this order</div>
+            </div>
+            <div style="padding:10px 14px;">
+              <input type="text" placeholder="Search recipes by name or ingredient..." disabled style="width:100%;box-sizing:border-box;height:34px;border:1px solid var(--border);border-radius:20px;background:var(--bg-inner);padding:0 14px;font-size:13px;color:var(--text-muted);outline:none;font-family:inherit;">
+            </div>
+            <div style="padding:2px 14px 12px;">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);padding:6px 0 8px;">FAVORITES</div>
+              <div id="tord-recipe-item" data-selected="0" onclick="window.tutOrdSelectRecipe()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg-panel);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.2s;user-select:none;">
+                <span id="tord-recipe-star" style="font-size:15px;color:var(--text-muted);flex-shrink:0;">&#9734;</span>
+                <div style="flex:1;font-weight:600;font-size:14px;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(recipeName)}</div>
+                <span style="font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${PRICE}</span>
+                ${dotEl}
+              </div>
+            </div>
+            <div style="padding:12px 14px;border-top:1px solid var(--border);">
+              <button id="tord-continue-btn" onclick="window.tutOrdContinue()" disabled style="width:100%;height:42px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:not-allowed;opacity:0.4;font-family:inherit;transition:opacity 0.2s;">Continue</button>
+            </div>
+          </div>
+
+          <div id="tord-step2" style="display:none;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+            <div style="padding:14px 16px 12px;border-bottom:1px solid var(--border);">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">SELECTED RECIPES</div>
+              <div id="tord-sel-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:10px;transition:background 0.2s,border-color 0.2s;">
+                <span style="font-size:13px;font-weight:600;color:var(--text-muted);flex-shrink:0;">1&times;</span>
+                <span style="flex:1;font-weight:600;font-size:13px;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(recipeName)}</span>
+                <span style="font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${PRICE}</span>
+              </div>
+            </div>
+            <div style="padding:16px;">
+              <div style="margin-bottom:12px;">${lbl('Customer',true)}<input id="tord-customer" type="text" placeholder="e.g., John Smith" autocomplete="off" oninput="this.style.color='var(--text-main)'" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor=''" style="${iStyle}color:#6b7280;"></div>
+              <div style="margin-bottom:12px;">${lbl('Order Date',true)}<input id="tord-date" type="text" value="${today}" readonly style="${iStyle}"></div>
+              <div style="margin-bottom:12px;">${lbl('Reference',true)}<input id="tord-ref" type="text" placeholder="e.g., ORD-12345" autocomplete="off" oninput="this.style.color='var(--text-main)'" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor=''" style="${iStyle}color:#6b7280;"></div>
+              <div style="margin-bottom:14px;">${lbl('Status')}<select id="tord-status" style="${iStyle}"><option value="processed" selected>Processed</option><option value="fulfilled">Fulfilled</option><option value="shipped">Shipped</option></select></div>
+              <div id="tord-inv-toggle" onclick="window.tutOrdToggleInv()" style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer;user-select:none;">
+                <div><div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct ingredient quantities based on recipe components</div></div>
+                <div id="tord-inv-track" style="width:44px;height:24px;background:var(--accent);border-radius:12px;position:relative;flex-shrink:0;transition:background 0.2s;"><div id="tord-inv-thumb" style="position:absolute;right:2px;top:2px;width:20px;height:20px;background:white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:right 0.2s;"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>`;
+    },
+    onEnter() {
+      const recipeName = _tutRecipeName || 'Handmade Necklace';
+      const full = "Awesome. Now that we have set up our ingredients and recipe we come to our core feature: Updating our inventory based on order processing.\n\nIn order to process an order all you have to do is choose the recipe that matches your sale and add a bit of customer data.";
+      const el = document.getElementById('tutTypewriterText4');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (!el) return;
+
+      let animStopped = false;
+
+      const selectRecipeUI = () => {
+        const item = document.getElementById('tord-recipe-item'); if (!item) return;
+        item.dataset.selected = '1';
+        item.style.borderColor = 'var(--accent)';
+        item.style.background = 'rgba(6,182,212,0.07)';
+        const star = document.getElementById('tord-recipe-star');
+        if (star) { star.textContent = '\u2605'; star.style.color = '#f59e0b'; }
+        const btn = document.getElementById('tord-continue-btn');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+      };
+
+      const fillInstant = () => {
+        animStopped = true;
+        _tutOrdResult = null;
+        const el_ = document.getElementById('tutTypewriterText4'); if (el_) el_.textContent = full;
+        const wrap = document.getElementById('tutOrderWrap');
+        if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+        selectRecipeUI();
+        const step1 = document.getElementById('tord-step1'); if (step1) step1.style.display = 'none';
+        const step2 = document.getElementById('tord-step2'); if (step2) step2.style.display = 'block';
+        const cust = document.getElementById('tord-customer'); if (cust) { cust.value='Sarah M.'; cust.style.color='var(--text-main)'; }
+        const ref  = document.getElementById('tord-ref');      if (ref)  { ref.value='ORD-00001';  ref.style.color='var(--text-main)'; }
+      };
+
+      const typeField = (id, val, cb) => {
+        const f = document.getElementById(id); if (!f) { if (cb) cb(); return; }
+        f.style.borderColor = 'var(--accent)';
+        let ci = 0;
+        const go = () => {
+          if (animStopped) { f.value=val; f.style.color='var(--text-main)'; f.style.borderColor=''; if (cb) cb(); return; }
+          if (ci < val.length) { f.value=val.slice(0,++ci); f.style.color='var(--text-main)'; setTimeout(go,65); }
+          else { f.style.borderColor=''; if (cb) cb(); }
+        };
+        setTimeout(go, 200);
+      };
+
+      window.tutOrdSelectRecipe = () => {
+        const item = document.getElementById('tord-recipe-item'); if (!item) return;
+        const nowSelected = !(item.dataset.selected === '1');
+        item.dataset.selected = nowSelected ? '1' : '0';
+        item.style.borderColor = nowSelected ? 'var(--accent)' : 'var(--border)';
+        item.style.background  = nowSelected ? 'rgba(6,182,212,0.07)' : 'var(--bg-panel)';
+        const star  = document.getElementById('tord-recipe-star');  if (star)  { star.textContent = nowSelected ? '\u2605' : '\u2606'; star.style.color = nowSelected ? '#f59e0b' : 'var(--text-muted)'; }
+        const check = document.getElementById('tord-recipe-check'); if (check) check.style.display = nowSelected ? 'flex' : 'none';
+        const btn   = document.getElementById('tord-continue-btn'); if (btn)   { btn.disabled=!nowSelected; btn.style.opacity=nowSelected?'1':'0.4'; btn.style.cursor=nowSelected?'pointer':'not-allowed'; }
+      };
+
+      window.tutOrdContinue = () => {
+        const item = document.getElementById('tord-recipe-item'); if (!item || item.dataset.selected !== '1') return;
+        item.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
+        item.style.transform = 'scale(1.03) translateY(-2px)';
+        item.style.boxShadow = '0 6px 22px rgba(6,182,212,0.4)';
+        setTimeout(() => {
+          const step1 = document.getElementById('tord-step1');
+          const step2 = document.getElementById('tord-step2');
+          if (step1) { step1.style.transition='opacity 0.25s,transform 0.25s'; step1.style.opacity='0'; step1.style.transform='translateY(-8px)'; }
+          setTimeout(() => {
+            if (step1) step1.style.display = 'none';
+            if (step2) {
+              step2.style.display = 'block';
+              step2.style.opacity = '0';
+              step2.style.transform = 'translateY(10px)';
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                step2.style.transition = 'opacity 0.3s, transform 0.3s';
+                step2.style.opacity = '1';
+                step2.style.transform = 'translateY(0)';
+                const sel = document.getElementById('tord-sel-row');
+                if (sel) {
+                  setTimeout(() => {
+                    sel.style.background = 'rgba(6,182,212,0.18)';
+                    sel.style.borderColor = 'var(--accent)';
+                    setTimeout(() => { sel.style.background = ''; sel.style.borderColor = ''; }, 700);
+                  }, 250);
+                }
+              }));
+            }
+          }, 230);
+        }, 130);
+      };
+
+      window.tutOrdToggleInv = () => {
+        const track = document.getElementById('tord-inv-track');
+        const thumb = document.getElementById('tord-inv-thumb');
+        const wrap  = document.getElementById('tord-inv-toggle');
+        if (!track || !thumb) return;
+        const on = thumb.style.right === '2px';
+        thumb.style.right = on ? '22px' : '2px';
+        track.style.background = on ? 'var(--border)' : 'var(--accent)';
+        if (wrap) { wrap.style.background = on ? 'transparent' : 'rgba(6,182,212,0.06)'; wrap.style.borderColor = on ? 'var(--border)' : 'rgba(6,182,212,0.22)'; }
+      };
+
+      window.tutOrdFinish = () => {
+        const thumb = document.getElementById('tord-inv-thumb');
+        const invOn = !thumb || thumb.style.right !== '22px';
+        const ref = (document.getElementById('tord-ref')||{}).value || 'ORD-00001';
+        _tutOrdResult = {ref, invOn};
+        tutorialNext();
+      };
+
+      const showFormAndAnimate = () => {
+        const wrap = document.getElementById('tutOrderWrap'); if (!wrap) return;
+        wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto';
+        setTimeout(() => {
+          if (animStopped) return;
+          selectRecipeUI();
+          setTimeout(() => {
+            if (animStopped) return;
+            window.tutOrdContinue();
+            setTimeout(() => {
+              if (animStopped) return;
+              typeField('tord-customer', 'Sarah M.', () => {
+                setTimeout(() => {
+                  if (animStopped) return;
+                  typeField('tord-ref', 'ORD-00001', () => {
+                    if (!animStopped) { nextBtn.textContent = 'Next'; nextBtn.onclick = () => window.tutOrdFinish(); }
+                  });
+                }, 200);
+              });
+            }, 700);
+          }, 1000);
+        }, 800);
+      };
+
+      nextBtn.textContent = 'Skip'; nextBtn.disabled = false;
+      nextBtn.onclick = () => { fillInstant(); tutorialNext(); };
+
+      const content = document.getElementById('tutorialContent');
+      let textDone = false;
+      if (content) {
+        content.style.cursor = 'pointer';
+        content.onclick = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') return;
+          if (!textDone) {
+            textDone = true;
+            el.textContent = full;
+            content.style.cursor = ''; content.onclick = null;
+            showFormAndAnimate();
+          }
+        };
+      }
+
+      let i = 0;
+      const tick = () => {
+        if (textDone) return;
+        const el_ = document.getElementById('tutTypewriterText4'); if (!el_) return;
+        if (i < full.length) { el_.textContent = full.slice(0,++i); setTimeout(tick, 22); }
+        else {
+          textDone = true;
+          if (content) { content.style.cursor=''; content.onclick=null; }
+          setTimeout(showFormAndAnimate, 300);
+        }
+      };
+      setTimeout(tick, 200);
+    },
+    onBack() {
+      const full = "Awesome. Now that we have set up our ingredients and recipe we come to our core feature: Updating our inventory based on order processing.\n\nIn order to process an order all you have to do is choose the recipe that matches your sale and add a bit of customer data.";
+      const el = document.getElementById('tutTypewriterText4'); if (el) el.textContent = full;
+      const wrap = document.getElementById('tutOrderWrap');
+      if (wrap) { wrap.style.transition='none'; wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+      const step1 = document.getElementById('tord-step1'); if (step1) step1.style.display = 'none';
+      const step2 = document.getElementById('tord-step2'); if (step2) step2.style.display = 'block';
+      const cust = document.getElementById('tord-customer'); if (cust) { cust.value='Sarah M.'; cust.style.color='var(--text-main)'; }
+      const ref  = document.getElementById('tord-ref');      if (ref)  { ref.value='ORD-00001';  ref.style.color='var(--text-main)'; }
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (nextBtn) { nextBtn.textContent='Next'; nextBtn.disabled=false; nextBtn.onclick=()=>window.tutOrdFinish(); }
+      window.tutOrdToggleInv = () => {
+        const track = document.getElementById('tord-inv-track');
+        const thumb = document.getElementById('tord-inv-thumb');
+        const wrap  = document.getElementById('tord-inv-toggle');
+        if (!track || !thumb) return;
+        const on = thumb.style.right === '2px';
+        thumb.style.right = on ? '22px' : '2px';
+        track.style.background = on ? 'var(--border)' : 'var(--accent)';
+        if (wrap) { wrap.style.background = on ? 'transparent' : 'rgba(6,182,212,0.06)'; wrap.style.borderColor = on ? 'var(--border)' : 'rgba(6,182,212,0.22)'; }
+      };
+      window.tutOrdFinish = () => {
+        const th = document.getElementById('tord-inv-thumb');
+        const invOn = !th || th.style.right !== '22px';
+        const ref = (document.getElementById('tord-ref')||{}).value || 'ORD-00001';
+        _tutOrdResult = {ref, invOn};
+        tutorialNext();
+      };
+    }
+  },
+
+  // ── Step 3b: Order Success ───────────────────────
+  {
+    label: 'Order Complete',
+    title: '',
+    render() {
+      const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const r = _tutOrdResult || {ref:'ORD-00001', invOn:true};
+      const ref = r.ref;
+      const invOn = r.invOn;
+      let invRows = '';
+      if (invOn) {
+        const ingr = _tutIngr || {1:{name:'Yellow Beads',stock:15,unit:'pcs',minRestock:20},2:{name:'String',stock:30,unit:'m',minRestock:10}};
+        const deduct = _tutRecipeQty || {1:15,2:0.5};
+        [1,2].forEach(n => {
+          const {name,stock,unit,minRestock} = ingr[n];
+          const ns = Math.max(0, stock - (deduct[n]||0));
+          const dc = ns<=0?'#ef4444':ns<=(minRestock||0)?'#f59e0b':'#22c55e';
+          invRows += `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);"><span style="width:8px;height:8px;border-radius:50%;background:${dc};flex-shrink:0;"></span><span style="flex:1;font-size:13px;font-weight:500;color:var(--text-main);">${esc(name)}</span><span style="font-size:13px;color:var(--text-muted);text-decoration:line-through;">${stock}</span><span style="font-size:13px;color:var(--text-muted);margin:0 2px;">→</span><span style="font-size:13px;font-weight:700;color:var(--text-main);">${ns} ${esc(unit)}</span></div>`;
+        });
+      }
+      return `
+        <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;padding:32px 20px 28px;text-align:center;">
+          <div style="width:62px;height:62px;background:var(--accent);border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(6,182,212,0.35);"><span style="color:white;font-size:28px;font-weight:700;">✓</span></div>
+          <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Order ${esc(ref)} Created!</div>
+          ${invOn ? `<div style="display:inline-block;border:1px solid var(--accent);border-radius:20px;padding:4px 14px;font-size:12px;color:var(--accent);margin-bottom:18px;">✓ Inventory Updated</div><div style="background:var(--bg-inner);border:1px solid var(--border);border-radius:10px;overflow:hidden;text-align:left;">${invRows}</div>` : '<div style="font-size:13px;color:var(--text-muted);margin-top:4px;">Inventory was not updated.</div>'}
+        </div>`;
+    }
+  },
+
+  // ── Step 7: Log expense (interactive) ────────
+  {
+    label: 'Step 4 · Log Expense',
+    title: '',
+    render() {
+      const ingr = _tutIngr || {1:{name:'Yellow Beads',stock:15,unit:'pcs',minRestock:20},2:{name:'String',stock:30,unit:'m',minRestock:10}};
+      const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const iStyle = 'width:100%;box-sizing:border-box;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg-main);padding:0 11px;font-size:14px;color:var(--text-main);outline:none;font-family:inherit;transition:border-color 0.2s;';
+      const lbl = t => `<div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:5px;">${t}</div>`;
+      const today = new Date().toISOString().slice(0,10);
+      const ingr1name = esc(ingr[1].name);
+      const ingr1stock = ingr[1].stock || 15;
+      const ingr1unit = esc(ingr[1].unit || 'pcs');
+      return `
+        <div id="tutExpTypewriterWrap">
+          <p id="tutExpTypewriterText" style="font-size:15px;line-height:1.8;color:var(--text-main);margin:0;white-space:pre-wrap;"></p>
+        </div>
+        <div id="tutExpFormWrap" style="opacity:0;transform:translateY(12px);transition:opacity 0.45s,transform 0.45s;margin-top:18px;pointer-events:none;">
+          <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+            <div style="padding:16px 18px 12px;border-bottom:1px solid var(--border);">
+              <div style="font-size:16px;font-weight:700;color:var(--text-main);">Add Expense</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">Log a purchase to restock your ingredients</div>
+            </div>
+            <div style="padding:16px;">
+              <div style="margin-bottom:12px;">${lbl('Name')}<input id="texp-name" type="text" placeholder="e.g., Craft Fair Beads" autocomplete="off" oninput="this.style.color='var(--text-main)'" style="${iStyle}color:#6b7280;"></div>
+              <div style="margin-bottom:12px;">${lbl('Amount')}<input id="texp-amount" type="text" placeholder="e.g., $2.50" autocomplete="off" oninput="this.style.color='var(--text-main)'" style="${iStyle}color:#6b7280;"></div>
+              <div style="margin-bottom:12px;">${lbl('Date')}<input id="texp-date" type="text" value="${today}" readonly style="${iStyle}"></div>
+              <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+                <div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:10px;">Link to ingredient <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(optional — auto-updates stock)</span></div>
+                <div id="texp-ingr-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-inner);border:1px solid var(--border);border-radius:10px;transition:border-color 0.2s,background 0.2s;">
+                  <span style="width:9px;height:9px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>
+                  <span style="flex:1;font-size:13px;font-weight:600;color:var(--text-main);">${ingr1name}</span>
+                  <span style="font-size:13px;color:var(--text-muted);">${ingr1stock} ${ingr1unit}</span>
+                  <span id="texp-ingr-badge" style="font-size:12px;font-weight:700;color:var(--accent);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.3);border-radius:8px;padding:2px 8px;opacity:0;transition:opacity 0.3s;">+50 ${ingr1unit}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    },
+    onEnter() {
+      const ingr = _tutIngr || {1:{name:'Yellow Beads',stock:15,unit:'pcs',minRestock:20},2:{name:'String',stock:30,unit:'m',minRestock:10}};
+      const full = "Just as easy as you can update your inventory by processing orders you can do the same with tracking expenses. While orders decrease your stock, expenses will increase them.";
+      const el = document.getElementById('tutExpTypewriterText');
+      const nextBtn = document.getElementById('tutorialNextBtn');
+      if (!el) return;
+      let animStopped = false;
+
+      const typeField = (id, val, cb) => {
+        const f = document.getElementById(id); if (!f) { if (cb) cb(); return; }
+        f.style.borderColor = 'var(--accent)';
+        let ci = 0;
+        const go = () => {
+          if (animStopped) { f.value=val; f.style.color='var(--text-main)'; f.style.borderColor=''; if (cb) cb(); return; }
+          if (ci < val.length) { f.value=val.slice(0,++ci); f.style.color='var(--text-main)'; setTimeout(go,65); }
+          else { f.style.borderColor=''; if (cb) cb(); }
+        };
+        setTimeout(go, 200);
+      };
+
+      const fillInstant = () => {
+        animStopped = true;
+        const el_ = document.getElementById('tutExpTypewriterText'); if (el_) el_.textContent = full;
+        const wrap = document.getElementById('tutExpFormWrap');
+        if (wrap) { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto'; }
+        const f1 = document.getElementById('texp-name');   if (f1) { f1.value='Craft Fair Beads'; f1.style.color='var(--text-main)'; }
+        const f2 = document.getElementById('texp-amount'); if (f2) { f2.value='$2.50'; f2.style.color='var(--text-main)'; }
+        const row = document.getElementById('texp-ingr-row');
+        if (row) { row.style.borderColor='var(--accent)'; row.style.background='rgba(6,182,212,0.06)'; }
+        const badge = document.getElementById('texp-ingr-badge'); if (badge) badge.style.opacity='1';
+      };
+
+      const showFormAndAnimate = () => {
+        const wrap = document.getElementById('tutExpFormWrap'); if (!wrap) return;
+        wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; wrap.style.pointerEvents='auto';
+        setTimeout(() => {
+          if (animStopped) return;
+          typeField('texp-name', 'Craft Fair Beads', () => {
+            setTimeout(() => {
+              if (animStopped) return;
+              typeField('texp-amount', '$2.50', () => {
+                setTimeout(() => {
+                  if (animStopped) return;
+                  const row = document.getElementById('texp-ingr-row');
+                  if (row) { row.style.borderColor='var(--accent)'; row.style.background='rgba(6,182,212,0.06)'; }
+                  const badge = document.getElementById('texp-ingr-badge');
+                  if (badge) badge.style.opacity='1';
+                  if (!animStopped) { nextBtn.textContent='Next'; nextBtn.onclick=()=>tutorialNext(); }
+                }, 400);
+              });
+            }, 200);
+          });
+        }, 600);
+      };
+
+      nextBtn.textContent='Skip'; nextBtn.disabled=false;
+      nextBtn.onclick=()=>{ fillInstant(); tutorialNext(); };
+
+      const content = document.getElementById('tutorialContent');
+      let textDone = false;
+      if (content) {
+        content.style.cursor='pointer';
+        content.onclick=(e)=>{
+          if (e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+          if (!textDone) { textDone=true; el.textContent=full; content.style.cursor=''; content.onclick=null; showFormAndAnimate(); }
+        };
+      }
+
+      let i=0;
+      const tick=()=>{
+        if(textDone) return;
+        const el_=document.getElementById('tutExpTypewriterText'); if(!el_) return;
+        if(i<full.length){el_.textContent=full.slice(0,++i); setTimeout(tick,22);}
+        else{textDone=true; if(content){content.style.cursor='';content.onclick=null;} setTimeout(showFormAndAnimate,300);}
+      };
+      setTimeout(tick,200);
+    },
+    onBack() {
+      const full="Just as easy as you can update your inventory by processing orders you can do the same with tracking expenses. While orders decrease your stock, expenses will increase them.";
+      const el=document.getElementById('tutExpTypewriterText'); if(el) el.textContent=full;
+      const wrap=document.getElementById('tutExpFormWrap');
+      if(wrap){wrap.style.transition='none';wrap.style.opacity='1';wrap.style.transform='translateY(0)';wrap.style.pointerEvents='auto';}
+      const f1=document.getElementById('texp-name'); if(f1){f1.value='Craft Fair Beads';f1.style.color='var(--text-main)';}
+      const f2=document.getElementById('texp-amount'); if(f2){f2.value='$2.50';f2.style.color='var(--text-main)';}
+      const row=document.getElementById('texp-ingr-row');
+      if(row){row.style.borderColor='var(--accent)';row.style.background='rgba(6,182,212,0.06)';}
+      const badge=document.getElementById('texp-ingr-badge'); if(badge) badge.style.opacity='1';
+      const nextBtn=document.getElementById('tutorialNextBtn');
+      if(nextBtn){nextBtn.textContent='Next';nextBtn.disabled=false;nextBtn.onclick=()=>tutorialNext();}
+    }
+  },
+
+  // ── Step 9: Final message ─────────────────────
+  {
+    label: 'You\'re ready! 🎉',
+    title: '',
+    isFinal: true,
+    render() {
+      return `
+        <span class="t-emoji-big">🎉</span>
+        <div style="text-align:center;font-size:19px;font-weight:800;line-height:1.3;margin-bottom:16px;">
+          Hold on — was that fast<br>and even a bit of fun?
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.65;text-align:center;margin:0 0 18px;">
+          If you liked this, <strong style="color:var(--text-main);">register for free</strong> and enjoy our other features like
+          <strong style="color:var(--accent);">scanning order screenshots or PDFs</strong> and
+          <strong style="color:var(--accent);">creating ingredients from a URL</strong> —
+          keeping your inventory up to date was never more intuitive and easy.
+        </p>
+        <div class="t-final-cta">
+          <a href="login.html" class="t-cta-primary">🚀 Sign Up Free</a>
+          <a href="login.html" class="t-cta-secondary" onclick="closeTutorial()">Maybe later</a>
+        </div>
+      `;
+    }
+  }
+];
+
+function startTutorial() {
+  _tutStep = 0;
+  document.getElementById('tutorialOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  _tutRender();
+}
+
+function closeTutorial() {
+  document.getElementById('tutorialOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function tutorialNext() {
+  if (_tutStep === 1) _tutIngr = _readTutIngredients();
+  if (_tutStep === 2) {
+    _tutRecipeName = (document.getElementById('trec-name')||{}).value || 'Handmade Necklace';
+    _tutRecipeQty = {
+      1: parseFloat((document.getElementById('trec-qty-1')||{}).textContent) || 15,
+      2: parseFloat((document.getElementById('trec-qty-2')||{}).textContent) || 0.5
+    };
+  }
+  if (_tutStep < _tutSteps.length - 1) { _tutStep++; _tutRender(); }
+  else closeTutorial();
+}
+
+function tutorialBack() {
+  if (_tutStep > 0) { _tutStep--; _tutRender(true); }
+}
+
+function _tutRender(goingBack) {
+  const step = _tutSteps[_tutStep];
+  const total = _tutSteps.length;
+  // Reset wide card unless this step sets it
+  const card = document.getElementById('tutorialCard');
+  if (card) card.classList.remove('t-wide');
+
+  document.getElementById('tutorialContent').innerHTML = step.render();
+
+  // render dots
+  const dotsEl = document.getElementById('tutorialDots');
+  if (dotsEl) {
+    dotsEl.innerHTML = _tutSteps.map((_, i) => {
+      const cls = i === _tutStep ? 'active' : i < _tutStep ? 'done' : '';
+      return `<div class="t-dot ${cls}" style="width:${cls === 'active' ? 24 : 8}px"></div>`;
+    }).join('');
+  }
+
+  const backBtn = document.getElementById('tutorialBackBtn');
+  const nextBtn = document.getElementById('tutorialNextBtn');
+  backBtn.style.display = _tutStep === 0 ? 'none' : '';
+  if (step.isFinal) {
+    nextBtn.style.display = 'none';
+  } else {
+    nextBtn.style.display = '';
+    // Default label for static steps — onEnter() overrides for animated steps
+    nextBtn.textContent = _tutStep === total - 2 ? '🎉 Finish' : 'Next';
+    nextBtn.onclick = () => tutorialNext();
+    nextBtn.disabled = false;
+  }
+
+  // call per-step hook if defined (may override button label/state)
+  if (goingBack && typeof step.onBack === 'function') step.onBack();
+  else if (!goingBack && typeof step.onEnter === 'function') step.onEnter();
+
+  // scroll to top of content
+  document.getElementById('tutorialContent').scrollTop = 0;
+}
+
+// Close on backdrop click
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('tutorialBackdrop').addEventListener('click', closeTutorial);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,3295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Ingredient Detail</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .alert-blocking {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--warning);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .alert-content h4 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 600; }
+  .alert-content p { margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted); }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+  }
+
+  .breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; cursor: pointer; }
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .star-icon {
+    font-size: 28px;
+    cursor: pointer;
+  }
+  
+  .star-icon.favorited {
+    color: #fbbf24;
+  }
+  
+  .star-icon:not(.favorited) {
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-outline { background: var(--bg-inner); color: var(--text-main); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--border); }
+  .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+  .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+  }
+
+  .panel h3 {
+    margin: 0 0 24px 0;
+    font-size: 18px;
+  }
+
+  .form-section {
+    margin-bottom: 32px;
+  }
+
+  .form-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-section h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    letter-spacing: 0.05em;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  textarea.form-input {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .custom-attr-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .custom-attr-row input {
+    flex: 1;
+    padding: 8px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 12px;
+  }
+
+  .custom-attr-row button {
+    padding: 8px 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+
+  .custom-attr-row button:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .stat-box {
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .history-section {
+    margin-top: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+  }
+
+  .save-indicator {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--success);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .save-indicator.show {
+    opacity: 1;
+  }
+
+  .reorder-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .reorder-modal.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .reorder-modal-content {
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 600px !important;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal-header {
+    margin-bottom: 24px;
+  }
+
+  .modal-header h3 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+  }
+
+  .source-url-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .source-url-display:hover {
+    border-color: var(--accent);
+  }
+
+  .source-url-display a {
+    color: var(--accent);
+    text-decoration: none;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .source-url-display svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .ingredient-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ingredient-item-content {
+    flex: 1;
+  }
+
+  .ingredient-item-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .ingredient-item-attrs {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .ingredient-item-quantity {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 500;
+  }
+
+  .btn-reorder {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .btn-reorder:hover {
+    opacity: 0.9;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+    background: var(--bg-panel);
+    margin-bottom: 20px;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .drop-zone-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  .drop-zone-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .drop-zone-subtext {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  .file-preview {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: none;
+  }
+
+  .file-preview.active {
+    display: block;
+  }
+
+  .file-preview img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+
+  .btn-capture {
+    background: var(--premium);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .btn-capture:hover {
+    opacity: 0.9;
+  }
+
+  /* ---------- CUSTOM MODALS ---------- */
+  .modal-overlay { 
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10000 !important;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-content { 
+    background: var(--bg-inner) !important;
+    border: 1px solid var(--border); 
+    border-radius: 20px; 
+    padding: 32px; 
+    width: 90%; 
+    max-width: 450px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.active .modal-content {
+    transform: scale(1);
+  }
+
+  /* Notification Bell Styles */
+  .notification-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notification-bell:hover {
+    background: var(--bg-panel);
+  }
+  .notification-bell svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-main);
+  }
+  .notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+    z-index: 10000;
+  }
+  .notification-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .notification-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .notification-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+  .mark-all-read {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mark-all-read:hover {
+    text-decoration: underline;
+  }
+  .notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .notification-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  .notification-item:hover {
+    background: var(--bg-inner);
+  }
+  .notification-item.unread {
+    background: rgba(6, 182, 212, 0.05);
+  }
+  .notification-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #06b6d4;
+    border-radius: 50%;
+  }
+  .notification-message {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .notification-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .notification-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .notification-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+  .notification-actions button:hover {
+    background: var(--bg-panel);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .notification-actions button.delete-btn {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .notification-actions button.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .notification-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .notification-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 968px) {
+    .container { padding: 24px 16px; }
+    
+    /* Main grid: 2 columns → stack on tablet/mobile */
+    .main-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .panel { padding: 24px 20px; }
+  }
+  
+  @media (max-width: 768px) {
+    /* Hide chat and feedback widgets on mobile */
+    #chat-widget,
+    #feedback-widget {
+      display: none !important;
+    }
+
+    /* Hide favorite star on mobile */
+    #starIcon {
+      display: none !important;
+    }
+
+    /* Hide Copy button on mobile */
+    button[onclick="duplicateIngredient()"] {
+      display: none !important;
+    }
+
+    /* Hide Notes section on mobile */
+    .form-group:has(#notes) {
+      display: none !important;
+    }
+
+    /* Hide Used in Recipes panel on mobile */
+    .panel:has(#recipesList) {
+      display: none !important;
+    }
+
+    /* On mobile show chart + demand badge, hide only the table */
+    .history-section {
+      display: block !important;
+      order: 99;
+    }
+    .history-section h3:last-of-type,
+    #historyLog {
+      display: none !important;
+    }
+
+    /* Reorder container elements: Title -> Stock Status -> Details -> Buttons */
+    .container {
+      padding: 16px 12px;
+      padding-bottom: 180px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Breadcrumb stays at top */
+    .breadcrumb {
+      order: 0;
+    }
+
+    /* Alert block */
+    #alertBlock {
+      order: 1;
+    }
+
+    /* Header with title */
+    .detail-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      order: 2;
+    }
+
+    /* Title section */
+    .detail-header > div:first-child {
+      margin-bottom: 16px;
+    }
+
+    /* Buttons section - fixed to bottom */
+    .detail-header > div:last-child {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Button order: Delete, Save, Reorder */
+    .detail-header .btn-danger {
+      order: 1;
+    }
+
+    .detail-header button[onclick="saveAllChanges()"] {
+      order: 2;
+    }
+
+    .detail-header .btn-reorder {
+      order: 3;
+      display: block !important;
+    }
+
+    /* Main grid comes after header */
+    .main-grid {
+      order: 3;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Stock Status panel appears first in main-grid */
+    .main-grid > div:last-child {
+      order: -1;
+    }
+
+    /* Ingredient Details panel appears second */
+    .main-grid > div:first-child {
+      order: 1;
+    }
+
+    /* Save indicator after buttons */
+    .save-indicator {
+      order: 5;
+    }
+
+    .detail-header .btn,
+    .detail-header .btn-reorder,
+    .detail-header .btn-danger {
+      padding: 10px 8px;
+      font-size: 14px;
+      white-space: nowrap;
+      width: 100%;
+    }
+
+    .header-title h1 {
+      font-size: 24px;
+    }
+
+    /* Panel adjustments */
+    .panel {
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    
+    /* Header actions: wrap on mobile */
+    .header-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    /* Form rows: 2 columns → stack on mobile */
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    
+    /* Modal adjustments */
+    .reorder-modal-content,
+    .modal-content {
+      width: calc(100% - 32px);
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      margin: 16px;
+    }
+    
+    /* Source URL display */
+    .source-url-display {
+      font-size: 13px;
+    }
+    
+    /* Inventory table - horizontal scroll */
+    .inventory-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -16px;
+      padding: 0 16px;
+    }
+    
+    table {
+      min-width: 500px;
+      font-size: 13px;
+    }
+
+    table th,
+    table td {
+      padding: 12px 6px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .container { padding: 16px 8px; }
+    .panel { padding: 16px 12px; }
+    
+    .header h1 { font-size: 24px; }
+    
+    .reorder-modal-content,
+    .modal-content {
+      padding: 20px 16px;
+    }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="operations.html" class="logo">ShelfyAI</a>
+  
+  <div class="nav-links" id="navLinks">
+    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+  </div>
+  
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+    
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Upgrade to PRO</span>
+          </div>
+          <div class="user-menu-item" onclick="openSettings()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+(function() {
+  const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+  if (cachedEmail) {
+    const emailEl = document.getElementById('userMenuEmail');
+    const avatarEl = document.getElementById('userAvatar');
+    if (emailEl) emailEl.textContent = cachedEmail;
+    if (avatarEl) {
+      if (cachedAvatar && cachedAvatar !== 'null') {
+        avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+        avatarEl.style.backgroundSize = 'cover';
+        avatarEl.style.backgroundPosition = 'center';
+        avatarEl.textContent = '';
+      } else {
+        avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+        avatarEl.style.backgroundImage = 'none';
+      }
+    }
+  }
+})();
+</script>
+
+<div class="container">
+  
+  <div class="breadcrumb" onclick="goBackToList()">← Back to Inventory</div>
+
+  <div id="alertBlock" class="alert-blocking" style="display: none;">
+    <div class="alert-content">
+      <h4>Low Stock</h4>
+      <p id="alertText"></p>
+    </div>
+  </div>
+  
+  <div class="detail-header">
+    <div>
+      <h1 id="ingredientName" style="margin:0;">Loading...</h1>
+      <div id="ingredientAttributes" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;"></div>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
+      <button class="btn-reorder" style="display:none;" id="reorderBtn">Restock</button>
+      <button class="btn btn-outline" onclick="duplicateIngredient()">Copy</button>
+      <button class="btn btn-outline" onclick="saveAllChanges()">Save</button>
+      <button class="btn btn-danger" onclick="deleteIngredient()">Delete</button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    
+    <!-- Left Column: Main Details -->
+    <div class="panel">
+      <h3>Ingredient Details</h3>
+      
+      <div class="form-section">
+        <div class="form-group">
+          <label for="name">Name *</label>
+          <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="quantity">Quantity *</label>
+            <div style="position:relative;">
+              <input type="number" id="quantity" class="form-input" step="1" placeholder="0" required style="padding-right:36px; -moz-appearance:textfield;">
+              <div style="position:absolute; right:1px; top:1px; bottom:1px; width:30px; display:flex; flex-direction:column; border-left:1px solid var(--border); border-radius:0 7px 7px 0; overflow:hidden;">
+                <button type="button" onclick="stepQty(1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s; border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▲</button>
+                <button type="button" onclick="stepQty(-1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▼</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="unit">Unit *</label>
+            <select id="unit" class="form-input" required>
+              <option value="">Select unit</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="g">Grams (g)</option>
+              <option value="l">Liters (l)</option>
+              <option value="ml">Milliliters (ml)</option>
+              <option value="cm">Centimeters (cm)</option>
+              <option value="pcs">Pieces (pcs)</option>
+              <option value="lb">Pounds (lb)</option>
+              <option value="oz">Ounces (oz)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cost_per_unit">Cost per Unit *</label>
+            <input type="number" id="cost_per_unit" class="form-input" step="0.01" placeholder="0.00" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="sku">SKU</label>
+            <input type="text" id="sku" class="form-input" placeholder="Stock Keeping Unit">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="min_stock">Minimum Stock Alert *</label>
+            <input type="number" id="min_stock" class="form-input" step="0.01" placeholder="e.g., 10" required>
+          </div>
+
+          <div class="form-group">
+            <label for="estimated_delivery">Estimated Delivery (days)</label>
+            <input type="number" id="estimated_delivery" class="form-input" placeholder="Max days for delivery">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="type">Type *</label>
+            <select id="type" class="form-input" required>
+              <option value="">Select type</option>
+              <option value="Production">Production</option>
+              <option value="Shipping">Shipping</option>
+              <option value="Freebies">Freebies</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="category">Category</label>
+            <input type="text" id="category" class="form-input" list="categoryList" placeholder="Type or select category">
+            <datalist id="categoryList"></datalist>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-group">
+          <label for="source_url" style="display: flex; align-items: center; gap: 6px;">
+            Source URL
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor; opacity: 0.6; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" onclick="const url = document.getElementById('source_url').value.trim(); if(url) window.open(url, '_blank')">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
+            </svg>
+          </label>
+          <input type="url" id="source_url" class="form-input" placeholder="https://supplier.com/product">
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" class="form-input" placeholder="Additional information about this ingredient..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Stats & Status -->
+    <div>
+      <div class="panel" style="padding: 20px;">
+        <h3 style="font-size: 14px; margin-bottom: 16px;">Stock Status</h3>
+        
+        <div class="stat-box" style="padding: 12px; margin-bottom: 12px;">
+          <div class="stat-label" style="font-size: 10px;">Current Stock</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="stat-value" id="stockDisplay" style="font-size: 20px;">0 units</div>
+            <span id="stockBadge" class="status-badge" style="font-size: 9px; padding: 4px 8px;"></span>
+          </div>
+        </div>
+
+        <div class="stat-box" style="padding: 12px; margin-bottom: 0;">
+          <div class="stat-label" style="font-size: 10px;">Unit Cost</div>
+          <div class="stat-value" id="costDisplay" style="font-size: 20px;">$0.00</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 16px; padding: 20px;">
+        <h3 style="font-size: 14px; margin-bottom: 16px;">Custom Attributes</h3>
+        <div id="customAttributes" style="margin-bottom: 12px;">
+          <p style="color: var(--text-muted); font-size: 12px;">No custom attributes</p>
+        </div>
+        <button type="button" class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 8px;" onclick="addCustomAttribute()">+ Add Attribute</button>
+      </div>
+
+      <div class="panel" style="margin-top: 16px; padding: 20px;">
+        <h3 style="font-size: 14px; margin-bottom: 12px;">Used in Recipes</h3>
+        <div id="recipesList" style="color: var(--text-muted); font-size: 12px;">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+      <h3 style="margin:0;">Quantity Development</h3>
+      <span id="demandBadge" style="display:none; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;"></span>
+    </div>
+    <div style="position:relative; height:220px; margin-bottom:28px;">
+      <canvas id="qtyChart"></canvas>
+      <p id="qtyChartEmpty" style="display:none; color:var(--text-muted); font-size:13px; text-align:center; padding-top:80px;">Not enough data to show chart</p>
+    </div>
+    <h3 style="margin-bottom:12px;">Quantity Change History</h3>
+    <div id="historyLog">
+      <p style="color: var(--text-muted); font-size: 13px;">Loading history...</p>
+    </div>
+  </div>
+
+  <div class="save-indicator" id="saveIndicator">✓ Saved</div>
+
+</div>
+
+<!-- Restock Modal -->
+<div class="reorder-modal" id="reorderModal" onclick="if(event.target === this) closeReorderModal()">
+  <div class="reorder-modal-content">
+    <button class="modal-close" onclick="closeReorderModal()">×</button>
+    <div class="modal-header">
+      <h3>Restock from Source</h3>
+      <div class="source-url-display" id="sourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
+        <a href="#" id="sourceUrlLink">No source URL</a>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
+        </svg>
+      </div>
+      <div style="margin-top: 16px;">
+        <button class="btn-reorder" onclick="markAsReordered()" style="width: 100%; padding: 12px 32px;">Mark as Restocked</button>
+      </div>
+      <h4 style="font-size: 13px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; color: var(--text-muted);">Ingredients from same source</h4>
+    </div>
+    <div id="reorderIngredientsList" style="margin-top: 0;">
+      <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Upload Modal -->
+<div class="modal-overlay" id="expenseModal" onclick="if(event.target === this) closeExpenseModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt, invoice, or product image</p>
+    
+    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
+      <div style="margin-bottom: 16px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
+      </div>
+      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
+      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
+      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center;">
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
+      <button class="btn btn-secondary" onclick="captureScreenshot()" style="width: 100%;">
+        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
+        Capture Screenshot
+      </button>
+    </div>
+    
+    <div id="filePreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <img id="filePreviewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
+        <div style="flex: 1;">
+          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
+          <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="clearFile()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+      </div>
+    </div>
+    
+    <div id="uploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
+    
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button class="btn btn-secondary" onclick="closeExpenseModal()" style="flex: 1;">Cancel</button>
+      <button class="btn btn-primary" onclick="uploadExpenseAndComplete()" id="uploadBtn" style="flex: 1;" disabled>Process</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  })();
+
+  let currentIngredient = null;
+  let customAttributes = {};
+  let hasUnsavedChanges = false;
+  let initialFormState = null;
+  let reorderAbortController = null;
+
+  // Warn before leaving with unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // Track form changes
+  function setupChangeTracking() {
+    const inputs = document.querySelectorAll('.form-input');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        hasUnsavedChanges = true;
+      });
+    });
+  }
+
+  async function loadIngredientDetail() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    const from = urlParams.get('from') || 'list';
+    
+    if (!id) {
+      showAlert('No ingredient ID provided');
+      setTimeout(() => {
+        window.location.href = `ingredients.html?view=${from}`;
+      }, 1500);
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        showAlert('Ingredient not found');
+        setTimeout(() => {
+          window.location.href = `ingredients.html?view=${from}`;
+        }, 1500);
+        return;
+      }
+
+      currentIngredient = data;
+      displayIngredient(data);
+      
+      // Check if we should auto-open the reorder modal
+      const openReorder = urlParams.get('openReorder');
+      if (openReorder === 'true' && data.source_url && data.source_url.trim()) {
+        // Small delay to ensure everything is loaded
+        setTimeout(() => {
+          openReorderModal();
+        }, 300);
+      }
+    } catch (err) {
+      showAlert('Error loading ingredient: ' + err.message);
+    }
+  }
+
+  function displayIngredient(ing) {
+    // Header
+    document.getElementById('ingredientName').textContent = ing.name;
+    
+    // Display attributes under title (values only)
+    const attrsElement = document.getElementById('ingredientAttributes');
+    if (ing.custom_attributes) {
+      try {
+        const customAttrs = typeof ing.custom_attributes === 'string' 
+          ? JSON.parse(ing.custom_attributes) 
+          : ing.custom_attributes;
+        const values = Object.values(customAttrs).filter(v => v && v.trim());
+        if (values.length > 0) {
+          attrsElement.textContent = values.join(' • ');
+        } else {
+          attrsElement.textContent = '';
+        }
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+        attrsElement.textContent = '';
+      }
+    } else {
+      attrsElement.textContent = '';
+    }
+    
+    // Favorite star
+    const starIcon = document.getElementById('starIcon');
+    if (ing.is_favorite) {
+      starIcon.textContent = '★';
+      starIcon.classList.add('favorited');
+    } else {
+      starIcon.textContent = '☆';
+      starIcon.classList.remove('favorited');
+    }
+
+    // Form fields
+    document.getElementById('name').value = ing.name || '';
+    document.getElementById('quantity').value = ing.quantity || 0;
+    document.getElementById('unit').value = ing.unit || '';
+    document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
+    document.getElementById('category').value = ing.category || '';
+    document.getElementById('min_stock').value = ing.min_stock || '';
+    document.getElementById('sku').value = ing.sku || '';
+    document.getElementById('type').value = ing.type || '';
+    document.getElementById('estimated_delivery').value = ing.estimated_delivery || '';
+    document.getElementById('source_url').value = ing.source_url || '';
+    document.getElementById('notes').value = ing.notes || '';
+
+    // Load categories for datalist
+    loadCategories();
+
+    // Custom attributes
+    if (ing.custom_attributes) {
+      try {
+        customAttributes = typeof ing.custom_attributes === 'string' 
+          ? JSON.parse(ing.custom_attributes) 
+          : ing.custom_attributes;
+        renderCustomAttributes();
+      } catch (e) {
+        console.error('Error parsing custom attributes:', e);
+        customAttributes = {};
+      }
+    }
+
+    // Update stats
+    updateStatsDisplay();
+
+    // Stock status alert
+    const qty = ing.quantity || 0;
+    const minStock = ing.min_stock || 0;
+    const alertBlock = document.getElementById('alertBlock');
+    
+    if (qty === 0) {
+      alertBlock.style.display = 'flex';
+      alertBlock.style.borderLeftColor = 'var(--danger)';
+      document.querySelector('#alertBlock h4').textContent = 'Out of Stock';
+      document.getElementById('alertText').innerHTML = `This ingredient is out of stock!`;
+    } else if (minStock > 0 && qty < minStock) {
+      alertBlock.style.display = 'flex';
+      alertBlock.style.borderLeftColor = 'var(--warning)';
+      document.querySelector('#alertBlock h4').textContent = 'Low Stock';
+      document.getElementById('alertText').innerHTML = `Current stock (${qty}) is below minimum (${minStock}). Consider reordering.`;
+    } else {
+      alertBlock.style.display = 'none';
+    }
+
+    // Load related data
+    loadRecipes(ing.id);
+    loadHistory(ing.id);
+    
+    // Always show reorder button
+    const reorderBtn = document.getElementById('reorderBtn');
+    reorderBtn.style.display = 'inline-block';
+    
+    if (ing.reorder_pending) {
+      reorderBtn.textContent = 'Restock Processed';
+      reorderBtn.onclick = processReorder;
+    } else {
+      reorderBtn.textContent = 'Restock';
+      reorderBtn.onclick = handleReorderClick;
+    }
+
+    // Store initial state and setup change tracking
+    initialFormState = getCurrentFormState();
+    hasUnsavedChanges = false;
+    setupChangeTracking();
+  }
+
+  // Extract domain from URL for consistent restocking (e.g., https://www.textil-grosshandel.eu)
+  function stripUrlParams(url) {
+    if (!url || !url.trim()) return url;
+    try {
+      const urlObj = new URL(url);
+      return urlObj.origin;
+    } catch {
+      // If URL is invalid, just return it as-is and let validation handle it
+      return url;
+    }
+  }
+
+  function getCurrentFormState() {
+    return {
+      name: document.getElementById('name').value,
+      quantity: document.getElementById('quantity').value,
+      unit: document.getElementById('unit').value,
+      cost_per_unit: document.getElementById('cost_per_unit').value,
+      category: document.getElementById('category').value,
+      min_stock: document.getElementById('min_stock').value,
+      sku: document.getElementById('sku').value,
+      type: document.getElementById('type').value,
+      estimated_delivery: document.getElementById('estimated_delivery').value,
+      source_url: document.getElementById('source_url').value,
+      notes: document.getElementById('notes').value
+    };
+  }
+
+  async function loadCategories() {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const { data: ingredients } = await supabaseClient
+        .from('ingredients')
+        .select('category')
+        .eq('profile_id', user.id)
+        .not('category', 'is', null);
+      
+      if (ingredients) {
+        const uniqueCategories = [...new Set(ingredients.map(i => i.category).filter(c => c))];
+        const datalist = document.getElementById('categoryList');
+        datalist.innerHTML = uniqueCategories.map(cat => `<option value="${cat}">`).join('');
+      }
+    } catch (err) {
+      console.error('Error loading categories:', err);
+    }
+  }
+
+  async function loadRecipes(ingredientId) {
+    const container = document.getElementById('recipesList');
+    
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Please log in to view recipes</p>';
+        return;
+      }
+
+      const { data: recipes, error } = await supabaseClient
+        .from('recipes')
+        .select('*')
+        .eq('profile_id', user.id);
+
+      if (error) throw error;
+
+      // Filter recipes that contain this ingredient
+      const recipesWithIngredient = recipes.filter(recipe => {
+        if (!recipe.components || !Array.isArray(recipe.components)) return false;
+        return recipe.components.some(comp => {
+          const compIngId = comp.ingredient_id || comp.id;
+          return compIngId === ingredientId;
+        });
+      });
+
+      if (recipesWithIngredient.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Not used in any recipes yet</p>';
+        return;
+      }
+
+      container.innerHTML = recipesWithIngredient.map(recipe => {
+        // Find the component for this ingredient
+        const component = recipe.components.find(comp => {
+          const compIngId = comp.ingredient_id || comp.id;
+          return compIngId === ingredientId;
+        });
+        
+        const quantity = component ? `${component.quantity} ${component.unit || ''}` : '';
+        
+        return `
+          <div style="padding: 12px; background: var(--bg-inner); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" 
+               onclick="window.location.href='recipe-detail.html?id=${recipe.id}'"
+               onmouseover="this.style.background='var(--bg-panel)'"
+               onmouseout="this.style.background='var(--bg-inner)'">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 600; color: var(--text-main); font-size: 14px;">${recipe.name}</div>
+                <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Uses ${quantity}</div>
+              </div>
+              <div style="color: var(--accent); font-size: 18px;">→</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (error) {
+      console.error('Error loading recipes:', error);
+      container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Error loading recipes</p>';
+    }
+  }
+
+  function handleReorderClick() {
+    if (!currentIngredient) return;
+    
+    // Check if source_url exists
+    if (!currentIngredient.source_url || !currentIngredient.source_url.trim()) {
+      // Show hint modal
+      document.getElementById('noSourceModal').classList.add('active');
+      return;
+    }
+    
+    // Open reorder modal if source_url exists
+    openReorderModal();
+  }
+
+  function openReorderModal() {
+    if (!currentIngredient || !currentIngredient.source_url) return;
+    
+    const modal = document.getElementById('reorderModal');
+    const link = document.getElementById('sourceUrlLink');
+    const display = document.getElementById('sourceUrlDisplay');
+    
+    link.textContent = currentIngredient.source_url;
+    display.dataset.url = currentIngredient.source_url;
+    
+    modal.classList.add('active');
+    loadReorderIngredients(currentIngredient.source_url);
+  }
+
+  function closeNoSourceModal() {
+    document.getElementById('noSourceModal').classList.remove('active');
+  }
+
+  function addSourceUrl() {
+    closeNoSourceModal();
+    // Scroll to source URL field
+    const sourceUrlField = document.getElementById('source_url');
+    sourceUrlField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sourceUrlField.focus();
+  }
+
+  function closeReorderModal() {
+    // Cancel any ongoing loadReorderIngredients request
+    if (reorderAbortController) {
+      reorderAbortController.abort();
+      reorderAbortController = null;
+    }
+    document.getElementById('reorderModal').classList.remove('active');
+  }
+
+  async function markAsReordered() {
+    if (!currentIngredient) return;
+    
+    // Ask if user wants to upload an expense
+    const uploadExpense = await showConfirm('Would you like to upload an expense receipt (invoice/bill) for this reorder?');
+    
+    if (uploadExpense) {
+      // Close reorder modal and open expense modal
+      closeReorderModal();
+      openExpenseModal();
+      return;
+    }
+    
+    // If no expense upload, complete the reorder directly
+    await completeReorder();
+  }
+
+  function openExpenseModal() {
+    document.getElementById('expenseModal').classList.add('active');
+  }
+
+  function closeExpenseModal() {
+    document.getElementById('expenseModal').classList.remove('active');
+    clearFile();
+  }
+
+  async function skipExpenseUpload() {
+    closeExpenseModal();
+    await completeReorder();
+  }
+
+  let selectedFile = null;
+
+  // Setup drag and drop
+  document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    
+    if (dropZone && fileInput) {
+      // Click to browse
+      dropZone.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      // Drag and drop events
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.background = 'rgba(59, 130, 246, 0.05)';
+      });
+      
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--bg-panel)';
+      });
+      
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--bg-panel)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileSelect(files[0]);
+        }
+      });
+      
+      // File input change
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFileSelect(e.target.files[0]);
+        }
+      });
+    }
+  });
+
+  function handleFileSelect(file) {
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      showAlert('Please upload a PDF, PNG, or JPEG file');
+      return;
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showAlert('File size must be less than 10MB');
+      return;
+    }
+    
+    selectedFile = file;
+    
+    // Show preview
+    document.getElementById('fileName').textContent = file.name;
+    const fileSizeKB = (file.size / 1024).toFixed(2);
+    const fileSizeElement = document.getElementById('fileSize');
+    if (fileSizeElement) {
+      fileSizeElement.textContent = `${fileSizeKB} KB`;
+    }
+    document.getElementById('filePreview').style.display = 'block';
+    
+    // Enable upload button
+    document.getElementById('uploadBtn').disabled = false;
+    
+    // If image, show preview
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById('filePreviewImage');
+        img.src = e.target.result;
+        img.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      document.getElementById('filePreviewImage').style.display = 'none';
+    }
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    document.getElementById('filePreview').style.display = 'none';
+    document.getElementById('filePreviewImage').style.display = 'none';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('uploadBtn').disabled = true;
+  }
+
+  async function captureScreenshot() {
+    try {
+      // Use getDisplayMedia which allows user to select what to capture
+      // (entire screen, window, or browser tab)
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: "always"
+        },
+        audio: false,
+        preferCurrentTab: false
+      });
+      
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Wait for video to be ready
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          resolve();
+        };
+      });
+      
+      // Give a moment for the video to start
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Create canvas and capture the current frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Convert canvas to blob and create file
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `receipt_${Date.now()}.png`, { type: 'image/png' });
+          handleFileSelect(file);
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('Screenshot capture error:', error);
+      if (error.name === 'NotAllowedError') {
+        showAlert('Screen capture was cancelled or denied. Please try again or upload a file instead.');
+      } else {
+        showAlert('Failed to capture screenshot: ' + error.message);
+      }
+    }
+  }
+
+  async function skipExpenseUpload() {
+    document.getElementById('expenseUploadSection').style.display = 'none';
+    await completeReorder();
+  }
+
+  async function uploadExpenseAndComplete() {
+    if (!selectedFile) {
+      showAlert('Please select a file or take a screenshot first');
+      return;
+    }
+    
+    try {
+      // Show loading state
+      const uploadBtn = event.target;
+      const originalText = uploadBtn.textContent;
+      uploadBtn.textContent = 'Processing...';
+      uploadBtn.disabled = true;
+      
+      // Convert file to base64
+      const base64 = await fileToBase64(selectedFile);
+      
+      // Send to AgentQL for OCR/extraction
+      const expenseData = await sendToAgentQL(base64, selectedFile.type);
+      
+      if (expenseData) {
+        // Save extracted expense data to database
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) {
+          try {
+            await supabaseClient
+              .from('expenses')
+              .insert([{
+                profile_id: user.id,
+                description: expenseData.description || `Restock: ${currentIngredient.name}`,
+                amount: expenseData.amount || null,
+                expense_date: expenseData.date || new Date().toISOString().split('T')[0],
+                vendor: expenseData.vendor || null,
+                notes: expenseData.notes || 'Auto-extracted from receipt'
+              }]);
+          } catch (err) {
+            console.log('Expense record not saved:', err);
+          }
+        }
+      }
+      
+      // Complete the reorder
+      await completeReorder();
+      
+      // Close expense modal and reset
+      closeExpenseModal();
+      uploadBtn.textContent = originalText;
+      uploadBtn.disabled = false;
+      
+    } catch (error) {
+      console.error('Error processing expense:', error);
+      showAlert('Failed to process expense receipt. Please try again.');
+      event.target.textContent = 'Upload & Complete';
+      event.target.disabled = false;
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  async function sendToAgentQL(base64Image, mimeType) {
+    try {
+      // Get user session for authentication
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (!session) {
+        throw new Error('You must be logged in to use this feature');
+      }
+      
+      // Call our serverless function (which securely uses the API key)
+      const response = await fetch('/api/extract-receipt.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          image: base64Image,
+          mimeType: mimeType
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Receipt extraction error:', errorData);
+        throw new Error(errorData.error || 'Failed to extract receipt data');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        return {
+          amount: result.data.amount,
+          date: result.data.date,
+          vendor: result.data.vendor,
+          description: result.data.description,
+          items: result.data.items,
+          notes: 'Auto-extracted from receipt via AgentQL'
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error sending to AgentQL:', error);
+      // Don't block the reorder process if OCR fails
+      showAlert('Could not extract receipt data automatically. The reorder will still be processed.');
+      return null;
+    }
+  }
+
+  async function completeReorder() {
+    if (!currentIngredient) return;
+    
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: true })
+        .eq('id', currentIngredient.id);
+
+      if (error) throw error;
+
+      currentIngredient.reorder_pending = true;
+      
+      // Update button
+      const reorderBtn = document.getElementById('reorderBtn');
+      reorderBtn.textContent = 'Restock Processed';
+      reorderBtn.onclick = processReorder;
+      
+      // Close modal
+      closeReorderModal();
+      
+      showSaveIndicator();
+    } catch (error) {
+      console.error('Error marking as reordered:', error);
+      showAlert('Failed to mark as reordered');
+    }
+  }
+
+  async function processReorder() {
+    if (!currentIngredient) return;
+    
+    if (!await showConfirm('Have the goods been received? This will reset the reorder status.')) return;
+    
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: false })
+        .eq('id', currentIngredient.id);
+
+      if (error) throw error;
+
+      currentIngredient.reorder_pending = false;
+      
+      // Update button
+      const reorderBtn = document.getElementById('reorderBtn');
+      reorderBtn.textContent = 'Restock';
+      reorderBtn.onclick = handleReorderClick;
+      
+      showSaveIndicator();
+    } catch (error) {
+      console.error('Error processing reorder:', error);
+      showAlert('Failed to process reorder');
+    }
+  }
+
+  async function loadReorderIngredients(sourceUrl) {
+    // Cancel previous request if still running
+    if (reorderAbortController) {
+      reorderAbortController.abort();
+    }
+    
+    // Create new abort controller for this request
+    reorderAbortController = new AbortController();
+    
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const strippedUrl = stripUrlParams(sourceUrl);
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .select('id, name, quantity, unit, min_stock, custom_attributes')
+        .eq('profile_id', user.id)
+        .like('source_url', strippedUrl + '%')
+        .neq('id', currentIngredient.id)
+        .order('name')
+        .abortSignal(reorderAbortController?.signal);
+
+      const container = document.getElementById('reorderIngredientsList');
+      if (error) {
+        // Don't show error if request was aborted
+        if (error.name === 'AbortError') return;
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+        return;
+      }
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No ingredients from this source</p>';
+        return;
+      }
+
+      container.innerHTML = data.map(ing => {
+        // Get stock status
+        const qty = ing.quantity || 0;
+        const minStock = ing.min_stock || 0;
+        let stockBadge = '';
+        let stockColor = '';
+        
+        if (qty === 0) {
+          stockBadge = 'Out of Stock';
+          stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
+        } else if (minStock > 0 && qty < minStock) {
+          stockBadge = 'Low on Stock';
+          stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
+        } else {
+          stockBadge = 'In Stock';
+          stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
+        }
+        
+        // Parse custom attributes to get only values
+        let attrs = '';
+        if (ing.custom_attributes) {
+          try {
+            const customAttrs = typeof ing.custom_attributes === 'string' 
+              ? JSON.parse(ing.custom_attributes) 
+              : ing.custom_attributes;
+            const values = Object.values(customAttrs).filter(v => v && v.trim());
+            if (values.length > 0) {
+              attrs = values.join(', ');
+            }
+          } catch (e) {
+            console.error('Error parsing attributes:', e);
+          }
+        }
+        
+        return `
+          <div class="ingredient-item">
+            <div class="ingredient-item-content">
+              <a href="ingredient-detail.html?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
+              ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
+              <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
+            </div>
+            <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Error loading reorder ingredients:', err);
+      document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+    }
+  }
+
+  function escapeHtml(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return String(text).replace(/[&<>\"']/g, m => map[m]);
+  }
+
+  let qtyChartInstance = null;
+
+  async function loadHistory(ingredientId) {
+    try {
+      // Fetch up to 12 months of history for chart + demand analysis
+      const since12mo = new Date();
+      since12mo.setFullYear(since12mo.getFullYear() - 1);
+
+      const { data: allData, error: allError } = await supabaseClient
+        .from('ingredient_history')
+        .select('*')
+        .eq('ingredient_id', ingredientId)
+        .eq('field_name', 'quantity')
+        .gte('changed_at', since12mo.toISOString())
+        .order('changed_at', { ascending: true });
+
+      // Draw chart
+      renderQtyChart(allData || []);
+      // Compute demand badge
+      renderDemandBadge(allData || []);
+
+      // For the table, use most recent 20 entries (descending)
+      const data = allData ? [...allData].reverse().slice(0, 20) : [];
+      const error = allError;
+
+      const container = document.getElementById('historyLog');
+      if (error || !data || data.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No history yet</p>';
+        return;
+      }
+
+      container.innerHTML = '<table style="width: 100%; border-collapse: collapse;">'
+        + '<thead><tr style="border-bottom: 1px solid var(--border); text-align: left;">'
+        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Date</th>'
+        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Old</th>'
+        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">New</th>'
+        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Change</th>'
+        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Reason</th>'
+        + '</tr></thead><tbody>'
+        + data.map(h => {
+            const change = parseFloat(h.new_value) - parseFloat(h.old_value);
+            const changeColor = change > 0 ? 'var(--success)' : 'var(--danger)';
+            const changeSymbol = change > 0 ? '+' : '';
+            let reasonText = 'Unknown';
+            if (h.reason === 'order' && h.reference_id) {
+              reasonText = `<a href="order-detail.html?id=${h.reference_id}" style="color: var(--accent); text-decoration: none; cursor: pointer;">Order: ${h.reference_text || h.reference_id}</a>`;
+            } else if (h.reason === 'order') {
+              reasonText = `Order: ${h.reference_text || 'N/A'}`;
+            } else if (h.reason === 'restock') {
+              reasonText = h.reference_text || 'Restocked';
+            } else if (h.reason === 'expense' && h.reference_id) {
+              reasonText = `<a href="expense-detail.html?id=${h.reference_id}" style="color: var(--accent); text-decoration: none; cursor: pointer;">Expense: ${h.reference_text || h.reference_id}</a>`;
+            } else if (h.reason === 'expense') {
+              reasonText = `Expense: ${h.reference_text || 'N/A'}`;
+            } else if (h.reason === 'manual') {
+              reasonText = 'Manual';
+            }
+            return `<tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 8px; font-size: 13px;">${new Date(h.changed_at).toLocaleString()}</td>
+              <td style="padding: 8px; font-size: 13px;">${h.old_value}</td>
+              <td style="padding: 8px; font-size: 13px;">${h.new_value}</td>
+              <td style="padding: 8px; font-size: 13px; color: ${changeColor}; font-weight: 600;">${changeSymbol}${change}</td>
+              <td style="padding: 8px; font-size: 13px; color: var(--text-muted);">${reasonText}</td>
+            </tr>`;
+          }).join('')
+        + '</tbody></table>';
+    } catch (err) {
+      console.error('Error loading history:', err);
+      document.getElementById('historyLog').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading history</p>';
+    }
+  }
+
+  function renderQtyChart(data) {
+    const canvas = document.getElementById('qtyChart');
+    const emptyMsg = document.getElementById('qtyChartEmpty');
+    if (!canvas) return;
+
+    if (qtyChartInstance) { qtyChartInstance.destroy(); qtyChartInstance = null; }
+
+    if (!data || data.length < 2) {
+      canvas.style.display = 'none';
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      return;
+    }
+    canvas.style.display = 'block';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    const minStock = parseFloat(document.getElementById('min_stock')?.value) || null;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+    const accentColor = '#06b6d4';
+
+    // Group by day — use last entry's new_value for each day
+    const dayMap = new Map();
+    data.forEach(h => {
+      const key = new Date(h.changed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      dayMap.set(key, parseFloat(h.new_value)); // data is asc, so last write wins
+    });
+    const labels = Array.from(dayMap.keys());
+    const values = Array.from(dayMap.values());
+
+    const datasets = [{
+      label: 'Quantity',
+      data: values,
+      borderColor: accentColor,
+      backgroundColor: accentColor + '22',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+    }];
+
+    if (minStock !== null && minStock > 0) {
+      datasets.push({
+        label: 'Min Stock',
+        data: new Array(values.length).fill(minStock),
+        borderColor: '#f59e0b',
+        borderDash: [5, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      });
+    }
+
+    qtyChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: textColor, boxWidth: 12, font: { size: 11 } }
+          },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: {
+            ticks: { color: textColor, font: { size: 11 }, maxTicksLimit: 8, maxRotation: 0 },
+            grid: { color: gridColor }
+          },
+          y: {
+            ticks: { color: textColor, font: { size: 11 } },
+            grid: { color: gridColor },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  function stepQty(delta) {
+    const input = document.getElementById('quantity');
+    const current = parseFloat(input.value) || 0;
+    const step = parseFloat(input.step) || 1;
+    const next = Math.max(0, current + delta * step);
+    input.value = next;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  function renderDemandBadge(data) {
+    const badge = document.getElementById('demandBadge');
+    if (!badge || !data || data.length === 0) return;
+
+    const now = new Date();
+    const ms3  = new Date(now); ms3.setMonth(ms3.getMonth() - 3);
+    const ms12 = new Date(now); ms12.setFullYear(ms12.getFullYear() - 1);
+
+    // Sum of absolute negative changes (consumption) per month
+    let consumed3 = 0, months3 = new Set();
+    let consumed12 = 0, months12 = new Set();
+
+    data.forEach(h => {
+      const d = new Date(h.changed_at);
+      const change = parseFloat(h.new_value) - parseFloat(h.old_value);
+      if (change >= 0) return; // only consumption (decreases)
+      const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+      if (d >= ms12) {
+        consumed12 += Math.abs(change);
+        months12.add(monthKey);
+      }
+      if (d >= ms3) {
+        consumed3 += Math.abs(change);
+        months3.add(monthKey);
+      }
+    });
+
+    const avg3  = months3.size  > 0 ? consumed3  / 3  : 0;
+    const avg12 = months12.size > 0 ? consumed12 / 12 : 0;
+
+    // Need at least some data to make a call
+    if (avg12 === 0 && avg3 === 0) { badge.style.display = 'none'; return; }
+
+    let label, bg, color;
+    if (avg3 > avg12 * 1.2) {
+      label = '↑ High Demand'; bg = '#fef3c7'; color = '#92400e';
+    } else if (avg12 > 0 && avg3 < avg12 * 0.8) {
+      label = '↓ Low Demand'; bg = '#f3f4f6'; color = '#6b7280';
+    } else {
+      label = '→ Normal Demand'; bg = '#d1fae5'; color = '#065f46';
+    }
+
+    // Dark mode adjustments
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+      bg = bg.replace('#fef3c7','#451a03').replace('#f3f4f6','#1f2937').replace('#d1fae5','#022c22');
+      color = color.replace('#92400e','#fbbf24').replace('#6b7280','#9ca3af').replace('#065f46','#34d399');
+    }
+
+    badge.textContent = label;
+    badge.style.background = bg;
+    badge.style.color = color;
+    badge.style.display = 'inline-block';
+  }
+
+  function updateStatsDisplay() {
+    const qty = parseFloat(document.getElementById('quantity').value) || 0;
+    const unit = document.getElementById('unit').value || 'units';
+    const cost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
+    const minStock = parseFloat(document.getElementById('min_stock').value) || 0;
+
+    // Stock display
+    document.getElementById('stockDisplay').textContent = `${qty} ${unit}`;
+    
+    // Stock badge - check reorder pending status first
+    const badge = document.getElementById('stockBadge');
+    
+    if (currentIngredient && currentIngredient.reorder_pending) {
+      badge.textContent = 'Reorder Pending';
+      badge.style.background = 'rgba(168, 85, 247, 0.1)';
+      badge.style.color = '#a855f7';
+    } else if (qty === 0) {
+      badge.textContent = 'Out of Stock';
+      badge.style.background = 'rgba(239, 68, 68, 0.1)';
+      badge.style.color = 'var(--danger)';
+    } else if (minStock > 0 && qty < minStock) {
+      badge.textContent = 'Low Stock';
+      badge.style.background = 'rgba(245, 158, 11, 0.1)';
+      badge.style.color = 'var(--warning)';
+    } else {
+      badge.textContent = 'In Stock';
+      badge.style.background = 'rgba(16, 185, 129, 0.1)';
+      badge.style.color = 'var(--success)';
+    }
+
+    // Cost display
+    document.getElementById('costDisplay').textContent = `$${cost.toFixed(2)}`;
+  }
+
+  function renderCustomAttributes() {
+    const container = document.getElementById('customAttributes');
+    container.innerHTML = '';
+    
+    Object.entries(customAttributes).forEach(([key, value]) => {
+      const row = document.createElement('div');
+      row.className = 'custom-attr-row';
+      row.innerHTML = `
+        <input type="text" value="${key}" placeholder="Attribute name" onchange="updateCustomAttribute('${key}', this.value, this.nextElementSibling.value)">
+        <input type="text" value="${value}" placeholder="Value" onchange="updateCustomAttribute('${key}', this.previousElementSibling.value, this.value)">
+        <button onclick="removeCustomAttribute('${key}')">×</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function addCustomAttribute() {
+    const newKey = `Attribute ${Object.keys(customAttributes).length + 1}`;
+    customAttributes[newKey] = '';
+    renderCustomAttributes();
+  }
+
+  function updateCustomAttribute(oldKey, newKey, newValue) {
+    if (oldKey !== newKey) {
+      delete customAttributes[oldKey];
+    }
+    customAttributes[newKey] = newValue;
+  }
+
+  function removeCustomAttribute(key) {
+    delete customAttributes[key];
+    renderCustomAttributes();
+  }
+
+  async function toggleFavorite() {
+    if (!currentIngredient) return;
+    
+    const newState = !currentIngredient.is_favorite;
+    
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ is_favorite: newState })
+        .eq('id', currentIngredient.id)
+        .select();
+
+      if (error) throw error;
+
+      currentIngredient.is_favorite = newState;
+      
+      const starIcon = document.getElementById('starIcon');
+      if (newState) {
+        starIcon.textContent = '★';
+        starIcon.classList.add('favorited');
+      } else {
+        starIcon.textContent = '☆';
+        starIcon.classList.remove('favorited');
+      }
+      
+      showSaveIndicator();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showAlert('Failed to update favorite status');
+    }
+  }
+
+  async function saveAllChanges() {
+    if (!currentIngredient) return;
+
+    const oldQuantity = currentIngredient.quantity;
+    const newQuantity = parseFloat(document.getElementById('quantity').value) || 0;
+
+    const updateData = {
+      name: document.getElementById('name').value,
+      quantity: newQuantity,
+      unit: document.getElementById('unit').value,
+      cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
+      category: document.getElementById('category').value,
+      min_stock: parseFloat(document.getElementById('min_stock').value) || null,
+      sku: document.getElementById('sku').value || '',
+      type: document.getElementById('type').value,
+      estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
+      source_url: stripUrlParams(document.getElementById('source_url').value) || '',
+      notes: document.getElementById('notes').value || '',
+      custom_attributes: Object.keys(customAttributes).length > 0 ? JSON.stringify(customAttributes) : null
+    };
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update(updateData)
+        .eq('id', currentIngredient.id);
+
+      if (error) throw error;
+
+      // Log quantity change if it changed
+      if (oldQuantity !== newQuantity) {
+        await supabaseClient
+          .from('ingredient_history')
+          .insert([{
+            ingredient_id: currentIngredient.id,
+            profile_id: user.id,
+            field_name: 'quantity',
+            old_value: String(oldQuantity),
+            new_value: String(newQuantity),
+            reason: 'manual',
+            reference_id: null,
+            reference_text: 'Manual adjustment'
+          }]);
+        
+        // Reload history
+        loadHistory(currentIngredient.id);
+        
+        // Check if out of stock and create notification
+        if (newQuantity <= 0) {
+          await createOutOfStockNotification(
+            currentIngredient.id,
+            updateData.name,
+            user.id
+          );
+        }
+      }
+
+      currentIngredient = { ...currentIngredient, ...updateData };
+      hasUnsavedChanges = false;
+      initialFormState = getCurrentFormState();
+      showSaveIndicator();
+      
+      // Update header
+      document.getElementById('ingredientName').textContent = updateData.name;
+      
+    } catch (err) {
+      showAlert('Failed to save changes: ' + err.message);
+    }
+  }
+
+  function showSaveIndicator() {
+    const indicator = document.getElementById('saveIndicator');
+    indicator.classList.add('show');
+    setTimeout(() => {
+      indicator.classList.remove('show');
+    }, 2000);
+  }
+
+  async function duplicateIngredient() {
+    if (!currentIngredient) return;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        showAlert('Please log in to duplicate ingredients');
+        return;
+      }
+
+      // Get current form values
+      const customAttrs = {};
+      const container = document.getElementById('customAttributesContainer');
+      if (container) {
+        const rows = container.querySelectorAll('.attribute-row');
+        rows.forEach(row => {
+          const keyInput = row.querySelector('input:first-child');
+          const valueInput = row.querySelector('input:nth-child(2)');
+          if (keyInput && valueInput && keyInput.value && valueInput.value) {
+            customAttrs[keyInput.value] = valueInput.value;
+          }
+        });
+      }
+
+      // Create duplicate with current form values
+      const duplicateData = {
+        name: document.getElementById('name').value + ' (Copy)',
+        quantity: parseFloat(document.getElementById('quantity').value) || 0,
+        unit: document.getElementById('unit').value,
+        cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
+        category: document.getElementById('category').value,
+        type: document.getElementById('type').value,
+        min_stock: parseFloat(document.getElementById('min_stock').value) || null,
+        estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
+        sku: document.getElementById('sku').value || '',
+        source_url: document.getElementById('source_url').value || '',
+        notes: document.getElementById('notes').value || '',
+        custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null,
+        custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null,
+        profile_id: user.id
+      };
+
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .insert([duplicateData])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        // Redirect to the new ingredient
+        window.location.href = `ingredient-detail.html?id=${data[0].id}`;
+      }
+    } catch (err) {
+      console.error('Error duplicating ingredient:', err);
+      showAlert('Failed to duplicate ingredient: ' + err.message);
+    }
+  }
+
+  async function deleteIngredient() {
+    if (!currentIngredient) return;
+    
+    if (!await showConfirm(`Delete "${currentIngredient.name}"? This cannot be undone.`)) return;
+
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .delete()
+        .eq('id', currentIngredient.id);
+
+      if (error) {
+        showAlert('Failed to delete: ' + error.message);
+      } else {
+        goBackToList();
+      }
+    } catch (err) {
+      showAlert('Error deleting: ' + err.message);
+    }
+  }
+  
+  function goBackToList() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const from = urlParams.get('from') || 'list';
+    window.location.href = `ingredients.html?view=${from}`;
+  }
+
+  // Auto-update stats when inputs change
+  ['quantity', 'unit', 'cost_per_unit', 'min_stock'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateStatsDisplay);
+  });
+
+  // === Notification System ===
+  let notificationsCache = [];
+  let notificationCheckInterval = null;
+
+  async function initializeNotifications() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      document.getElementById('notificationBell').style.display = 'flex';
+      await loadNotifications();
+      notificationCheckInterval = setInterval(loadNotifications, 30000);
+    }
+  }
+
+  async function loadNotifications() {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      
+      const { data: notifications, error } = await supabaseClient
+        .from('notifications')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      
+      notificationsCache = notifications || [];
+      renderNotifications();
+      updateNotificationBadge();
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  }
+
+  function renderNotifications() {
+    const listContainer = document.getElementById('notificationList');
+    
+    if (notificationsCache.length === 0) {
+      listContainer.innerHTML = `
+        <div class="notification-empty">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+          </svg>
+          <p>No notifications</p>
+        </div>
+      `;
+      return;
+    }
+    
+    listContainer.innerHTML = notificationsCache.map(notification => `
+      <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+           data-notification-id="${notification.id}"
+           onmouseenter="markAsRead('${notification.id}')">
+        <div class="notification-message">${notification.message}</div>
+        <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
+        <div class="notification-actions">
+          ${notification.ingredient_id ? `
+            <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
+              Open Ingredient
+            </button>
+            <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+              Restock
+            </button>
+          ` : ''}
+          <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
+            Delete
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateNotificationBadge() {
+    const unreadCount = notificationsCache.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notificationBadge');
+    
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diff = Math.floor((now - time) / 1000);
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+    return time.toLocaleDateString();
+  }
+
+  function toggleNotifications() {
+    const dropdown = document.getElementById('notificationDropdown');
+    dropdown.classList.toggle('active');
+  }
+
+  document.addEventListener('click', (e) => {
+    const bell = document.getElementById('notificationBell');
+    const dropdown = document.getElementById('notificationDropdown');
+    
+    if (bell && dropdown && !bell.contains(e.target)) {
+      dropdown.classList.remove('active');
+    }
+  });
+
+  async function markAsRead(notificationId) {
+    const notification = notificationsCache.find(n => n.id === notificationId);
+    if (!notification || notification.is_read) return;
+    
+    try {
+      const { error } = await supabaseClient
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId);
+      
+      if (error) throw error;
+      
+      notification.is_read = true;
+      updateNotificationBadge();
+      
+      const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+      if (item) {
+        item.classList.remove('unread');
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  }
+
+  async function markAllAsRead() {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      
+      const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
+      if (unreadIds.length === 0) return;
+      
+      const { error } = await supabaseClient
+        .from('notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in('id', unreadIds);
+      
+      if (error) throw error;
+      
+      notificationsCache.forEach(n => {
+        if (!n.is_read) n.is_read = true;
+      });
+      
+      renderNotifications();
+      updateNotificationBadge();
+      
+      if (typeof showNotification === 'function') {
+        showNotification('All notifications marked as read', 'success');
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  }
+
+  async function deleteNotification(notificationId) {
+    try {
+      const { error } = await supabaseClient
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+      
+      if (error) throw error;
+      
+      notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
+      
+      renderNotifications();
+      updateNotificationBadge();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  }
+
+  function openIngredient(ingredientId) {
+    window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+  }
+
+  async function restockIngredient(ingredientId, notificationId) {
+    try {
+      // Check if we're already on this ingredient's detail page
+      if (currentIngredient && ingredientId === currentIngredient.id) {
+        // Close notification dropdown
+        const dropdown = document.getElementById('notificationDropdown');
+        if (dropdown) dropdown.classList.remove('active');
+        
+        // Trigger reorder (will show hint if no source URL)
+        handleReorderClick();
+      } else {
+        // Navigate to the ingredient detail page with openReorder parameter
+        window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+      }
+    } catch (error) {
+      console.error('Error restocking ingredient:', error);
+      showAlert('Failed to restock ingredient', 'error');
+    }
+  }
+
+  async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
+    try {
+      // Check user's notification settings from database
+      const { data: settings } = await supabaseClient
+        .from('user_settings')
+        .select('notifications_enabled, out_of_stock_notifications')
+        .eq('user_id', userId)
+        .single();
+      
+      // Don't create notification if disabled
+      if (!settings || !settings.notifications_enabled || !settings.out_of_stock_notifications) {
+        return;
+      }
+
+      const { data: existing, error: checkError } = await supabaseClient
+        .from('notifications')
+        .select('id')
+        .eq('profile_id', userId)
+        .eq('ingredient_id', ingredientId)
+        .eq('type', 'ingredient_out_of_stock')
+        .eq('is_read', false);
+      
+      if (checkError) throw checkError;
+      
+      if (existing && existing.length > 0) return;
+      
+      const { error: insertError } = await supabaseClient
+        .from('notifications')
+        .insert([{
+          profile_id: userId,
+          type: 'ingredient_out_of_stock',
+          ingredient_id: ingredientId,
+          message: `Ingredient ${ingredientName} has run out of stock`,
+          is_read: false
+        }]);
+      
+      if (insertError) throw insertError;
+      
+      await loadNotifications();
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
+  }
+
+  loadIngredientDetail();
+  initializeNotifications();
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal" onclick="if(event.target === this) closeFeedback()">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1">
+          <div class="emoji-face">😡</div>
+          <div class="emoji-label">Hate</div>
+        </div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2">
+          <div class="emoji-face">😟</div>
+          <div class="emoji-label">Bad</div>
+        </div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3">
+          <div class="emoji-face">😐</div>
+          <div class="emoji-label">Okay</div>
+        </div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4">
+          <div class="emoji-face">😊</div>
+          <div class="emoji-label">Good</div>
+        </div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5">
+          <div class="emoji-face">🤩</div>
+          <div class="emoji-label">Love</div>
+        </div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+    
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+    
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let confirmResolver = null;
+
+// Custom modal functions
+function showAlert(message, title = 'Alert') {
+  document.getElementById('alertTitle').textContent = title;
+  document.getElementById('alertMessage').textContent = message;
+  document.getElementById('alertModal').classList.add('active');
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+}
+
+function showConfirm(message, title = 'Confirm') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
+let currentStep = 1;
+let feedbackRating = 0;
+
+// Show feedback button for logged in users
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      document.getElementById('feedbackButton').classList.add('show');
+    }
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    showAlert('Please select a rating');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+  
+  if (!text.trim()) {
+    showAlert('Please provide some feedback');
+    return;
+  }
+  
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert([
+            {
+              score: feedbackRating,
+              comment: text,
+              user_id: session.user.id
+            }
+          ]);
+        
+        if (error) {
+          console.error('Error saving feedback:', error);
+          showAlert('Failed to submit feedback. Please try again.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+  
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+
+// Escape key listener for modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('alertModal').classList.contains('active')) {
+      closeAlert();
+    } else if (document.getElementById('confirmModal').classList.contains('active')) {
+      resolveConfirm(false);
+    } else if (document.getElementById('reorderModal').classList.contains('active')) {
+      closeReorderModal();
+    } else if (document.getElementById('expenseModal').classList.contains('active')) {
+      closeExpenseModal();
+    } else if (document.getElementById('feedbackModal').classList.contains('active')) {
+      closeFeedback();
+    }
+  }
+});
+</script>
+
+<!-- Custom Alert Modal -->
+<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="alertTitle">Alert</h3>
+    <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <button style="width: 100%; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
+      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- No Source URL Modal -->
+<div class="modal-overlay" id="noSourceModal" onclick="if(event.target === this) closeNoSourceModal()">
+  <div class="modal-content">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">📍 Source URL Missing</h3>
+    <p style="color: var(--text-main); font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
+      We don't know where to restock this ingredient from yet.
+    </p>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
+      💡 <strong>Tip:</strong> Add a source URL (like a supplier website or product page) to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
+    </p>
+    <div style="display: flex; gap: 12px;">
+      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="closeNoSourceModal()">Cancel</button>
+      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="addSourceUrl()">Add Source URL</button>
+    </div>
+  </div>
+</div>
+
+<!-- Switch Account Modal -->
+<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
+  <div class="modal-content-custom" style="max-width: 450px;">
+    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
+
+    <!-- Tabs -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
+      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="switch-login-content" class="switch-account-content" style="display: block;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchLogin(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
+      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
+          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span>or</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <form onsubmit="handleSwitchSignUp(event)">
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
+          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
+          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
+          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.switch-account-tab.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+}
+.switch-account-tab:hover {
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchAccountTab(tab) {
+  // Update tab buttons
+  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update tab content
+  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
+  document.getElementById('switch-' + tab + '-content').style.display = 'block';
+}
+
+function closeSwitchAccountModal() {
+  document.getElementById('switchAccountModal').classList.remove('active');
+  // Reset forms
+  document.getElementById('switch-login-email').value = '';
+  document.getElementById('switch-login-password').value = '';
+  document.getElementById('switch-signup-email').value = '';
+  document.getElementById('switch-signup-password').value = '';
+  document.getElementById('switch-signup-confirm-password').value = '';
+}
+
+async function handleSwitchGoogleLogin() {
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    alert('Google sign-in failed: ' + error.message);
+  }
+}
+
+async function handleSwitchLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-login-email').value;
+  const password = document.getElementById('switch-login-password').value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Switching...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign in with new credentials
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    // Reload page to refresh UI with new user
+    window.location.reload();
+  } catch (error) {
+    alert('Login failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In';
+  }
+}
+
+async function handleSwitchSignUp(e) {
+  e.preventDefault();
+  const email = document.getElementById('switch-signup-email').value;
+  const password = document.getElementById('switch-signup-password').value;
+  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
+
+  if (password !== confirmPassword) {
+    alert('Passwords do not match!');
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+
+  try {
+    // Sign out current user first
+    await supabaseClient.auth.signOut();
+    
+    // Clear cache
+    sessionStorage.removeItem('shelfy_user_email');
+    sessionStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign up with new credentials
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) throw error;
+
+    alert('Account created successfully! Please check your email to confirm your account.');
+    
+    // Switch to login tab and set email
+    switchAccountTab('login');
+    document.getElementById('switch-login-email').value = email;
+  } catch (error) {
+    alert('Sign up failed: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+</script>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
