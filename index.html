@@ -257,6 +257,286 @@
     .sub { font-size: 15px; }
     .section-container { padding: 24px 14px 48px; }
   }
+
+  /* ---------- USP SECTION ---------- */
+  .usp-section {
+    background: var(--bg-main);
+    padding: 80px 24px;
+  }
+
+  .usp-section h2 {
+    font-size: 48px;
+    font-weight: 800;
+    margin-bottom: 60px;
+    text-align: center;
+    color: var(--text-main);
+    letter-spacing: -1px;
+  }
+
+  .usp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .usp-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .usp-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--premium));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+
+  .usp-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15);
+  }
+
+  .usp-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .usp-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+    transition: transform 0.3s ease;
+  }
+
+  .usp-card:hover .usp-icon {
+    transform: scale(1.1) rotate(5deg);
+  }
+
+  .usp-icon.icon-focus {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05));
+  }
+
+  .usp-icon.icon-automation {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  }
+
+  .usp-icon.icon-ai {
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.15), rgba(155, 89, 182, 0.05));
+  }
+
+  .usp-card h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-main);
+    line-height: 1.3;
+  }
+
+  .usp-card p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ---------- TESTIMONIALS SECTION ---------- */
+  .testimonial-section {
+    background: var(--bg-inner);
+    padding: 80px 24px 100px;
+  }
+
+  .testimonial-section h2 {
+    font-size: 48px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    text-align: center;
+    color: var(--text-main);
+    letter-spacing: -1px;
+  }
+
+  .testimonial-section .section-subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 60px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .testimonial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .testimonial-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .testimonial-card::after {
+    content: '"';
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    font-size: 120px;
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0.08;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .testimonial-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    border-color: var(--accent);
+  }
+
+  .testimonial-rating {
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+  }
+
+  .testimonial-quote {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-main);
+    margin-bottom: 24px;
+    font-style: italic;
+    flex-grow: 1;
+    position: relative;
+    z-index: 1;
+  }
+
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: auto;
+  }
+
+  .testimonial-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .testimonial-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0.2;
+    z-index: -1;
+  }
+
+  .avatar-gradient-1 {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  }
+
+  .avatar-gradient-2 {
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+  }
+
+  .avatar-gradient-3 {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+  }
+
+  .testimonial-info {
+    flex: 1;
+  }
+
+  .testimonial-name {
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .testimonial-role {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 768px) {
+    .usp-section,
+    .testimonial-section {
+      padding: 60px 16px;
+    }
+
+    .usp-section h2,
+    .testimonial-section h2 {
+      font-size: 36px;
+      margin-bottom: 40px;
+    }
+
+    .usp-grid,
+    .testimonial-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .usp-card,
+    .testimonial-card {
+      padding: 32px 24px;
+    }
+
+    .usp-card h3 {
+      font-size: 22px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .usp-section h2,
+    .testimonial-section h2 {
+      font-size: 30px;
+    }
+
+    .testimonial-section .section-subtitle {
+      font-size: 16px;
+    }
+  }
 </style>
 
 <!-- JSON-LD Structured Data -->
@@ -411,37 +691,35 @@
 </section>
 
 <!-- Why ShelfyAI Section -->
-<section class="section-container" style="padding-top: 80px; padding-bottom: 80px;">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <h2 style="font-size: 42px; font-weight: 700; margin-bottom: 60px; text-align: center; color: var(--text-main);">Why ShelfyAI?</h2>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px;">
-      <!-- USP 1: User Friendly UX -->
-      <div style="background: var(--bg-inner); padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
-        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 28px;">📊</div>
-        <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">Focus on What Matters</h3>
-        <p style="font-size: 16px; line-height: 1.6; color: var(--text-muted);">
-          Clean, intuitive interface designed with small businesses in mind. Get a crystal-clear overview of your inventory at a glance—no clutter, no confusion, just the insights you need to make smart decisions.
-        </p>
-      </div>
+<section class="usp-section">
+  <h2>Why ShelfyAI?</h2>
+  
+  <div class="usp-grid">
+    <!-- USP 1: User Friendly UX -->
+    <div class="usp-card">
+      <div class="usp-icon icon-focus">📊</div>
+      <h3>Focus on What Matters</h3>
+      <p>
+        Clean, intuitive interface designed with small businesses in mind. Get a crystal-clear overview of your inventory at a glance—no clutter, no confusion, just the insights you need to make smart decisions.
+      </p>
+    </div>
 
-      <!-- USP 2: Set It and Forget It -->
-      <div style="background: var(--bg-inner); padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
-        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--success), #27ae60); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 28px;">⚡</div>
-        <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">Set It and Forget It</h3>
-        <p style="font-size: 16px; line-height: 1.6; color: var(--text-muted);">
-          Complete the 5-minute initial setup once, then all you do is upload your orders and expenses. ShelfyAI automatically keeps your inventory up to date—no manual entry, no spreadsheet maintenance, no headaches.
-        </p>
-      </div>
+    <!-- USP 2: Set It and Forget It -->
+    <div class="usp-card">
+      <div class="usp-icon icon-automation">⚡</div>
+      <h3>Set It and Forget It</h3>
+      <p>
+        Complete the 5-minute initial setup once, then all you do is upload your orders and expenses. ShelfyAI automatically keeps your inventory up to date—no manual entry, no spreadsheet maintenance, no headaches.
+      </p>
+    </div>
 
-      <!-- USP 3: AI Does the Heavy Lifting -->
-      <div style="background: var(--bg-inner); padding: 40px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center;">
-        <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #9b59b6, #8e44ad); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 28px;">🤖</div>
-        <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">AI Does the Heavy Lifting</h3>
-        <p style="font-size: 16px; line-height: 1.6; color: var(--text-muted);">
-          Snap a photo of your receipt or paste an order URL. Our AI instantly reads and extracts items, quantities, and prices, then updates your inventory in seconds. No typing, no data entry errors—just fast, accurate tracking.
-        </p>
-      </div>
+    <!-- USP 3: AI Does the Heavy Lifting -->
+    <div class="usp-card">
+      <div class="usp-icon icon-ai">🤖</div>
+      <h3>AI Does the Heavy Lifting</h3>
+      <p>
+        Snap a photo of your receipt or paste an order URL. Our AI instantly reads and extracts items, quantities, and prices, then updates your inventory in seconds. No typing, no data entry errors—just fast, accurate tracking.
+      </p>
     </div>
   </div>
 </section>
@@ -449,54 +727,52 @@
 <!-- Testimonials Section -->
 <section class="section-container" style="padding-top: 80px; padding-bottom: 100px; background: var(--bg-inner);">
   <div style="max-width: 1100px; margin: 0 auto;">
-    <h2 style="font-size: 42px; font-weight: 700; margin-bottom: 20px; text-align: center; color: var(--text-main);">What Our Customers Say</h2>
-    <p style="font-size: 18px; color: var(--text-muted); text-align: center; margin-bottom: 60px;">Real stories from small business owners who transformed their inventory management</p>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px;">
-      <!-- Testimonial 1 -->
-      <div style="background: var(--bg-main); padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-left: 4px solid var(--accent);">
-        <div style="font-size: 24px; color: var(--accent); margin-bottom: 16px;">★★★★★</div>
-        <p style="font-size: 16px; line-height: 1.7; color: var(--text-main); margin-bottom: 20px; font-style: italic;">
-          "I used to spend 3 hours every week updating my spreadsheet. Now I just snap photos of my receipts and ShelfyAI does the rest. I've saved over 150 hours this year!"
-        </p>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #ff6b6b, #ee5a6f); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">SM</div>
-          <div>
-            <div style="font-weight: 700; color: var(--text-main);">Sarah Martinez</div>
-            <div style="font-size: 14px; color: var(--text-muted);">Owner, Sweet Delights Bakery</div>
-          </div>
+    <h2 style="ftestimonial-section">
+  <h2>What Our Customers Say</h2>
+  <p class="section-subtitle">Real stories from small business owners who transformed their inventory management</p>
+  
+  <div class="testimonial-grid">
+    <!-- Testimonial 1 -->
+    <div class="testimonial-card">
+      <div class="testimonial-rating">★★★★★</div>
+      <p class="testimonial-quote">
+        "I used to spend 3 hours every week updating my spreadsheet. Now I just snap photos of my receipts and ShelfyAI does the rest. I've saved over 150 hours this year!"
+      </p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar avatar-gradient-1">SM</div>
+        <div class="testimonial-info">
+          <div class="testimonial-name">Sarah Martinez</div>
+          <div class="testimonial-role">Owner, Sweet Delights Bakery</div>
         </div>
       </div>
+    </div>
 
-      <!-- Testimonial 2 -->
-      <div style="background: var(--bg-main); padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-left: 4px solid var(--success);">
-        <div style="font-size: 24px; color: var(--success); margin-bottom: 16px;">★★★★★</div>
-        <p style="font-size: 16px; line-height: 1.7; color: var(--text-main); margin-bottom: 20px; font-style: italic;">
-          "The low-stock alerts saved my business during the holiday rush. I used to run out of key materials and lose sales. Now I know exactly when to reorder. Total game-changer."
-        </p>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #4ecdc4, #44a08d); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">JC</div>
-          <div>
-            <div style="font-weight: 700; color: var(--text-main);">James Chen</div>
-            <div style="font-size: 14px; color: var(--text-muted);">Etsy Seller, Handmade Candles</div>
-          </div>
+    <!-- Testimonial 2 -->
+    <div class="testimonial-card">
+      <div class="testimonial-rating">★★★★★</div>
+      <p class="testimonial-quote">
+        "The low-stock alerts saved my business during the holiday rush. I used to run out of key materials and lose sales. Now I know exactly when to reorder. Total game-changer."
+      </p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar avatar-gradient-2">JC</div>
+        <div class="testimonial-info">
+          <div class="testimonial-name">James Chen</div>
+          <div class="testimonial-role">Etsy Seller, Handmade Candles</div>
         </div>
       </div>
+    </div>
 
-      <!-- Testimonial 3 -->
-      <div style="background: var(--bg-main); padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-left: 4px solid #9b59b6;">
-        <div style="font-size: 24px; color: #9b59b6; margin-bottom: 16px;">★★★★★</div>
-        <p style="font-size: 16px; line-height: 1.7; color: var(--text-main); margin-bottom: 20px; font-style: italic;">
-          "Finally found an inventory system that isn't built for giant warehouses. ShelfyAI understands small businesses. The recipe cost calculator alone paid for itself in the first month."
-        </p>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #f093fb, #f5576c); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">LP</div>
-          <div>
-            <div style="font-weight: 700; color: var(--text-main);">Lisa Patel</div>
-            <div style="font-size: 14px; color: var(--text-muted);">Founder, Organic Skincare Studio</div>
-          </div>
-        </div>
-      </div>
+    <!-- Testimonial 3 -->
+    <div class="testimonial-card">
+      <div class="testimonial-rating">★★★★★</div>
+      <p class="testimonial-quote">
+        "Finally found an inventory system that isn't built for giant warehouses. ShelfyAI understands small businesses. The recipe cost calculator alone paid for itself in the first month."
+      </p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar avatar-gradient-3">LP</div>
+        <div class="testimonial-info">
+          <div class="testimonial-name">Lisa Patel</div>
+          <div class="testimonial-role">Founder, Organic Skincare Studiov>
     </div>
   </div>
 </section>
