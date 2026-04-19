@@ -108,7 +108,7 @@ module.exports = async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription',
-      payment_method_types: ['card', 'sepa_debit'],
+      payment_method_types: ['card'],
       line_items: [{ price: PRICE_IDS[tier][interval], quantity: 1 }],
       automatic_tax: { enabled: true },
       customer_update: {

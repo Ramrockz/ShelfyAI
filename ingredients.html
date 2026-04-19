@@ -7,6 +7,11 @@
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Ingredients Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Prevent search engine indexing -->
+<meta name="robots" content="noindex, nofollow" />
+<meta name="description" content="Manage your ingredients inventory with ShelfyAI." />
+
 <script>
   // Apply theme immediately from localStorage to prevent flash
   (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
@@ -3589,7 +3594,6 @@ function renderKanban(data) {
             <span class="star-icon ${starClass}" data-id="${i.id}" style="font-size: 16px; cursor: pointer;">${starIcon}</span>
             <h5 style="flex: 1; margin: 0; cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</h5>
           </div>
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Qty: ${i.qty}</div>
           <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${attributesText}</div>
         </div>`;
       });
