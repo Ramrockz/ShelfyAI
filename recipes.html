@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Recipes</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script>
@@ -144,10 +147,10 @@
   }
 
   /* ---------- LIST VIEW ---------- */
-  .table-container { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-  th { padding: 14px 20px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
-  td { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .table-container { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; table-layout: fixed; }
+  th { padding: 14px 20px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); position: relative; resize: horizontal; overflow: auto; }
+  td { padding: 16px 20px; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
 
   /* ---------- KANBAN VIEW ---------- */
@@ -1107,14 +1110,14 @@
 <body>
 
 <nav class="navbar">
-  <a href="operations.html" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
-    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
   </div>
   
   <div class="nav-actions">
@@ -1166,15 +1169,15 @@
       
       <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
         <div class="user-menu-header">
-          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-email" id="userMenuEmail">Loading...</div>
           <div class="user-menu-role">Free Plan</div>
         </div>
         <div class="user-menu-list">
-          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
-            <span>Upgrade to PRO</span>
+            <span>Update Plan</span>
           </div>
           <div class="user-menu-item" onclick="openSettings()">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1254,7 +1257,7 @@
           <button class="view-btn" id="viewBtnKanban" onclick="switchView('kanban')">Kanban</button>
         </div>
       </div>
-      <input type="text" id="searchRecipes" placeholder="Search recipes..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+      <input type="text" id="searchRecipes" placeholder="Search recipes..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="cardsToShow = 10; render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1263,11 +1266,12 @@
       <table>
         <thead>
           <tr>
-            <th>Recipe Name</th>
-            <th>Ingredients</th>
-            <th>Prod. Cost</th>
-            <th>Production Status</th>
-            <th>Action</th>
+            <th style="width: 50px;">#</th>
+            <th style="width: 25%;">Recipe Name</th>
+            <th style="width: 25%;">Ingredients</th>
+            <th style="width: 15%;">Prod. Cost</th>
+            <th style="width: 15%;">Production Status</th>
+            <th style="width: 15%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1359,6 +1363,7 @@ let allIngredients = [];
 let recipes = [];
 let currentRecipe = {};
 let currentView = 'recent';
+let cardsToShow = 10;
 let favoriteIngredients = new Set();
 let currentDeleteRecipeId = null;
 let currentDuplicateRecipeId = null;
@@ -1532,10 +1537,18 @@ function toggleIngredients(recipeId) {
 // --- VIEW LOGIC ---
 function switchView(view) {
     currentView = view;
+    if (view === 'recent') {
+        cardsToShow = 10;
+    }
     ['recent', 'list', 'kanban'].forEach(v => {
         document.getElementById(`viewBtn${v.charAt(0).toUpperCase() + v.slice(1)}`).classList.toggle('active', v === view);
         document.getElementById(`${v}View`).style.display = v === view ? (v === 'list' ? 'block' : 'grid') : 'none';
     });
+    render();
+}
+
+function showMoreRecipes() {
+    cardsToShow += 10;
     render();
 }
 
@@ -1558,7 +1571,9 @@ function render() {
             </div>`;
         } else {
             const favData = allData.filter(r => r.is_favorite);
-            const otherData = allData.filter(r => !r.is_favorite);
+            const allOtherData = allData.filter(r => !r.is_favorite);
+            const otherData = allOtherData.slice(0, cardsToShow);
+            const hasMore = allOtherData.length > cardsToShow;
             const hasFavs = favData.length > 0;
             const sectionLabel = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
             const buildCards = arr => arr.map(r => {
@@ -1588,7 +1603,7 @@ function render() {
                                     const minStock = ingData ? (ingData.min_stock || 0) : 0;
                                     const nameColor = !ingData || available < required ? 'var(--danger)' : available <= minStock ? '#f59e0b' : 'var(--accent)';
                                     return `<div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px;">
-                                        <a href="ingredient-detail.html?id=${ing.ingredient_id || ing.id}" target="_blank" style="color: ${nameColor}; text-decoration: none; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                        <a href=""/ingredient-detail?id=${ing.ingredient_id || ing.id}" target="_blank" style="color: ${nameColor}; text-decoration: none; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
                                             ${ing.ingredient_name || ing.name}
                                         </a>
                                     </div>`;
@@ -1606,7 +1621,7 @@ function render() {
                 return `
                 <div class="card-small">
                     <h4 style="cursor: pointer; display:flex; align-items:center; gap:8px; margin-bottom:0;">
-                      <span onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('recipe-detail.html?id=${r.id}&from=' + currentView,'_blank')}" style="flex:1;">${r.name}</span>
+                      <span onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}" style="flex:1;">${r.name}</span>
                       <span class="star-icon ${r.is_favorite ? 'favorited' : ''}" onclick="event.stopPropagation();toggleRecipeFavorite('${r.id}')" title="${r.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">${r.is_favorite ? '★' : '☆'}</span>
                     </h4>
                     ${ingredientsList}
@@ -1618,19 +1633,25 @@ function render() {
                     </div>
                 </div>`;
             });
-            const countLabel = `<div style="grid-column:1/-1; font-size:13px; color:var(--text-muted); font-weight:600; margin-bottom:8px;">Showing ${data.length} of ${recipes.length} recipes</div>`;
             if (hasFavs) {
-                container.innerHTML = countLabel
-                    + sectionLabel('Favorites') + buildCards(favData).join('')
+                container.innerHTML = sectionLabel('Favorites') + buildCards(favData).join('')
                     + sectionLabel('All Recipes') + buildCards(otherData).join('');
             } else {
-                container.innerHTML = countLabel + buildCards(otherData).join('');
+                container.innerHTML = buildCards(otherData).join('');
+            }
+            
+            if (hasMore) {
+                container.innerHTML += `
+                    <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
+                        <button onclick="showMoreRecipes()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOtherData.length - cardsToShow} remaining)</button>
+                    </div>
+                `;
             }
         }
     } else if (currentView === 'list') {
         const tbody = document.getElementById('tableBody');
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
                 <p style="font-size: 18px; margin-bottom: 8px;">No recipes yet</p>
                 <p style="margin-bottom: 20px;">Combine ingredients into a finished product</p>
                 <button onclick="openBuilder()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ Create Recipe</button>
@@ -1638,29 +1659,31 @@ function render() {
         } else {
             const favRows = allData.filter(r => r.is_favorite);
             const otherRows = allData.filter(r => !r.is_favorite);
+            const allRows = [...favRows, ...otherRows];
+            let rowIndex = 0;
             const buildRow = r => {
+                rowIndex++;
                 const color = r.status === 'ready' ? 'var(--success)' : (r.status === 'low' ? 'var(--warning)' : 'var(--danger)');
-                return `<tr style="cursor: pointer;" onmousedown="if(event.button===1){event.preventDefault();window.open('recipe-detail.html?id=${r.id}&from=' + currentView,'_blank')}"><td onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView"><strong>${r.is_favorite ? '⭐ ' : ''}${r.name}</strong></td><td onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView">${r.count}</td><td onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView">$${r.cost.toFixed(2)}</td>
-                        <td onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView"><span class="status-dot" style="background:${color}"></span> ${r.status}</td>
+                return `<tr style="cursor: pointer;" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}">
+                        <td style="color: var(--text-muted); font-weight: 600;">${rowIndex}</td>
+                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView"><strong>${r.is_favorite ? '⭐ ' : ''}${r.name}</strong></td>
+                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView">${r.count}</td>
+                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView">$${r.cost.toFixed(2)}</td>
+                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView"><span class="status-dot" style="background:${color}"></span> ${r.status}</td>
                         <td>
                             <span style="color:var(--accent); cursor:pointer; font-weight:700; margin-right: 12px;" onclick="editRecipe('${r.id}')">EDIT</span>
                             <span style="color:var(--text-muted); cursor:pointer; font-weight:700; margin-right: 12px;" onclick="duplicateRecipe('${r.id}')">DUPLICATE</span>
                             <span style="color:var(--danger); cursor:pointer; font-weight:700;" onclick="deleteRecipe('${r.id}')">DELETE</span>
                         </td></tr>`;
             };
-            const sectionRow = (label) => `<tr><td colspan="5" style="padding:18px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); border-bottom: 2px solid var(--border);">${label}</td></tr>`;
-            if (favRows.length > 0) {
-                tbody.innerHTML = sectionRow('Favorites') + favRows.map(buildRow).join('') + sectionRow('All Recipes') + otherRows.map(buildRow).join('');
-            } else {
-                tbody.innerHTML = otherRows.map(buildRow).join('');
-            }
+            tbody.innerHTML = allRows.map(buildRow).join('');
         }
     } else {
         ['ready', 'low', 'out'].forEach(s => document.getElementById(`col-${s}`).innerHTML = "");
         data.forEach(r => {
             document.getElementById(`col-${r.status || 'ready'}`).innerHTML += `
                 <div class="card-small" style="margin-bottom:12px;">
-                    <h4 style="cursor: pointer;" onclick="window.location.href='recipe-detail.html?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('recipe-detail.html?id=${r.id}&from=' + currentView,'_blank')}">${r.name}</h4>
+                    <h4 style="cursor: pointer;" onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}">${r.name}</h4>
                     <p>$${r.cost.toFixed(2)}</p>
                     <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;">
                         <span style="color: var(--accent); cursor: pointer;" onclick="editRecipe('${r.id}')">Edit</span>
@@ -1674,7 +1697,7 @@ function render() {
 
 // --- BUILDER LOGIC ---
 function editRecipe(recipeId) {
-  window.location.href = `recipe-detail.html?id=${recipeId}&from=${currentView}`;
+  window.location.href = `/recipe-detail?id=${recipeId}&from=${currentView}`;
 }
 
 async function openBuilder() {
@@ -2895,12 +2918,12 @@ async function deleteNotification(notificationId) {
 }
 
 function openIngredient(ingredientId) {
-  window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+  window.location.href = `/ingredient-detail?id=${ingredientId}`;
 }
 
 async function restockIngredient(ingredientId, notificationId) {
   // Navigate to ingredient detail page with openReorder parameter
-  window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+  window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
 }
 
 async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
@@ -3359,10 +3382,12 @@ async function checkAIUsage() {
     if (!session) return null;
     const { data: settings } = await window.supabaseClient.from('user_settings').select('tier').eq('user_id', session.user.id).single();
     const tier = settings?.tier || 'free';
-    const limits = { free: { ingredients: 5 }, starter: { ingredients: 25 }, pro: { ingredients: 50 } };
-    const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await window.supabaseClient.from('ai_usage_tracking').select('ingredient_count').eq('user_id', session.user.id).eq('date', today).single();
-    const used = usage?.ingredient_count || 0;
+    const limits = { free: { ingredients: 25 }, starter: { ingredients: 50 }, pro: { ingredients: 100 } };
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const { data: usageRecords } = await window.supabaseClient.from('ai_usage_tracking').select('ingredient_count').eq('user_id', session.user.id).gte('date', `${yearMonth}-01`).lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
+    const used = usageRecords ? usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) : 0;
     const limit = limits[tier].ingredients;
     aiUsageStatus = { used, limit, tier, limitReached: used >= limit };
     return aiUsageStatus;
@@ -3400,14 +3425,14 @@ async function openMethodModalFromRecipe() {
 
 function selectMethod(method) {
   if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
-    alert(`Daily limit reached: You've used all ${aiUsageStatus.limit} AI extractions for today. Limit resets at midnight.`);
+    alert(`Monthly limit reached: You've used all ${aiUsageStatus.limit} AI extractions for this month. Limit resets on the 1st of next month.`);
     return;
   }
   closeMethodModal();
   if (method === 'manual') { openManualEntryModal(); }
   else if (method === 'url') { openUrlImportModal(); }
   else if (method === 'image') { openImageUploadModal(); }
-  else { window.location.href = `ingredients.html?method=${method}`; }
+  else { window.location.href = `/ingredients?method=${method}`; }
 }
 
 async function openManualEntryModal() {
@@ -3560,7 +3585,7 @@ async function processUrlImport() {
       if (response.status === 429) {
         await checkAIUsage();
         if (session && typeof createAILimitNotification === 'function') await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
-        throw new Error(`${errData.error || 'Daily limit reached'}. Limit resets at midnight.`);
+        throw new Error(`${errData.error || 'Monthly limit reached'}. Limit resets on the 1st of next month.`);
       }
       throw new Error(errData.error || 'Failed to extract data');
     }
@@ -3725,7 +3750,7 @@ async function processImageUpload() {
       if (response.status === 429) {
         await checkAIUsage();
         if (session && typeof createAILimitNotification === 'function') await createAILimitNotification(session.user.id, aiUsageStatus?.tier||'free');
-        throw new Error(`${errData.error||'Daily limit reached'}. Limit resets at midnight.`);
+        throw new Error(`${errData.error||'Monthly limit reached'}. Limit resets on the 1st of next month.`);
       }
       throw new Error(errData.error || 'Failed to extract data');
     }
@@ -3777,33 +3802,32 @@ function showUploadStatus(message, type) {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>

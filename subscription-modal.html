@@ -1,0 +1,201 @@
+<!-- Subscription Modal -->
+<div class="modal-overlay" id="subscriptionModal" onclick="if(event.target === this) closeSubscriptionModal()" style="display: none;">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Upgrade Your Plan</h3>
+    
+    <div style="margin-bottom: 32px;">
+      <!-- Billing Toggle -->
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px;">
+        <span class="toggle-label" id="modal-label-monthly" style="font-size: 14px; font-weight: 600; color: var(--text-main);">Monthly</span>
+        <input type="checkbox" id="modal-price-switch" onchange="toggleModalPricing()" style="display: none;" />
+        <label for="modal-price-switch" class="switch" style="position: relative; display: inline-block; width: 48px; height: 24px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 99px; cursor: pointer;"></label>
+        <span class="toggle-label" id="modal-label-yearly" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Yearly</span>
+        <span style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;">Save 20%</span>
+      </div>
+
+      <!-- Plan Cards -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        
+        <!-- Starter Plan -->
+        <div class="plan-card" id="plan-starter" onclick="selectPlan('starter')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s;">
+          <h4 style="margin: 0 0 8px 0; font-size: 18px;">Starter</h4>
+          <div class="plan-price" id="starter-modal-price" style="font-size: 32px; font-weight: 800; margin: 16px 0;">€9.99<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+          <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text-muted);">
+            <li style="margin-bottom: 8px;">✓ 50 AI scans/month</li>
+            <li style="margin-bottom: 8px;">✓ Bulk Upload (5)</li>
+            <li style="margin-bottom: 8px;">✓ Full Dashboard</li>
+          </ul>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')" style="background: var(--bg-panel); border: 2px solid var(--accent); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; position: relative;">
+          <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 800;">POPULAR</div>
+          <h4 style="margin: 0 0 8px 0; font-size: 18px;">Pro</h4>
+          <div class="plan-price" id="pro-modal-price" style="font-size: 32px; font-weight: 800; margin: 16px 0;">€19.99<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+          <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text-muted);">
+            <li style="margin-bottom: 8px;">✓ 100 AI scans/month</li>
+            <li style="margin-bottom: 8px;">✓ Bulk Upload (25)</li>
+            <li style="margin-bottom: 8px;">✓ Full Dashboard</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 16px;">Prices plus applicable VAT. Cancel anytime.</p>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button onclick="closeSubscriptionModal()" style="flex: 1; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-weight: 600; cursor: pointer;">Cancel</button>
+      <button id="subscribeButton" onclick="handleSubscribe()" style="flex: 1; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;">Subscribe Now</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .switch::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text-main);
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+  }
+  
+  input:checked + .switch::after {
+    transform: translateX(24px);
+    background: var(--accent);
+  }
+  
+  .plan-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  
+  .plan-card.selected {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--bg-panel) 0%, rgba(59, 130, 246, 0.05) 100%);
+  }
+</style>
+
+<script>
+let selectedPlan = 'pro'; // Default to Pro
+let selectedInterval = 'month';
+
+function openSubscriptionModal(defaultPlan = 'pro') {
+  selectedPlan = defaultPlan;
+  selectedInterval = 'month';
+  document.getElementById('modal-price-switch').checked = false;
+  document.getElementById('subscriptionModal').style.display = 'flex';
+  updatePlanSelection();
+  toggleModalPricing(); // Reset prices
+}
+
+function closeSubscriptionModal() {
+  document.getElementById('subscriptionModal').style.display = 'none';
+}
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  updatePlanSelection();
+}
+
+function updatePlanSelection() {
+  document.getElementById('plan-starter').classList.toggle('selected', selectedPlan === 'starter');
+  document.getElementById('plan-pro').classList.toggle('selected', selectedPlan === 'pro');
+}
+
+function toggleModalPricing() {
+  const isYearly = document.getElementById('modal-price-switch').checked;
+  selectedInterval = isYearly ? 'year' : 'month';
+  
+  const starterPrice = document.getElementById('starter-modal-price');
+  const proPrice = document.getElementById('pro-modal-price');
+  const labelMonthly = document.getElementById('modal-label-monthly');
+  const labelYearly = document.getElementById('modal-label-yearly');
+
+  if (isYearly) {
+    starterPrice.innerHTML = '€99<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/year</span>';
+    proPrice.innerHTML = '€199<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/year</span>';
+    labelYearly.style.color = 'var(--text-main)';
+    labelMonthly.style.color = 'var(--text-muted)';
+  } else {
+    starterPrice.innerHTML = '€9.99<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/mo</span>';
+    proPrice.innerHTML = '€19.99<span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/mo</span>';
+    labelMonthly.style.color = 'var(--text-main)';
+    labelYearly.style.color = 'var(--text-muted)';
+  }
+}
+
+async function handleSubscribe() {
+  const button = document.getElementById('subscribeButton');
+  button.disabled = true;
+  button.textContent = 'Creating checkout...';
+  
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      window.location.href = '/login.html?redirect=pricing';
+      return;
+    }
+
+    const response = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        tier: selectedPlan,
+        interval: selectedInterval
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    // Redirect to Stripe Checkout
+    const stripe = Stripe(data.publishableKey);
+    const { error } = await stripe.redirectToCheckout({
+      sessionId: data.sessionId
+    });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Subscription error:', error);
+    alert('Failed to start checkout: ' + error.message);
+    button.disabled = false;
+    button.textContent = 'Subscribe Now';
+  }
+}
+</script>

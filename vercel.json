@@ -4,6 +4,8 @@
   "installCommand": null,
   "framework": null,
   "outputDirectory": ".",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
       "source": "/manifest.json",
@@ -17,6 +19,21 @@
         { "key": "Service-Worker-Allowed", "value": "/" },
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
+    },
+    {
+      "source": "/(ingredients|ingredient-detail|recipes|recipe-detail|sales|expenses|expense-detail|operations|shopping-list|orders|order-detail|settings).html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, proxy-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "routes": [
@@ -35,6 +52,24 @@
     {
       "src": "/api/extract-url",
       "dest": "/api/extract-url.js"
+    },
+    {
+      "src": "/api/stripe-webhook",
+      "dest": "/api/stripe-webhook.js"
+    },
+    {
+      "src": "/api/create-checkout-session",
+      "dest": "/api/create-checkout-session.js"
+    },
+    {
+      "src": "/api/create-portal-session",
+      "dest": "/api/create-portal-session.js"
     }
-  ]
+  ],
+  "functions": {
+    "api/stripe-webhook.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 }

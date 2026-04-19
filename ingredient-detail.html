@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Ingredient Detail</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script>
@@ -899,14 +902,14 @@
 <body>
 
 <nav class="navbar">
-  <a href="operations.html" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
-    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
+    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
   </div>
   
   <div class="nav-actions">
@@ -958,15 +961,15 @@
       
       <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
         <div class="user-menu-header">
-          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-email" id="userMenuEmail">Loading...</div>
           <div class="user-menu-role">Free Plan</div>
         </div>
         <div class="user-menu-list">
-          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
-            <span>Upgrade to PRO</span>
+            <span>Update Plan</span>
           </div>
           <div class="user-menu-item" onclick="openSettings()">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1314,7 +1317,7 @@
     if (!id) {
       showAlert('No ingredient ID provided');
       setTimeout(() => {
-        window.location.href = `ingredients.html?view=${from}`;
+        window.location.href = `/ingredients?view=${from}`;
       }, 1500);
       return;
     }
@@ -1332,7 +1335,7 @@
       if (error || !data) {
         showAlert('Ingredient not found');
         setTimeout(() => {
-          window.location.href = `ingredients.html?view=${from}`;
+          window.location.href = `/ingredients?view=${from}`;
         }, 1500);
         return;
       }
@@ -1552,7 +1555,7 @@
         
         return `
           <div style="padding: 12px; background: var(--bg-inner); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" 
-               onclick="window.location.href='recipe-detail.html?id=${recipe.id}'"
+               onclick="window.location.href='/recipe-detail?id=${recipe.id}'"
                onmouseover="this.style.background='var(--bg-panel)'"
                onmouseout="this.style.background='var(--bg-inner)'">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2049,7 +2052,7 @@
         return `
           <div class="ingredient-item">
             <div class="ingredient-item-content">
-              <a href="ingredient-detail.html?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
+              <a href=""/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
               ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
               <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
             </div>
@@ -2522,7 +2525,7 @@
 
       if (data && data[0]) {
         // Redirect to the new ingredient
-        window.location.href = `ingredient-detail.html?id=${data[0].id}`;
+        window.location.href = `/ingredient-detail?id=${data[0].id}`;
       }
     } catch (err) {
       console.error('Error duplicating ingredient:', err);
@@ -2554,7 +2557,7 @@
   function goBackToList() {
     const urlParams = new URLSearchParams(window.location.search);
     const from = urlParams.get('from') || 'list';
-    window.location.href = `ingredients.html?view=${from}`;
+    window.location.href = `/ingredients?view=${from}`;
   }
 
   // Auto-update stats when inputs change
@@ -2746,7 +2749,7 @@
   }
 
   function openIngredient(ingredientId) {
-    window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+    window.location.href = `/ingredient-detail?id=${ingredientId}`;
   }
 
   async function restockIngredient(ingredientId, notificationId) {
@@ -2761,7 +2764,7 @@
         handleReorderClick();
       } else {
         // Navigate to the ingredient detail page with openReorder parameter
-        window.location.href = `ingredient-detail.html?id=${ingredientId}&openReorder=true`;
+        window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
       }
     } catch (error) {
       console.error('Error restocking ingredient:', error);
@@ -3264,33 +3267,32 @@ async function handleSwitchSignUp(e) {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>

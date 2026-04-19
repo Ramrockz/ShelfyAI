@@ -17,42 +17,66 @@ if (typeof window.supabaseClient === 'undefined') {
   } catch (error) {
     console.error('Failed to initialize Supabase:', error);
     // If Supabase fails to initialize, redirect to login
-    if (window.location.pathname.includes('.html') && !window.location.pathname.includes('login.html')) {
-      window.location.href = 'login.html';
+    if (!window.location.pathname.includes('/login') && window.location.pathname !== '/') {
+      window.location.href = '/login';
     }
   }
 }
 
 const supabaseClient = window.supabaseClient;
 
-// List of protected pages
+// List of protected pages (without .html extension to match clean URLs)
 const protectedPages = [
-  'ingredients.html',
-  'ingredient-detail.html',
-  'recipes.html',
-  'recipe-detail.html',
-  'sales.html',
-  'expenses.html',
-  'expense-detail.html',
-  'operations.html',
-  'shopping-list.html',
-  'orders.html',
-  'order-detail.html',
-  'settings.html'
+  'ingredients',
+  'ingredient-detail',
+  'recipes',
+  'recipe-detail',
+  'sales',
+  'expenses',
+  'expense-detail',
+  'operations',
+  'shopping-list',
+  'orders',
+  'order-detail',
+  'settings'
 ];
 
-// Get current page
-const currentPage = window.location.pathname.split('/').pop() || window.location.href.split('/').pop().split('?')[0];
+// Get current page (handle both clean URLs and .html URLs)
+let currentPage = window.location.pathname.split('/').pop() || window.location.href.split('/').pop().split('?')[0];
+// Remove .html extension if present
+currentPage = currentPage.replace('.html', '');
 
 console.log('Current page:', currentPage, 'Is protected:', protectedPages.includes(currentPage));
 
 // Logout function
 async function logout() {
-  // Clear cached user data
-  sessionStorage.removeItem('shelfy_user_email');
-  sessionStorage.removeItem('shelfy_user_avatar');
-  await supabaseClient.auth.signOut();
-  window.location.href = 'index.html';
+  try {
+    // Clear all cached user data
+    sessionStorage.clear();
+    localStorage.removeItem('shelfy_user_email');
+    localStorage.removeItem('shelfy_user_avatar');
+    
+    // Sign out from Supabase (this clears the session from localStorage)
+    await supabaseClient.auth.signOut();
+    
+    // Broadcast logout event to other tabs/windows
+    const channel = new BroadcastChannel('shelfy_auth');
+    channel.postMessage({ type: 'logout' });
+    channel.close();
+    
+    // Clear service worker cache to prevent serving cached protected pages
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    
+    // Force reload to clear any in-memory state
+    window.location.replace('/');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Even if there's an error, still redirect
+    window.location.replace('/');
+  }
 }
 
 // Get current user
@@ -113,60 +137,64 @@ async function initUserMenu() {
     const userEmailElement = document.getElementById('userMenuEmail');
     const userAvatar = document.getElementById('userAvatar');
     
-    // Immediately show cached data for instant load
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    console.log('initUserMenu: Starting...');
+    console.log('initUserMenu: userEmailElement exists:', !!userEmailElement);
+    console.log('initUserMenu: userAvatar exists:', !!userAvatar);
     
-    if (cachedEmail && userEmailElement) {
-      userEmailElement.textContent = cachedEmail;
-      
-      if (userAvatar) {
-        if (cachedAvatar && cachedAvatar !== 'null') {
-          userAvatar.style.backgroundImage = `url(${cachedAvatar})`;
-          userAvatar.style.backgroundSize = 'cover';
-          userAvatar.style.backgroundPosition = 'center';
-          userAvatar.textContent = '';
-        } else {
-          userAvatar.style.backgroundImage = '';
-          userAvatar.textContent = cachedEmail.charAt(0).toUpperCase();
-        }
-      }
-    }
-    
-    // Fetch fresh data in background
+    // Fetch user data
     const user = await getCurrentUser();
+    
+    console.log('initUserMenu: User data:', user);
+    
+    if (!user ||!user.email) {
+      console.error('No user or user email found in initUserMenu');
+      if (userEmailElement) {
+        userEmailElement.textContent = 'Not logged in';
+      }
+      return;
+    }
+
+    console.log('initUserMenu: User email:', user.email);
 
     // Guarantee a profiles row exists so FK constraints on other tables don't fail
     await ensureProfileExists(user);
     
-    if (user && userEmailElement) {
-      // Update with fresh data
-      userEmailElement.textContent = user.email;
+    if (userEmailElement) {
+      // Force update with user data - clear first then set
+      userEmailElement.textContent = '';
+      setTimeout(() => {
+        userEmailElement.textContent = user.email;
+        console.log('initUserMenu: Email set to:', user.email);
+      }, 0);
       sessionStorage.setItem('shelfy_user_email', user.email);
+    } else {
+      console.error('initUserMenu: userMenuEmail element not found in DOM');
+    }
       
-      // Load avatar from database
-      const { data: settings } = await supabaseClient
-        .from('user_settings')
-        .select('avatar_url')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (userAvatar) {
-        if (settings?.avatar_url) {
-          // Show avatar image
-          userAvatar.style.backgroundImage = `url(${settings.avatar_url})`;
-          userAvatar.style.backgroundSize = 'cover';
-          userAvatar.style.backgroundPosition = 'center';
-          userAvatar.textContent = '';
-          sessionStorage.setItem('shelfy_user_avatar', settings.avatar_url);
-        } else {
-          // Show initial
-          userAvatar.style.backgroundImage = '';
-          userAvatar.textContent = user.email.charAt(0).toUpperCase();
-          sessionStorage.setItem('shelfy_user_avatar', 'null');
-        }
+    // Load avatar from database
+    const { data: settings } = await supabaseClient
+      .from('user_settings')
+      .select('avatar_url')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (userAvatar) {
+      if (settings?.avatar_url) {
+        // Show avatar image
+        userAvatar.style.backgroundImage = `url(${settings.avatar_url})`;
+        userAvatar.style.backgroundSize = 'cover';
+        userAvatar.style.backgroundPosition = 'center';
+        userAvatar.textContent = '';
+        sessionStorage.setItem('shelfy_user_avatar', settings.avatar_url);
+      } else {
+        // Show initial
+        userAvatar.style.backgroundImage = '';
+        userAvatar.textContent = user.email.charAt(0).toUpperCase();
+        sessionStorage.setItem('shelfy_user_avatar', 'null');
       }
     }
+    
+    console.log('initUserMenu: Completed successfully');
   } catch (error) {
     console.error('Error initializing user menu:', error);
   }
@@ -174,7 +202,7 @@ async function initUserMenu() {
 
 // Settings function (placeholder)
 function openSettings() {
-  window.location.href = 'settings.html';
+  window.location.href = '/settings';
 }
 
 // Switch account function (placeholder)
@@ -197,33 +225,124 @@ async function switchAccount() {
       // Ensure profile row exists for the newly authenticated user
       await ensureProfileExists(session.user);
       // Redirect to the app (preserve any ?return= param if present)
-      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
       window.location.replace(returnUrl);
     }
   });
 })();
 
+// Listen for logout events from other tabs/windows
+const authChannel = new BroadcastChannel('shelfy_auth');
+authChannel.onmessage = (event) => {
+  if (event.data.type === 'logout') {
+    // Another tab logged out, clean up and redirect
+    sessionStorage.clear();
+    window.location.replace('/');
+  }
+};
+
+// Listen for Supabase auth state changes (handles cross-tab logout)
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    // User signed out, redirect to home if on protected page
+    if (protectedPages.includes(currentPage)) {
+      sessionStorage.clear();
+      window.location.replace('/');
+    }
+  }
+});
+
 // If on a protected page, hide content until auth is verified
 if (protectedPages.includes(currentPage)) {
-  // Check authentication
-  supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
-    console.log('Session check result:', session ? 'Authenticated' : 'Not authenticated');
-    if (!session) {
-      // Not authenticated, redirect to login
-      window.location.href = `login.html?return=${currentPage}`;
-    } else {
-      // Authenticated, initialize user menu first
-      await initUserMenu();
-      // Then show content
+  // Safety fallback: always show page after 3 seconds to prevent permanent blank screen
+  setTimeout(() => {
+    if (document.documentElement.style.visibility === 'hidden') {
+      console.warn('Forcing page visibility after timeout');
       document.documentElement.style.visibility = 'visible';
     }
-  }).catch((error) => {
-    console.error('Auth check failed:', error);
-    // Error checking auth, redirect to login
-    window.location.href = `login.html?return=${currentPage}`;
-  });
+  }, 3000);
+  // Check if this is an OAuth callback (hash contains access_token)
+  const isOAuthCallback = window.location.hash.includes('access_token=');
+  
+  if (isOAuthCallback) {
+    // OAuth callback - wait for session to be established from hash parameters
+    console.log('OAuth callback detected, waiting for session establishment...');
+    
+    // Give Supabase time to process the hash and establish the session
+    setTimeout(async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session && session.user) {
+        console.log('OAuth session established for user:', session.user.email);
+        await ensureProfileExists(session.user);
+        await initUserMenu();
+        document.documentElement.style.visibility = 'visible';
+        // Clear the hash from URL for cleaner appearance
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else {
+        // Session establishment failed
+        console.error('OAuth callback failed to establish session');
+        window.location.replace(`/login?return=${currentPage}`);
+      }
+    }, 1500); // Wait 1.5 seconds for session to be processed from hash
+  } else {
+    // Not an OAuth callback - do normal auth check
+    // Supabase v2 stores session in localStorage with key format: sb-{project-ref}-auth-token
+    const hasSessionData = localStorage.getItem('sb-qakldmfmdlwvehseaksy-auth-token');
+    
+    if (!hasSessionData) {
+      // No session data at all, immediately redirect (prevents flash)
+      window.location.replace(`/login?return=${currentPage}`);
+    } else {
+      // Session data exists, verify it's valid
+      supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
+        console.log('Session check result:', session ? 'Authenticated' : 'Not authenticated');
+        if (!session) {
+          // Not authenticated, redirect to login (use replace to prevent back button)
+          window.location.replace(`/login?return=${currentPage}`);
+        } else {
+          // Authenticated, initialize user menu first
+          await initUserMenu();
+          // Then show content
+          document.documentElement.style.visibility = 'visible';
+          
+          // Periodically validate session (every 30 seconds)
+          // This helps catch session expiry and cross-device logouts
+          setInterval(async () => {
+            const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
+            if (!currentSession) {
+              // Session expired or user logged out elsewhere
+              sessionStorage.clear();
+              window.location.replace('/login?return=' + currentPage);
+            }
+          }, 30000); // Check every 30 seconds
+        }
+      }).catch((error) => {
+        console.error('Auth check failed:', error);
+        // Error checking auth, redirect to login (use replace to prevent back button)
+        window.location.replace(`/login?return=${currentPage}`);
+      });
+    }
+  }
 } else {
   // Not a protected page, show it
   console.log('Not a protected page, showing content');
   document.documentElement.style.visibility = 'visible';
 }
+
+// Fix footer layout on mobile - override inline styles
+function fixFooterOnMobile() {
+  if (window.innerWidth <= 768) {
+    const footerGrid = document.querySelector('.footer-grid');
+    if (footerGrid) {
+      footerGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      footerGrid.style.gap = '10px';
+    }
+  }
+}
+// Run on load and resize
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', fixFooterOnMobile);
+} else {
+  fixFooterOnMobile();
+}
+window.addEventListener('resize', fixFooterOnMobile);

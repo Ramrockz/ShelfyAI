@@ -195,13 +195,13 @@
 <body>
 
 <nav class="navbar">
-  <a href="index.html" class="logo">ShelfyAI</a>
+  <a href="/" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="index.html" class="nav-link" data-page="index">Home</a>
-    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
-    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
-    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/sandbox" class="nav-link" data-page="sandbox">Playground</a>
   </div>
   
   <div class="nav-actions">
@@ -217,7 +217,7 @@
         </svg>
       </span>
     </div>
-    <a href="login.html" class="btn-signin" id="authButton">Log In</a>
+    <a href="/login" class="btn-signin" id="authButton">Log In</a>
     <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -230,7 +230,7 @@
     <div class="sidebar-section">
       <div class="sidebar-title">Getting Started</div>
       <a href="#quick-start" class="sidebar-link active">Quick Start</a>
-      <a href="#installation" class="sidebar-link">Installation</a>
+      <a href="#installation" class="sidebar-link">Getting Started</a>
       <a href="#authentication" class="sidebar-link">Authentication</a>
     </div>
 
@@ -241,43 +241,33 @@
       <a href="#orders" class="sidebar-link">Order Processing</a>
       <a href="#expenses" class="sidebar-link">Expense Tracking</a>
     </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-title">Advanced</div>
-      <a href="#ai-vision" class="sidebar-link">AI Vision Scanning</a>
-      <a href="#analytics" class="sidebar-link">Analytics & Reports</a>
-      <a href="#integrations" class="sidebar-link">Integrations</a>
-    </div>
   </aside>
 
   <!-- Main Content -->
   <main class="docs-content">
     <h1>Quick Start Guide</h1>
-    <p>Welcome to ShelfyAI! This guide will help you get started with automated inventory management using AI-powered tracking and computer vision.</p>
+    <p>Welcome to ShelfyAI! This guide will help you get started with inventory management for makers and small businesses.</p>
 
     <h2 id="quick-start">What is ShelfyAI?</h2>
-    <p>ShelfyAI is an intelligent inventory management system designed for makers, small businesses, and manufacturers. It uses computer vision and automated workflows to track materials, manage recipes, process orders, and monitor expenses—all in real time.</p>
+    <p>ShelfyAI is an inventory management system designed for makers, small businesses, and manufacturers. Track materials, manage recipes, process orders, and monitor expenses—all in one place.</p>
 
     <h3>Key Features</h3>
     <ul>
-      <li><strong>AI Vision Scanning:</strong> Automatically detect and count inventory items using your camera</li>
-      <li><strong>Recipe Composition:</strong> Define product recipes and track component usage</li>
-      <li><strong>Real-time Stock Alerts:</strong> Get notified when materials are running low</li>
-      <li><strong>Cost Intelligence:</strong> Automatic COGS calculation and profit margin analysis</li>
-      <li><strong>Multi-channel Orders:</strong> Manage orders from Etsy, Shopify, and more in one place</li>
+      <li><strong>Ingredient Tracking:</strong> Monitor all your raw materials with real-time stock levels</li>
+      <li><strong>Recipe Management:</strong> Define product recipes and automatically calculate costs</li>
+      <li><strong>Low Stock Alerts:</strong> Get notified when materials drop below reorder levels</li>
+      <li><strong>Order Processing:</strong> Track orders manually or extract data from URLs using AI</li>
+      <li><strong>Expense Tracking:</strong> Upload receipts and let AI extract the data automatically</li>
+      <li><strong>Cost & Profit Analysis:</strong> Automatic material cost calculation and profit tracking</li>
     </ul>
 
     <h2 id="installation">Getting Started</h2>
     
     <h3>1. Create Your Account</h3>
-    <p>Sign up for a free ShelfyAI account at <a href="login.html" style="color: var(--accent);">shelfy-main.vercel.app/login</a>. No credit card required to start.</p>
-
-    <div class="note-box">
-      <p><strong>💡 Tip:</strong> Start with the free tier to track unlimited ingredients and 3 AI vision scans per month.</p>
-    </div>
+    <p>Sign up for a free ShelfyAI account at <a href="/login" style="color: var(--accent);">shelfyai.com/login</a>. You can use email/password or sign in with Google.</p>
 
     <h3>2. Add Your First Ingredient</h3>
-    <p>Navigate to the Ingredients page and click "Add Ingredient". You can manually enter details or use AI Vision to automatically detect and count items.</p>
+    <p>Navigate to the <strong>Ingredients</strong> page and click "+ New Ingredient" to add your first raw material.</p>
 
     <div class="code-block">
       <code>Example Ingredient Entry:
@@ -285,77 +275,116 @@ Name: Oak Planks
 Quantity: 50
 Unit: pieces
 Cost per Unit: $5.50
-Supplier: Local Lumber Co.
-Reorder Level: 10 pieces</code>
+Reorder Level: 10</code>
     </div>
 
-    <h3>3. Use AI Vision Scanning</h3>
-    <p>Point your camera at your inventory and let ShelfyAI automatically count and identify items:</p>
-    <ol>
-      <li>Click the "Scan with AI" button on the Ingredients page</li>
-      <li>Grant camera permissions when prompted</li>
-      <li>Position items clearly in the camera view</li>
-      <li>ShelfyAI will detect and count items in real-time</li>
-      <li>Review and confirm the detected quantities</li>
-    </ol>
+    <p>When your stock drops to or below the reorder level, you'll automatically receive a notification.</p>
 
     <h2 id="authentication">Authentication</h2>
-    <p>ShelfyAI uses secure email and password authentication. Your data is encrypted and stored securely using Supabase.</p>
+    <p>ShelfyAI supports secure authentication via:</p>
+    <ul>
+      <li>Email and password</li>
+      <li>Google OAuth</li>
+    </ul>
+    <p>All data is encrypted and securely stored.</p>
 
     <h2 id="ingredients">Ingredient Tracking</h2>
-    <p>Track all your raw materials with real-time stock levels. Set reorder points to receive alerts when supplies are running low.</p>
-
-    <h3>Features:</h3>
+    <p>Track all your raw materials with real-time stock levels. Each ingredient includes:</p>
+    
+    <h3>Key Fields:</h3>
     <ul>
-      <li>Automatic low-stock alerts</li>
-      <li>Historical cost tracking</li>
-      <li>Supplier management</li>
-      <li>Batch and expiry tracking</li>
+      <li><strong>Name:</strong> Material identifier</li>
+      <li><strong>Quantity:</strong> Current stock level</li>
+      <li><strong>Unit:</strong> Measurement unit (pieces, kg, liters, etc.)</li>
+      <li><strong>Cost per Unit:</strong> Material cost for profit calculations</li>
+      <li><strong>Reorder Level:</strong> Minimum stock threshold for alerts</li>
+      <li><strong>Notes:</strong> Additional information or supplier details</li>
+    </ul>
+
+    <h3>Stock Management:</h3>
+    <ul>
+      <li>Manually adjust quantities up or down</li>
+      <li>Receive automatic low-stock notifications</li>
+      <li>Track when recipes consume ingredients</li>
     </ul>
 
     <h2 id="recipes">Recipe Management</h2>
-    <p>Create product recipes by defining which ingredients are needed and in what quantities. ShelfyAI automatically:</p>
+    <p>Create product recipes by specifying which ingredients and quantities are needed. ShelfyAI automatically:</p>
     <ul>
-      <li>Calculates total material costs</li>
-      <li>Deducts ingredients when recipes are produced</li>
-      <li>Shows which recipes can be made with current stock</li>
-      <li>Computes profit margins</li>
+      <li>Calculates total material costs based on ingredient prices</li>
+      <li>Shows profit margin when you set a retail price</li>
+      <li>Indicates which recipes can be made with current inventory</li>
+      <li>Deducts ingredients when you process orders containing recipes</li>
     </ul>
 
-    <h2 id="orders">Order Processing</h2>
-    <p>Manage customer orders from multiple sales channels in one unified dashboard. Track order status from placement to fulfillment.</p>
-
-    <h2 id="expenses">Expense Tracking</h2>
-    <p>Monitor all business expenses automatically. Categorize costs and maintain accurate financial records for better decision-making.</p>
-
-    <h2 id="ai-vision">AI Vision Scanning</h2>
-    <p>The AI Vision feature uses computer vision to automatically detect and count inventory items, eliminating manual data entry.</p>
+    <h3>Creating a Recipe:</h3>
+    <ol>
+      <li>Go to the <strong>Recipes</strong> page</li>
+      <li>Click "+ New Recipe"</li>
+      <li>Enter recipe name and optional description</li>
+      <li>Add ingredients with required quantities</li>
+      <li>Set your retail price (optional)</li>
+      <li>Save to start using the recipe in orders</li>
+    </ol>
 
     <div class="note-box">
-      <p><strong>📸 Pro Tip:</strong> For best results, ensure good lighting and position items clearly in the camera view.</p>
+      <p><strong>💡 Pro Tip:</strong> Set retail prices on recipes to track profit margins on each product.</p>
     </div>
 
-    <h2 id="analytics">Analytics & Reports</h2>
-    <p>Export detailed reports in PDF or CSV format. Track metrics like inventory turnover, profit margins, and expense trends over time.</p>
-
-    <h2 id="integrations">Integrations</h2>
-    <p>Connect ShelfyAI with your existing tools:</p>
+    <h2 id="orders">Order Processing</h2>
+    <p>Manage customer orders from the <strong>Orders</strong> page. You can:</p>
+    
+    <h3>Manual Entry:</h3>
     <ul>
-      <li>Etsy and Shopify for order import</li>
-      <li>QuickBooks for accounting</li>
-      <li>Google Sheets for custom reporting</li>
+      <li>Create orders by selecting recipes</li>
+      <li>Set quantities and customer details</li>
+      <li>Track order status (pending, fulfilled, shipped)</li>
     </ul>
 
-    <h2>Next Steps</h2>
-    <p>Ready to dive deeper? Check out:</p>
+    <h3>AI-Powered Import:</h3>
+    <p>ShelfyAI can extract order data automatically:</p>
     <ul>
-      <li><a href="sandbox.html" style="color: var(--accent);">Try the Playground</a> - Test features without creating an account</li>
-      <li><a href="pricing.html" style="color: var(--accent);">View Pricing</a> - Upgrade to Pro for unlimited AI scans</li>
-      <li><a href="faq.html" style="color: var(--accent);">Read the FAQ</a> - Common questions answered</li>
+      <li>Paste an order confirmation URL (e.g., from Etsy or Shopify)</li>
+      <li>AI extracts customer details, items, and amounts</li>
+      <li>Review and confirm before saving</li>
+    </ul>
+
+    <h2 id="expenses">Expense Tracking</h2>
+    <p>Track business expenses on the <strong>Expenses</strong> page:</p>
+
+    <h3>Manual Entry:</h3>
+    <p>Add expenses with amount, date, category, and description.</p>
+
+    <h3>AI Receipt Upload:</h3>
+    <ol>
+      <li>Click "Upload Receipt"</li>
+      <li>Take a photo or upload an image of your receipt</li>
+      <li>AI automatically extracts date, amount, vendor, and items</li>
+      <li>Review and save the expense</li>
+    </ol>
+
+    <div class="note-box">
+      <p><strong>📸 Tip:</strong> For best results with receipt scanning, ensure the image is clear and well-lit.</p>
+    </div>
+
+    <h2>Notifications</h2>
+    <p>ShelfyAI sends automatic notifications when:</p>
+    <ul>
+      <li>An ingredient drops to or below its reorder level</li>
+      <li>You have pending tasks or alerts</li>
+    </ul>
+    <p>View all notifications by clicking the bell icon in the top navigation.</p>
+
+    <h2>Next Steps</h2>
+    <p>Ready to explore more?</p>
+    <ul>
+      <li><a href="/sandbox" style="color: var(--accent);">Try the Playground</a> - Test features before creating an account</li>
+      <li><a href="/pricing" style="color: var(--accent);">View Pricing</a> - See plan options and features</li>
+      <li><a href="/faq" style="color: var(--accent);">Read the FAQ</a> - Common questions answered</li>
     </ul>
 
     <p style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
-      Questions? <a href="mailto:support@shelfyai.com" style="color: var(--accent);">Contact Support</a>
+      Questions? Feedback? We'd love to hear from you!
     </p>
   </main>
 </div>
@@ -395,33 +424,32 @@ Reorder Level: 10 pieces</code>
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>

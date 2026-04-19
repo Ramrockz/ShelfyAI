@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Ingredients Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script>
@@ -129,14 +132,27 @@
 
   /* ---------- LIST VIEW (TABLE) ---------- */
   .table-container { background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 900px; }
-  th { padding: 12px 16px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); text-align: left; }
+  table { width: 100%; border-collapse: collapse; min-width: 900px; table-layout: fixed; }
+  th { padding: 12px 16px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); text-align: left; position: relative; resize: horizontal; overflow: auto; }
   th.sortable { cursor: pointer; user-select: none; transition: all 0.2s; }
   th.sortable:hover { color: var(--accent); background: rgba(255,255,255,0.02); }
   th.sortable::after { content: '⇅'; margin-left: 6px; opacity: 0.3; font-size: 12px; }
   th.sortable.asc::after { content: '▲'; opacity: 1; color: var(--accent); }
   th.sortable.desc::after { content: '▼'; opacity: 1; color: var(--accent); }
-  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  .ingredient-name-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .ingredient-name-cell strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   
   .stepper { display: flex; align-items: center; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; width: fit-content; }
   .stepper button { background: transparent; border: none; color: var(--text-main); width: 28px; height: 28px; cursor: pointer; font-weight: 700; }
@@ -946,14 +962,14 @@
 <body>
 
 <nav class="navbar">
-  <a href="operations.html" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
-    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
   </div>
   
   <div class="nav-actions">
@@ -1005,15 +1021,15 @@
       
       <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
         <div class="user-menu-header">
-          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-email" id="userMenuEmail">Loading...</div>
           <div class="user-menu-role">Free Plan</div>
         </div>
         <div class="user-menu-list">
-          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
-            <span>Upgrade to PRO</span>
+            <span>Update Plan</span>
           </div>
           <div class="user-menu-item" onclick="openSettings()">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1089,7 +1105,7 @@
 
   <main class="main" style="visibility: hidden;">
     <!-- Mobile Search Bar (visible only on mobile) -->
-    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="render()" />
+    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="cardsToShow = 10; render()" />
     
     <!-- Mobile Type Filters (visible only on mobile) -->
     <div class="mobile-type-filters">
@@ -1113,7 +1129,7 @@
         </div>
         <div id="filterBadges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;"></div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="cardsToShow = 10; render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1122,13 +1138,13 @@
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th class="sortable" onclick="sortTable('name')">Name</th>
-            <th class="sortable" onclick="sortTable('type')">Type</th>
-            <th class="sortable" onclick="sortTable('category')">Category</th>
-            <th>Attributes</th>
-            <th class="sortable" onclick="sortTable('qty')">Quantity</th>
-            <th>Action</th>
+            <th style="width: 50px;">#</th>
+            <th class="sortable" onclick="sortTable('name')" style="width: 30%;">Name</th>
+            <th class="sortable" onclick="sortTable('type')" style="width: 12%;">Type</th>
+            <th class="sortable" onclick="sortTable('category')" style="width: 15%;">Category</th>
+            <th style="width: 20%;">Attributes</th>
+            <th class="sortable" onclick="sortTable('qty')" style="width: 10%;">Quantity</th>
+            <th style="width: 13%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1468,6 +1484,7 @@ let sortBy = null;
 let sortOrder = 'asc';
 let listCurrentPage = 1;
 let itemsPerPage = 10;
+let cardsToShow = 10;
 let confirmResolver = null;
 let uploadedFile = null;
 
@@ -1608,20 +1625,24 @@ async function checkAIUsage() {
 
     const tier = settings?.tier || 'free';
     const limits = {
-      free: { ingredients: 5 },
-      starter: { ingredients: 25 },
-      pro: { ingredients: 50 }
+      free: { ingredients: 25 },
+      starter: { ingredients: 50 },
+      pro: { ingredients: 100 }
     };
 
-    const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await window.supabaseClient
+    // Get current month's usage
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    
+    const { data: usageRecords } = await window.supabaseClient
       .from('ai_usage_tracking')
       .select('ingredient_count')
       .eq('user_id', session.user.id)
-      .eq('date', today)
-      .single();
+      .gte('date', `${yearMonth}-01`)
+      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const used = usage?.ingredient_count || 0;
+    const used = usageRecords ? usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) : 0;
     const limit = limits[tier].ingredients;
 
     aiUsageStatus = {
@@ -1677,7 +1698,7 @@ function closeMethodModal() {
 function selectMethod(method) {
   // Check if AI method and limit reached
   if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
-    alert(`Daily limit reached: You've used all ${aiUsageStatus.limit} AI extractions for today. Limit resets at midnight. Upgrade your plan for more extractions.`);
+    alert(`Monthly limit reached: You've used all ${aiUsageStatus.limit} AI extractions for this month. Limit resets on the 1st of next month. Upgrade your plan for more extractions.`);
     return;
   }
   
@@ -2453,6 +2474,11 @@ function switchView(view) {
   currentView = view;
   localStorage.setItem('ingredientsView', view); // Save view preference
   
+  // Reset cards to show when switching to recent view
+  if (view === 'recent') {
+    cardsToShow = 10;
+  }
+  
   // Update URL to reflect current view (remove query parameter to rely on localStorage)
   const url = new URL(window.location);
   url.searchParams.delete('view');
@@ -2892,6 +2918,7 @@ function applyInventoryFilter(filterType) {
   window.inventoryFilteredList = filteredIngredients;
   window.inventoryFilterType = filterType;
   
+  cardsToShow = 10;
   render();
 }
 
@@ -3041,48 +3068,56 @@ function addAttributeFilter(value, key = null) {
   }
   
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function removeAttributeFilter(key) {
   delete activeAttributeFilters[key];
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function addCategoryFilter(value) {
   activeCategoryFilter = value;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function removeCategoryFilter() {
   activeCategoryFilter = null;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function addStatusFilter(value) {
   activeStatusFilter = value;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function removeStatusFilter() {
   activeStatusFilter = null;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function addDeliveryFilter(value) {
   activeDeliveryFilter = value;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
 function removeDeliveryFilter() {
   activeDeliveryFilter = null;
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
@@ -3094,6 +3129,7 @@ function addTypeFilter(value) {
     activeTypeFilter = value;
   }
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
@@ -3106,6 +3142,7 @@ function removeTypeFilter() {
   currentNavData = {};
   
   listCurrentPage = 1;
+  cardsToShow = 10;
   render();
 }
 
@@ -3189,6 +3226,7 @@ function renderFilterBadges() {
 function removeInventoryFilter() {
   window.inventoryFilteredList = null;
   window.inventoryFilterType = null;
+  cardsToShow = 10;
   render();
 }
 
@@ -3254,7 +3292,7 @@ function renderRecent(data) {
     attributesText = attributesText ? categoryBadge + ' • ' + attributesText : categoryBadge;
     return `<div class="card-small">
         <h4>
-          <span class="name" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
+          <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
           <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
         </h4>
         ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
@@ -3271,9 +3309,11 @@ function renderRecent(data) {
   const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
 
   const favData = data.filter(i => i.is_favorite);
-  const otherData = data.filter(i => !i.is_favorite).slice(0, 10);
+  const allOtherData = data.filter(i => !i.is_favorite);
+  const otherData = allOtherData.slice(0, cardsToShow);
+  const hasMoreCards = allOtherData.length > cardsToShow;
 
-  container.innerHTML = `<div style="grid-column: 1/-1; font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px;">Showing ${data.length} ingredients</div>`;
+  container.innerHTML = '';
 
   if (favData.length > 0) {
     container.innerHTML += sectionLbl('Favorites');
@@ -3285,6 +3325,20 @@ function renderRecent(data) {
   } else {
     otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
+  
+  // Add "Show More" button if there are more cards to display
+  if (hasMoreCards) {
+    container.innerHTML += `
+      <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
+        <button onclick="showMoreCards()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOtherData.length - cardsToShow} remaining)</button>
+      </div>
+    `;
+  }
+}
+
+function showMoreCards() {
+  cardsToShow += 10;
+  render();
 }
 
 function renderList(data) {
@@ -3387,10 +3441,10 @@ function renderList(data) {
     tbody.innerHTML += `
       <tr>
         <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
-        <td>
+        <td class="ingredient-name-cell">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
-            <strong style="cursor: pointer;" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
+            <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer; flex-shrink: 0;">${starIcon}</span>
+            <strong style="cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
           </div>
         </td>
         <td><span style="color:var(--text-main); font-weight: 500;">${escapeHtml(i.type || 'Production')}</span></td>
@@ -3533,7 +3587,7 @@ function renderKanban(data) {
         elem.innerHTML += `<div class="kanban-item" draggable="true" ondragstart="dragStart(event, '${i.id}')" data-id="${i.id}">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
             <span class="star-icon ${starClass}" data-id="${i.id}" style="font-size: 16px; cursor: pointer;">${starIcon}</span>
-            <h5 style="flex: 1; margin: 0; cursor: pointer;" onclick="window.location.href='ingredient-detail.html?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('ingredient-detail.html?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</h5>
+            <h5 style="flex: 1; margin: 0; cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</h5>
           </div>
           <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Qty: ${i.qty}</div>
           <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${attributesText}</div>
@@ -3666,7 +3720,7 @@ function changePage(page) {
 }
 
 function editIngredient(id) {
-  window.location.href = `ingredient-detail.html?id=${id}&from=${currentView}`;
+  window.location.href = `/ingredient-detail?id=${id}&from=${currentView}`;
 }
 
 async function deleteIng(id) { 
@@ -4120,6 +4174,7 @@ function sortTable(column) {
     sortBy = column;
     sortOrder = 'asc';
   }
+  cardsToShow = 10;
   render();
 }
 
@@ -4644,33 +4699,32 @@ async function handleSwitchSignUp(e) {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>
@@ -4761,7 +4815,7 @@ async function handleSwitchSignUp(e) {
 
   function goToIngredientDetail() {
     if (_restockCurrentIngredientId) {
-      window.location.href = `ingredient-detail.html?id=${_restockCurrentIngredientId}`;
+      window.location.href = `/ingredient-detail?id=${_restockCurrentIngredientId}`;
     }
     closeRestockNoSourceModal();
   }
@@ -4824,7 +4878,7 @@ async function handleSwitchSignUp(e) {
 
         return `<div class="restock-ingredient-item">
           <div class="restock-ingredient-item-content">
-            <a href="ingredient-detail.html?id=${ing.id}" target="_blank" class="restock-ingredient-item-title">${escapeHtml(ing.name)}</a>
+            <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="restock-ingredient-item-title">${escapeHtml(ing.name)}</a>
             ${attrs ? `<div class="restock-ingredient-item-attrs">${escapeHtml(attrs)}</div>` : ''}
             <div class="restock-ingredient-item-qty">${qty} ${ing.unit || 'units'}</div>
           </div>

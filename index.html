@@ -195,7 +195,10 @@
     /* Hide the heavy kanban layer on mobile */
     .kanban-window { display: none !important; }
 
-    /* Simplify card column */
+    /* Hide tab description on mobile */
+    .tab-description { display: none !important; }
+
+    /* Simplify card column - show only Recent Detection window */
     .card-column {
       width: 100% !important;
       margin-left: 0;
@@ -207,8 +210,7 @@
       gap: 12px;
     }
     .window-mock,
-    .window-recent,
-    .window-operational {
+    .window-recent {
       position: relative !important;
       width: 100% !important;
       left: 0 !important;
@@ -216,6 +218,9 @@
       transform: none !important;
       margin-bottom: 0;
     }
+    /* Hide operational insight window on mobile */
+    .window-operational { display: none !important; }
+    
     .stack-window { border-radius: 14px; }
     .insight-table { font-size: 13px; }
     .insight-table td, .insight-table th { padding: 8px 4px; }
@@ -238,13 +243,13 @@
 <body>
 
 <nav class="navbar">
-  <a href="index.html" class="logo">ShelfyAI</a>
+  <a href="/" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="index.html" class="nav-link" data-page="index">Home</a>
-    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
-    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
-    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/sandbox" class="nav-link" data-page="sandbox">Playground</a>
   </div>
   
   <div class="nav-actions">
@@ -260,7 +265,7 @@
         </svg>
       </span>
     </div>
-    <a href="login.html" class="btn-signin" id="authButton">Log In</a>
+    <a href="/login" class="btn-signin" id="authButton">Log In</a>
     <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -269,23 +274,23 @@
 
 <section class="section-container hero">
   <div class="hero-text">
-    <h1>AI-powered inventory,<br>from stock to output</h1>
-    <p class="sub">Eliminate manual logging forever. ShelfyAI uses computer vision and automated recipes to track components in real time.</p>
+    <h1>Never worry about inventory again</h1>
+    <p class="sub">Keeping your stock up to date was never easier. Gone are the days of manual tracking and overspending on refilling.</p>
     <div class="cta-group">
       <button class="btn btn-primary" onclick="startTutorial()">Get Started</button>
-      <a href="login.html" class="btn btn-secondary">Sign up</a>
+      <a href="/login" class="btn btn-secondary">Sign up</a>
     </div>
   </div>
 
   <div class="panel">
     <div class="tabs">
-      <div class="tab active" onclick="setTab('ingredients', this)">Ingredients</div>
-      <div class="tab" onclick="setTab('recipes', this)">Recipes</div>
-      <div class="tab" onclick="setTab('orders', this)">Orders</div>
-      <div class="tab" onclick="setTab('expenses', this)">Expenses</div>
+      <div class="tab active" onclick="manualTabClick('ingredients', this)">Ingredients</div>
+      <div class="tab" onclick="manualTabClick('recipes', this)">Recipes</div>
+      <div class="tab" onclick="manualTabClick('orders', this)">Orders</div>
+      <div class="tab" onclick="manualTabClick('expenses', this)">Expenses</div>
     </div>
 
-    <div class="tab-description" id="tabDescription">Track and monitor your raw materials with real-time stock levels and automatic alerts.</div>
+    <div class="tab-description" id="tabDescription">Create and monitor your raw materials effortlessly</div>
 
     <div class="insights-stage" id="panel-stage">
       <div class="window-mock kanban-window" id="kanbanLayer"></div>
@@ -308,7 +313,7 @@
 <script>
 const data = {
   ingredients: {
-    description: "Track and monitor your raw materials with real-time stock levels and automatic alerts.",
+    description: "Create and monitor your raw materials effortlessly",
     thumb: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?q=80&w=200",
     recent: { name: "M8 Steel Bolts", meta: "482 Units Detected" },
     opHeader: "Stock Status",
@@ -320,7 +325,7 @@ const data = {
     ]
   },
   recipes: {
-    description: "Manage production recipes, calculate profitability, and optimize your manufacturing workflow.",
+    description: "Add materials to form your final product once and use it for inventory calculation",
     thumb: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=200",
     recent: { name: "Wooden Box", meta: "Batch Ready for Assembly" },
     opHeader: "Recipe Production",
@@ -332,7 +337,7 @@ const data = {
     ]
   },
   orders: {
-    description: "Process and fulfill customer orders from multiple sales channels in one unified dashboard.",
+    description: "Process and track your order to decrease your inventory and track revenue",
     thumb: "https://images.unsplash.com/photo-1585079542156-2755d9c8a094?q=80&w=200",
     recent: { name: "Order #48291", meta: "Etsy Store • Priority 1" },
     opHeader: "Active Orders",
@@ -344,7 +349,7 @@ const data = {
     ]
   },
   expenses: {
-    description: "Monitor business expenses, categorize costs, and maintain accurate financial records automatically.",
+    description: "Process and track your expenses to increase your inventory and track revenue",
     thumb: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=200",
     recent: { name: "Material Cost", meta: "$284.50 • Oak Planks Purchase" },
     opHeader: "Recent Expenses",
@@ -407,6 +412,33 @@ function setTab(key, el) {
 }
 
 setTab('ingredients', document.querySelector('.tab'));
+
+// Auto-rotate tabs every 3 seconds
+const tabOrder = ['ingredients', 'recipes', 'orders', 'expenses'];
+let currentTabIndex = 0;
+let autoRotateInterval = null;
+
+// Function to handle manual tab clicks
+function manualTabClick(key, el) {
+  // Stop auto-rotation when user manually clicks
+  if (autoRotateInterval) {
+    clearInterval(autoRotateInterval);
+    autoRotateInterval = null;
+  }
+  setTab(key, el);
+}
+
+// Start auto-rotation
+autoRotateInterval = setInterval(() => {
+  currentTabIndex = (currentTabIndex + 1) % tabOrder.length;
+  const nextTab = tabOrder[currentTabIndex];
+  const tabElement = Array.from(document.querySelectorAll('.tab')).find(
+    tab => tab.textContent.toLowerCase() === nextTab
+  );
+  if (tabElement) {
+    setTab(nextTab, tabElement);
+  }
+}, 3000);
 
 // Auto-highlight active page in navigation
 (function() {
@@ -556,33 +588,32 @@ async function submitFeedback() {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>
@@ -2181,8 +2212,8 @@ const _tutSteps = [
           keeping your inventory up to date was never more intuitive and easy.
         </p>
         <div class="t-final-cta">
-          <a href="login.html" class="t-cta-primary">🚀 Sign Up Free</a>
-          <a href="login.html" class="t-cta-secondary" onclick="closeTutorial()">Maybe later</a>
+          <a href="/login" class="t-cta-primary">🚀 Sign Up Free</a>
+          <a href="/login" class="t-cta-secondary" onclick="closeTutorial()">Maybe later</a>
         </div>
       `;
     }

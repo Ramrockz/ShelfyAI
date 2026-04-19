@@ -103,23 +103,27 @@ module.exports = async (req, res) => {
 
     const tier = settings?.tier || 'free';
     const limits = {
-      free: { ingredients: 5, orders: 5, expenses: 5 },
-      starter: { ingredients: 25, orders: 25, expenses: 25 },
-      pro: { ingredients: 50, orders: 50, expenses: 50 }
+      free: { ingredients: 25, orders: 25, expenses: 25 },
+      starter: { ingredients: 50, orders: 50, expenses: 50 },
+      pro: { ingredients: 100, orders: 100, expenses: 100 }
     };
 
-    // Get today's usage
-    const { data: usage } = await supabase
+    // Get current month's usage (YYYY-MM format)
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    
+    const { data: usageRecords } = await supabase
       .from('ai_usage_tracking')
-      .select('*')
+      .select('ingredient_count, order_count, expense_count')
       .eq('user_id', user.id)
-      .eq('date', new Date().toISOString().split('T')[0])
-      .single();
+      .gte('date', `${yearMonth}-01`)
+      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
     const currentUsage = {
-      ingredient: usage?.ingredient_count || 0,
-      order: usage?.order_count || 0,
-      expense: usage?.expense_count || 0
+      ingredient: usageRecords?.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) || 0,
+      order: usageRecords?.reduce((sum, record) => sum + (record.order_count || 0), 0) || 0,
+      expense: usageRecords?.reduce((sum, record) => sum + (record.expense_count || 0), 0) || 0
     };
 
     // Determine which counter to check based on context
@@ -127,12 +131,12 @@ module.exports = async (req, res) => {
     const limit = limits[tier][usageType + 's'];
     const used = currentUsage[usageType];
 
-    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Used: ${used}/${limit}`);
+    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Used: ${used}/${limit} (monthly)`);
 
     if (used >= limit) {
       return res.status(429).json({ 
-        error: 'Daily limit reached',
-        message: `You've reached your daily limit of ${limit} AI ${usageType} extractions. Upgrade your plan for more.`,
+        error: 'Monthly limit reached',
+        message: `You've reached your monthly limit of ${limit} AI ${usageType} extractions. Your limit will reset on the 1st of next month.`,
         limit,
         used,
         tier

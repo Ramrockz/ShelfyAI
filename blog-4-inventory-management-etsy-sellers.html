@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Inventory Management for Etsy Sellers – ShelfyAI Blog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#06b6d4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+<style>
+  .article-wrap { max-width: 740px; margin: 0 auto; padding: 60px 24px 100px; }
+  .article-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 14px; margin-bottom: 40px; transition: color 0.2s; }
+  .article-back:hover { color: var(--accent); }
+  .article-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .article-tag { padding: 4px 12px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; font-size: 12px; color: var(--accent); }
+  .article-date { font-size: 13px; color: var(--text-muted); }
+  .article-hero { width: 100%; height: 280px; background: linear-gradient(135deg, var(--accent) 0%, #0891b2 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 48px; }
+  .article-title { font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; margin-bottom: 32px; color: var(--text-main); }
+  .article-body { font-size: 16px; line-height: 1.8; color: var(--text-muted); }
+  .article-body h2 { font-size: 22px; font-weight: 700; color: var(--text-main); margin: 48px 0 16px; letter-spacing: -0.5px; }
+  .article-body p { margin-bottom: 20px; }
+  .article-body ul, .article-body ol { margin: 0 0 20px 24px; line-height: 2; }
+  .article-body strong { color: var(--text-main); }
+  .article-body .stat { display: block; background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin: 24px 0; font-size: 15px; color: var(--text-main); }
+  .article-cta { margin-top: 64px; padding: 40px; background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(8,145,178,0.08) 100%); border: 1px solid rgba(6,182,212,0.2); border-radius: 20px; text-align: center; }
+  .article-cta h3 { font-size: 22px; margin-bottom: 12px; color: var(--text-main); }
+  .article-cta p { font-size: 15px; color: var(--text-muted); margin-bottom: 24px; }
+  .btn-cta { display: inline-block; padding: 14px 28px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; transition: background 0.2s; }
+  .btn-cta:hover { background: #0891b2; }
+  @media (max-width: 600px) { .article-title { font-size: 26px; } .article-hero { height: 180px; font-size: 52px; } }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="logo">ShelfyAI</a>
+  <div class="nav-links" id="navLinks">
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/blog" class="nav-link active" data-page="blog">Blog</a>
+  </div>
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label"><img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display:block;"></span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/></svg></span>
+    </div>
+    <a href="/login" class="btn-signin">Log In</a>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<div class="article-wrap">
+  <a href="/blog" class="article-back">← Back to Blog</a>
+
+  <div class="article-meta">
+    <span class="article-tag">Etsy</span>
+    <span class="article-tag">Sellers</span>
+    <span class="article-tag">Inventory Tips</span>
+    <span class="article-date">March 10, 2026 · Published by ShelfyAI</span>
+  </div>
+
+  <div class="article-hero">🛍️</div>
+
+  <h1 class="article-title">Inventory Management for Etsy Sellers: How to Stop Running Out of Stock and Start Scaling</h1>
+
+  <div class="article-body">
+
+    <p>Running an Etsy shop is exciting — until you get a surge of orders and realize you're out of the materials you need to fulfill them. Or until you spend a weekend restocking supplies, only to find half of what you bought is already sitting in a corner from last month's over-order.</p>
+
+    <p>Inventory management is one of the biggest hidden challenges for Etsy sellers, and one of the least talked about. Most advice for Etsy focuses on photography, SEO listings, and pricing strategy. But if your stock tracking is broken, none of that matters — because you can't sell what you don't have, and you can't profit if your cash is buried in supplies you don't need.</p>
+
+    <h2>Why Inventory Is Especially Hard for Etsy Sellers</h2>
+
+    <p>Etsy sellers face a unique version of the inventory problem. Unlike a retailer selling finished products, many Etsy sellers work with raw materials and components — thread, resin, packaging, hardware, fabrics, dyes — that combine into finished products in varying quantities. Tracking what you have is only half the problem. Tracking what you're actually consuming per product, and how that translates to supply needs, is the other half.</p>
+
+    <p>Add to that the unpredictability of Etsy demand. A listing can go viral overnight. A seasonal surge can arrive faster than expected. A featured placement can triple your daily orders for a week. When that happens, the sellers who know exactly what they have — and what they need to reorder immediately — fulfill those orders and convert that traffic into reviews and repeat customers.</p>
+
+    <span class="stat">70% of businesses lose customers due to stockouts. For Etsy sellers, where reviews are everything, these mistakes are disproportionately costly.</span>
+
+    <h2>The Real Cost of Poor Inventory Tracking for Etsy Sellers</h2>
+
+    <p><strong>Lost sales during peak moments.</strong> Etsy demand is spiky — holidays, gifting seasons, viral moments. If you're out of stock when the traffic arrives, you lose sales you can't recover. Worse, a listing with low or no stock may be deprioritized by Etsy's search algorithm, reducing the visibility you worked hard to build.</p>
+
+    <p><strong>Cash tied up in the wrong supplies.</strong> Without accurate tracking, it's easy to over-order materials you already have plenty of, while running short on things you actually need. The result is cash sitting on shelves in the form of supplies you don't need yet, while you scramble to source what's actually missing.</p>
+
+    <p><strong>Time wasted on manual counts.</strong> Most Etsy sellers track inventory in a spreadsheet, a notebook, or — if they're being honest — their memory. That means regular manual counts, constant reconciliation, and a nagging uncertainty about whether the numbers are actually right.</p>
+
+    <p><strong>Scaling becomes impossible.</strong> At a certain point, every successful Etsy seller hits the same wall: the systems that worked when they had ten products and twenty orders a month completely break down at fifty products and two hundred orders. Manual tracking doesn't scale.</p>
+
+    <h2>What Good Inventory Management Looks Like for an Etsy Seller</h2>
+
+    <p><strong>Know what you have, right now.</strong> Not what you had last Tuesday when you last updated your spreadsheet. Current stock levels, updated as you use materials and receive new supplies. This is the foundation everything else builds on.</p>
+
+    <p><strong>Know when to reorder — before you run out.</strong> Set minimum stock levels for your key materials. When stock drops below that level, you should be alerted automatically — not discover the shortage when you sit down to fulfill an order.</p>
+
+    <p><strong>Know what you're spending on supplies.</strong> Understanding your per-product material cost is how you price correctly and protect your margins. If your material costs are tracked in the same system as your stock levels, you have everything you need to make smart pricing decisions.</p>
+
+    <p><strong>Update your inventory without it taking over your life.</strong> The right tool should make updating stock fast enough that it actually happens — not a 30-minute chore you put off until the end of the week.</p>
+
+    <h2>How AI Is Changing Inventory Management for Small Sellers</h2>
+
+    <p>The biggest shift in inventory tools over the past two years is the arrival of AI that can read product images and supplier URLs to update your stock automatically. Instead of manually entering every new supply delivery into a form, you can photograph the items or paste the supplier link — and the AI extracts the relevant details and updates your inventory in seconds.</p>
+
+    <p>For Etsy sellers who are constantly sourcing new materials — checking supplier websites, placing orders, receiving deliveries — this changes the equation entirely. The friction of keeping your inventory current drops to almost nothing.</p>
+
+    <span class="stat">Only 23% of small businesses have adopted AI inventory tools — meaning sellers who move now are operating with a meaningful advantage over the majority of their competition.</span>
+
+    <h2>Practical Steps to Get Your Etsy Inventory Under Control</h2>
+
+    <p><strong>Start with your top materials.</strong> Don't try to track everything at once. Identify the ten to fifteen materials or components that are most critical to your bestselling products. Get those tracked accurately first.</p>
+
+    <p><strong>Set reorder points based on lead time.</strong> How long does it take for a supply order to arrive? If it's a week, your reorder point needs to be set high enough that you never hit zero while you're waiting. If your supplier is local and you can restock in a day, you can run leaner.</p>
+
+    <p><strong>Track by product, not just by category.</strong> "Thread" is too broad. "Red cotton thread, 500m spools" is trackable. The more specific your inventory entries, the more useful the data.</p>
+
+    <p><strong>Build restocking into your routine, not your reaction.</strong> The goal is to never be surprised by a shortage. With the right alerts in place, restocking becomes a scheduled, calm activity — not an emergency.</p>
+
+    <h2>The Etsy Sellers Who Scale Are the Ones Who Get This Right</h2>
+
+    <p>The difference between an Etsy seller who stays small and one who builds a real business often comes down to systems. Not talent, not product quality, not even marketing. Systems.</p>
+
+    <p>Inventory is one of the first systems that breaks as a shop grows — and one of the easiest to fix with the right tool. The sellers who invest in getting their stock tracking right early are the ones who can confidently run promotions, lean into peak seasons, and fulfill surges without the panic that comes from not knowing what they have.</p>
+
+    <p>You built the products worth selling. Build the systems worth scaling on.</p>
+
+  </div>
+
+  <div class="article-cta">
+    <h3>Built for sellers like you</h3>
+    <p>ShelfyAI is AI-powered inventory management built for small sellers. Update your stock from photos and supplier URLs in seconds, get low-stock alerts before you run out, and always know exactly what you have — without spreadsheets.</p>
+    <a href="/login" class="btn-cta">Start free →</a>
+  </div>
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+</body>
+</html>

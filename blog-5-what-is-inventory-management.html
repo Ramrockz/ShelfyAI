@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>What Is Inventory Management? A Plain-English Guide – ShelfyAI Blog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#06b6d4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+<style>
+  .article-wrap { max-width: 740px; margin: 0 auto; padding: 60px 24px 100px; }
+  .article-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 14px; margin-bottom: 40px; transition: color 0.2s; }
+  .article-back:hover { color: var(--accent); }
+  .article-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .article-tag { padding: 4px 12px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; font-size: 12px; color: var(--accent); }
+  .article-date { font-size: 13px; color: var(--text-muted); }
+  .article-hero { width: 100%; height: 280px; background: linear-gradient(135deg, var(--accent) 0%, #0891b2 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 48px; }
+  .article-title { font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; margin-bottom: 32px; color: var(--text-main); }
+  .article-body { font-size: 16px; line-height: 1.8; color: var(--text-muted); }
+  .article-body h2 { font-size: 22px; font-weight: 700; color: var(--text-main); margin: 48px 0 16px; letter-spacing: -0.5px; }
+  .article-body h3 { font-size: 18px; font-weight: 700; color: var(--text-main); margin: 32px 0 12px; }
+  .article-body p { margin-bottom: 20px; }
+  .article-body ul, .article-body ol { margin: 0 0 20px 24px; line-height: 2; }
+  .article-body strong { color: var(--text-main); }
+  .article-body .stat { display: block; background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin: 24px 0; font-size: 15px; color: var(--text-main); }
+  .article-body .term { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 16px 0; }
+  .article-body .term strong { display: block; font-size: 15px; margin-bottom: 6px; }
+  .article-cta { margin-top: 64px; padding: 40px; background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(8,145,178,0.08) 100%); border: 1px solid rgba(6,182,212,0.2); border-radius: 20px; text-align: center; }
+  .article-cta h3 { font-size: 22px; margin-bottom: 12px; color: var(--text-main); }
+  .article-cta p { font-size: 15px; color: var(--text-muted); margin-bottom: 24px; }
+  .btn-cta { display: inline-block; padding: 14px 28px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; transition: background 0.2s; }
+  .btn-cta:hover { background: #0891b2; }
+  @media (max-width: 600px) { .article-title { font-size: 26px; } .article-hero { height: 180px; font-size: 52px; } }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="logo">ShelfyAI</a>
+  <div class="nav-links" id="navLinks">
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/blog" class="nav-link active" data-page="blog">Blog</a>
+  </div>
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label"><img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display:block;"></span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/></svg></span>
+    </div>
+    <a href="/login" class="btn-signin">Log In</a>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<div class="article-wrap">
+  <a href="/blog" class="article-back">← Back to Blog</a>
+
+  <div class="article-meta">
+    <span class="article-tag">Basics</span>
+    <span class="article-tag">Guide</span>
+    <span class="article-tag">Small Business</span>
+    <span class="article-date">March 3, 2026 · Published by ShelfyAI</span>
+  </div>
+
+  <div class="article-hero">📚</div>
+
+  <h1 class="article-title">What Is Inventory Management? A Plain-English Guide for Small Business Owners</h1>
+
+  <div class="article-body">
+
+    <p>If you've searched "inventory management" and come back with answers written for logistics directors at multinational corporations, you're not alone. Most content on this topic is built for large enterprises — and completely useless if you run a café, a boutique shop, a small food business, or any operation where you're also the one taking out the bins.</p>
+
+    <p>This guide cuts through the jargon. Here's what inventory management actually means, why it matters for small businesses specifically, and what good inventory management looks like in practice.</p>
+
+    <h2>What Is Inventory Management?</h2>
+
+    <p>Inventory management is the process of tracking and controlling the goods and materials your business holds — what you have, how much of it, where it is, and when you need more.</p>
+
+    <p>For a restaurant, that means ingredients. For a retail shop, that means products. For a bakery, that means raw materials and finished goods. For any product-based business, inventory is the physical stock you depend on to serve customers and make sales.</p>
+
+    <p>Inventory management covers:</p>
+    <ul>
+      <li>Knowing exactly what stock you have at any given moment</li>
+      <li>Tracking what comes in (purchases and deliveries) and what goes out (sales and usage)</li>
+      <li>Setting reorder points so you never unexpectedly run out</li>
+      <li>Avoiding overstock that ties up cash and creates waste</li>
+      <li>Identifying patterns in how inventory moves over time</li>
+    </ul>
+
+    <p>Done well, inventory management keeps your business running smoothly. Done poorly — or not at all — it becomes a source of constant, expensive problems.</p>
+
+    <h2>Why Inventory Management Matters More for Small Businesses</h2>
+
+    <p>Large companies have dedicated inventory teams, sophisticated software, and enough margin to absorb the cost of errors. Small businesses don't.</p>
+
+    <p>When a small business runs out of a key product, there's no warehouse backup. When cash gets tied up in excess stock, there's often no line of credit to cover the gap. When inventory data is wrong, the owner — usually the same person also serving customers, managing staff, and handling marketing — has to stop and deal with it.</p>
+
+    <span class="stat">46% of small and medium-sized businesses still don't track inventory at all, or do so manually — which is almost as bad as not tracking it.</span>
+
+    <h2>The Two Most Expensive Inventory Mistakes</h2>
+
+    <h3>Too Little: Stockouts</h3>
+    <p>A stockout happens when you run out of something you need. For a retailer, that means a customer asks for a product and you don't have it. For a restaurant or café, that means a dish comes off the menu mid-service. The immediate cost is the lost sale. The longer-term cost is the damaged relationship. Research shows <strong>70% of businesses</strong> lose customers due to stockouts — and most of those customers don't complain, they just don't come back.</p>
+
+    <h3>Too Much: Overstock</h3>
+    <p>Overstock is the opposite problem, but equally costly. Excess inventory ties up cash that could be deployed elsewhere. For perishable goods, overstock becomes waste — and food waste alone costs global supply chains a projected <strong>$540 billion in 2026</strong>. For non-perishable goods, excess stock means storage costs, insurance costs, and products that may eventually need to be discounted or written off.</p>
+
+    <h2>Key Concepts Without the Jargon</h2>
+
+    <div class="term">
+      <strong>Par level</strong>
+      The minimum quantity of an item you should always have on hand. When stock drops below this level, it's time to reorder. Par levels should be based on actual usage data, not gut feeling.
+    </div>
+
+    <div class="term">
+      <strong>Reorder point</strong>
+      The specific stock level that triggers a reorder. It accounts for how long delivery takes, so you never run out while waiting for restocking.
+    </div>
+
+    <div class="term">
+      <strong>Stock count / stocktake</strong>
+      A physical count of everything you have. Manual stocktakes are time-consuming and error-prone. Automated systems reduce how often you need to do full counts by keeping data updated in real time.
+    </div>
+
+    <div class="term">
+      <strong>Carrying cost</strong>
+      The total cost of holding inventory — storage space, insurance, spoilage risk, tied-up capital. The goal is to carry enough to meet demand without carrying so much that costs mount.
+    </div>
+
+    <div class="term">
+      <strong>FIFO (First In, First Out)</strong>
+      Using older stock before newer stock. Critical for perishables — the oldest ingredients should always be used first to minimize spoilage.
+    </div>
+
+    <h2>Manual vs. Digital vs. AI-Powered Inventory Management</h2>
+
+    <p><strong>Manual (spreadsheets, notebooks):</strong> The most common approach for small businesses, and the most costly. Spreadsheets are static — they only know what you tell them, and they don't update automatically. They're also error-prone: one wrong number compounds into bad ordering decisions.</p>
+
+    <p><strong>Digital inventory software:</strong> A step up from spreadsheets. Traditional inventory software provides structure and automation, but often requires significant setup, manual data entry, and a learning curve that doesn't suit small business owners juggling everything else.</p>
+
+    <p><strong>AI-powered inventory management:</strong> The newest category, and the most practical for small businesses. AI tools can read product photos and supplier URLs to update your inventory automatically — no manual entry. They track stock in real time, surface patterns in how inventory moves, and send alerts before problems arise.</p>
+
+    <p>The performance gap is significant. AI-driven inventory tools improve accuracy by <strong>35%</strong>, reduce errors by <strong>40%</strong> in real-time tracking environments, and help businesses reduce inventory levels by <strong>35%</strong> compared to manual methods — without increasing stockouts.</p>
+
+    <h2>Getting Started</h2>
+
+    <p>If you're currently managing inventory manually — or not managing it at all — the improvement from moving to even a basic system is significant. Start with what you actually need to track. List your core products or ingredients. Set simple par levels based on your best guess of weekly usage. Then refine those par levels as you gather real data.</p>
+
+    <p>The goal is simple: always know what you have, always know when you need more, and stop letting inventory problems cost you money you can't afford to lose.</p>
+
+  </div>
+
+  <div class="article-cta">
+    <h3>Simple inventory management, starting today</h3>
+    <p>ShelfyAI is AI-powered inventory management built for small businesses. Update stock from photos and URLs, get real-time alerts, and always know exactly what you have — without spreadsheets, without manual entry, and without the enterprise price tag.</p>
+    <a href="/login" class="btn-cta">Start free →</a>
+  </div>
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+</body>
+</html>

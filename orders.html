@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Orders</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script>
@@ -106,10 +109,10 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 16px;
-    overflow: hidden;
+    overflow-x: auto;
   }
 
-  table { width: 100%; border-collapse: collapse; text-align: left; }
+  table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
   th { 
     padding: 16px 24px; 
     font-size: 11px; 
@@ -119,6 +122,9 @@
     font-weight: 700;
     cursor: pointer;
     user-select: none;
+    position: relative;
+    resize: horizontal;
+    overflow: auto;
   }
   th.sortable:hover { background: var(--bg-inner); }
   td { padding: 18px 24px; font-size: 14px; border-bottom: 1px solid var(--border); }
@@ -876,14 +882,14 @@
 <body>
 
 <nav class="navbar">
-  <a href="operations.html" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="operations.html" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="ingredients.html" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="recipes.html" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="orders.html" class="nav-link" data-page="orders">Orders</a>
-    <a href="expenses.html" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
   </div>
   
   <div class="nav-actions">
@@ -935,15 +941,15 @@
       
       <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
         <div class="user-menu-header">
-          <div class="user-menu-email" id="userMenuEmail">user@example.com</div>
+          <div class="user-menu-email" id="userMenuEmail">Loading...</div>
           <div class="user-menu-role">Free Plan</div>
         </div>
         <div class="user-menu-list">
-          <div class="user-menu-item" onclick="window.location.href='pricing.html'" style="color: var(--accent); font-weight: 600;">
+          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
-            <span>Upgrade to PRO</span>
+            <span>Update Plan</span>
           </div>
           <div class="user-menu-item" onclick="openSettings()">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1035,19 +1041,20 @@
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th class="sortable" onclick="sortTable('date')">Date</th>
-            <th class="sortable" onclick="sortTable('customer')">Customer</th>
-            <th class="sortable" onclick="sortTable('source')">Source</th>
-            <th class="sortable" onclick="sortTable('revenue')">Revenue</th>
-            <th>Order Ref</th>
-            <th>Tracking</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th style="width: 60px;">#</th>
+            <th class="sortable" onclick="sortTable('date')" style="width: 10%;">Date</th>
+            <th class="sortable" onclick="sortTable('customer')" style="width: 20%;">Customer</th>
+            <th class="sortable" onclick="sortTable('source')" style="width: 12%;">Source</th>
+            <th class="sortable" onclick="sortTable('revenue')" style="width: 10%;">Revenue</th>
+            <th style="width: 15%;">Order Ref</th>
+            <th style="width: 15%;">Tracking</th>
+            <th style="width: 10%;">Status</th>
+            <th style="width: 8%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
       </table>
+      <div id="paginationContainer" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px;"></div>
     </div>
 
     <div id="kanbanView" class="kanban-board" style="display:none">
@@ -1175,6 +1182,9 @@ let orders = [];
 let currentView = 'recent';
 let sortColumn = 'date';
 let sortDirection = 'desc';
+let cardsToShow = 10;
+let itemsPerPage = 10;
+let listCurrentPage = 1;
 let orderToDelete = null;
 let editingOrderId = null;
 
@@ -1222,6 +1232,14 @@ async function loadOrders() {
 function switchView(view) {
   currentView = view;
   
+  if (view === 'recent') {
+    cardsToShow = 10;
+  }
+  
+  if (view === 'list') {
+    listCurrentPage = 1;
+  }
+  
   document.getElementById('recentBtn').classList.toggle('active', view === 'recent');
   document.getElementById('listBtn').classList.toggle('active', view === 'list');
   document.getElementById('kanbanBtn').classList.toggle('active', view === 'kanban');
@@ -1232,7 +1250,12 @@ function switchView(view) {
   
   render();
 }
-
+// Reset pagination when search changes
+  if (currentView === 'list') {
+    listCurrentPage = 1;
+  }
+  
+  
 function render() {
   const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearchInput')?.value || '').toLowerCase();
   
@@ -1254,14 +1277,17 @@ function renderRecent(filtered) {
     return;
   }
   
-  container.innerHTML = filtered.map(order => {
+  const displayData = filtered.slice(0, cardsToShow);
+  const hasMore = filtered.length > cardsToShow;
+  
+  container.innerHTML = displayData.map(order => {
     const date = new Date(order.sale_date).toLocaleDateString();
     const status = order.status || 'processed';
     const trackingHTML = order.tracking_number ? 
       `<div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; pointer-events: none;">📦 ${order.tracking_number}</div>` : '';
     
     return `
-      <div class="card-small" onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}" style="cursor: pointer;">
+      <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">
         <h4>${order.customer || 'Unknown Customer'}</h4>
         <div class="order-info">
           <span>Source: ${order.source || 'N/A'}</span>
@@ -1285,15 +1311,35 @@ function renderRecent(filtered) {
       </div>
     `;
   }).join('');
+  
+  if (hasMore) {
+    container.innerHTML += `
+      <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
+        <button onclick="showMoreOrders()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${filtered.length - cardsToShow} remaining)</button>
+      </div>
+    `;
+  }
+}
+
+function showMoreOrders() {
+  cardsToShow += 10;
+  render();
 }
 
 function renderList(filtered) {
   const tbody = document.getElementById('tableBody');
+  const tableContainer = document.getElementById('listView');
+  const paginationContainer = document.getElementById('paginationContainer');
   
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No orders yet</p><p style="margin-bottom: 20px;">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ New Order</button></td></tr>';
+    tableContainer.style.display = 'none';
+    if (paginationContainer) paginationContainer.style.display = 'none';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No orders yet</p><p style="margin-bottom: 20px;">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ New Order</button></td></tr>';
     return;
   }
+  
+  tableContainer.style.display = 'block';
+  if (paginationContainer) paginationContainer.style.display = 'flex';
   
   // Sort
   filtered.sort((a, b) => {
@@ -1321,7 +1367,15 @@ function renderList(filtered) {
     return 0;
   });
   
-  tbody.innerHTML = filtered.map((order, idx) => {
+  // Pagination logic
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (listCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = filtered.slice(startIndex, endIndex);
+  
+  tbody.innerHTML = "";
+  paginatedData.forEach((order, index) => {
+    const actualIndex = startIndex + index + 1;
     const date = new Date(order.sale_date).toLocaleDateString();
     const status = order.status || 'processed';
     const statusColors = {
@@ -1338,17 +1392,17 @@ function renderList(filtered) {
     let actionButtons = '';
     if (status === 'processed') {
       actionButtons = `
-        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e;">Fulfilled</button>
-        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7;">Shipped</button>
-        <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444;">Refunded</button>
+        <span style="color: #22c55e; font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')">FULFILLED</span>
+        <span style="color: #a855f7; font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')">SHIPPED</span>
+        <span style="color: #ef4444; font-weight:700; cursor:pointer; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')">REFUNDED</span>
       `;
     } else if (status === 'fulfilled') {
-      actionButtons = `<button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7;">Shipped</button>`;
+      actionButtons = `<span style="color: #a855f7; font-weight:700; cursor:pointer; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')">SHIPPED</span>`;
     }
     
-    return `
-      <tr onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}" style="cursor: pointer;">
-        <td>${idx + 1}</td>
+    tbody.innerHTML += `
+      <tr onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">
+        <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
         <td>${date}</td>
         <td>${order.customer || 'Unknown'}</td>
         <td>${order.source || 'N/A'}</td>
@@ -1356,14 +1410,53 @@ function renderList(filtered) {
         <td>${order.order_reference || '-'}</td>
         <td>${trackingDisplay}</td>
         <td>${statusBadge}</td>
-        <td>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            ${actionButtons}
-          </div>
-        </td>
+        <td>${actionButtons}</td>
       </tr>
     `;
-  }).join('');
+  });
+  
+  // Render pagination controls
+  if (paginationContainer) {
+    renderPaginationOrders(totalPages, filtered.length);
+  }
+}
+
+function renderPaginationOrders(totalPages, totalItems) {
+  const container = document.getElementById('paginationContainer');
+  if (!container) return;
+  
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  let html = `<span style="color: var(--text-muted); font-size: 12px; margin-right: 8px;">Page ${listCurrentPage} of ${totalPages} (${totalItems} items)</span>`;
+  
+  // Previous button
+  if (listCurrentPage > 1) {
+    html += `<button onclick="listCurrentPage--; render();" style="padding: 6px 12px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 12px;">Previous</button>`;
+  }
+  
+  // Page numbers
+  const maxButtons = 5;
+  let startPage = Math.max(1, listCurrentPage - Math.floor(maxButtons / 2));
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  
+  if (endPage - startPage < maxButtons - 1) {
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const active = i === listCurrentPage;
+    html += `<button onclick="listCurrentPage=${i}; render();" style="padding: 6px 12px; background: ${active ? 'var(--accent)' : 'var(--bg-panel)'}; color: ${active ? '#fff' : 'var(--text-main)'}; border: 1px solid ${active ? 'var(--accent)' : 'var(--border)'}; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: ${active ? '700' : '400'};">${i}</button>`;
+  }
+  
+  // Next button
+  if (listCurrentPage < totalPages) {
+    html += `<button onclick="listCurrentPage++; render();" style="padding: 6px 12px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 12px;">Next</button>`;
+  }
+  
+  container.innerHTML = html;
 }
 
 function renderKanban(filtered) {
@@ -1385,7 +1478,7 @@ function renderKanban(filtered) {
       <div class="kanban-card" draggable="true" data-order-id="${order.id}" 
            ondragstart="handleDragStart(event)" 
            ondragend="event.currentTarget.style.opacity = '1'"
-           onclick="window.location.href='order-detail.html?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('order-detail.html?id=${order.id}','_blank')}">
+           onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
         <h5>${order.customer || 'Unknown'}</h5>
         <p><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></p>
         <p>Source: ${order.source || 'N/A'}</p>
@@ -2316,33 +2409,32 @@ async function handleSwitchSignUp(e) {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>
@@ -3059,7 +3151,7 @@ async function processOrderImageUpload() {
         if (typeof createAILimitNotification === 'function') {
           await createAILimitNotification(session.user.id, 'free');
         }
-        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
+        throw new Error(`${errorData.error || 'Monthly limit reached'}. Limit resets on the 1st of next month.`);
       }
       throw new Error(errorData.error || 'Failed to extract data from image');
     }

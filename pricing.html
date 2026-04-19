@@ -227,14 +227,15 @@
 </head>
 <body>
 
-<nav class="navbar">
-  <a href="index.html" class="logo">ShelfyAI</a>
+<nav class="navbar" id="mainNav">
+  <!-- Public Navigation (default) -->
+  <a href="/" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="index.html" class="nav-link" data-page="index">Home</a>
-    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
-    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
-    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link active" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/sandbox" class="nav-link" data-page="sandbox">Playground</a>
   </div>
   
   <div class="nav-actions">
@@ -250,7 +251,7 @@
         </svg>
       </span>
     </div>
-    <a href="login.html" class="btn-signin" id="authButton">Log In</a>
+    <a href="/login" class="btn-signin" id="authButton">Log In</a>
     <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -284,15 +285,15 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (5/day)</li>
-        <li><span class="check">✓</span> AI Orders (5/day)</li>
-        <li><span class="check">✓</span> AI Expenses (5/day)</li>
+        <li><span class="check">✓</span> AI Ingredients (25/month)</li>
+        <li><span class="check">✓</span> AI Orders (25/month)</li>
+        <li><span class="check">✓</span> AI Expenses (25/month)</li>
         <li><span class="cross">✕</span> Bulk Upload</li>
         <li><span class="cross">✕</span> Order Dashboard</li>
         <li><span class="cross">✕</span> Expense Tracking</li>
       </ul>
 
-      <a href="login.html" class="btn btn-free" id="btn-free">Sign Up</a>
+      <button class="btn btn-free" id="btn-free" onclick="handlePricingClick('free')" style="cursor: pointer;">Sign Up</button>
     </div>
 
     <div class="card popular">
@@ -309,15 +310,15 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (25/day)</li>
-        <li><span class="check">✓</span> AI Orders (25/day)</li>
-        <li><span class="check">✓</span> AI Expenses (25/day)</li>
+        <li><span class="check">✓</span> AI Ingredients (50/month)</li>
+        <li><span class="check">✓</span> AI Orders (50/month)</li>
+        <li><span class="check">✓</span> AI Expenses (50/month)</li>
         <li><span class="check">✓</span> Bulk Upload (5 per upload)</li>
         <li><span class="check">✓</span> Order Dashboard</li>
         <li><span class="check">✓</span> Expense Tracking</li>
       </ul>
 
-      <a href="login.html" class="btn btn-pro" id="btn-starter">Sign Up</a>
+      <button class="btn btn-pro" id="btn-starter" onclick="handlePricingClick('starter')" style="cursor: pointer;">Sign Up</button>
     </div>
 
     <div class="card">
@@ -333,15 +334,15 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (50/day)</li>
-        <li><span class="check">✓</span> AI Orders (50/day)</li>
-        <li><span class="check">✓</span> AI Expenses (50/day)</li>
+        <li><span class="check">✓</span> AI Ingredients (100/month)</li>
+        <li><span class="check">✓</span> AI Orders (100/month)</li>
+        <li><span class="check">✓</span> AI Expenses (100/month)</li>
         <li><span class="check">✓</span> Bulk Upload (25 per upload)</li>
         <li><span class="check">✓</span> Order Dashboard</li>
         <li><span class="check">✓</span> Expense Tracking</li>
       </ul>
 
-      <a href="login.html" class="btn btn-pro" id="btn-pro">Sign Up</a>
+      <button class="btn btn-pro" id="btn-pro" onclick="handlePricingClick('pro')" style="cursor: pointer;">Sign Up</button>
     </div>
 
   </div>
@@ -378,67 +379,123 @@
   })();
 
   // Update auth button and pricing CTAs for logged in users
-  if (typeof window.supabaseClient !== 'undefined') {
-    window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      const authButton = document.getElementById('authButton');
-      if (session && authButton) {
-        authButton.href = 'operations.html';
-        authButton.textContent = 'Dashboard';
+  async function updateAuthUI() {
+    if (typeof window.supabaseClient === 'undefined') {
+      console.warn('Supabase client not yet loaded, retrying...');
+      setTimeout(updateAuthUI, 100);
+      return;
+    }
 
-        // Free plan — already have an account, no action needed
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      
+      if (session) {
+        // User is logged in - replace navigation with authenticated version
+        const navLinks = document.getElementById('navLinks');
+        if (navLinks) {
+          navLinks.innerHTML = `
+            <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+            <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
+            <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+            <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+            <a href="/pricing" class="nav-link active" data-page="pricing">Pricing</a>
+          `;
+        }
+        
+        // Update logo link
+        const logo = document.querySelector('.logo');
+        if (logo) {
+          logo.href = '/operations';
+        }
+        
+        // Update auth button to "Dashboard"
+        const authButton = document.getElementById('authButton');
+        if (authButton) {
+          authButton.href = '/operations';
+          authButton.textContent = 'Dashboard';
+        }
+
+        // Update pricing plan buttons
         const btnFree = document.getElementById('btn-free');
         if (btnFree) {
           btnFree.textContent = 'Current Plan';
-          btnFree.href = '#';
+          btnFree.onclick = null;
           btnFree.className = 'btn btn-current';
         }
 
-        // Paid plans — show Upgrade
         const btnStarter = document.getElementById('btn-starter');
         if (btnStarter) {
           btnStarter.textContent = 'Upgrade';
-          btnStarter.href = 'settings.html';
         }
 
         const btnPro = document.getElementById('btn-pro');
         if (btnPro) {
           btnPro.textContent = 'Upgrade';
-          btnPro.href = 'settings.html';
         }
       }
-    });
+    } catch (error) {
+      console.error('Error updating auth UI:', error);
+    }
   }
+
+  // Wait for DOM to be ready then update auth UI
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateAuthUI);
+  } else {
+    updateAuthUI();
+  }
+</script>
+
+<!-- Stripe & Subscription Integration -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+window.handlePricingClick = function(tier) {
+  if (typeof window.supabaseClient === 'undefined') {
+    window.location.href = '/login.html';
+    return;
+  }
+
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+      window.location.href = '/login.html?redirect=pricing';
+    } else if (tier === 'free') {
+      window.location.href = '/operations.html';
+    } else {
+      openSubscriptionModal(tier);
+    }
+  });
+};
 </script>
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>
@@ -447,6 +504,205 @@
     </div>
   </div>
 </footer>
+
+<!-- Subscription Modal -->
+<div class="modal-overlay" id="subscriptionModal" onclick="if(event.target === this) closeSubscriptionModal()" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 10000;">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Complete Your Subscription</h3>
+    <p id="modal-plan-name" style="font-size: 28px; font-weight: 800; margin: 0 0 8px 0; color: var(--accent);"></p>
+    <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 32px 0;">Choose your billing interval</p>
+    
+    <div style="margin-bottom: 32px;">
+      <!-- Billing Toggle -->
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px;">
+        <span class="toggle-label" id="modal-label-monthly" style="font-size: 14px; font-weight: 600; color: var(--text-main);">Monthly</span>
+        <input type="checkbox" id="modal-price-switch" onchange="toggleModalPricing()" style="display: none;" />
+        <label for="modal-price-switch" class="switch" style="position: relative; display: inline-block; width: 48px; height: 24px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 99px; cursor: pointer;"></label>
+        <span class="toggle-label" id="modal-label-yearly" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Yearly</span>
+        <span style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;">Save 20%</span>
+      </div>
+
+      <!-- Price Display -->
+      <div style="text-align: center; background: linear-gradient(180deg, var(--bg-panel) 0%, rgba(59, 130, 246, 0.05) 100%); border: 2px solid var(--accent); border-radius: 16px; padding: 32px; margin-bottom: 24px;">
+        <div id="modal-price-display" style="font-size: 48px; font-weight: 900; color: var(--text-main); margin-bottom: 8px;">€9.99<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/mo</span></div>
+        <div id="modal-plan-features" style="font-size: 14px; color: var(--text-muted);"></div>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 0;">Prices plus applicable VAT. Cancel anytime.</p>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button onclick="closeSubscriptionModal()" style="flex: 1; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-weight: 600; cursor: pointer;">Cancel</button>
+      <button id="subscribeButton" onclick="handleSubscribe()" style="flex: 1; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;">Continue to Checkout</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .switch::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text-main);
+    top: 2px;
+    left: 2px;
+    transition: 0.3s;
+  }
+  
+  input:checked + .switch::after {
+    transform: translateX(24px);
+    background: var(--accent);
+  }
+</style>
+
+<script>
+let selectedPlan = 'pro';
+let selectedInterval = 'month';
+
+const planDetails = {
+  starter: {
+    name: 'Starter Plan',
+    features: '50 AI scans/month • Bulk Upload (5) • Full Dashboard',
+    monthlyPrice: '€9.99',
+    yearlyPrice: '€99'
+  },
+  pro: {
+    name: 'Pro Plan',
+    features: '100 AI scans/month • Bulk Upload (25) • Full Dashboard',
+    monthlyPrice: '€19.99',
+    yearlyPrice: '€199'
+  }
+};
+
+window.openSubscriptionModal = function(defaultPlan = 'pro') {
+  try {
+    selectedPlan = defaultPlan;
+    selectedInterval = 'month';
+    
+    const modal = document.getElementById('subscriptionModal');
+    if (!modal) {
+      console.error('Modal not found!');
+      return;
+    }
+    
+    // Update plan name and features
+    document.getElementById('modal-plan-name').textContent = planDetails[selectedPlan].name;
+    document.getElementById('modal-plan-features').textContent = planDetails[selectedPlan].features;
+    
+    // Reset to monthly
+    document.getElementById('modal-price-switch').checked = false;
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Update price display
+    updateModalPrice();
+  } catch (error) {
+    console.error('Error opening modal:', error);
+  }
+}
+
+window.closeSubscriptionModal = function() {
+  const modal = document.getElementById('subscriptionModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+window.toggleModalPricing = function() {
+  const isYearly = document.getElementById('modal-price-switch').checked;
+  selectedInterval = isYearly ? 'year' : 'month';
+  updateModalPrice();
+}
+
+function updateModalPrice() {
+  const isYearly = selectedInterval === 'year';
+  const priceDisplay = document.getElementById('modal-price-display');
+  const labelMonthly = document.getElementById('modal-label-monthly');
+  const labelYearly = document.getElementById('modal-label-yearly');
+  
+  if (isYearly) {
+    priceDisplay.innerHTML = planDetails[selectedPlan].yearlyPrice + '<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/year</span>';
+    labelYearly.style.color = 'var(--text-main)';
+    labelMonthly.style.color = 'var(--text-muted)';
+  } else {
+    priceDisplay.innerHTML = planDetails[selectedPlan].monthlyPrice + '<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/mo</span>';
+    labelMonthly.style.color = 'var(--text-main)';
+    labelYearly.style.color = 'var(--text-muted)';
+  }
+}
+
+window.handleSubscribe = async function() {
+  const button = document.getElementById('subscribeButton');
+  button.disabled = true;
+  button.textContent = 'Creating checkout...';
+  
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      window.location.href = '/login.html?redirect=pricing';
+      return;
+    }
+
+    const response = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        tier: selectedPlan,
+        interval: selectedInterval
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    const stripe = Stripe(data.publishableKey);
+    const { error } = await stripe.redirectToCheckout({
+      sessionId: data.sessionId
+    });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Subscription error:', error);
+    alert('Failed to start checkout: ' + error.message);
+    button.disabled = false;
+    button.textContent = 'Continue to Checkout';
+  }
+}
+</script>
 
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v3';
+const CACHE_NAME = 'shelfy-v57';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -58,6 +58,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Protected pages that require authentication
+  const protectedPages = [
+    'ingredients.html',
+    'ingredient-detail.html',
+    'recipes.html',
+    'recipe-detail.html',
+    'sales.html',
+    'expenses.html',
+    'expense-detail.html',
+    'operations.html',
+    'shopping-list.html',
+    'orders.html',
+    'order-detail.html',
+    'settings.html'
+  ];
+
+  const url = new URL(event.request.url);
+  const isProtectedPage = protectedPages.some(page => url.pathname.includes(page));
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const networkFetch = fetch(event.request)
@@ -70,10 +89,19 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
 
-      // Network-first for HTML pages, cache-first for static assets
-      if (event.request.destination === 'document') {
-        return networkFetch;
+      // Always use network-first for HTML pages (especially protected ones)
+      // This ensures authentication is always checked
+      if (event.request.destination === 'document' || isProtectedPage) {
+        return networkFetch.catch(() => {
+          // Only serve cached version if network fails (offline)
+          return cached || new Response('Offline - Please check your connection', {
+            status: 503,
+            statusText: 'Service Unavailable'
+          });
+        });
       }
+      
+      // Cache-first for static assets (CSS, JS, images)
       return cached || networkFetch;
     })
   );

@@ -7,6 +7,22 @@
 <script>
   // Apply theme immediately from localStorage to prevent flash
   (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+  
+  // Super-fast redirect check for mobile PWA - if logged in, redirect before rendering anything
+  (function(){
+    var hasSession = localStorage.getItem('sb-qakldmfmdlwvehseaksy-auth-token');
+    var isPasswordReset = window.location.hash.includes('type=recovery');
+    var isOAuthCallback = window.location.hash.includes('access_token=') && !isPasswordReset;
+    
+    if (hasSession && !isPasswordReset && !isOAuthCallback) {
+      // Already logged in - redirect immediately to prevent any flash
+      var returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
+      window.location.replace(returnUrl);
+    } else {
+      // Not logged in or special case - hide page until session check completes
+      document.documentElement.style.visibility='hidden';
+    }
+  })();
 </script>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="manifest" href="/manifest.json" />
@@ -225,13 +241,13 @@
 <body>
 
 <nav class="navbar">
-  <a href="index.html" class="logo">ShelfyAI</a>
+  <a href="/" class="logo">ShelfyAI</a>
   
   <div class="nav-links" id="navLinks">
-    <a href="index.html" class="nav-link" data-page="index">Home</a>
-    <a href="pricing.html" class="nav-link" data-page="pricing">Pricing</a>
-    <a href="docs.html" class="nav-link" data-page="docs">Quick Start</a>
-    <a href="sandbox.html" class="nav-link" data-page="sandbox">Playground</a>
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/sandbox" class="nav-link" data-page="sandbox">Playground</a>
   </div>
   
   <div class="nav-actions">
@@ -256,7 +272,7 @@
 <div class="login-container">
   <div class="login-box">
     <h1>Welcome to ShelfyAI</h1>
-    <p>Manage your restaurant inventory intelligently</p>
+    <p>Where updating your inventory is no longer a pain.</p>
 
     <!-- Tabs -->
     <div class="tabs">
@@ -369,23 +385,55 @@ function resolveConfirm(result) {
 }
 
   // Check if already logged in or handling password reset
-  supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    // Check if this is a password reset callback
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const type = hashParams.get('type');
+  const isOAuthCallback = window.location.hash.includes('access_token=') && !window.location.hash.includes('type=recovery');
+  
+  // Quick synchronous check - if session exists in localStorage, redirect immediately
+  // This prevents flash on mobile when reopening app with existing session
+  const hasSessionData = localStorage.getItem('sb-qakldmfmdlwvehseaksy-auth-token');
+  
+  if (hasSessionData && !isOAuthCallback && !window.location.hash.includes('type=recovery')) {
+    // Likely logged in - redirect immediately, then verify in background
+    const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
+    window.location.replace(returnUrl);
+    // Note: The target page will do the actual session validation
+  } else if (isOAuthCallback) {
+    // OAuth callback from Google/other provider - wait for session to be established
+    console.log('OAuth callback detected on login page, waiting for session...');
+    setTimeout(async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        // Session established, redirect to return URL or operations
+        const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
+        window.location.replace(returnUrl);
+      } else {
+        // Failed to establish session, show login form
+        document.documentElement.style.visibility = 'visible';
+      }
+    }, 1000);
+  } else {
+    // Normal page load - check session
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      // Check if this is a password reset callback
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
 
-    if (type === 'recovery' && accessToken) {
-      // User clicked reset password link - show update password modal
-      setTimeout(() => {
-        document.getElementById('updatePasswordModal').classList.add('active');
-      }, 100);
-    } else if (session) {
-      // Already logged in, redirect to dashboard
-      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
-      window.location.href = returnUrl;
-    }
-  });
+      if (type === 'recovery' && accessToken) {
+        // User clicked reset password link - show update password modal
+        document.documentElement.style.visibility = 'visible';
+        setTimeout(() => {
+          document.getElementById('updatePasswordModal').classList.add('active');
+        }, 100);
+      } else if (session) {
+        // Already logged in, redirect to dashboard without adding to history
+        const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
+        window.location.replace(returnUrl);
+      } else {
+        // Not logged in — show the login form
+        document.documentElement.style.visibility = 'visible';
+      }
+    });
+  }
 
   // Switch between tabs
   function switchTab(tab) {
@@ -401,7 +449,7 @@ function resolveConfirm(result) {
   // Handle Google Login
   async function handleGoogleLogin() {
     try {
-      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
       const baseUrl = 'https://www.shelfyai.com';
       const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
@@ -434,7 +482,7 @@ function resolveConfirm(result) {
       if (error) throw error;
 
       // Success - redirect to intended page or dashboard
-      const returnUrl = new URLSearchParams(window.location.search).get('return') || 'operations.html';
+      const returnUrl = new URLSearchParams(window.location.search).get('return') || '/operations';
       window.location.href = returnUrl;
     } catch (error) {
       showAlert('Login failed: ' + error.message, 'Error');
@@ -491,7 +539,7 @@ function resolveConfirm(result) {
       const { error } = await supabaseClient.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: `${window.location.origin}/operations.html`
+          emailRedirectTo: `${window.location.origin}/operations`
         }
       });
 
@@ -532,7 +580,7 @@ function resolveConfirm(result) {
 
     try {
       const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login.html`
+        redirectTo: `${window.location.origin}/login`
       });
 
       if (error) throw error;
@@ -674,33 +722,32 @@ function resolveConfirm(result) {
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="index.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
-          <a href="pricing.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
-          <a href="faq.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
-          <a href="imprint.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="ingredients.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="recipes.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
-          <a href="expenses.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
-          <a href="orders.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
-          <a href="shopping-list.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Shopping List</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
       </div>
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="blog.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="sandbox.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
-          <a href="privacy.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
-          <a href="terms.html" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
       </div>
     </div>

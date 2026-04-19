@@ -92,12 +92,13 @@ a {
 }
 
 .nav-links {
-  display: flex;
+  display: flex !important;
   gap: 32px;
   align-items: center;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 10;
 }
 
 .theme-toggle-wrapper {
@@ -820,10 +821,54 @@ tr:hover td {
 
   .nav-links {
     gap: 20px;
+    display: flex !important;
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
+  /* Keep footer as 3 columns on mobile with tighter spacing */
+  .footer-grid,
+  .footer-grid[style] {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 32px !important;
+  }
+  
+  /* Make footer text smaller on mobile to fit 3 columns */
+  footer h4,
+  footer h4[style] {
+    font-size: 10px !important;
+    margin: 0 0 8px 0 !important;
+  }
+  
+  footer a,
+  footer .footer-grid a,
+  footer .footer-grid div a {
+    font-size: 9px !important;
+  }
+  
+  footer .footer-grid > div,
+  footer .footer-grid > div > div {
+    gap: 8px !important;
+  }
+  
+  footer .footer-grid > div,
+  footer .footer-grid > div[style] {
+    padding: 0 2px !important;
+  }
+  
+  /* Force footer wrapper to respect mobile width */
+  footer > div,
+  footer > div[style] {
+    padding: 0 12px !important;
+  }
+
   .navbar {
     padding: 10px 12px;
     gap: 12px;
@@ -889,20 +934,20 @@ tr:hover td {
 
   /* Hide nav links by default on mobile */
   .nav-links {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
-    flex-direction: column;
-    gap: 0;
-    padding: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: none;
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: var(--bg-panel) !important;
+    border-bottom: 1px solid var(--border) !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    transition: max-height 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transform: none !important;
   }
 
   .nav-links.active {
@@ -931,11 +976,11 @@ tr:hover td {
   }
 }
 
-  /* ---------- COOKIE CONSENT ---------- */
-  .cookie-banner {
-    position: fixed;
-    left: 20px;
-    right: 20px;
+/* ---------- COOKIE CONSENT ---------- */
+.cookie-banner {
+  position: fixed;
+  left: 20px;
+  right: 20px;
     bottom: 20px;
     z-index: 11000;
     background: var(--bg-panel);

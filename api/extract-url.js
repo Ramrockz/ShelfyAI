@@ -79,28 +79,32 @@ module.exports = async (req, res) => {
 
     const tier = settings?.tier || 'free';
     const limits = {
-      free: { ingredients: 5 },
-      starter: { ingredients: 25 },
-      pro: { ingredients: 50 }
+      free: { ingredients: 25 },
+      starter: { ingredients: 50 },
+      pro: { ingredients: 100 }
     };
 
-    // Get today's usage
-    const { data: usage } = await supabase
+    // Get current month's usage (YYYY-MM format)
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    
+    const { data: usageRecords } = await supabase
       .from('ai_usage_tracking')
       .select('ingredient_count')
       .eq('user_id', user.id)
-      .eq('date', new Date().toISOString().split('T')[0])
-      .single();
+      .gte('date', `${yearMonth}-01`)
+      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const used = usage?.ingredient_count || 0;
+    const used = usageRecords?.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) || 0;
     const limit = limits[tier].ingredients;
 
-    console.log(`Usage check - Tier: ${tier}, Used: ${used}/${limit}`);
+    console.log(`Usage check - Tier: ${tier}, Used: ${used}/${limit} (monthly)`);
 
     if (used >= limit) {
       return res.status(429).json({ 
-        error: 'Daily limit reached',
-        message: `You've reached your daily limit of ${limit} AI ingredient extractions. Upgrade your plan for more.`,
+        error: 'Monthly limit reached',
+        message: `You've reached your monthly limit of ${limit} AI ingredient extractions. Your limit will reset on the 1st of next month.`,
         limit,
         used,
         tier

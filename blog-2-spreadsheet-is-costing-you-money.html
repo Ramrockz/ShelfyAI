@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Why Your Spreadsheet Is Costing You Money – ShelfyAI Blog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#06b6d4" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="chat-bot.js"></script>
+<style>
+  .article-wrap { max-width: 740px; margin: 0 auto; padding: 60px 24px 100px; }
+  .article-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 14px; margin-bottom: 40px; transition: color 0.2s; }
+  .article-back:hover { color: var(--accent); }
+  .article-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .article-tag { padding: 4px 12px; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; font-size: 12px; color: var(--accent); }
+  .article-date { font-size: 13px; color: var(--text-muted); }
+  .article-hero { width: 100%; height: 280px; background: linear-gradient(135deg, var(--accent) 0%, #0891b2 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 48px; }
+  .article-title { font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; margin-bottom: 32px; color: var(--text-main); }
+  .article-body { font-size: 16px; line-height: 1.8; color: var(--text-muted); }
+  .article-body h2 { font-size: 22px; font-weight: 700; color: var(--text-main); margin: 48px 0 16px; letter-spacing: -0.5px; }
+  .article-body p { margin-bottom: 20px; }
+  .article-body ul, .article-body ol { margin: 0 0 20px 24px; line-height: 2; }
+  .article-body strong { color: var(--text-main); }
+  .article-body .stat { display: block; background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 20px; margin: 24px 0; font-size: 15px; color: var(--text-main); }
+  .article-cta { margin-top: 64px; padding: 40px; background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(8,145,178,0.08) 100%); border: 1px solid rgba(6,182,212,0.2); border-radius: 20px; text-align: center; }
+  .article-cta h3 { font-size: 22px; margin-bottom: 12px; color: var(--text-main); }
+  .article-cta p { font-size: 15px; color: var(--text-muted); margin-bottom: 24px; }
+  .btn-cta { display: inline-block; padding: 14px 28px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; transition: background 0.2s; }
+  .btn-cta:hover { background: #0891b2; }
+  @media (max-width: 600px) { .article-title { font-size: 26px; } .article-hero { height: 180px; font-size: 52px; } }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="logo">ShelfyAI</a>
+  <div class="nav-links" id="navLinks">
+    <a href="/" class="nav-link" data-page="index">Home</a>
+    <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
+    <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
+    <a href="/blog" class="nav-link active" data-page="blog">Blog</a>
+  </div>
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label"><img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display:block;"></span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/></svg></span>
+    </div>
+    <a href="/login" class="btn-signin">Log In</a>
+    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<div class="article-wrap">
+  <a href="/blog" class="article-back">← Back to Blog</a>
+
+  <div class="article-meta">
+    <span class="article-tag">Inventory</span>
+    <span class="article-tag">Efficiency</span>
+    <span class="article-date">March 25, 2026 · Published by ShelfyAI</span>
+  </div>
+
+  <div class="article-hero">📋</div>
+
+  <h1 class="article-title">Why Your Spreadsheet Is Costing You Money (And What to Do About It)</h1>
+
+  <div class="article-body">
+
+    <p>Spreadsheets are a marvel of human ingenuity. They helped entire industries manage complexity before modern software existed. They're flexible, familiar, and free. And for tracking inventory in a small business, they are quietly one of the most expensive tools you can use.</p>
+
+    <p>Not because of what they charge you. Because of what they cost you.</p>
+
+    <h2>The Spreadsheet Trap</h2>
+
+    <p>Walk into the back office of most small businesses and you'll find the same thing: an Excel file, a Google Sheet, maybe a notebook beside it. The sheet has columns for product names, quantities, and maybe a reorder point someone added six months ago and hasn't touched since.</p>
+
+    <p>This is how <strong>67.4% of inventory managers</strong> currently track stock. Among small businesses specifically, nearly <strong>39%</strong> still use entirely manual methods — pen, paper, and spreadsheets — despite the clear evidence that these approaches lead to costly errors.</p>
+
+    <p>The problem isn't that spreadsheets are bad tools. It's that they are <em>passive</em> tools. They only know what you tell them, exactly when you tell them. They don't update when a sale happens. They don't alert you when stock drops below a threshold. They don't flag a discrepancy between what they say you have and what's actually on the shelf. They sit there, patiently displaying numbers that are increasingly wrong with every passing hour.</p>
+
+    <h2>What Manual Tracking Actually Costs</h2>
+
+    <p>The consequences of manual inventory management show up in ways that are easy to miss because they're diffuse. There's no single line item in your accounts called "spreadsheet errors." Instead, the costs show up as:</p>
+
+    <p><strong>Stockouts you didn't see coming.</strong> You were out of a product before you knew it was running low. A customer asked, you checked, you apologized. That customer — and their future visits — may never come back. Research shows that <strong>70% of businesses</strong> have lost customers due to stockouts. The damage isn't just the lost sale; it's the lost relationship.</p>
+
+    <p><strong>Overstock you can't move.</strong> Manual tracking makes it hard to catch when you're consistently over-ordering. You order based on gut feeling or habit, and before long you're sitting on inventory you don't need, with cash locked up in products that aren't moving. Overstocking costs global businesses <strong>$1.1 trillion annually</strong>.</p>
+
+    <p><strong>Time you can't get back.</strong> Manual inventory counts are slow. Someone has to physically walk the floor, count items, and enter the numbers. In a small business, that someone is usually you. Hours spent doing inventory counts are hours not spent on customers, on marketing, on the things that actually grow your business.</p>
+
+    <p><strong>Errors that compound.</strong> One wrong number in a spreadsheet doesn't stay contained. It influences your ordering decisions, which affects what you have in stock, which impacts what you can sell. By the time you catch the error — if you catch it — it's already cost you.</p>
+
+    <h2>The Real Problem: Spreadsheets Don't Scale</h2>
+
+    <p>When a business is very small — a single product line, a handful of SKUs, slow and predictable sales — manual tracking kind of works. It's imprecise, but the margin for error is small enough that it doesn't cause catastrophic failures.</p>
+
+    <p>But the moment a business starts to grow, manual tracking breaks down. More products means more rows. More locations means more sheets. More sales channels means more data that needs to be reconciled. The same system that "worked" when you had twenty products becomes actively dangerous when you have two hundred.</p>
+
+    <span class="stat">The tool that felt manageable at the start becomes the thing holding you back.</span>
+
+    <h2>Why Small Businesses Stay Stuck</h2>
+
+    <p>If manual tracking is so costly, why do so many businesses keep doing it?</p>
+
+    <p>Largely because the alternatives have historically felt worse. Legacy inventory software was designed for large enterprises with IT departments and implementation budgets. It required lengthy onboarding, complex integrations, and months of learning before it paid off. For a small business owner who just needs to know if they have enough of something to get through the week, it felt like overkill.</p>
+
+    <p>So businesses defaulted to what they knew: spreadsheets. The cost of staying comfortable is invisible in the short term and painful over time.</p>
+
+    <p>That calculus is changing. Modern inventory tools — especially those powered by AI — are designed for simplicity first. They don't require manual data entry or complicated setup. They update automatically. They surface the information you actually need without burying it in dashboards you have to learn to read.</p>
+
+    <h2>What the Switch Actually Looks Like</h2>
+
+    <p>In practical terms, the switch to a smart inventory system means:</p>
+
+    <ul>
+      <li><strong>Your stock updates automatically.</strong> When a sale happens, your inventory reflects it. No manual entry. No end-of-day reconciliation.</li>
+      <li><strong>You get alerts before problems happen.</strong> Instead of discovering a stockout when a customer asks, you're notified when stock drops below your set threshold — early enough to act.</li>
+      <li><strong>Adding new products takes seconds.</strong> With AI-powered tools, you can update your inventory by scanning a photo of a product or pasting a supplier URL. The system extracts the relevant information automatically.</li>
+      <li><strong>You can actually trust your numbers.</strong> When your inventory data is accurate, every decision downstream gets better. You order the right amount. You know what to restock. You stop wasting money on products you don't need.</li>
+    </ul>
+
+    <h2>The Moment to Change Is Before You Need To</h2>
+
+    <p>The most successful small businesses don't wait for a crisis. They build the right habits and the right tools before the problems arrive. Inventory management is one of those foundational systems where getting it right early pays dividends for years.</p>
+
+    <p>Your spreadsheet got you here. It probably won't get you where you're going.</p>
+
+  </div>
+
+  <div class="article-cta">
+    <h3>Replace your spreadsheet today</h3>
+    <p>ShelfyAI replaces your spreadsheet with a smart, AI-powered inventory system built for small businesses. Update stock from photos and URLs, get automatic low-stock alerts, and always know exactly what you have.</p>
+    <a href="/login" class="btn-cta">Try ShelfyAI free →</a>
+  </div>
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/faq" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">FAQ</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+</body>
+</html>
