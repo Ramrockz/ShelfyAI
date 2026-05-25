@@ -972,6 +972,16 @@
     100% { transform: scale(1, 1); }
   }
 
+  /* ---------- STOCK ALERTS (shown on all screen sizes) ---------- */
+  #mobileStockAlerts { margin-bottom: 24px; }
+  .stock-alert-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 8px; }
+  .stock-alert-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; text-decoration: none; min-height: 44px; }
+  .stock-alert-row:active { opacity: 0.7; }
+  .stock-alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .stock-alert-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stock-alert-qty { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+  .stock-all-ok { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--success); }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
     .hub-container { padding: 20px 16px; }
@@ -1029,20 +1039,11 @@
     .core-actions .action-card:nth-child(4) { order: unset; }
     .action-card p { font-size: 10px !important; margin: 4px 0 12px !important; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     
-    /* Operations grid: hide on mobile */
+    /* Operations grid: single column on mobile */
     .ops-grid {
-      display: none;
+      grid-template-columns: 1fr;
+      gap: 16px;
     }
-
-    /* Mobile stock alerts */
-    #mobileStockAlerts { display: block !important; margin-bottom: 24px; }
-    .stock-alert-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 8px; }
-    .stock-alert-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; text-decoration: none; min-height: 44px; }
-    .stock-alert-row:active { opacity: 0.7; }
-    .stock-alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .stock-alert-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stock-alert-qty { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-    .stock-all-ok { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--success); }
 
     /* Hide CSV import on mobile */
     #csv-method-card {
@@ -1881,8 +1882,8 @@
     </div>
   </section>
 
-  <!-- Mobile-only stock alerts list — hidden on desktop -->
-  <div id="mobileStockAlerts" style="display:none;"></div>
+  <!-- Stock alerts — shown on all screen sizes -->
+  <div id="mobileStockAlerts"></div>
 
   <div class="ops-grid">
     <div class="panel">
