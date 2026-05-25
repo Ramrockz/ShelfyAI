@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Recipes</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -37,6 +37,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
 
 <style>
@@ -157,11 +158,6 @@
   th { padding: 14px 20px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); position: relative; resize: horizontal; overflow: auto; }
   td { padding: 16px 20px; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-
-  /* ---------- KANBAN VIEW ---------- */
-  .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .kanban-col { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 16px; border: 1px solid var(--border); min-height: 500px; }
-  .col-title { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 
   /* ---------- BUILDER OVERLAYS (EXACTLY YOUR CODE) ---------- */
   .recipe-overlay { 
@@ -718,9 +714,8 @@
       display: none;
     }
     
-    /* Hide list and kanban views on mobile */
-    #listView,
-    #kanbanView {
+    /* Hide list view on mobile */
+    #listView {
       display: none !important;
     }
     
@@ -1259,10 +1254,9 @@
         <div class="view-switcher">
           <button class="view-btn active" id="viewBtnRecent" onclick="switchView('recent')">Cards</button>
           <button class="view-btn" id="viewBtnList" onclick="switchView('list')">List</button>
-          <button class="view-btn" id="viewBtnKanban" onclick="switchView('kanban')">Kanban</button>
         </div>
       </div>
-      <input type="text" id="searchRecipes" placeholder="Search recipes..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="cardsToShow = 10; render()" />
+      <input type="text" id="searchRecipes" placeholder="Search recipes..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="cardsToShow = 10; render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1283,20 +1277,6 @@
       </table>
     </div>
 
-    <div id="kanbanView" class="kanban-board" style="display: none;">
-        <div class="kanban-col">
-            <div class="col-title"><span class="status-dot" style="background:var(--success)"></span> Can be Produced</div>
-            <div id="col-ready"></div>
-        </div>
-        <div class="kanban-col">
-            <div class="col-title"><span class="status-dot" style="background:var(--warning)"></span> 1+ Ingredient Low</div>
-            <div id="col-low"></div>
-        </div>
-        <div class="kanban-col">
-            <div class="col-title"><span class="status-dot" style="background:var(--danger)"></span> 1+ Ingredient Out</div>
-            <div id="col-out"></div>
-        </div>
-    </div>
   </main>
 </div>
 
@@ -1545,7 +1525,7 @@ function switchView(view) {
     if (view === 'recent') {
         cardsToShow = 10;
     }
-    ['recent', 'list', 'kanban'].forEach(v => {
+    ['recent', 'list'].forEach(v => {
         document.getElementById(`viewBtn${v.charAt(0).toUpperCase() + v.slice(1)}`).classList.toggle('active', v === view);
         document.getElementById(`${v}View`).style.display = v === view ? (v === 'list' ? 'block' : 'grid') : 'none';
     });
@@ -1569,12 +1549,25 @@ function render() {
     if (currentView === 'recent') {
         const container = document.getElementById('recentView');
         if (data.length === 0) {
-            container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <p style="font-size: 18px; margin-bottom: 8px;">No recipes yet</p>
-                <p style="margin-bottom: 20px;">Combine ingredients into a finished product</p>
-                <button onclick="openBuilder()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ Create Recipe</button>
-            </div>`;
+            const isFirstTime = !allData || allData.length === 0;
+            const fab = document.querySelector('.fab');
+            if (fab) fab.style.display = isFirstTime ? 'none' : '';
+            container.innerHTML = isFirstTime ? `
+              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px; opacity:0.5;"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No recipes yet</h3>
+                <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Bundle ingredients into a recipe — then use it to deduct stock in one tap</p>
+                <button onclick="openBuilder()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Create Recipe</button>
+              </div>
+            ` : `
+              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="margin-bottom:12px; opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <p style="color:var(--text-muted); font-size:15px; margin:0;">No recipes match your search</p>
+              </div>
+            `;
         } else {
+            const fab = document.querySelector('.fab');
+            if (fab) fab.style.display = '';
             const favData = allData.filter(r => r.is_favorite);
             const allOtherData = allData.filter(r => !r.is_favorite);
             const otherData = allOtherData.slice(0, cardsToShow);
@@ -1683,20 +1676,6 @@ function render() {
             };
             tbody.innerHTML = allRows.map(buildRow).join('');
         }
-    } else {
-        ['ready', 'low', 'out'].forEach(s => document.getElementById(`col-${s}`).innerHTML = "");
-        data.forEach(r => {
-            document.getElementById(`col-${r.status || 'ready'}`).innerHTML += `
-                <div class="card-small" style="margin-bottom:12px;">
-                    <h4 style="cursor: pointer;" onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}">${r.name}</h4>
-                    <p>$${r.cost.toFixed(2)}</p>
-                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; gap: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;">
-                        <span style="color: var(--accent); cursor: pointer;" onclick="editRecipe('${r.id}')">Edit</span>
-                        <span style="color: var(--text-muted); cursor: pointer;" onclick="duplicateRecipe('${r.id}')">Dup</span>
-                        <span style="color: var(--danger); cursor: pointer;" onclick="deleteRecipe('${r.id}')">Del</span>
-                    </div>
-                </div>`;
-        });
     }
 }
 
@@ -3745,7 +3724,7 @@ async function processImageUpload() {
     const formData = new FormData();
     formData.append('file', uploadedFile);
     formData.append('context', 'ingredient');
-    const response = await fetch('/api/extract-receipt.js', {
+    const response = await fetch('/api/extract-receipt', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` },
       body: formData

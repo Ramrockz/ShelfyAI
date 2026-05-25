@@ -293,20 +293,6 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
       return;
     }
 
-    // Check if notification already exists
-    const { data: existing, error: checkError } = await supabaseClient
-      .from('notifications')
-      .select('id')
-      .eq('profile_id', userId)
-      .eq('ingredient_id', ingredientId)
-      .eq('type', 'ingredient_out_of_stock')
-      .eq('is_read', false);
-    
-    if (checkError) throw checkError;
-    
-    // Don't create duplicate notifications
-    if (existing && existing.length > 0) return;
-    
     const { error: insertError } = await supabaseClient
       .from('notifications')
       .insert([{
@@ -394,7 +380,7 @@ async function createAILimitNotification(userId, tier) {
       .insert([{
         profile_id: userId,
         type: 'ai_limit_reached',
-        message: `You've reached your daily AI extraction limit for ${tier} tier. Limit resets at midnight.`,
+        message: `You've reached your monthly AI scan limit (orders & expenses). Limit resets on the 1st.`,
         is_read: false
       }])
       .select();

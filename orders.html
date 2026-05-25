@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Orders</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -37,6 +37,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 
@@ -1037,7 +1038,7 @@
           <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">Kanban</button>
         </div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search orders..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+      <input type="text" id="searchInput" placeholder="Search orders..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1278,13 +1279,31 @@ function renderRecent(filtered) {
   const container = document.getElementById('recentView');
   
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No orders yet</p><p style="margin-bottom: 20px;">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ New Order</button></div>';
+    const isFirstTime = !orders || orders.length === 0;
+    const fab = document.querySelector('.fab');
+    if (fab) fab.style.display = isFirstTime ? 'none' : '';
+    container.innerHTML = isFirstTime ? `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px; opacity:0.5;"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No orders yet</h3>
+        <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Track customer orders and auto-update your inventory</p>
+        <button onclick="openAddOrderModal()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ New Order</button>
+      </div>
+    ` : `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="margin-bottom:12px; opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p style="color:var(--text-muted); font-size:15px; margin:0;">No orders match your search</p>
+      </div>
+    `;
     return;
   }
   
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = '';
+
   const displayData = filtered.slice(0, cardsToShow);
   const hasMore = filtered.length > cardsToShow;
-  
+
   container.innerHTML = displayData.map(order => {
     const date = new Date(order.sale_date).toLocaleDateString();
     const status = order.status || 'processed';
@@ -3139,7 +3158,7 @@ async function processOrderImageUpload() {
     const formData = new FormData();
     formData.append('file', orderUploadedFile);
     formData.append('context', 'order');
-    const response = await fetch('/api/extract-receipt.js', {
+    const response = await fetch('/api/extract-receipt', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` },
       body: formData

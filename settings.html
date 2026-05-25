@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Settings</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -36,76 +36,70 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 
 <style>
   .settings-container {
-    max-width: 900px;
+    max-width: 680px;
     margin: 0 auto;
-    padding: 40px 24px;
+    padding: 20px 24px 120px;
   }
 
+  /* Page header hidden everywhere — bottom nav / page title handles it */
   .settings-header {
-    margin-bottom: 40px;
-  }
-
-  .settings-header h1 {
-    margin: 0 0 8px 0;
-    font-size: 32px;
-    font-weight: 700;
-  }
-
-  .settings-header p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 14px;
+    display: none;
   }
 
   .settings-section {
     background: var(--bg-panel);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 24px;
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 20px;
+    overflow: hidden;
   }
 
+  /* Small uppercase section label — consistent on all screen sizes */
   .settings-section h2 {
-    margin: 0 0 24px 0;
-    font-size: 18px;
+    margin: 0;
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
+    padding: 18px 20px 8px;
   }
 
   .settings-section h2 svg {
-    width: 24px;
-    height: 24px;
-    color: var(--accent);
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
   }
 
   .settings-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--border);
+    gap: 12px;
   }
 
   .settings-row:last-child {
     border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  .settings-row:first-child {
-    padding-top: 0;
   }
 
   .settings-label {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    flex: 1;
+    min-width: 0;
   }
 
   .settings-label h3 {
@@ -128,8 +122,8 @@
   }
 
   .current-avatar {
-    width: 80px;
-    height: 80px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--accent), var(--premium));
     display: flex;
@@ -137,9 +131,10 @@
     justify-content: center;
     color: white;
     font-weight: 700;
-    font-size: 32px;
+    font-size: 22px;
     overflow: hidden;
     position: relative;
+    flex-shrink: 0;
   }
 
   .current-avatar img {
@@ -150,8 +145,9 @@
 
   .avatar-buttons {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .btn {
@@ -287,15 +283,18 @@
   }
 
   .tier-features {
-    margin-top: 16px;
-    padding-top: 16px;
+    margin: 0;
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--border);
   }
 
   .tier-features h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-main);
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
   }
 
   .tier-feature-list {
@@ -537,212 +536,111 @@
     font-size: 14px;
   }
 
-  /* ---------- MOBILE RESPONSIVE ---------- */
-  @media (max-width: 968px) {
-    .settings-container {
-      padding: 24px 16px;
-    }
-    
-    .settings-section {
-      padding: 24px 20px;
-    }
+  /* Plan card — subscription summary widget */
+  .plan-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, rgba(6,182,212,0.07) 0%, rgba(6,182,212,0.02) 100%);
+    border-bottom: 1px solid var(--border);
   }
-  
+
+  .plan-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .plan-card-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .plan-upgrade-btn {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 8px 14px;
+    border: 1.5px solid var(--accent);
+    border-radius: 10px;
+    transition: 0.2s;
+    flex-shrink: 0;
+  }
+
+  .plan-upgrade-btn:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* ---------- MOBILE ADJUSTMENTS (layout/spacing only — design is shared) ---------- */
   @media (max-width: 768px) {
     .settings-container {
-      padding: 20px 12px;
+      padding: 8px 0 140px;
     }
-    
-    .settings-header {
-      margin-bottom: 24px;
-    }
-    
-    .settings-header h1 {
-      font-size: 28px;
-    }
-    
+
+    /* Sections go edge-to-edge with side margins on mobile */
     .settings-section {
-      padding: 20px 16px;
-      border-radius: 16px;
+      margin: 0 12px 16px;
     }
-    
+
     .settings-section h2 {
-      font-size: 16px;
-      margin-bottom: 20px;
+      padding: 18px 16px 8px;
     }
-    
+
     .settings-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 20px 0;
+      padding: 14px 16px;
     }
-    
-    .settings-row .toggle-switch,
-    .settings-row .theme-options,
-    .settings-row .btn,
-    .settings-row .tier-badge {
-      align-self: stretch;
+
+    .tier-features {
+      padding: 12px 16px 16px;
     }
-    
+
+    .plan-card {
+      padding: 16px;
+    }
+
+    .settings-label p {
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .form-input {
       width: 100%;
     }
-    
-    .btn {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 14px;
-    }
-    
-    .avatar-upload {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    
-    .avatar-buttons {
-      width: 100%;
-    }
-    
-    .avatar-buttons .btn {
-      width: 100%;
-    }
-    
-    .theme-options {
-      width: 100%;
-      gap: 8px;
-    }
-    
-    .theme-option {
-      flex: 1;
-      text-align: center;
-      padding: 12px 16px;
-      font-size: 14px;
-    }
-    
+
     .save-button-bar {
       flex-direction: column;
-      padding: 16px;
-      gap: 12px;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      gap: 10px;
     }
-    
+
     .save-button-bar button {
       width: 100%;
-      padding: 12px 20px;
+      padding: 13px;
       font-size: 15px;
     }
-    
+
     .save-button-bar-text {
       font-size: 13px;
       text-align: center;
     }
-    
-    .tier-features {
-      margin-top: 12px;
-      padding-top: 12px;
-    }
-    
-    .usage-header {
-      flex-direction: row;
-      gap: 8px;
-    }
-    
-    .usage-label {
-      font-size: 13px;
-    }
-    
-    .usage-count {
-      font-size: 12px;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .settings-container {
-      padding: 16px 8px;
-    }
-    
-    .settings-header h1 {
-      font-size: 24px;
-    }
-    
-    .settings-header p {
-      font-size: 13px;
-    }
-    
-    .settings-section {
-      padding: 16px 12px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-    }
-    
-    .settings-section h2 {
-      font-size: 15px;
-      gap: 8px;
-    }
-    
-    .settings-section h2 svg {
-      width: 20px;
-      height: 20px;
-    }
-    
-    .settings-row {
-      padding: 16px 0;
-    }
-    
-    .settings-label h3 {
-      font-size: 14px;
-    }
-    
-    .settings-label p {
-      font-size: 12px;
-    }
-    
-    .toggle-switch {
-      width: 44px;
-      height: 24px;
-    }
-    
-    .toggle-switch::after {
-      width: 18px;
-      height: 18px;
-    }
-    
-    .toggle-switch.active::after {
-      transform: translateX(20px);
-    }
-    
-    .tier-badge {
-      padding: 6px 12px;
-      font-size: 12px;
-      justify-content: center;
-    }
-    
-    .tier-feature {
-      font-size: 12px;
-    }
-    
-    .current-avatar {
-      width: 64px;
-      height: 64px;
-      font-size: 24px;
-    }
-    
+
     .modal-content {
       margin: 16px;
-      padding: 20px 16px;
+      padding: 24px 20px;
       max-width: calc(100% - 32px);
     }
-    
-    .modal-content h3 {
-      font-size: 18px;
-    }
-    
+
     .modal-actions {
       flex-direction: column-reverse;
       gap: 8px;
     }
-    
+
     .modal-actions button {
       width: 100%;
     }
@@ -929,53 +827,27 @@
       Subscription & Usage
     </h2>
     
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Current Plan</h3>
-        <p>Your subscription tier and benefits</p>
+    <div class="plan-card">
+      <div class="plan-card-info">
+        <span class="tier-badge free" id="tierBadge">Free</span>
+        <p class="plan-card-sub">Your current plan</p>
       </div>
-      <span class="tier-badge free" id="tierBadge">Free</span>
+      <a href="/pricing.html" class="plan-upgrade-btn" id="upgradeBtn">Upgrade</a>
     </div>
 
     <div class="tier-features">
-      <h4>Monthly AI Limits</h4>
+      <h4>AI Scans this month <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(orders &amp; expenses)</span></h4>
       <div class="tier-feature-list">
         <div class="usage-item">
           <div class="usage-header">
-            <span class="usage-label">AI Ingredients (URL/Image)</span>
-            <span class="usage-count" id="ingredientUsage">0 / 25 this month</span>
+            <span class="usage-label" id="scanUsage">0 / 20 used</span>
+            <span class="usage-count" id="scanPercent"></span>
           </div>
           <div class="usage-bar">
-            <div class="usage-bar-fill" id="ingredientBar" style="width: 0%"></div>
-          </div>
-        </div>
-        <div class="usage-item">
-          <div class="usage-header">
-            <span class="usage-label">AI Orders (Image)</span>
-            <span class="usage-count" id="orderUsage">0 / 25 this month</span>
-          </div>
-          <div class="usage-bar">
-            <div class="usage-bar-fill" id="orderBar" style="width: 0%"></div>
-          </div>
-        </div>
-        <div class="usage-item">
-          <div class="usage-header">
-            <span class="usage-label">AI Expenses (Image)</span>
-            <span class="usage-count" id="expenseUsage">0 / 25 this month</span>
-          </div>
-          <div class="usage-bar">
-            <div class="usage-bar-fill" id="expenseBar" style="width: 0%"></div>
+            <div class="usage-bar-fill" id="scanBar" style="width: 0%"></div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="settings-row" style="margin-top: 20px; padding-top: 20px;" id="upgradeRow">
-      <div class="settings-label">
-        <h3>Upgrade Plan</h3>
-        <p>Get more AI extractions and unlock advanced features</p>
-      </div>
-      <a href="/pricing.html" class="btn btn-primary" style="text-decoration: none; display: inline-block;">Upgrade Now</a>
     </div>
   </div>
 
@@ -1316,89 +1188,82 @@ async function loadSettings() {
 
 // Tier management functions
 async function loadTierInformation(settings) {
-  // Try to get tier from user_settings first, then fall back to subscriptions table
   const { data: { user } } = await supabaseClient.auth.getUser();
-  let tier = settings?.tier || 'free';
-  
-  // If tier not in settings or is 'free', check subscriptions table as fallback
-  if (user && (!settings?.tier || settings.tier === 'free')) {
+  let tier = 'free';
+
+  // Always verify against the subscriptions table — user_settings.tier can be stale
+  // if the subscription expired without the webhook firing (e.g. cancel_at_period_end)
+  if (user) {
     const { data: subscription, error: subError } = await supabaseClient
       .from('subscriptions')
-      .select('tier, status')
+      .select('tier, status, current_period_end, cancel_at_period_end')
       .eq('profile_id', user.id)
-      .maybeSingle(); // Use maybeSingle to avoid errors if no rows
-    
+      .maybeSingle();
+
     if (!subError && subscription && subscription.status === 'active') {
-      tier = subscription.tier;
-      console.log('Tier loaded from subscriptions table:', tier);
-    } else if (subError && subError.code !== 'PGRST116') {
-      console.warn('Error loading subscription:', subError.message);
+      const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+      const stillValid = !periodEnd || periodEnd > new Date();
+      if (stillValid) {
+        tier = subscription.tier || 'free';
+      }
+    }
+
+    // If subscription is expired but user_settings.tier is still a paid tier, sync it silently
+    if (tier === 'free' && settings?.tier && settings.tier !== 'free') {
+      supabaseClient.from('user_settings').update({ tier: 'free' }).eq('user_id', user.id);
     }
   }
   
   console.log('Loading tier information:', tier);
   
-  // Define tier limits (monthly)
-  const tierLimits = {
-    free: { ingredients: 25, orders: 25, expenses: 25 },
-    starter: { ingredients: 50, orders: 50, expenses: 50 },
-    pro: { ingredients: 100, orders: 100, expenses: 100 }
-  };
-  
+  // Define scan limits (orders + expenses shared pool)
+  const scanLimits = { free: 20, starter: 100, pro: 300 };
+  const scanLimit = scanLimits[tier] ?? 20;
+
   // Update tier badge
   const tierBadge = document.getElementById('tierBadge');
   tierBadge.className = `tier-badge ${tier}`;
   tierBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
   console.log('Updated tier badge to:', tier);
-  
-  // Get limits for current tier
-  const limits = tierLimits[tier];
-  
+
   // Fetch this month's actual usage from the database
   const now = new Date();
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  // user already declared above, don't redeclare
-  
-  let ingredientCount = 0;
-  let orderCount = 0;
-  let expenseCount = 0;
-  
+
+  let totalScans = 0;
+
   if (user) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    // Sum all counts for the current month
     const { data: usageRecords, error } = await supabaseClient
       .from('ai_usage_tracking')
-      .select('ingredient_count, order_count, expense_count')
+      .select('order_count, expense_count')
       .eq('user_id', user.id)
       .gte('date', `${yearMonth}-01`)
       .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-    
+
     if (!error && usageRecords && usageRecords.length > 0) {
-      ingredientCount = usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0);
-      orderCount = usageRecords.reduce((sum, record) => sum + (record.order_count || 0), 0);
-      expenseCount = usageRecords.reduce((sum, record) => sum + (record.expense_count || 0), 0);
+      totalScans = usageRecords.reduce((sum, record) =>
+        sum + (record.order_count || 0) + (record.expense_count || 0), 0);
     }
   }
-  
-  // Update usage displays with actual data
-  const ingredientUsageEl = document.getElementById('ingredientUsage');
-  const orderUsageEl = document.getElementById('orderUsage');
-  const expenseUsageEl = document.getElementById('expenseUsage');
-  
-  if (ingredientUsageEl) {
-    ingredientUsageEl.textContent = `${ingredientCount} / ${limits.ingredients} this month`;
+
+  // Update combined scan usage display
+  const scanUsageEl = document.getElementById('scanUsage');
+  if (scanUsageEl) {
+    scanUsageEl.textContent = `${totalScans} / ${scanLimit} used`;
   }
-  if (orderUsageEl) {
-    orderUsageEl.textContent = `${orderCount} / ${limits.orders} this month`;
+  const pct = scanLimit > 0 ? Math.round((totalScans / scanLimit) * 100) : 0;
+  const scanPercentEl = document.getElementById('scanPercent');
+  if (scanPercentEl) {
+    scanPercentEl.textContent = `${pct}%`;
   }
-  if (expenseUsageEl) {
-    expenseUsageEl.textContent = `${expenseCount} / ${limits.expenses} this month`;
+  updateUsageBar('scanBar', totalScans, scanLimit);
+
+  // Hide upgrade button when on pro
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn && tier === 'pro') {
+    upgradeBtn.style.display = 'none';
   }
-  
-  // Update usage bars with actual percentages
-  updateUsageBar('ingredientBar', ingredientCount, limits.ingredients);
-  updateUsageBar('orderBar', orderCount, limits.orders);
-  updateUsageBar('expenseBar', expenseCount, limits.expenses);
 }
 
 function updateUsageBar(barId, used, limit) {

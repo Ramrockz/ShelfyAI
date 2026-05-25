@@ -929,7 +929,19 @@ tr:hover td {
 
   /* Show hamburger menu */
   .hamburger {
-    display: flex;
+    display: flex !important;
+    order: 3;
+    z-index: 1002;
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .hamburger span {
+    width: 22px;
+    height: 2px;
   }
 
   /* Hide nav links by default on mobile */
@@ -948,10 +960,12 @@ tr:hover td {
     transition: max-height 0.3s ease !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     transform: none !important;
+    z-index: 999;
   }
 
   .nav-links.active {
-    max-height: 400px;
+    max-height: 400px !important;
+    overflow-y: auto !important;
   }
 
   .nav-links a {
@@ -1056,3 +1070,52 @@ tr:hover td {
       min-width: 120px;
     }
   }
+
+/* ---------- MOBILE GLOBAL FIXES ---------- */
+@media (max-width: 768px) {
+  /* Prevent iOS Safari from zooming on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Notification dropdown — prevent overflow off left edge on small screens */
+  .notification-dropdown {
+    width: calc(100vw - 32px) !important;
+    right: -8px !important;
+    left: auto !important;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* ---------- SKELETON LOADER ---------- */
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--bg-panel) 25%, var(--bg-inner) 50%, var(--bg-panel) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s infinite;
+  border-radius: 8px;
+  height: 20px;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.skeleton-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-panel) 25%, var(--bg-inner) 50%, var(--bg-panel) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s infinite;
+}
+

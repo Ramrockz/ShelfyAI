@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Ingredient Detail</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -35,6 +35,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
 
 <style>
@@ -784,9 +785,6 @@
       order: 1;
     }
 
-    .detail-header button[onclick="saveAllChanges()"] {
-      order: 2;
-    }
 
     .detail-header .btn-reorder {
       order: 3;
@@ -892,12 +890,71 @@
   @media (max-width: 480px) {
     .container { padding: 16px 8px; }
     .panel { padding: 16px 12px; }
-    
+
     .header h1 { font-size: 24px; }
-    
+
     .reorder-modal-content,
     .modal-content {
       padding: 20px 16px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    /* Fix action buttons above bottom nav */
+    .detail-header > div:last-child {
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    /* Adjust container bottom padding for nav + button bar */
+    .container {
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 80px) !important;
+    }
+
+    .breadcrumb {
+      display: none !important;
+    }
+
+    /* Bigger tap targets for form inputs */
+    .form-input {
+      min-height: 44px;
+      font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+      padding: 10px 12px;
+    }
+    select.form-input {
+      min-height: 44px;
+    }
+
+    /* Stock status panel — make the numbers pop */
+    #stockDisplay {
+      font-size: 32px !important;
+      font-weight: 800 !important;
+    }
+    #costDisplay {
+      font-size: 24px !important;
+      font-weight: 700 !important;
+    }
+    .stat-box {
+      padding: 16px !important;
+    }
+
+    /* Alert block — more compact */
+    .alert-blocking {
+      padding: 12px 16px;
+      border-radius: 10px;
+    }
+    .alert-blocking h4 {
+      margin: 0 0 2px 0;
+      font-size: 14px;
+    }
+    .alert-blocking p {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    /* Ingredient name — bigger */
+    #ingredientName {
+      font-size: 26px !important;
+      font-weight: 800;
     }
   }
 </style>
@@ -1050,7 +1107,6 @@
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn">Restock</button>
       <button class="btn btn-outline" onclick="duplicateIngredient()">Copy</button>
-      <button class="btn btn-outline" onclick="saveAllChanges()">Save</button>
       <button class="btn btn-danger" onclick="deleteIngredient()">Delete</button>
     </div>
   </div>
@@ -1064,14 +1120,14 @@
       <div class="form-section">
         <div class="form-group">
           <label for="name">Name *</label>
-          <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required>
+          <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required onblur="autoSave()">
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="quantity">Quantity *</label>
             <div style="position:relative;">
-              <input type="number" id="quantity" class="form-input" step="1" placeholder="0" required style="padding-right:36px; -moz-appearance:textfield;">
+              <input type="number" id="quantity" class="form-input" step="1" placeholder="0" required style="padding-right:36px; -moz-appearance:textfield;" onblur="autoSave()">
               <div style="position:absolute; right:1px; top:1px; bottom:1px; width:30px; display:flex; flex-direction:column; border-left:1px solid var(--border); border-radius:0 7px 7px 0; overflow:hidden;">
                 <button type="button" onclick="stepQty(1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s; border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▲</button>
                 <button type="button" onclick="stepQty(-1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▼</button>
@@ -1081,7 +1137,7 @@
           
           <div class="form-group">
             <label for="unit">Unit *</label>
-            <select id="unit" class="form-input" required>
+            <select id="unit" class="form-input" required onchange="autoSave()">
               <option value="">Select unit</option>
               <option value="kg">Kilograms (kg)</option>
               <option value="g">Grams (g)</option>
@@ -1098,12 +1154,12 @@
         <div class="form-row">
           <div class="form-group">
             <label for="cost_per_unit">Cost per Unit *</label>
-            <input type="number" id="cost_per_unit" class="form-input" step="0.01" placeholder="0.00" required>
+            <input type="number" id="cost_per_unit" class="form-input" step="0.01" placeholder="0.00" required onblur="autoSave()">
           </div>
           
           <div class="form-group">
             <label for="sku">SKU</label>
-            <input type="text" id="sku" class="form-input" placeholder="Stock Keeping Unit">
+            <input type="text" id="sku" class="form-input" placeholder="Stock Keeping Unit" onblur="autoSave()">
           </div>
         </div>
       </div>
@@ -1112,19 +1168,19 @@
         <div class="form-row">
           <div class="form-group">
             <label for="min_stock">Minimum Stock Alert *</label>
-            <input type="number" id="min_stock" class="form-input" step="0.01" placeholder="e.g., 10" required>
+            <input type="number" id="min_stock" class="form-input" step="0.01" placeholder="e.g., 10" required onblur="autoSave()">
           </div>
 
           <div class="form-group">
             <label for="estimated_delivery">Estimated Delivery (days)</label>
-            <input type="number" id="estimated_delivery" class="form-input" placeholder="Max days for delivery">
+            <input type="number" id="estimated_delivery" class="form-input" placeholder="Max days for delivery" onblur="autoSave()">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="type">Type *</label>
-            <select id="type" class="form-input" required>
+            <select id="type" class="form-input" required onchange="autoSave()">
               <option value="">Select type</option>
               <option value="Production">Production</option>
               <option value="Shipping">Shipping</option>
@@ -1134,7 +1190,7 @@
           
           <div class="form-group">
             <label for="category">Category</label>
-            <input type="text" id="category" class="form-input" list="categoryList" placeholder="Type or select category">
+            <input type="text" id="category" class="form-input" list="categoryList" placeholder="Type or select category" onblur="autoSave()">
             <datalist id="categoryList"></datalist>
           </div>
         </div>
@@ -1148,12 +1204,12 @@
               <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
             </svg>
           </label>
-          <input type="url" id="source_url" class="form-input" placeholder="https://supplier.com/product">
+          <input type="url" id="source_url" class="form-input" placeholder="https://supplier.com/product" onblur="autoSave()">
         </div>
 
         <div class="form-group">
           <label for="notes">Notes</label>
-          <textarea id="notes" class="form-input" placeholder="Additional information about this ingredient..."></textarea>
+          <textarea id="notes" class="form-input" placeholder="Additional information about this ingredient..." onblur="autoSave()"></textarea>
         </div>
       </div>
     </div>
@@ -1295,14 +1351,12 @@
   let hasUnsavedChanges = false;
   let initialFormState = null;
   let reorderAbortController = null;
+  let _autoSaveTimer = null;
 
-  // Warn before leaving with unsaved changes
-  window.addEventListener('beforeunload', (e) => {
-    if (hasUnsavedChanges) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  });
+  function autoSave() {
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(() => saveAllChanges(), 600);
+  }
 
   // Track form changes
   function setupChangeTracking() {
@@ -1888,7 +1942,7 @@
       }
       
       // Call our serverless function (which securely uses the API key)
-      const response = await fetch('/api/extract-receipt.js', {
+      const response = await fetch('/api/extract-receipt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2243,6 +2297,7 @@
     const next = Math.max(0, current + delta * step);
     input.value = next;
     input.dispatchEvent(new Event('input'));
+    autoSave();
   }
 
   function renderDemandBadge(data) {

@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Ingredients Master</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -38,6 +38,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 
@@ -135,6 +136,52 @@
   .card-actions .edit-link { color: var(--accent); }
   .card-actions .delete-link { color: var(--danger); }
 
+  /* ---------- CARD QUANTITY HOVER CONTROLS ---------- */
+  .qty-display-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 0;
+  }
+  
+  .qty-hover-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transform: scale(1);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+  }
+
+  .qty-hover-btn:hover {
+    background: #0891b2;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.5);
+  }
+
+  .qty-hover-btn:active {
+    transform: scale(0.95);
+  }
+
+  .qty-number {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    transition: all 0.2s ease;
+  }
+
   /* ---------- LIST VIEW (TABLE) ---------- */
   .table-container { background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border); overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; min-width: 900px; table-layout: fixed; }
@@ -160,15 +207,10 @@
   }
   
   .stepper { display: flex; align-items: center; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; width: fit-content; }
-  .stepper button { background: transparent; border: none; color: var(--text-main); width: 28px; height: 28px; cursor: pointer; font-weight: 700; }
+  .stepper button { background: transparent; border: none; color: var(--text-main); width: 36px; height: 36px; cursor: pointer; font-weight: 700; }
   .stepper span { width: 34px; text-align: center; font-weight: 700; color: var(--text-main); }
   
   .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-
-  /* ---------- KANBAN VIEW ---------- */
-  .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .kanban-col { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 16px; border: 1px solid var(--border); min-height: 500px; }
-  .kanban-item { background: var(--bg-panel); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; cursor: grab; }
 
   /* ---------- FILTER DRAWER ---------- */
   .drawer { position: fixed; top: 0; right: -340px; width: 340px; height: 100vh; background: var(--bg-panel); border-left: 1px solid var(--border); z-index: 1000; padding: 40px 24px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; }
@@ -742,9 +784,8 @@
       display: none !important;
     }
 
-    /* Hide List and Kanban views on mobile */
-    #listView,
-    #kanbanView {
+    /* Hide List view on mobile */
+    #listView {
       display: none !important;
     }
 
@@ -1130,11 +1171,10 @@
         <div class="view-switcher">
           <button class="view-btn active" id="recentBtn" onclick="switchView('recent')">Cards</button>
           <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
-          <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">Kanban</button>
         </div>
         <div id="filterBadges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;"></div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="cardsToShow = 10; render()" />
+      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="cardsToShow = 10; render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1157,20 +1197,6 @@
       <div id="paginationContainer" style="display: flex; justify-content: center; align-items: center; gap: 12px; padding: 20px; border-top: 1px solid var(--border);"></div>
     </div>
 
-    <div id="kanbanView" class="kanban-board" style="display:none">
-        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'in-stock')">
-            <div id="inStockHeader" style="font-size:10px; color:var(--success); font-weight:800; margin-bottom:12px;">IN STOCK</div>
-            <div id="in-stock"></div>
-        </div>
-        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'low-stock')">
-            <div id="lowStockHeader" style="font-size:10px; color:var(--warning); font-weight:800; margin-bottom:12px;">LOW STOCK</div>
-            <div id="low-stock"></div>
-        </div>
-        <div class="kanban-col" ondragover="event.preventDefault()" ondrop="drop(event, 'out-of-stock')">
-            <div id="outStockHeader" style="font-size:10px; color:var(--danger); font-weight:800; margin-bottom:12px;">OUT OF STOCK</div>
-            <div id="out-of-stock"></div>
-        </div>
-    </div>
   </main>
 
   <!-- Floating Action Button (visible only on mobile) -->
@@ -1354,20 +1380,6 @@
   </div>
 </div>
 
-<div class="modal" id="quantityModal">
-  <div class="modal-content" style="max-width: 400px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Quantity</h3>
-    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-      <button onclick="adjustModalQuantity(-1)" style="width: 48px; height: 48px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
-      <input type="number" id="newQuantityInput" min="0" style="flex: 1; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; text-align: center; font-weight: 700;" placeholder="0">
-      <button onclick="adjustModalQuantity(1)" style="width: 48px; height: 48px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
-    </div>
-    <div style="display: flex; gap: 12px;">
-      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeQuantityModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex: 1;" onclick="saveQuantityChange()">Save</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="imageModal" onclick="if(event.target === this) closeImageModal()">
   <div class="modal-content" style="max-width: 600px;">
@@ -1431,7 +1443,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="duplicateModal" onclick="if(event.target === this) closeDuplicateModal()">
+<div class="modal-overlay" id="duplicateModal">
   <div class="modal-content" style="max-width: 600px;">
     <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Ingredient</h3>
     <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated ingredient</p>
@@ -1451,7 +1463,7 @@
     
     <div style="display: flex; gap: 12px; margin-top: 8px;">
       <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeDuplicateModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex: 1;" onclick="saveDuplicate(false)">Create Duplicate</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="saveDuplicate(false)">Create</button>
       <button class="btn btn-outline" style="flex: 1;" onclick="saveDuplicate(true)">Create & Add Another</button>
     </div>
   </div>
@@ -1478,7 +1490,7 @@
 
 <script>
 // Load saved view preference or default to 'cards'
-let currentView = localStorage.getItem('ingredientsView') || 'recent';
+let currentView = (['recent', 'list'].includes(localStorage.getItem('ingredientsView'))) ? localStorage.getItem('ingredientsView') : 'recent';
 let ingredients = [];
 let activeAttributeFilters = {};
 let activeCategoryFilter = null;
@@ -1522,6 +1534,16 @@ function resolveConfirm(result) {
 
 // Load ingredients from Supabase on page load
 async function loadIngredients() {
+  const recentContainer = document.getElementById('recentView');
+  if (recentContainer) {
+    recentContainer.innerHTML = Array(6).fill(0).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:55%; height:14px;"></div>
+        <div class="skeleton-line" style="width:35%; height:11px; margin-top:6px;"></div>
+        <div class="skeleton-line" style="width:100%; height:36px; margin-top:14px;"></div>
+      </div>
+    `).join('');
+  }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
@@ -2014,7 +2036,7 @@ async function processImageUpload() {
     
     console.log('Sending as multipart/form-data with context: ingredient');
     
-    const response = await fetch('/api/extract-receipt.js', {
+    const response = await fetch('/api/extract-receipt', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`
@@ -2490,18 +2512,15 @@ function switchView(view) {
   window.history.replaceState({}, '', url);
   
   listCurrentPage = 1; // Reset to page 1 when switching views
-  ['recentBtn', 'listBtn', 'kanbanBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
+  ['recentBtn', 'listBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
   document.getElementById(view + 'Btn').classList.add('active');
-  
+
   // Clean up empty states from other views
   const emptyStateList = document.getElementById('emptyStateList');
-  const emptyStateKanban = document.getElementById('emptyStateKanban');
   if (emptyStateList) emptyStateList.remove();
-  if (emptyStateKanban) emptyStateKanban.remove();
-  
+
   document.getElementById('recentView').style.display = view === 'recent' ? 'grid' : 'none';
   document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-  document.getElementById('kanbanView').style.display = view === 'kanban' ? 'grid' : 'none';
   render();
 }
 
@@ -2525,7 +2544,7 @@ function filterByTypeMobile(type) {
 
 function getStatus(qty, minStock = 0) {
   if (qty === 0) return { label: 'Out', color: 'var(--danger)', key: 'out' };
-  if (minStock > 0 && qty <= minStock) return { label: 'Low', color: 'var(--warning)', key: 'low' };
+  if (minStock > 0 && qty < minStock) return { label: 'Low', color: 'var(--warning)', key: 'low' };
   return { label: 'Active', color: 'var(--success)', key: 'in' };
 }
 
@@ -2910,7 +2929,7 @@ function applyInventoryFilter(filterType) {
     filteredIngredients = ingredients.filter(i => {
       const qty = parseFloat(i.qty) || 0;
       const minStock = parseFloat(i.min_stock) || 0;
-      return minStock > 0 && qty > 0 && qty <= minStock;
+      return minStock > 0 && qty > 0 && qty < minStock;
     });
   } else if (filterType === 'dead-stock') {
     filteredIngredients = ingredients.filter(i => {
@@ -3041,7 +3060,6 @@ function render() {
 
   if (currentView === 'recent') renderRecent(filtered);
   if (currentView === 'list') renderList(filtered);
-  if (currentView === 'kanban') renderKanban(filtered);
 }
 
 function addAttributeFilter(value, key = null) {
@@ -3244,24 +3262,35 @@ function escapeHtml(text) {
 function renderRecent(data) {
   const container = document.getElementById('recentView');
   
-  // Sort by quantity ascending (lowest first)
+  // Sort by name alphabetically
   data = [...data].sort((a, b) => {
-    const qtyA = parseFloat(a.qty) || 0;
-    const qtyB = parseFloat(b.qty) || 0;
-    return qtyA - qtyB;
+    return a.name.localeCompare(b.name);
   });
   
   if (data.length === 0) {
-    container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px;">
-        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
-        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
+    const isFirstTime = !ingredients || ingredients.length === 0;
+    const fab = document.querySelector('.fab');
+    if (fab) fab.style.display = isFirstTime ? 'none' : '';
+    container.innerHTML = isFirstTime ? `
+      <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px; opacity:0.5;"><path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 24px; max-width: 260px; margin-left: auto; margin-right: auto;">Add your first ingredient to start tracking inventory</p>
+        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
+      </div>
+    ` : `
+      <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="margin-bottom:12px; opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No ingredients match your search</p>
       </div>
     `;
     return;
   }
   
+  // Restore FAB when data is present
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = '';
+
   // Clear container first to prevent duplicates
   container.innerHTML = '';
 
@@ -3272,7 +3301,7 @@ function renderRecent(data) {
     const safeName = escapeHtml(i.name);
     let qtyColor = 'var(--success)';
     if (i.qty === 0) qtyColor = 'var(--danger)';
-    else if (i.reorder_point && i.qty < i.reorder_point) qtyColor = 'var(--warning)';
+    else if (i.min_stock && i.qty < i.min_stock) qtyColor = 'var(--warning)';
     let attributesText = '';
     if (i.custom_attributes) {
       try {
@@ -3301,10 +3330,16 @@ function renderRecent(data) {
           <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
         </h4>
         ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
-        <div style="font-size: 32px; font-weight: 800; color: ${qtyColor}; margin: 12px 0; line-height: 1; text-align: center;">${i.qty}</div>
+        <div style="display: flex; justify-content: center; margin: 12px 0;">
+          <div class="qty-display-container">
+            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">−</button>
+            <span class="qty-number" style="color: ${qtyColor};">${i.qty}</span>
+            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', 1)">+</button>
+          </div>
+        </div>
         <div class="divider"></div>
         <div class="card-actions">
-          <span class="edit-link" onclick="openRestockModal('${i.id}')">Restock</span>
+          <span class="edit-link" onclick="editIngredient('${i.id}')">Edit</span>
           <span class="edit-link" onclick="openDuplicateModal('${i.id}')">Duplicate</span>
           <span class="delete-link" onclick="deleteIng('${i.id}')">Delete</span>
         </div>
@@ -3468,138 +3503,7 @@ function renderList(data) {
   renderPagination(totalPages, data.length);
 }
 
-function renderKanban(data) {
-  const kanbanView = document.getElementById('kanbanView');
-  
-  if (data.length === 0) {
-    kanbanView.style.display = 'none';
-    // Show empty state in main content area
-    const kanbanContainer = kanbanView.parentElement;
-    if (kanbanContainer && !document.getElementById('emptyStateKanban')) {
-      const emptyDiv = document.createElement('div');
-      emptyDiv.id = 'emptyStateKanban';
-      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
-      emptyDiv.innerHTML = `
-        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
-        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
-      `;
-      kanbanContainer.appendChild(emptyDiv);
-    }
-    return;
-  }
-  
-  // Remove empty state if it exists
-  const emptyState = document.getElementById('emptyStateKanban');
-  if (emptyState) emptyState.remove();
-  
-  kanbanView.style.display = 'grid';
-  
-  ['in-stock', 'low-stock', 'out-of-stock'].forEach(id => {
-    const elem = document.getElementById(id);
-    const status = id === 'in-stock' ? 'in' : (id === 'low-stock' ? 'low' : 'out');
-    let filtered = data.filter(i => getStatus(i.qty, i.min_stock).key === status);
-    
-    // Apply filters
-    if (activeCategoryFilter) {
-      filtered = filtered.filter(i => i.category === activeCategoryFilter);
-    }
-    if (activeDeliveryFilter) {
-      filtered = filtered.filter(i => i.delivery === activeDeliveryFilter);
-    }
-    if (Object.keys(activeAttributeFilters).length > 0) {
-      filtered = filtered.filter(i => {
-        if (!i.custom_attributes) return false;
-        try {
-          const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-          // Check if all active attribute filters match
-          return Object.entries(activeAttributeFilters).every(([key, value]) => {
-            const attrValue = attrs[key];
-            return attrValue && attrValue.toLowerCase() === value.toLowerCase();
-          });
-        } catch (e) {
-          return false;
-        }
-      });
-    }
-    
-    // Update header with count
-    const headerMap = {
-      'in-stock': { id: 'inStockHeader', label: 'IN STOCK' },
-      'low-stock': { id: 'lowStockHeader', label: 'LOW STOCK' },
-      'out-of-stock': { id: 'outStockHeader', label: 'OUT OF STOCK' }
-    };
-    const header = document.getElementById(headerMap[id].id);
-    if (header) {
-      header.textContent = `${headerMap[id].label} (${filtered.length})`;
-    }
-    
-    if (filtered.length === 0) {
-      elem.innerHTML = `<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No items</div>`;
-    } else {
-      elem.innerHTML = "";
-      filtered.forEach(i => {
-        const starIcon = i.is_favorite ? '★' : '☆';
-        const starClass = i.is_favorite ? 'favorited' : '';
-        const safeName = escapeHtml(i.name);
-        
-        // Build attributes text (case-insensitive grouping and alphabetical sort)
-        let attributesText = '';
-        if (i.custom_attributes) {
-          try {
-            const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-            
-            // Group by lowercase key to handle duplicates, collect all unique values, capitalize keys
-            const groupedAttrs = new Map();
-            for (const [key, value] of Object.entries(attrs)) {
-              const lowerKey = key.toLowerCase();
-              if (!value || !value.trim()) continue;
-              if (!groupedAttrs.has(lowerKey)) {
-                groupedAttrs.set(lowerKey, []);
-              }
-              // Only add if value is unique
-              const capitalizedKey = capitalizeAttributeKey(key);
-              if (!groupedAttrs.get(lowerKey).some(item => item.value === value)) {
-                groupedAttrs.get(lowerKey).push({ key: capitalizedKey, value });
-              }
-            }
-            
-            // Flatten and sort all entries alphabetically by key
-            const allEntries = [];
-            for (const entries of groupedAttrs.values()) {
-              allEntries.push(...entries);
-            }
-            const sortedValues = allEntries
-              .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
-              .map(item => item.value);
-            
-            if (sortedValues.length > 0) {
-              attributesText = sortedValues.map(v => `<span class="attr-badge" data-value="${escapeHtml(v)}" style="cursor: pointer;">${escapeHtml(v)}</span>`).join(' • ');
-            }
-          } catch (e) {
-            console.error('Error parsing attributes:', e);
-          }
-        }
-        
-        const categoryText = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; color: var(--accent); font-weight: 600;">${escapeHtml(i.category)}</span>`;
-        
-        if (attributesText) {
-          attributesText = categoryText + ' • ' + attributesText;
-        } else {
-          attributesText = categoryText;
-        }
-        
-        elem.innerHTML += `<div class="kanban-item" draggable="true" ondragstart="dragStart(event, '${i.id}')" data-id="${i.id}">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span class="star-icon ${starClass}" data-id="${i.id}" style="font-size: 16px; cursor: pointer;">${starIcon}</span>
-            <h5 style="flex: 1; margin: 0; cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</h5>
-          </div>
-          <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${attributesText}</div>
-        </div>`;
-      });
-    }
-  });
-}
+
 
 async function toggleFavorite(id) {
   const item = ingredients.find(i => i.id === id || i.id == id);
@@ -3647,16 +3551,19 @@ async function updateQty(id, delta) {
       .from('ingredients')
       .update({ quantity: newQty })
       .eq('id', id);
-    
+
     if (error) throw error;
-    
+
     // Update local state
     item.qty = newQty;
-    
-    // Create history entry
+
+    // Get user for history + out-of-stock notification
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) {
+        if (newQty === 0 && oldQty > 0) {
+          await createOutOfStockNotification(id, item.name, user.id);
+        }
         await supabaseClient
           .from('ingredient_history')
           .insert([{
@@ -3672,9 +3579,8 @@ async function updateQty(id, delta) {
       }
     } catch (historyError) {
       console.error('Error creating history entry:', historyError);
-      // Don't show error to user, history is non-critical
     }
-    
+
     render();
   } catch (error) {
     showAlert('Failed to update: ' + error.message, 'Error');
@@ -3916,9 +3822,55 @@ async function saveDuplicate(keepOpen = false) {
     render();
     
     if (keepOpen) {
-      // Reset form for next duplicate but keep modal open
-      document.getElementById('dupName').value = `${currentDuplicateIngredient.name} (Copy)`;
-      document.getElementById('dupQty').value = currentDuplicateIngredient.qty || 0;
+      // Update currentDuplicateIngredient to the newly created ingredient
+      currentDuplicateIngredient = {
+        id: newIng.id,
+        name: newIng.name,
+        qty: parseFloat(newIng.quantity) || 0,
+        unit: newIng.unit,
+        cost: parseFloat(newIng.cost_per_unit) || 0,
+        category: newIng.category || 'General',
+        type: newIng.type,
+        sku: newIng.sku || '',
+        notes: newIng.notes || '',
+        min_stock: newIng.min_stock || 0,
+        estimated_delivery: newIng.estimated_delivery,
+        custom_attributes: newIng.custom_attributes
+      };
+      
+      // Reset form for next duplicate using the newly created ingredient
+      document.getElementById('dupName').value = `${newIng.name} (Copy)`;
+      document.getElementById('dupQty').value = parseFloat(newIng.quantity) || 0;
+      document.getElementById('dupSourceUrl').value = newIng.source_url || '';
+      
+      // Update duplicateAttributes from the newly created ingredient
+      if (newIng.custom_attributes) {
+        try {
+          duplicateAttributes = typeof newIng.custom_attributes === 'string' 
+            ? JSON.parse(newIng.custom_attributes) 
+            : newIng.custom_attributes;
+        } catch (e) {
+          duplicateAttributes = {};
+        }
+      } else {
+        duplicateAttributes = {};
+      }
+      
+      // Re-render attribute rows
+      const attrContainer = document.getElementById('dupAttributes');
+      if (attrContainer) {
+        attrContainer.innerHTML = '';
+        for (const [key, value] of Object.entries(duplicateAttributes)) {
+          attrContainer.innerHTML += `
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" value="${escapeHtml(key)}" placeholder="Attribute name" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);" oninput="updateDuplicateAttribute(this)">
+              <input type="text" value="${escapeHtml(value)}" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);" oninput="updateDuplicateAttribute(this)">
+              <button type="button" onclick="removeDuplicateAttributeRow(this)" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+            </div>
+          `;
+        }
+      }
+      
       document.getElementById('dupName').focus();
       document.getElementById('dupName').select();
     } else {
@@ -4182,103 +4134,6 @@ function sortTable(column) {
   render();
 }
 
-let draggedItemId = null;
-let dropTargetColumn = null;
-
-function dragStart(ev, id) {
-  draggedItemId = id;
-  ev.dataTransfer.effectAllowed = 'move';
-  ev.dataTransfer.setData('text/html', ev.target.innerHTML);
-}
-
-function drop(ev, col) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  
-  if (!draggedItemId) return;
-  
-  const item = ingredients.find(i => i.id === draggedItemId);
-  if (!item) return;
-  
-  dropTargetColumn = col;
-  
-  // Open modal to ask for quantity
-  const modal = document.getElementById('quantityModal');
-  const input = document.getElementById('newQuantityInput');
-  
-  input.value = item.qty;
-  
-  modal.classList.add('active');
-  setTimeout(() => input.focus(), 100);
-}
-
-function adjustModalQuantity(delta) {
-  const input = document.getElementById('newQuantityInput');
-  const currentVal = parseInt(input.value) || 0;
-  const newVal = Math.max(0, currentVal + delta);
-  input.value = newVal;
-}
-
-function closeQuantityModal() {
-  const modal = document.getElementById('quantityModal');
-  modal.classList.remove('active');
-  draggedItemId = null;
-  dropTargetColumn = null;
-}
-
-async function saveQuantityChange() {
-  const input = document.getElementById('newQuantityInput');
-  const newQty = parseInt(input.value);
-  
-  if (isNaN(newQty) || newQty < 0) {
-    showAlert('Please enter a valid quantity', 'Error');
-    return;
-  }
-  
-  const item = ingredients.find(i => i.id === draggedItemId);
-  if (!item) return;
-  
-  const oldQty = item.qty;
-  
-  try {
-    // Update quantity in database
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .update({ quantity: newQty })
-      .eq('id', draggedItemId);
-    
-    if (error) throw error;
-    
-    // Update local state
-    item.qty = newQty;
-    
-    // Create history entry
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (user) {
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
-            ingredient_id: draggedItemId,
-            profile_id: user.id,
-            field_name: 'quantity',
-            old_value: String(oldQty),
-            new_value: String(newQty),
-            reason: 'manual',
-            reference_id: null,
-            reference_text: 'Manual adjustment'
-          }]);
-      }
-    } catch (historyError) {
-      console.error('Error creating history entry:', historyError);
-    }
-    
-    closeQuantityModal();
-    render();
-  } catch (error) {
-    showAlert('Failed to update: ' + error.message, 'Error');
-  }
-}
 
 function resetFilters() { 
   document.getElementById('fName').value = ""; 
@@ -4291,22 +4146,9 @@ function resetFilters() {
   sortOrder = 'asc';
   render(); 
 }
-window.onclick = (e) => { 
+window.onclick = (e) => {
   if (e.target.id === 'modal') closeModal();
-  if (e.target.id === 'quantityModal') closeQuantityModal();
 };
-
-// Enter key support for quantity modal
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('newQuantityInput');
-  if (input) {
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        saveQuantityChange();
-      }
-    });
-  }
-});
 
 // Auto-highlight active page in navigation
 (function() {
@@ -4749,6 +4591,12 @@ async function handleSwitchSignUp(e) {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/></svg>
       </div>
       <div style="margin-top: 16px;">
+        <label style="display:block; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Quantity Received</label>
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
+          <input type="number" id="restockQtyInput" min="0" step="any" placeholder="e.g. 500"
+            style="flex:1; padding:11px 14px; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:15px; min-height:44px; box-sizing:border-box;">
+          <span id="restockUnitLabel" style="font-size:13px; color:var(--text-muted); white-space:nowrap;">units</span>
+        </div>
         <button class="btn-restock" onclick="markAsRestocked()" id="markRestockedBtn" style="width: 100%; padding: 12px 32px;">Mark as Restocked</button>
       </div>
       <h4 style="font-size: 13px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; color: var(--text-muted);">Ingredients from same source</h4>
@@ -4785,6 +4633,12 @@ async function handleSwitchSignUp(e) {
     if (!ing) return;
 
     _restockCurrentIngredientId = id;
+
+    // Pre-fill unit label and reset quantity input
+    const unitLabel = document.getElementById('restockUnitLabel');
+    if (unitLabel) unitLabel.textContent = ing.unit || 'units';
+    const qtyInput = document.getElementById('restockQtyInput');
+    if (qtyInput) qtyInput.value = '';
 
     if (!ing.source_url || !ing.source_url.trim()) {
       document.getElementById('restockNoSourceModal').classList.add('active');
@@ -4899,22 +4753,33 @@ async function handleSwitchSignUp(e) {
     if (!_restockCurrentIngredientId) return;
 
     const btn = document.getElementById('markRestockedBtn');
+    const qtyReceived = parseFloat(document.getElementById('restockQtyInput')?.value) || 0;
+
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
     try {
+      const ing = ingredients.find(i => i.id === _restockCurrentIngredientId);
+      const updates = { reorder_pending: false };
+      if (qtyReceived > 0 && ing) {
+        updates.quantity = (ing.qty || 0) + qtyReceived;
+      }
+
       const { error } = await supabaseClient
         .from('ingredients')
-        .update({ reorder_pending: true })
+        .update(updates)
         .eq('id', _restockCurrentIngredientId);
 
       if (error) throw error;
 
       // Update local cache
-      const ing = ingredients.find(i => i.id === _restockCurrentIngredientId);
-      if (ing) ing.reorder_pending = true;
+      if (ing) {
+        ing.reorder_pending = false;
+        if (qtyReceived > 0) ing.qty = (ing.qty || 0) + qtyReceived;
+      }
 
       closeRestockModal();
+      render();
     } catch (err) {
       console.error('Error marking as restocked:', err);
       btn.textContent = 'Mark as Restocked';

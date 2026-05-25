@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Expenses</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -35,6 +35,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
 
 <style>
@@ -141,35 +142,6 @@
     transition: 0.2s;
   }
   .btn-action:hover { border-color: var(--accent); background: var(--bg-panel); }
-
-  /* ---------- KANBAN VIEW ---------- */
-  .kanban-board {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-  }
-  .kanban-col {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    min-height: 500px;
-  }
-  .kanban-card {
-    background: var(--bg-inner);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  .kanban-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-  }
-  .kanban-card h5 { margin: 0 0 8px 0; font-size: 14px; }
-  .kanban-card p { margin: 4px 0; font-size: 12px; color: var(--text-muted); }
 
   /* ---------- MODALS ---------- */
   .modal-overlay { 
@@ -462,9 +434,8 @@
       display: none !important;
     }
 
-    /* Hide List and Kanban views on mobile */
-    #listView,
-    #kanbanView {
+    /* Hide List view on mobile */
+    #listView {
       display: none !important;
     }
 
@@ -707,10 +678,9 @@
         <div class="view-switcher">
           <button class="view-btn active" id="recentBtn" onclick="switchView('recent')">Cards</button>
           <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
-          <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">By Category</button>
         </div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search expenses..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 300px;" oninput="render()" />
+      <input type="text" id="searchInput" placeholder="Search expenses..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -734,9 +704,6 @@
       <div id="paginationContainer" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px;"></div>
     </div>
 
-    <div id="kanbanView" class="kanban-board" style="display:none">
-      <!-- Categories will be dynamically generated -->
-    </div>
   </main>
 
   <!-- Floating Action Button (visible only on mobile) -->
@@ -929,11 +896,9 @@ function switchView(view) {
   
   document.getElementById('recentBtn').classList.toggle('active', view === 'recent');
   document.getElementById('listBtn').classList.toggle('active', view === 'list');
-  document.getElementById('kanbanBtn').classList.toggle('active', view === 'kanban');
-  
+
   document.getElementById('recentView').style.display = view === 'recent' ? 'grid' : 'none';
   document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-  document.getElementById('kanbanView').style.display = view === 'kanban' ? 'grid' : 'none';
   
   render();
 }
@@ -953,20 +918,37 @@ function render() {
 
   if (currentView === 'recent') renderRecent(filtered);
   else if (currentView === 'list') renderList(filtered);
-  else if (currentView === 'kanban') renderKanban(filtered);
 }
 
 function renderRecent(filtered) {
   const container = document.getElementById('recentView');
   
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);"><p style="font-size: 18px; margin-bottom: 8px;">No expenses yet</p><p style="margin-bottom: 20px;">Track your business costs and spending</p><button onclick="openAddExpenseModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">+ Add Expense</button></div>';
+    const isFirstTime = !expenses || expenses.length === 0;
+    const fab = document.querySelector('.fab');
+    if (fab) fab.style.display = isFirstTime ? 'none' : '';
+    container.innerHTML = isFirstTime ? `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px; opacity:0.5;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No expenses yet</h3>
+        <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Track what you spend to keep your costs in check</p>
+        <button onclick="openImageUploadModal()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Add Expense</button>
+      </div>
+    ` : `
+      <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="margin-bottom:12px; opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p style="color:var(--text-muted); font-size:15px; margin:0;">No expenses match your search</p>
+      </div>
+    `;
     return;
   }
-  
+
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = '';
+
   const displayData = filtered.slice(0, cardsToShow);
   const hasMore = filtered.length > cardsToShow;
-  
+
   container.innerHTML = displayData.map(expense => {
     const date = new Date(expense.expense_date).toLocaleDateString();
     const hasReceipt = expense.receipt_url ? '📎' : '';
@@ -979,7 +961,7 @@ function renderRecent(filtered) {
           <span class="category-badge">${expense.category || 'Uncategorized'}</span>
         </div>
         <div class="expense-info">
-          <span><strong>€${parseFloat(expense.amount || 0).toFixed(2)}</strong></span>
+          <span><strong>$${parseFloat(expense.amount || 0).toFixed(2)}</strong></span>
           <span>${hasReceipt}</span>
         </div>
         <div class="expense-date">${date}</div>
@@ -1062,7 +1044,7 @@ function renderList(filtered) {
         <td>${expense.description || 'Untitled'}</td>
         <td>${expense.vendor || '-'}</td>
         <td><span class="category-badge">${expense.category || 'N/A'}</span></td>
-        <td><strong>€${parseFloat(expense.amount || 0).toFixed(2)}</strong></td>
+        <td><strong>$${parseFloat(expense.amount || 0).toFixed(2)}</strong></td>
         <td>${receiptLink}</td>
         <td>
           <span style="color:var(--accent); font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="editExpense('${expense.id}')">EDIT</span>
@@ -1114,42 +1096,6 @@ function renderPaginationExpenses(totalPages, totalItems) {
   }
   
   container.innerHTML = html;
-}
-
-function renderKanban(filtered) {
-  const container = document.getElementById('kanbanView');
-  
-  // Group by category
-  const categories = {};
-  filtered.forEach(expense => {
-    const cat = expense.category || 'Uncategorized';
-    if (!categories[cat]) categories[cat] = [];
-    categories[cat].push(expense);
-  });
-  
-  container.innerHTML = Object.entries(categories).map(([category, items]) => {
-    const total = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-    
-    return `
-      <div class="kanban-col">
-        <div style="font-size:10px; color:var(--accent); font-weight:800; margin-bottom:12px; display: flex; justify-content: space-between;">
-          <span>${category.toUpperCase()}</span>
-          <span>€${total.toFixed(2)}</span>
-        </div>
-        ${items.map(expense => {
-          const date = new Date(expense.expense_date).toLocaleDateString();
-          return `
-            <div class="kanban-card" onclick="window.location.href='/expense-detail?id=${expense.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/expense-detail?id=${expense.id}','_blank')}" style="cursor: pointer;">
-              <h5>${expense.description || 'Untitled'}</h5>
-              <p><strong>€${parseFloat(expense.amount || 0).toFixed(2)}</strong></p>
-              <p>Vendor: ${expense.vendor || 'N/A'}</p>
-              <p style="font-size: 11px; margin-top: 8px;">${date}</p>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }).join('');
 }
 
 function sortTable(column) {
@@ -1498,7 +1444,7 @@ async function processImageUpload() {
     formData.append('file', uploadedFile);
     formData.append('context', 'expense');
     
-    const response = await fetch('/api/extract-receipt.js', {
+    const response = await fetch('/api/extract-receipt', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`

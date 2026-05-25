@@ -94,7 +94,7 @@ module.exports = async (req, res) => {
     const context = (fields.context?.[0] || fields.context || 'ingredient').toLowerCase();
     console.log('Extraction context:', context);
 
-    // Check usage limits based on context
+    // Check usage limits — orders and expenses share a single monthly pool
     const { data: settings } = await supabase
       .from('user_settings')
       .select('tier')
@@ -102,43 +102,34 @@ module.exports = async (req, res) => {
       .single();
 
     const tier = settings?.tier || 'free';
-    const limits = {
-      free: { ingredients: 25, orders: 25, expenses: 25 },
-      starter: { ingredients: 50, orders: 50, expenses: 50 },
-      pro: { ingredients: 100, orders: 100, expenses: 100 }
-    };
+    const scanLimits = { free: 20, starter: 100, pro: 300 };
+    const scanLimit = scanLimits[tier] ?? 20;
 
     // Get current month's usage (YYYY-MM format)
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    
+
     const { data: usageRecords } = await supabase
       .from('ai_usage_tracking')
-      .select('ingredient_count, order_count, expense_count')
+      .select('order_count, expense_count')
       .eq('user_id', user.id)
       .gte('date', `${yearMonth}-01`)
       .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const currentUsage = {
-      ingredient: usageRecords?.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) || 0,
-      order: usageRecords?.reduce((sum, record) => sum + (record.order_count || 0), 0) || 0,
-      expense: usageRecords?.reduce((sum, record) => sum + (record.expense_count || 0), 0) || 0
-    };
+    const totalScansUsed = usageRecords?.reduce((sum, record) =>
+      sum + (record.order_count || 0) + (record.expense_count || 0), 0) || 0;
 
-    // Determine which counter to check based on context
     const usageType = context === 'order' ? 'order' : context === 'expense' ? 'expense' : 'ingredient';
-    const limit = limits[tier][usageType + 's'];
-    const used = currentUsage[usageType];
 
-    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Used: ${used}/${limit} (monthly)`);
+    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Scans used: ${totalScansUsed}/${scanLimit} (monthly)`);
 
-    if (used >= limit) {
-      return res.status(429).json({ 
+    if (usageType !== 'ingredient' && totalScansUsed >= scanLimit) {
+      return res.status(429).json({
         error: 'Monthly limit reached',
-        message: `You've reached your monthly limit of ${limit} AI ${usageType} extractions. Your limit will reset on the 1st of next month.`,
-        limit,
-        used,
+        message: `You've reached your monthly AI scan limit of ${scanLimit} (orders & expenses). Your limit will reset on the 1st of next month.`,
+        limit: scanLimit,
+        used: totalScansUsed,
         tier
       });
     }

@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Order Detail</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -34,6 +34,7 @@
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
 
 <style>
   .container {
@@ -351,6 +352,41 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .receipt-attach-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--bg-inner);
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+  .receipt-attach-btn:hover, .receipt-attach-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .receipt-preview-img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .receipt-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   table {
@@ -740,6 +776,16 @@
     <h3 class="section-title">📝 Notes</h3>
     <p id="orderNotes" style="margin: 0; color: var(--text-muted);"></p>
   </div>
+
+  <!-- Receipt Section -->
+  <div class="section" id="receiptSection">
+    <h3 class="section-title">Receipt</h3>
+    <div id="receiptContent">
+      <!-- Filled by displayReceiptSection() -->
+    </div>
+    <!-- Hidden file input — opened by the attach button -->
+    <input type="file" id="receiptFileInput" accept="image/*,application/pdf" capture="environment" style="display:none;" onchange="handleReceiptFile(this.files[0])">
+  </div>
 </div>
 
 <!-- Status Confirmation Modal -->
@@ -951,6 +997,61 @@ function displayOrder() {
   if (orderData.notes) {
     document.getElementById('notesSection').style.display = 'block';
     document.getElementById('orderNotes').textContent = orderData.notes;
+  }
+
+  displayReceiptSection();
+}
+
+function displayReceiptSection() {
+  const content = document.getElementById('receiptContent');
+  if (!content) return;
+  const url = orderData?.receipt_url;
+  if (url) {
+    const isImage = /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
+    content.innerHTML = `
+      ${isImage ? `<img src="${url}" class="receipt-preview-img" alt="Receipt">` : ''}
+      <div class="receipt-actions">
+        <a href="${url}" target="_blank" rel="noopener" style="padding:10px 18px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-main); text-decoration:none;">View Receipt</a>
+        <button onclick="document.getElementById('receiptFileInput').click()" style="padding:10px 18px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer;">Replace</button>
+      </div>
+    `;
+  } else {
+    content.innerHTML = `
+      <button class="receipt-attach-btn" onclick="document.getElementById('receiptFileInput').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Attach Receipt
+      </button>
+    `;
+  }
+}
+
+async function handleReceiptFile(file) {
+  if (!file) return;
+  const btn = document.querySelector('.receipt-attach-btn');
+  if (btn) { btn.textContent = 'Uploading…'; btn.disabled = true; }
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${user.id}/${orderId}.${ext}`;
+    const { error: uploadError } = await window.supabaseClient.storage
+      .from('receipts')
+      .upload(path, file, { upsert: true });
+    if (uploadError) throw uploadError;
+    const { data: urlData } = window.supabaseClient.storage
+      .from('receipts')
+      .getPublicUrl(path);
+    const { error: updateError } = await window.supabaseClient
+      .from('sales')
+      .update({ receipt_url: urlData.publicUrl })
+      .eq('id', orderId);
+    if (updateError) throw updateError;
+    orderData.receipt_url = urlData.publicUrl;
+    displayReceiptSection();
+    showNotification('Receipt attached', 'success');
+  } catch (err) {
+    console.error('Receipt upload failed:', err);
+    showNotification('Upload failed: ' + err.message, 'error');
+    displayReceiptSection();
   }
 }
 

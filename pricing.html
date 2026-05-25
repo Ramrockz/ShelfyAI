@@ -268,7 +268,7 @@
       "name": "Free Plan",
       "price": "0",
       "priceCurrency": "EUR",
-      "description": "25 AI scans per month for ingredients, orders, and expenses"
+      "description": "Unlimited AI ingredient imports plus 20 AI scans per month for orders and expenses"
     },
     {
       "@type": "Offer",
@@ -276,7 +276,7 @@
       "price": "9.99",
       "priceCurrency": "EUR",
       "billingDuration": "P1M",
-      "description": "50 AI scans per month for ingredients, orders, and expenses"
+      "description": "Unlimited AI ingredient imports plus 100 AI scans per month for orders and expenses"
     },
     {
       "@type": "Offer",
@@ -284,7 +284,7 @@
       "price": "99",
       "priceCurrency": "EUR",
       "billingDuration": "P1Y",
-      "description": "50 AI scans per month for ingredients, orders, and expenses"
+      "description": "Unlimited AI ingredient imports plus 100 AI scans per month for orders and expenses"
     },
     {
       "@type": "Offer",
@@ -292,7 +292,7 @@
       "price": "19.99",
       "priceCurrency": "EUR",
       "billingDuration": "P1M",
-      "description": "100 AI scans per month for ingredients, orders, and expenses"
+      "description": "Unlimited AI ingredient imports plus 300 AI scans per month for orders and expenses"
     },
     {
       "@type": "Offer",
@@ -300,7 +300,7 @@
       "price": "199",
       "priceCurrency": "EUR",
       "billingDuration": "P1Y",
-      "description": "100 AI scans per month for ingredients, orders, and expenses"
+      "description": "Unlimited AI ingredient imports plus 300 AI scans per month for orders and expenses"
     }
   ]
 }
@@ -352,20 +352,6 @@
     <span class="discount-badge">Save 20%</span>
   </div>
 
-  <!-- SEO Pricing Explanation -->
-  <div style="max-width: 800px; margin: 60px auto 40px; text-align: center;">
-    <h2 style="font-size: 36px; font-weight: 700; margin-bottom: 20px; color: var(--text-main);">Simple, Transparent Inventory Management Pricing</h2>
-    <p style="font-size: 17px; line-height: 1.7; color: var(--text-muted); margin-bottom: 20px;">
-      Whether you're just starting out or scaling your business, we have a plan that fits. Start free with manual inventory tracking and unlimited storage. Upgrade to unlock AI-powered receipt scanning and order extraction when you're ready to save time.
-    </p>
-    
-    <p style="font-size: 16px; line-height: 1.8; color: var(--text-muted); text-align: left; max-width: 700px; margin: 0 auto;">
-      <strong style="color: var(--text-main);">Free Plan:</strong> Perfect for testing ShelfyAI and tracking up to 100 items manually. Ideal for makers just getting started with inventory management.<br><br>
-      <strong style="color: var(--text-main);">Starter Plan:</strong> Add AI automation for ingredients, orders, and expenses with 50 scans per month. Great for small businesses processing regular supplier orders.<br><br>
-      <strong style="color: var(--text-main);">Pro Plan:</strong> For growing businesses needing more AI capacity with 100 scans per month. Best for high-volume shops on Etsy, e-commerce, or restaurants.
-    </p>
-  </div>
-
   <div class="pricing-grid">
     
     <div class="card">
@@ -381,10 +367,8 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (25/month)</li>
-        <li><span class="check">✓</span> AI Orders (25/month)</li>
-        <li><span class="check">✓</span> AI Expenses (25/month)</li>
-        <li><span class="cross">✕</span> Bulk Upload</li>
+        <li><span class="check">✓</span> AI Ingredient Import (Unlimited)</li>
+        <li><span class="check">✓</span> AI Scans / month: <strong>20</strong> <span style="color:var(--text-muted); font-size:12px;">(orders &amp; expenses)</span></li>
         <li><span class="cross">✕</span> Order Dashboard</li>
         <li><span class="cross">✕</span> Expense Tracking</li>
       </ul>
@@ -406,10 +390,8 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (50/month)</li>
-        <li><span class="check">✓</span> AI Orders (50/month)</li>
-        <li><span class="check">✓</span> AI Expenses (50/month)</li>
-        <li><span class="check">✓</span> Bulk Upload (5 per upload)</li>
+        <li><span class="check">✓</span> AI Ingredient Import (Unlimited)</li>
+        <li><span class="check">✓</span> AI Scans / month: <strong>100</strong> <span style="color:var(--text-muted); font-size:12px;">(orders &amp; expenses)</span></li>
         <li><span class="check">✓</span> Order Dashboard</li>
         <li><span class="check">✓</span> Expense Tracking</li>
       </ul>
@@ -430,10 +412,8 @@
         <li><span class="check">✓</span> Unlimited Recipes</li>
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
-        <li><span class="check">✓</span> AI Ingredients (100/month)</li>
-        <li><span class="check">✓</span> AI Orders (100/month)</li>
-        <li><span class="check">✓</span> AI Expenses (100/month)</li>
-        <li><span class="check">✓</span> Bulk Upload (25 per upload)</li>
+        <li><span class="check">✓</span> AI Ingredient Import (Unlimited)</li>
+        <li><span class="check">✓</span> AI Scans / month: <strong>300</strong> <span style="color:var(--text-muted); font-size:12px;">(orders &amp; expenses)</span></li>
         <li><span class="check">✓</span> Order Dashboard</li>
         <li><span class="check">✓</span> Expense Tracking</li>
       </ul>
@@ -683,13 +663,13 @@ let selectedInterval = 'month';
 const planDetails = {
   starter: {
     name: 'Starter Plan',
-    features: '50 AI scans/month • Bulk Upload (5) • Full Dashboard',
+    features: '100 AI scans/month (orders & expenses) • Unlimited ingredient imports • Full Dashboard',
     monthlyPrice: '€9.99',
     yearlyPrice: '€99'
   },
   pro: {
     name: 'Pro Plan',
-    features: '100 AI scans/month • Bulk Upload (25) • Full Dashboard',
+    features: '300 AI scans/month (orders & expenses) • Unlimited ingredient imports • Full Dashboard',
     monthlyPrice: '€19.99',
     yearlyPrice: '€199'
   }

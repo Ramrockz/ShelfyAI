@@ -70,47 +70,6 @@ module.exports = async (req, res) => {
 
     console.log('User authenticated:', user.id);
 
-    // Check usage limits for ingredients (URL extraction is always for ingredients)
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('tier')
-      .eq('user_id', user.id)
-      .single();
-
-    const tier = settings?.tier || 'free';
-    const limits = {
-      free: { ingredients: 25 },
-      starter: { ingredients: 50 },
-      pro: { ingredients: 100 }
-    };
-
-    // Get current month's usage (YYYY-MM format)
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    
-    const { data: usageRecords } = await supabase
-      .from('ai_usage_tracking')
-      .select('ingredient_count')
-      .eq('user_id', user.id)
-      .gte('date', `${yearMonth}-01`)
-      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-
-    const used = usageRecords?.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) || 0;
-    const limit = limits[tier].ingredients;
-
-    console.log(`Usage check - Tier: ${tier}, Used: ${used}/${limit} (monthly)`);
-
-    if (used >= limit) {
-      return res.status(429).json({ 
-        error: 'Monthly limit reached',
-        message: `You've reached your monthly limit of ${limit} AI ingredient extractions. Your limit will reset on the 1st of next month.`,
-        limit,
-        used,
-        tier
-      });
-    }
-
     // Define the extraction query using AgentQL's query language
     const extractionQuery = `{
   vendor(The name of the vendor/supplier)
