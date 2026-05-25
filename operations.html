@@ -341,7 +341,8 @@
   /* ---------- RECENT ACTIVITY GRID ---------- */
   .ops-grid {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr;
+    max-width: 680px;
     gap: 32px;
   }
 
@@ -975,12 +976,43 @@
   /* ---------- STOCK ALERTS (shown on all screen sizes) ---------- */
   #mobileStockAlerts { margin-bottom: 24px; }
   .stock-alert-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 8px; }
-  .stock-alert-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; text-decoration: none; min-height: 44px; }
-  .stock-alert-row:active { opacity: 0.7; }
+  .stock-alert-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; text-decoration: none; min-height: 44px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
+  .stock-alert-row:active { opacity: 0.7; transform: scale(0.98); }
+  @media (hover: hover) {
+    .stock-alert-row:hover { transform: translateX(4px); box-shadow: -3px 0 0 0 var(--accent), 0 4px 16px rgba(0,0,0,0.12); border-color: var(--accent); background: var(--bg-inner); }
+    .stock-alert-row:hover .stock-alert-name { color: var(--accent); }
+    .stock-alert-row:hover .stock-alert-chevron { transform: translateX(2px); opacity: 1; }
+  }
+  .stock-alert-chevron { transition: transform 0.15s ease; opacity: 0.4; }
   .stock-alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .stock-alert-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stock-alert-qty { font-size: 13px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
   .stock-all-ok { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--success); }
+
+  /* ---------- PENDING DELIVERIES ---------- */
+  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
+  .delivery-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(6,182,212,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
+  .delivery-info { flex: 1; min-width: 0; cursor: pointer; }
+  .delivery-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
+  .delivery-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .delivery-qty-badge { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+  .delivery-qty-badge.out { background: rgba(239,68,68,0.12); color: var(--danger); }
+  .delivery-qty-badge.low { background: rgba(245,158,11,0.12); color: var(--warning); }
+  .delivery-qty-badge.ok { background: rgba(16,185,129,0.1); color: var(--success); }
+  .delivery-source-link { font-size: 12px; color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 3px; opacity: 0.85; }
+  .delivery-source-link:hover { opacity: 1; text-decoration: underline; }
+  .delivery-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .delivery-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s, transform 0.1s; }
+  .delivery-btn:hover { opacity: 0.85; transform: scale(1.08); }
+  .delivery-btn:active { transform: scale(0.94); }
+  .delivery-btn.confirm { background: rgba(16,185,129,0.15); color: var(--success); }
+  .delivery-btn.cancel { background: rgba(239,68,68,0.12); color: var(--danger); }
+  .delivery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 10px; color: var(--text-muted); font-size: 14px; }
+  .delivery-empty svg { opacity: 0.35; }
+  @media (hover: hover) {
+    .delivery-row:hover { transform: translateX(4px); box-shadow: -3px 0 0 0 var(--accent), 0 4px 16px rgba(0,0,0,0.1); border-color: var(--accent); background: var(--bg-inner); }
+    .delivery-row:hover .delivery-name { color: var(--accent); }
+  }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -1887,17 +1919,8 @@
 
   <div class="ops-grid">
     <div class="panel">
-      <h2>Recent Inventory Updates</h2>
-      <div id="recentUpdatesContainer" style="max-height: 400px; overflow-y: auto;">
-        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
-          Loading...
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
       <h2>Pending Deliveries</h2>
-      <div id="inboundContainer" style="overflow-y: auto; max-height: 400px;">
+      <div id="inboundContainer">
         <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
           Loading...
         </div>
@@ -1949,269 +1972,7 @@ function resolveConfirm(result) {
 
   // Load recent updates on page load
   async function loadRecentUpdates() {
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-
-      const updates = [];
-
-      // Get recent ingredient creations (last 10)
-      const { data: creations, error: creationsError } = await supabaseClient
-        .from('ingredients')
-        .select('id, name, quantity, unit, created_at')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!creationsError && creations) {
-        creations.forEach(ing => {
-          updates.push({
-            type: 'creation',
-            timestamp: new Date(ing.created_at),
-            ingredient_id: ing.id,
-            ingredient_name: ing.name,
-            quantity: parseFloat(ing.quantity) || 0,
-            message: `Created ingredient with ${ing.quantity} ${ing.unit || ''}`.trim(),
-            created_at: ing.created_at
-          });
-        });
-      }
-
-      // Get recent quantity changes from history (last 10)
-      const { data: changes, error: changesError } = await supabaseClient
-        .from('ingredient_history')
-        .select('ingredient_id, field_name, old_value, new_value, changed_at, reason, reference_id, reference_text')
-        .eq('profile_id', user.id)
-        .eq('field_name', 'quantity')
-        .order('changed_at', { ascending: false })
-        .limit(10);
-
-      if (!changesError && changes) {
-        // Get ingredient names for the changes
-        const ingredientIds = [...new Set(changes.map(c => c.ingredient_id))];
-        const { data: ingredients } = await supabaseClient
-          .from('ingredients')
-          .select('id, name, unit')
-          .in('id', ingredientIds);
-
-        const ingredientMap = {};
-        if (ingredients) {
-          ingredients.forEach(ing => {
-            ingredientMap[ing.id] = ing;
-          });
-        }
-
-        changes.forEach(change => {
-          const ingredient = ingredientMap[change.ingredient_id];
-          if (ingredient) {
-            const oldVal = parseFloat(change.old_value) || 0;
-            const newVal = parseFloat(change.new_value) || 0;
-            const diff = newVal - oldVal;
-            const action = diff > 0 ? 'increased' : 'reduced';
-            
-            // Build message with reason
-            let reasonText = '';
-            if (change.reason === 'order') {
-              reasonText = ` (Order: ${change.reference_text || change.reference_id || 'Unknown'})`;
-            } else if (change.reason === 'restock') {
-              reasonText = ` (${change.reference_text || 'Restocked'})`;
-            } else if (change.reason === 'expense') {
-              reasonText = ` (Expense: ${change.reference_text || change.reference_id || 'Unknown'})`;
-            } else if (change.reason === 'manual') {
-              reasonText = ' (Manual)';
-            }
-            
-            updates.push({
-              type: 'quantity_change',
-              timestamp: new Date(change.changed_at),
-              ingredient_id: change.ingredient_id,
-              ingredient_name: ingredient.name,
-              message: `Quantity ${action}: ${oldVal} → ${newVal}${reasonText}`,
-              changed_at: change.changed_at
-            });
-          }
-        });
-      }
-
-      // Get recent reorder status changes (last 10)
-      const { data: reorders, error: reordersError } = await supabaseClient
-        .from('ingredient_history')
-        .select('ingredient_id, field_name, old_value, new_value, changed_at')
-        .eq('profile_id', user.id)
-        .eq('field_name', 'reorder_pending')
-        .order('changed_at', { ascending: false })
-        .limit(10);
-
-      if (!reordersError && reorders) {
-        // Get ingredient names for reorder changes
-        const reorderIngIds = [...new Set(reorders.map(r => r.ingredient_id))];
-        const { data: reorderIngredients } = await supabaseClient
-          .from('ingredients')
-          .select('id, name')
-          .in('id', reorderIngIds);
-
-        const reorderIngMap = {};
-        if (reorderIngredients) {
-          reorderIngredients.forEach(ing => {
-            reorderIngMap[ing.id] = ing;
-          });
-        }
-
-        reorders.forEach(reorder => {
-          const ingredient = reorderIngMap[reorder.ingredient_id];
-          if (ingredient) {
-            const isPending = reorder.new_value === 'true' || reorder.new_value === true;
-            const message = isPending 
-              ? 'Marked as reorder pending'
-              : 'Order processed';
-            const type = isPending ? 'reorder_pending' : 'order_processed';
-            
-            updates.push({
-              type: type,
-              timestamp: new Date(reorder.changed_at),
-              ingredient_id: reorder.ingredient_id,
-              ingredient_name: ingredient.name,
-              message: message,
-              changed_at: reorder.changed_at
-            });
-          }
-        });
-      }
-
-      // Get recent recipe creations (last 10)
-      const { data: recipesData, error: recipesError } = await supabaseClient
-        .from('recipes')
-        .select('id, name, cost, created_at')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!recipesError && recipesData) {
-        recipesData.forEach(recipe => {
-          updates.push({
-            type: 'recipe_created',
-            timestamp: new Date(recipe.created_at),
-            ingredient_id: null,
-            ingredient_name: recipe.name,
-            message: `Recipe created with cost $${parseFloat(recipe.cost || 0).toFixed(2)}`,
-            created_at: recipe.created_at,
-            clickable: false
-          });
-        });
-      }
-
-      // Get recent expense creations (last 10)
-      const { data: expenses, error: expensesError } = await supabaseClient
-        .from('expenses')
-        .select('id, description, amount, expense_date, created_at')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!expensesError && expenses) {
-        expenses.forEach(expense => {
-          // Try to extract ingredient name from description
-          const ingredientMatch = expense.description?.match(/Reorder: (.+)/);
-          const ingredientName = ingredientMatch ? ingredientMatch[1] : 'Expense';
-          const amount = expense.amount ? `$${expense.amount.toFixed(2)}` : '';
-          
-          updates.push({
-            type: 'expense',
-            timestamp: new Date(expense.created_at),
-            ingredient_id: null,
-            ingredient_name: ingredientName,
-            message: `Expense created${amount ? ': ' + amount : ''}`,
-            created_at: expense.created_at,
-            clickable: false
-          });
-        });
-      }
-
-      // Get recent sales (processed orders) (last 10)
-      const { data: sales, error: salesError } = await supabaseClient
-        .from('sales')
-        .select('id, customer, revenue, total_quantity, order_reference, custom_attributes, status, sale_date, created_at')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!salesError && sales) {
-        sales.forEach(sale => {
-          updates.push({
-            type: 'sale',
-            timestamp: new Date(sale.created_at),
-            ingredient_id: null,
-            ingredient_name: sale.customer || 'Unknown Customer',
-            message: `Order processed - $${(sale.revenue || 0).toFixed(2)}`,
-            created_at: sale.created_at,
-            clickable: false,
-            sale_data: sale  // Store full sale data for detailed display
-          });
-        });
-      }
-
-      // Sort all updates by timestamp (most recent first)
-      updates.sort((a, b) => b.timestamp - a.timestamp);
-
-      // Display updates
-      const container = document.getElementById('recentUpdatesContainer');
-      if (updates.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No recent activity</div>';
-        return;
-      }
-
-      container.innerHTML = updates.slice(0, 15).map(update => {
-        const timeAgo = getTimeAgo(update.timestamp);
-        let iconUrl;
-        if (update.type === 'creation') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/11785/11785258.png';
-        } else if (update.type === 'reorder_pending') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/12067/12067684.png';
-        } else if (update.type === 'order_processed') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/9422/9422482.png';
-        } else if (update.type === 'sale') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/9422/9422482.png';
-        } else if (update.type === 'expense') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/17290/17290996.png';
-        } else if (update.type === 'recipe_created') {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/941/941085.png';
-        } else {
-          iconUrl = 'https://cdn-icons-png.flaticon.com/512/545/545661.png';
-        }
-        
-        const isClickable = update.ingredient_id && update.clickable !== false;
-        const cursorStyle = isClickable ? 'pointer' : 'default';
-        const onclickAttr = isClickable ? `onclick="window.location.href='/ingredient-detail?id=${update.ingredient_id}'"` : '';
-        
-        // Build attributes display for sales
-        let attributesHtml = '';
-        let actionsHtml = '';
-        // No additional details for sales/orders in recent updates
-        
-        return `
-          <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: ${cursorStyle}; transition: background 0.2s;" 
-               onmouseover="${isClickable ? "this.style.background='var(--bg-hover)'" : ''}" 
-               onmouseout="${isClickable ? "this.style.background='transparent'" : ''}"
-               ${onclickAttr}>
-            <div style="display: flex; align-items: start; gap: 12px;">
-              <img src="${iconUrl}" class="update-icon" alt="${update.type}" style="margin-top: 2px;">
-              <div style="flex: 1;">
-                <div style="font-weight: 600; color: var(--text-main); margin-bottom: 4px;">${escapeHtml(update.ingredient_name)}</div>
-                <div style="font-size: 13px; color: var(--text-muted);">${escapeHtml(update.message)}</div>
-                ${attributesHtml}
-                ${actionsHtml}
-                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${timeAgo}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-    } catch (error) {
-      console.error('Error loading recent updates:', error);
-      document.getElementById('recentUpdatesContainer').innerHTML = 
-        '<div style="text-align: center; padding: 40px 20px; color: var(--danger); font-size: 14px;">Error loading updates</div>';
-    }
+    // Recent Inventory Updates panel removed — kept as no-op for callers
   }
 
   function getTimeAgo(date) {
@@ -2251,7 +2012,7 @@ function resolveConfirm(result) {
       // Fetch all ingredients with history
       const { data: ingredients, error } = await supabaseClient
         .from('ingredients')
-        .select('id, name, quantity, min_stock, created_at, updated_at')
+        .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at')
         .eq('profile_id', user.id);
 
       if (error) throw error;
@@ -2299,6 +2060,7 @@ function resolveConfirm(result) {
             <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
               <span class="stock-alert-dot" style="background:${color};"></span>
               <span class="stock-alert-name">${ing.name}</span>
+              ${ing.reorder_pending ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>` : ''}
               <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
               <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
             </div>`;
@@ -2352,45 +2114,41 @@ function resolveConfirm(result) {
       }
 
       if (!pendingOrders || pendingOrders.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">No pending deliveries</div>';
+        container.innerHTML = `
+          <div class="delivery-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <span>No pending deliveries</span>
+          </div>`;
         return;
       }
 
-      // Render pending deliveries
       container.innerHTML = pendingOrders.map(item => {
+        const qty = parseFloat(item.quantity) || 0;
         const hasSource = item.source_url && item.source_url.trim() !== '';
-        
+        const qtyClass = qty === 0 ? 'out' : 'low';
+        const qtyLabel = qty === 0 ? 'Out of stock' : `${qty} ${item.unit || ''}`;
+
         return `
-          <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.2s;" 
-               onmouseover="this.style.background='var(--bg-hover)'" 
-               onmouseout="this.style.background='transparent'">
-            <div style="display: flex; align-items: start; gap: 12px;">
-              <img src="https://cdn-icons-png.flaticon.com/512/12067/12067684.png" 
-                   class="update-icon" 
-                   alt="reorder" 
-                   style="margin-top: 2px; width: 24px; height: 24px;">
-              <div style="flex: 1; cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
-                <div style="font-weight: 600; color: var(--text-main); margin-bottom: 4px;">${escapeHtml(item.name)}</div>
-                <div style="font-size: 13px; color: var(--text-muted);">
-                  Current: ${item.quantity} ${item.unit}
-                  ${hasSource ? '· <span style="color: var(--primary);">Has source URL</span>' : ''}
-                </div>
-              </div>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <button onclick="event.stopPropagation(); processDelivery('${item.id}', '${escapeHtml(item.name)}')" 
-                        style="background: var(--success); border: none; color: white; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;"
-                        onmouseover="this.style.opacity='0.85'" 
-                        onmouseout="this.style.opacity='1'"
-                        title="Mark as received">✓</button>
-                <button onclick="event.stopPropagation(); cancelDelivery('${item.id}', '${escapeHtml(item.name)}')" 
-                        style="background: var(--danger); border: none; color: white; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;"
-                        onmouseover="this.style.opacity='0.85'" 
-                        onmouseout="this.style.opacity='1'"
-                        title="Cancel delivery">✕</button>
+          <div class="delivery-row">
+            <div class="delivery-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
+            <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
+              <div class="delivery-name">${escapeHtml(item.name)}</div>
+              <div class="delivery-meta">
+                <span class="delivery-qty-badge ${qtyClass}">${qtyLabel}</span>
+                ${hasSource ? `<a class="delivery-source-link" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Supplier <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
               </div>
             </div>
-          </div>
-        `;
+            <div class="delivery-actions">
+              <button class="delivery-btn confirm" onclick="event.stopPropagation(); processDelivery('${item.id}', '${escapeHtml(item.name)}')" title="Mark as received">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
+              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}', '${escapeHtml(item.name)}')" title="Cancel reorder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>`;
       }).join('');
 
     } catch (error) {

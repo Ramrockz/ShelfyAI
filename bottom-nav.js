@@ -159,9 +159,6 @@
         bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px) !important;
       }
     }
-    @media screen and (orientation: landscape) and (max-height: 500px) {
-      #rotate-overlay { display: flex !important; }
-    }
   `;
 
   document.head.appendChild(style);
@@ -199,5 +196,35 @@
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock('portrait').catch(() => {});
     }
+
+    // JS-based portrait enforcement using orientation APIs (not viewport pixels)
+    const isMobileDevice = navigator.maxTouchPoints > 0 && window.screen.width <= 1024;
+
+    function isLandscapeOrientation() {
+      if (screen.orientation && screen.orientation.type) {
+        return screen.orientation.type.startsWith('landscape');
+      }
+      if (typeof window.orientation !== 'undefined') {
+        return Math.abs(window.orientation) === 90;
+      }
+      return false;
+    }
+
+    function enforcePortrait() {
+      if (!isMobileDevice) return;
+      if (isLandscapeOrientation()) {
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      } else {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    }
+
+    window.addEventListener('orientationchange', () => setTimeout(enforcePortrait, 100));
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', () => setTimeout(enforcePortrait, 100));
+    }
+    enforcePortrait();
   });
 })();

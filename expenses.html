@@ -834,6 +834,38 @@
   </div>
 </div>
 
+<!-- Ingredient Mapping Modal -->
+<div class="modal-overlay" id="ingredientMappingModal">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Match to Ingredient</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">AI detected the item below. Confirm the best matching ingredient to update its cost per unit.</p>
+
+    <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px;">Detected Item</div>
+      <div style="font-weight:600;font-size:15px;" id="mappingItemName">—</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="mappingItemDetails">—</div>
+    </div>
+
+    <div style="margin-bottom:16px;position:relative;">
+      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-muted);">Matched Ingredient:</label>
+      <input type="text" id="ingredientSearchInput" placeholder="Search ingredients or leave empty to skip..."
+        autocomplete="off"
+        oninput="searchIngredientsForMapping(this.value)"
+        onfocus="showIngredientDropdown()"
+        onkeydown="if(event.key==='Escape') hideIngredientDropdown()"
+        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;box-sizing:border-box;" />
+      <div id="ingredientSearchDropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+    </div>
+
+    <div id="mappingMatchInfo" style="font-size:12px;color:var(--text-muted);margin-bottom:20px;"></div>
+
+    <div style="display:flex;gap:12px;">
+      <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="skipIngredientMapping()">Skip &amp; Edit Manually</button>
+      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Confirm &amp; Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let expenses = [];
 let currentView = 'recent';
@@ -1407,6 +1439,199 @@ async function captureScreenshot() {
   }
 })();
 
+// === Ingredient Mapping for Expense Receipts ===
+
+let pendingExpenseData = null;
+let selectedMappingIngredient = null;
+let allIngredientsCache = [];
+
+function calculateExpenseSimilarity(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  if (s1 === s2) return 1.0;
+  if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+  const words1 = s1.split(/\s+/), words2 = s2.split(/\s+/);
+  const commonWords = words1.filter(w => words2.includes(w));
+  if (commonWords.length > 0) return 0.5 + (commonWords.length / Math.max(words1.length, words2.length)) * 0.3;
+  return 0;
+}
+
+async function showIngredientMappingModal(expenseData) {
+  pendingExpenseData = expenseData;
+  selectedMappingIngredient = null;
+
+  const itemName = expenseData.item?.name || expenseData.description || '';
+  const itemPrice = expenseData.item?.price || null;
+  const itemQty = expenseData.item?.quantity || null;
+  const itemUnit = expenseData.item?.unit || null;
+
+  document.getElementById('mappingItemName').textContent = itemName || '(no name detected)';
+  const details = [
+    itemPrice ? `Price: ${itemPrice}` : null,
+    itemQty ? `Qty: ${itemQty}` : null,
+    itemUnit ? `Unit: ${itemUnit}` : null,
+    expenseData.vendor ? `Vendor: ${expenseData.vendor}` : null,
+  ].filter(Boolean).join(' · ');
+  document.getElementById('mappingItemDetails').textContent = details || '—';
+  document.getElementById('ingredientSearchInput').value = '';
+  document.getElementById('mappingMatchInfo').textContent = '';
+  document.getElementById('ingredientMappingModal').classList.add('active');
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return;
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, cost_per_unit').eq('profile_id', user.id);
+  allIngredientsCache = ingredients || [];
+
+  if (itemName && allIngredientsCache.length > 0) {
+    const scored = allIngredientsCache
+      .map(ing => ({ ing, score: calculateExpenseSimilarity(itemName, ing.name) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length > 0) {
+      const best = scored[0];
+      selectedMappingIngredient = best.ing;
+      document.getElementById('ingredientSearchInput').value = best.ing.name;
+      document.getElementById('mappingMatchInfo').textContent = `Best match: ${(best.score * 100).toFixed(0)}% confidence`;
+      renderIngredientDropdown(scored.slice(0, 8));
+    }
+  }
+}
+
+function renderIngredientDropdown(scored) {
+  const dropdown = document.getElementById('ingredientSearchDropdown');
+  if (!scored || scored.length === 0) {
+    dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching ingredients found</div>';
+  } else {
+    dropdown.innerHTML = scored.map(({ ing, score }) => `
+      <div onclick="selectMappingIngredient('${ing.id}')"
+        style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);"
+        onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:600;font-size:13px;">${ing.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);">${score !== undefined ? (score * 100).toFixed(0) + '% match · ' : ''}${ing.unit || ''}</div>
+      </div>`).join('');
+  }
+}
+
+function showIngredientDropdown() {
+  const dropdown = document.getElementById('ingredientSearchDropdown');
+  if (dropdown.innerHTML) dropdown.style.display = 'block';
+}
+
+function hideIngredientDropdown() {
+  document.getElementById('ingredientSearchDropdown').style.display = 'none';
+}
+
+function selectMappingIngredient(ingredientId) {
+  const ing = allIngredientsCache.find(i => i.id === ingredientId);
+  if (ing) {
+    selectedMappingIngredient = ing;
+    document.getElementById('ingredientSearchInput').value = ing.name;
+    document.getElementById('mappingMatchInfo').textContent = `Selected: ${ing.name}${ing.unit ? ' (' + ing.unit + ')' : ''}`;
+  }
+  hideIngredientDropdown();
+}
+
+function searchIngredientsForMapping(term) {
+  showIngredientDropdown();
+  if (!term.trim()) {
+    renderIngredientDropdown(allIngredientsCache.slice(0, 8).map(ing => ({ ing, score: undefined })));
+    return;
+  }
+  const lower = term.toLowerCase();
+  const scored = allIngredientsCache
+    .map(ing => ({ ing, score: calculateExpenseSimilarity(term, ing.name) }))
+    .filter(x => x.score > 0 || x.ing.name.toLowerCase().includes(lower))
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 8);
+  renderIngredientDropdown(scored);
+}
+
+function closeIngredientMappingModal() {
+  document.getElementById('ingredientMappingModal').classList.remove('active');
+  pendingExpenseData = null;
+  selectedMappingIngredient = null;
+}
+
+async function confirmIngredientMapping() {
+  if (!pendingExpenseData) return;
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    if (selectedMappingIngredient) {
+      const newCost = pendingExpenseData.item?.price
+        ? parseFloat(String(pendingExpenseData.item.price).replace(/[^0-9.]/g, ''))
+        : null;
+
+      if (newCost && !isNaN(newCost) && newCost > 0) {
+        await supabaseClient
+          .from('ingredients')
+          .update({ cost_per_unit: newCost })
+          .eq('id', selectedMappingIngredient.id);
+      }
+    }
+
+    await saveExpenseFromMapping(user.id);
+    closeIngredientMappingModal();
+    showNotification('Expense saved' + (selectedMappingIngredient ? ' and ingredient cost updated' : ''), 'success');
+    await loadExpenses();
+  } catch (err) {
+    console.error('Error confirming ingredient mapping:', err);
+    showNotification('Failed to save expense', 'error');
+  }
+}
+
+async function saveExpenseFromMapping(userId) {
+  const d = pendingExpenseData;
+  const description = d.description || d.item?.name || '';
+  const amount = d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null;
+  const vendor = d.vendor || '';
+  const rawDate = d.date || '';
+  let expenseDate = null;
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed)) expenseDate = parsed.toISOString().split('T')[0];
+  }
+
+  const { error } = await supabaseClient.from('expenses').insert([{
+    profile_id: userId,
+    description,
+    amount: amount || null,
+    expense_date: expenseDate,
+    vendor,
+    category: d.item?.product_category || d.category || null,
+  }]);
+
+  if (error) throw error;
+}
+
+function skipIngredientMapping() {
+  if (!pendingExpenseData) { closeIngredientMappingModal(); return; }
+  const d = pendingExpenseData;
+  closeIngredientMappingModal();
+
+  if (d.description) document.getElementById('expense_description').value = d.description;
+  if (d.amount) {
+    const m = String(d.amount).match(/[\d.]+/);
+    if (m) document.getElementById('expense_amount').value = m[0];
+  }
+  if (d.vendor) document.getElementById('expense_vendor').value = d.vendor;
+  if (d.date) document.getElementById('expense_date').value = d.date;
+  if (d.category) document.getElementById('expense_category').value = d.category;
+
+  openAddExpenseModal();
+}
+
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('ingredientSearchDropdown');
+  const input = document.getElementById('ingredientSearchInput');
+  if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
+    hideIngredientDropdown();
+  }
+});
+
 async function processImageUpload() {
   if (!uploadedFile) {
     showUploadStatus('Please select a file first', 'error');
@@ -1460,32 +1685,11 @@ async function processImageUpload() {
     const result = await response.json();
     
     if (result.success && result.data) {
-      // Populate expense form with extracted data
-      if (result.data.description) {
-        document.getElementById('expense_description').value = result.data.description;
-      }
-      if (result.data.amount) {
-        const amount = String(result.data.amount).match(/[\d.]+/);
-        if (amount) {
-          document.getElementById('expense_amount').value = amount[0];
-        }
-      }
-      if (result.data.vendor) {
-        document.getElementById('expense_vendor').value = result.data.vendor;
-      }
-      if (result.data.date) {
-        document.getElementById('expense_date').value = result.data.date;
-      }
-      if (result.data.category) {
-        document.getElementById('expense_category').value = result.data.category;
-      }
-      
       showUploadStatus('Data extracted successfully!', 'success');
-      
       setTimeout(() => {
         closeImageUploadModal();
-        openAddExpenseModal();
-      }, 1000);
+        showIngredientMappingModal(result.data);
+      }, 800);
     }
   } catch (error) {
     console.error('Error processing upload:', error);
@@ -1528,6 +1732,8 @@ document.addEventListener('keydown', (e) => {
       closeDeleteModal();
     } else if (document.getElementById('imageUploadModal').classList.contains('active')) {
       closeImageUploadModal();
+    } else if (document.getElementById('ingredientMappingModal').classList.contains('active')) {
+      closeIngredientMappingModal();
     }
   }
 });

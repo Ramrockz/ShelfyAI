@@ -1091,13 +1091,6 @@
   
   <div class="breadcrumb" onclick="goBackToList()">← Back to Inventory</div>
 
-  <div id="alertBlock" class="alert-blocking" style="display: none;">
-    <div class="alert-content">
-      <h4>Low Stock</h4>
-      <p id="alertText"></p>
-    </div>
-  </div>
-  
   <div class="detail-header">
     <div>
       <h1 id="ingredientName" style="margin:0;">Loading...</h1>
@@ -1481,25 +1474,6 @@
 
     // Update stats
     updateStatsDisplay();
-
-    // Stock status alert
-    const qty = ing.quantity || 0;
-    const minStock = ing.min_stock || 0;
-    const alertBlock = document.getElementById('alertBlock');
-    
-    if (qty === 0) {
-      alertBlock.style.display = 'flex';
-      alertBlock.style.borderLeftColor = 'var(--danger)';
-      document.querySelector('#alertBlock h4').textContent = 'Out of Stock';
-      document.getElementById('alertText').innerHTML = `This ingredient is out of stock!`;
-    } else if (minStock > 0 && qty < minStock) {
-      alertBlock.style.display = 'flex';
-      alertBlock.style.borderLeftColor = 'var(--warning)';
-      document.querySelector('#alertBlock h4').textContent = 'Low Stock';
-      document.getElementById('alertText').innerHTML = `Current stock (${qty}) is below minimum (${minStock}). Consider reordering.`;
-    } else {
-      alertBlock.style.display = 'none';
-    }
 
     // Load related data
     loadRecipes(ing.id);
