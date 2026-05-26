@@ -780,172 +780,51 @@
       padding: 12px 14px;
     }
     
-    /* Mobile Ingredient Swiper Container */
+    /* Mobile Ingredient Picker */
     .mobile-ingredient-swiper {
-      flex: 0 0 auto;
+      flex: 1 1 0;
       display: flex !important;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
       min-height: 0;
     }
-    
-    .mobile-swiper-header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding-bottom: 8px;
-    }
-    
-    .mobile-swiper-header h4 {
-      font-size: 13px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin: 0;
-      font-weight: 700;
-    }
-    
-    /* Search bar styled for mobile */
-    .recipe-search-input {
-      padding: 10px 16px;
-      font-size: 14px;
-      border-radius: 12px;
-    }
-    
-    /* Swipe Card Container */
-    .swipe-card-container {
-      position: relative;
-      flex: 0 0 220px;
-      height: 220px;
-      overflow: visible;
-      border-radius: 20px;
-      background: var(--bg-inner);
-      margin: 12px 0;
-    }
-    
-    .swipe-card {
-      position: absolute;
+
+    #mobileRecipeSearch {
+      flex-shrink: 0;
       width: 100%;
-      height: 100%;
-      background: var(--bg-panel);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      user-select: none;
-      touch-action: pan-x;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      opacity: 0;
-      overflow: hidden;
-    }
-    
-    .swipe-card.slide-out-left {
-      animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
-    }
-    
-    .swipe-card.slide-out-right {
-      animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
-    }
-    
-    .swipe-card.slide-in-left {
-      animation: slideInLeft 0.3s cubic-bezier(0, 0, 0.2, 1) forwards;
-    }
-    
-    .swipe-card.slide-in-right {
-      animation: slideInRight 0.3s cubic-bezier(0, 0, 0.2, 1) forwards;
-    }
-    
-    @keyframes slideOutLeft {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(-120%); opacity: 0; }
-    }
-    
-    @keyframes slideOutRight {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(120%); opacity: 0; }
-    }
-    
-    @keyframes slideInLeft {
-      from { transform: translateX(-120%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideInRight {
-      from { transform: translateX(120%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    
-    .swipe-card.active {
-      opacity: 1;
-      z-index: 1;
-    }
-    
-    .swipe-card:active {
-      transform: scale(0.98);
-    }
-    
-    .swipe-card-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 12px;
-      line-height: 1.2;
-    }
-    
-    .swipe-card-attributes {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 8px;
-    }
-    
-    .swipe-card-attributes span {
-      display: inline-block;
-      padding: 4px 10px;
+      padding: 11px 14px;
       background: var(--bg-inner);
       border: 1px solid var(--border);
       border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-muted);
-    }
-    
-    .swipe-card-attribute {
-      background: var(--bg-inner);
-      padding: 5px 12px;
-      border-radius: 14px;
-      font-size: 12px;
       color: var(--text-main);
-      border: 1px solid var(--border);
-      font-weight: 500;
+      font-size: 15px;
+      box-sizing: border-box;
+      outline: none;
     }
-    
-    .swipe-dots {
+    #mobileRecipeSearch:focus { border-color: var(--accent); }
+
+    #mobileRecipeIngList {
+      flex: 1 1 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mob-ing-row {
       display: flex;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 0;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      min-height: 44px;
     }
-    
-    .swipe-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--border);
-      transition: all 0.3s;
-    }
-    
-    .swipe-dot.active {
-      background: var(--accent);
-      width: 24px;
-      border-radius: 4px;
-    }
+    .mob-ing-row:active { opacity: 0.7; }
+    .mob-ing-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .mob-ing-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
+    .mob-ing-qty { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
     
     /* Selected Ingredients Area */
     #recipeDropzone {
@@ -1014,32 +893,6 @@
       display: none;
     }
     
-    /* Mobile Type Filters */
-    .mobile-type-filters {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-      margin-bottom: 16px;
-    }
-    
-    .mobile-type-filter {
-      flex: 1;
-      padding: 10px 12px;
-      background: var(--bg-inner);
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      color: var(--text-main);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .mobile-type-filter.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-    }
     
     .mobile-type-filter:active {
       transform: scale(0.96);
@@ -1292,19 +1145,10 @@
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
       </div>
       
-      <!-- Mobile Ingredient Swiper (visible only on mobile) -->
+      <!-- Mobile Ingredient Picker (visible only on mobile) -->
       <div class="mobile-ingredient-swiper">
-        <div class="mobile-type-filters">
-          <button class="mobile-type-filter active" data-type="Production" onclick="filterMobileByType('Production')">Production</button>
-          <button class="mobile-type-filter" data-type="Shipping" onclick="filterMobileByType('Shipping')">Shipping</button>
-          <button class="mobile-type-filter" data-type="Freebies" onclick="filterMobileByType('Freebies')">Freebies</button>
-        </div>
-        
-        <div class="swipe-card-container" id="swipeCardContainer">
-          <!-- Swipe cards will be inserted here -->
-        </div>
-        
-        <div class="swipe-dots" id="swipeDots"></div>
+        <input type="search" id="mobileRecipeSearch" placeholder="Search ingredients…" autocomplete="off">
+        <div id="mobileRecipeIngList"></div>
       </div>
       
       <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div></div>
@@ -1705,8 +1549,7 @@ async function openBuilder() {
   setTimeout(() => {
     console.log('Window width:', window.innerWidth);
     if (window.innerWidth <= 768) {
-      console.log('Initializing mobile swiper');
-      initMobileSwiper();
+      initMobileIngredientList();
     }
   }, 100);
 }
@@ -2031,14 +1874,57 @@ function removeIngredient(id) {
   delete currentRecipe[id];
   updateDisabledState();
   updateCost();
-  
+
   const row = document.querySelector(`#recipeDropzone .drop-item[data-id="${id}"]`);
   if (row) row.remove();
-  
+
   const dz = document.getElementById('recipeDropzone');
   if (dz && Object.keys(currentRecipe).length === 0) {
     dz.innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div>';
   }
+
+  if (window.innerWidth <= 768) renderMobileIngList();
+}
+
+function initMobileIngredientList() {
+  const searchInput = document.getElementById('mobileRecipeSearch');
+  if (!searchInput) return;
+  searchInput.value = '';
+  searchInput.addEventListener('input', renderMobileIngList);
+  renderMobileIngList();
+}
+
+function renderMobileIngList() {
+  const container = document.getElementById('mobileRecipeIngList');
+  if (!container) return;
+  const q = (document.getElementById('mobileRecipeSearch')?.value || '').toLowerCase().trim();
+  const added = new Set(Object.keys(currentRecipe));
+  const visible = ingredientData
+    .filter(i => !added.has(i.id))
+    .filter(i => !q || i.name.toLowerCase().includes(q));
+
+  if (visible.length === 0) {
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">${q ? 'No results' : 'All ingredients added'}</div>`;
+    return;
+  }
+
+  container.innerHTML = visible.map(i => {
+    const qty = parseFloat(i.quantity) || 0;
+    const min = parseFloat(i.min_stock) || 0;
+    const dotColor = qty === 0 ? 'var(--danger)' : (min > 0 && qty < min) ? 'var(--warning)' : 'var(--success)';
+    return `<div class="mob-ing-row" onclick="mobileTapIngredient('${i.id}')">
+      <span class="mob-ing-dot" style="background:${dotColor}"></span>
+      <span class="mob-ing-name">${i.name}</span>
+      <span class="mob-ing-qty">${qty} ${i.unit || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function mobileTapIngredient(id) {
+  const item = ingredientData.find(i => i.id === id);
+  if (!item) return;
+  addIngredientToRecipe({ id: item.id, name: item.name, price: item.price, unit: item.unit });
+  renderMobileIngList();
 }
 
 function updateDisabledState() {
