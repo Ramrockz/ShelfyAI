@@ -2282,35 +2282,20 @@
         return;
       }
 
-      // Get current form values
-      const customAttrs = {};
-      const container = document.getElementById('customAttributesContainer');
-      if (container) {
-        const rows = container.querySelectorAll('.attribute-row');
-        rows.forEach(row => {
-          const keyInput = row.querySelector('input:first-child');
-          const valueInput = row.querySelector('input:nth-child(2)');
-          if (keyInput && valueInput && keyInput.value && valueInput.value) {
-            customAttrs[keyInput.value] = valueInput.value;
-          }
-        });
-      }
-
-      // Create duplicate with current form values
+      // Use currentIngredient as the source of truth so hidden fields (mobile) are included
       const duplicateData = {
-        name: document.getElementById('name').value + ' (Copy)',
-        quantity: parseFloat(document.getElementById('quantity').value) || 0,
-        unit: document.getElementById('unit').value,
-        cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
-        category: document.getElementById('category').value,
-        type: document.getElementById('type').value,
-        min_stock: parseFloat(document.getElementById('min_stock').value) || null,
-        estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
-        sku: document.getElementById('sku').value || '',
-        source_url: document.getElementById('source_url').value || '',
-        notes: document.getElementById('notes').value || '',
-        custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null,
-        custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null,
+        name: (document.getElementById('name')?.value || currentIngredient.name) + ' (Copy)',
+        quantity: parseFloat(document.getElementById('quantity')?.value ?? currentIngredient.quantity) || 0,
+        unit: document.getElementById('unit')?.value || currentIngredient.unit || '',
+        cost_per_unit: parseFloat(document.getElementById('cost_per_unit')?.value ?? currentIngredient.cost_per_unit) || 0,
+        category: document.getElementById('category')?.value || currentIngredient.category || '',
+        type: document.getElementById('type')?.value || currentIngredient.type || '',
+        min_stock: parseFloat(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock) || null,
+        estimated_delivery: parseInt(document.getElementById('estimated_delivery')?.value ?? currentIngredient.estimated_delivery) || null,
+        sku: document.getElementById('sku')?.value ?? currentIngredient.sku ?? '',
+        source_url: document.getElementById('source_url')?.value ?? currentIngredient.source_url ?? '',
+        notes: document.getElementById('notes')?.value ?? currentIngredient.notes ?? '',
+        custom_attributes: currentIngredient.custom_attributes || null,
         profile_id: user.id
       };
 
