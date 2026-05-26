@@ -846,14 +846,29 @@
     }
     
     /* Modal adjustments */
-    .reorder-modal-content,
-    .modal-content {
-      width: calc(100% - 32px);
-      max-width: 500px;
-      max-height: 90vh;
+    .modal-overlay { align-items: flex-end !important; }
+    .modal-content,
+    .modal-content-custom,
+    .reorder-modal-content {
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 20px 20px 0 0 !important;
+      margin: 0 !important;
+      max-height: 85vh !important;
+      padding: 24px 20px calc(24px + env(safe-area-inset-bottom)) !important;
+      transform: none !important;
       overflow-y: auto;
-      padding: 24px 20px;
-      margin: 16px;
+    }
+    .modal-content::before,
+    .modal-content-custom::before,
+    .reorder-modal-content::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 20px;
     }
     
     /* Source URL display */
@@ -885,11 +900,6 @@
     .panel { padding: 16px 12px; }
 
     .header h1 { font-size: 24px; }
-
-    .reorder-modal-content,
-    .modal-content {
-      padding: 20px 16px;
-    }
   }
 
   @media (max-width: 768px) {
