@@ -171,13 +171,19 @@ async function initUserMenu() {
       console.error('initUserMenu: userMenuEmail element not found in DOM');
     }
       
-    // Load avatar from database
+    // Load avatar and tier from database
     const { data: settings } = await supabaseClient
       .from('user_settings')
-      .select('avatar_url')
+      .select('avatar_url, tier')
       .eq('user_id', user.id)
       .single();
-    
+
+    const roleEl = document.querySelector('.user-menu-role');
+    if (roleEl) {
+      const tierLabels = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' };
+      roleEl.textContent = tierLabels[settings?.tier] || 'Free Plan';
+    }
+
     if (userAvatar) {
       if (settings?.avatar_url) {
         // Show avatar image
