@@ -132,8 +132,9 @@
     color: #fff;
   }
 
-  /* Mobile hero CTA — hidden on desktop */
+  /* Mobile hero CTA and search — hidden on desktop */
   .mobile-hero-action { display: none; }
+  .mobile-search-wrapper { display: none; }
   .mobile-hero-btn {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     width: 100%; padding: 18px;
@@ -141,7 +142,6 @@
     border: none; border-radius: 16px;
     font-size: 18px; font-weight: 800; letter-spacing: -0.01em;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.35);
     transition: background 0.15s, transform 0.1s;
   }
   .mobile-hero-btn:active { background: #0891b2; transform: scale(0.98); }
@@ -1050,26 +1050,39 @@
       margin: 6px 0 0;
     }
 
-    /* Action cards: compact horizontal scroll strip */
-    .core-actions {
-      display: flex !important;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      gap: 10px !important;
-      margin: 0 -16px 24px !important;
-      padding: 0 16px 8px !important;
-      scrollbar-width: none;
+    /* Hide setup-only action cards on mobile */
+    .core-actions { display: none !important; }
+
+    /* Search bar */
+    .mobile-search-wrapper { display: block; margin-bottom: 16px; }
+    #mobileStockSearch {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 15px;
+      box-sizing: border-box;
+      outline: none;
     }
-    .core-actions::-webkit-scrollbar { display: none; }
-    .core-actions .action-card {
-      flex: 0 0 150px !important;
-      min-width: 150px !important;
-      scroll-snap-align: start;
-      padding: 14px !important;
+    #mobileStockSearch:focus { border-color: var(--accent); }
+    #mobileStockResults { margin-top: 8px; }
+    .search-result-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      min-height: 44px;
     }
-    .core-actions .action-card:nth-child(3) { order: unset; }
-    .core-actions .action-card:nth-child(4) { order: unset; }
-    .action-card p { font-size: 10px !important; margin: 4px 0 12px !important; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .search-result-row:active { opacity: 0.7; }
+    .search-result-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
+    .search-result-qty { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
     
     /* Operations grid: single column on mobile */
     .ops-grid {
@@ -1871,9 +1884,9 @@
   <div class="mobile-hero-action">
     <button class="mobile-hero-btn" onclick="openOrderMethodModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-      Use a Recipe
+      Process Order
     </button>
-    <p class="mobile-hero-sub">Deducts ingredients from your stock</p>
+    <p class="mobile-hero-sub">Update inventory when you sell something</p>
   </div>
 
   <section class="core-actions">
@@ -1913,6 +1926,12 @@
       <button class="btn-action btn-action-cyan" onclick="openImageUploadModal('ingredient')">+ New Expense</button>
     </div>
   </section>
+
+  <!-- Mobile-only stock search -->
+  <div class="mobile-search-wrapper">
+    <input type="search" id="mobileStockSearch" placeholder="Search stock…" autocomplete="off">
+    <div id="mobileStockResults"></div>
+  </div>
 
   <!-- Stock alerts — shown on all screen sizes -->
   <div id="mobileStockAlerts"></div>
@@ -2018,6 +2037,7 @@ function resolveConfirm(result) {
       if (error) throw error;
 
       console.log('Total ingredients:', ingredients?.length || 0);
+      window._dashIngredients = ingredients || [];
 
       let outOfStockCount = 0;
       let lowStockCount = 0;
@@ -2051,10 +2071,7 @@ function resolveConfirm(result) {
         });
 
         if (outItems.length === 0 && lowItems.length === 0) {
-          alertsEl.innerHTML = `<div class="stock-all-ok">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            All stock levels OK
-          </div>`;
+          alertsEl.innerHTML = '';
         } else {
           const row = (ing, color) => `
             <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
@@ -2086,9 +2103,29 @@ function resolveConfirm(result) {
 
   // Navigate to ingredients page with filter
   function filterInventory(type) {
-    // Store filter type in sessionStorage to be picked up by ingredients page
     sessionStorage.setItem('inventoryFilter', type);
     window.location.href = '/ingredients';
+  }
+
+  function initMobileSearch() {
+    const input = document.getElementById('mobileStockSearch');
+    const results = document.getElementById('mobileStockResults');
+    if (!input || !results) return;
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      results.innerHTML = '';
+      if (!q) return;
+      const matches = (window._dashIngredients || [])
+        .filter(i => i.name.toLowerCase().includes(q))
+        .slice(0, 8);
+      results.innerHTML = matches.length
+        ? matches.map(i => `
+            <div class="search-result-row" onclick="window.location.href='/ingredient-detail?id=${i.id}'">
+              <span class="search-result-name">${i.name}</span>
+              <span class="search-result-qty">${parseFloat(i.quantity) || 0} ${i.unit || ''}</span>
+            </div>`).join('')
+        : `<div class="search-result-row"><span class="search-result-name" style="color:var(--text-muted)">No results</span></div>`;
+    });
   }
 
   // Load inbound status (pending deliveries)
@@ -5231,6 +5268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     allowInput: false,
     disableMobile: true
   });
+  initMobileSearch();
 });
 
 async function loadOrderRecipeData() {
