@@ -370,9 +370,16 @@ async function loadAnalytics() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    const { data: settings } = await supabaseClient
-      .from('user_settings').select('tier').eq('user_id', user.id).single();
-    const tier = settings?.tier || 'free';
+    let tier = 'free';
+    const { data: subscription } = await supabaseClient
+      .from('subscriptions')
+      .select('tier, status, current_period_end')
+      .eq('profile_id', user.id)
+      .maybeSingle();
+    if (subscription && subscription.status === 'active') {
+      const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+      if (!periodEnd || periodEnd > new Date()) tier = subscription.tier || 'free';
+    }
 
     if (tier === 'free') {
       document.getElementById('analyticsPaywall').style.display = 'block';

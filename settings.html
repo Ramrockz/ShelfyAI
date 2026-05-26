@@ -1209,9 +1209,9 @@ async function loadTierInformation(settings) {
       }
     }
 
-    // If subscription is expired but user_settings.tier is still a paid tier, sync it silently
-    if (tier === 'free' && settings?.tier && settings.tier !== 'free') {
-      supabaseClient.from('user_settings').update({ tier: 'free' }).eq('user_id', user.id);
+    // Sync user_settings.tier whenever it doesn't match the verified tier
+    if (settings?.tier !== tier) {
+      supabaseClient.from('user_settings').update({ tier }).eq('user_id', user.id);
     }
   }
   
