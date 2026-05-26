@@ -2166,8 +2166,9 @@ function resolveConfirm(result) {
         // Build ETA label — only show if we can compute it
         let etaLabel = '';
         let etaBadgeClass = 'low';
-        if (item.reorder_date && item.delivery_days) {
-          const eta = new Date(item.reorder_date + 'T00:00:00');
+        const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
+        if (orderBase && item.delivery_days) {
+          const eta = new Date(orderBase + 'T00:00:00');
           eta.setDate(eta.getDate() + item.delivery_days);
           const today = new Date(); today.setHours(0, 0, 0, 0);
           const daysLeft = Math.round((eta - today) / 86400000);
