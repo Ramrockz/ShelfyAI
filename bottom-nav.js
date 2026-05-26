@@ -19,6 +19,10 @@
     {
       href: '/expenses', page: 'expenses', label: 'Expenses',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`
+    },
+    {
+      href: '/analytics', page: 'analytics', label: 'Analytics',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`
     }
   ];
 
@@ -41,6 +45,7 @@
     'order-detail': 'Order',
     'expenses': 'Expenses',
     'expense-detail': 'Expense',
+    'analytics': 'Analytics',
     'settings': 'Settings'
   };
   const pageTitle = pageTitleMap[rawPage] || '';
