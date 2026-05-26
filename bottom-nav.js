@@ -182,16 +182,6 @@
     document.body.appendChild(nav);
     document.body.appendChild(overlay);
 
-    if (pageTitle && window.innerWidth <= 768) {
-      const navbar = document.querySelector('.navbar');
-      if (navbar) {
-        const titleEl = document.createElement('span');
-        titleEl.className = 'mobile-page-title';
-        titleEl.textContent = pageTitle;
-        navbar.appendChild(titleEl);
-      }
-    }
-
     // Lock to portrait when supported (works in PWA/fullscreen mode)
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock('portrait').catch(() => {});
