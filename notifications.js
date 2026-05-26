@@ -70,8 +70,8 @@ function renderNotifications() {
           <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
             Open Ingredient
           </button>
-          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            Restock
+          <button onclick="markAsReordered('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            Mark as Reordered
           </button>
         ` : ''}
         <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
@@ -212,68 +212,38 @@ function openIngredient(ingredientId) {
   window.location.href = `ingredient-detail.html?id=${ingredientId}`;
 }
 
-// Restock ingredient
-async function restockIngredient(ingredientId, notificationId) {
+// Mark ingredient as reordered (phase 1 of two-phase reorder flow)
+async function markAsReordered(ingredientId, notificationId) {
   try {
-    // Get ingredient details
     const { data: ingredient, error: fetchError } = await supabaseClient
       .from('ingredients')
-      .select('*')
+      .select('name, unit')
       .eq('id', ingredientId)
       .single();
-    
+
     if (fetchError) throw fetchError;
-    
-    // Simple restock - add 100 units (you can make this more sophisticated)
-    const currentQty = parseFloat(ingredient.quantity) || 0;
-    const newQty = currentQty + 100;
-    
+
+    const today = new Date().toISOString().split('T')[0];
     const { error: updateError } = await supabaseClient
       .from('ingredients')
-      .update({ quantity: newQty })
+      .update({ reorder_pending: true, reorder_date: today })
       .eq('id', ingredientId);
-    
+
     if (updateError) throw updateError;
-    
-    // Create history entry for restock
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (user) {
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
-            ingredient_id: ingredientId,
-            profile_id: user.id,
-            field_name: 'quantity',
-            old_value: String(currentQty),
-            new_value: String(newQty),
-            reason: 'restock',
-            reference_id: null,
-            reference_text: 'Quick restock (+100 units)'
-          }]);
-      }
-    } catch (historyError) {
-      console.error('Error creating history entry:', historyError);
-    }
-    
+
     if (typeof showNotification === 'function') {
-      showNotification(`${ingredient.name} restocked to ${newQty} ${ingredient.unit}`, 'success');
+      showNotification(`${ingredient.name} marked as reordered — confirm delivery when it arrives`, 'success');
     }
-    
-    // Delete the notification
+
     await deleteNotification(notificationId);
-    
-    // Reload page data if functions exist
-    if (typeof loadRecentUpdates === 'function') {
-      await loadRecentUpdates();
-    }
-    if (typeof loadIngredients === 'function') {
-      await loadIngredients();
-    }
+
+    if (typeof loadRecentUpdates === 'function') await loadRecentUpdates();
+    if (typeof loadIngredients === 'function') await loadIngredients();
+    if (typeof loadPendingDeliveries === 'function') await loadPendingDeliveries();
   } catch (error) {
-    console.error('Error restocking ingredient:', error);
+    console.error('Error marking ingredient as reordered:', error);
     if (typeof showNotification === 'function') {
-      showNotification('Failed to restock ingredient', 'error');
+      showNotification('Failed to mark as reordered', 'error');
     }
   }
 }
