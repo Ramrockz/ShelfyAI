@@ -671,6 +671,40 @@ input[type="number"] {
   }
 }
 
+/* ── Mobile bottom sheet (opt-in via .modal-sheet on the overlay) ── */
+@media (max-width: 768px) {
+  .modal-overlay.modal-sheet {
+    align-items: flex-end !important;
+  }
+  .modal-overlay.modal-sheet .modal-content,
+  .modal-overlay.modal-sheet .modal-content-custom {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+    max-height: 75vh !important;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) !important;
+    transform: translateY(30px) !important;
+    transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.15) !important;
+    overflow-y: auto;
+  }
+  .modal-overlay.modal-sheet.active .modal-content,
+  .modal-overlay.modal-sheet.active .modal-content-custom {
+    transform: translateY(0) !important;
+  }
+  .modal-overlay.modal-sheet .modal-content::before,
+  .modal-overlay.modal-sheet .modal-content-custom::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: rgba(128,128,128,0.3);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+}
+
 .modal h2 {
   margin: 0 0 20px 0;
   font-size: 24px;

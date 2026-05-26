@@ -1077,20 +1077,18 @@
     }
 
     /* Modal adjustments */
-    .modal-overlay { align-items: flex-end !important; }
     .modal-content,
     .modal-content-custom,
-    .reorder-modal-content {
-      width: 100% !important;
-      max-width: 100% !important;
-      border-radius: 20px 20px 0 0 !important;
-      margin: 0 !important;
+    .reorder-modal-content,
+    .production-modal-content {
+      width: calc(100% - 32px) !important;
+      max-width: 500px !important;
+      border-radius: 20px !important;
+      margin: 16px !important;
       max-height: 85vh !important;
-      padding: 24px 20px calc(24px + env(safe-area-inset-bottom)) !important;
-      transform: translateY(30px) !important;
-      transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.15) !important;
+      padding: 24px 20px !important;
       overflow-y: auto;
+      transform: none !important;
     }
     .modal-overlay.active .modal-content,
     .modal-overlay.active .modal-content-custom,
@@ -6115,7 +6113,7 @@ document.addEventListener('keydown', (e) => {
 </script>
 
 <!-- Custom Alert Modal -->
-<div class="modal-overlay" id="alertModal" onclick="if(event.target === this) closeAlert()">
+<div class="modal-overlay modal-sheet" id="alertModal" onclick="if(event.target === this) closeAlert()">
   <div class="modal-content-custom">
     <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="alertTitle">Alert</h3>
     <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
@@ -6124,7 +6122,7 @@ document.addEventListener('keydown', (e) => {
 </div>
 
 <!-- Delivery Quantity Modal -->
-<div class="modal-overlay" id="opsDeliveryModal" onclick="if(event.target===this) closeOpsDeliveryModal()">
+<div class="modal-overlay modal-sheet" id="opsDeliveryModal" onclick="if(event.target===this) closeOpsDeliveryModal()">
   <div class="modal-content" style="max-width:420px; position:relative;">
     <button onclick="closeOpsDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">×</button>
     <h3 id="opsDeliveryTitle" style="margin:0 0 8px 0;">Confirm Delivery</h3>
@@ -6142,7 +6140,7 @@ document.addEventListener('keydown', (e) => {
 </div>
 
 <!-- Custom Confirm Modal -->
-<div class="modal-overlay" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+<div class="modal-overlay modal-sheet" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
   <div class="modal-content-custom">
     <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
     <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
@@ -6198,7 +6196,7 @@ document.addEventListener('keydown', (e) => {
 </div>
 
 <!-- Delete Sale Modal -->
-<div class="modal-overlay" id="deleteSaleModal" style="display: none;" onclick="if(event.target === this) closeDeleteSaleModal()">
+<div class="modal-overlay modal-sheet" id="deleteSaleModal" style="display: none;" onclick="if(event.target === this) closeDeleteSaleModal()">
   <div class="modal-content-custom">
     <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-main);">Delete Order</h3>
     <p style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;">
