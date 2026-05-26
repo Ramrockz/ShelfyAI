@@ -1093,7 +1093,7 @@
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-        <span class="btn-text">Restock</span>
+        <span class="btn-text">Mark as Reordered</span>
       </button>
       <button class="btn btn-outline" onclick="duplicateIngredient()">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1249,12 +1249,12 @@
 
 </div>
 
-<!-- Restock Modal -->
+<!-- Place Reorder Modal -->
 <div class="reorder-modal" id="reorderModal" onclick="if(event.target === this) closeReorderModal()">
   <div class="reorder-modal-content">
     <button class="modal-close" onclick="closeReorderModal()">×</button>
     <div class="modal-header">
-      <h3>Restock from Source</h3>
+      <h3>Place Reorder</h3>
       <div class="source-url-display" id="sourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
         <a href="#" id="sourceUrlLink">No source URL</a>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -1262,12 +1262,25 @@
         </svg>
       </div>
       <div style="margin-top: 16px;">
-        <button class="btn-reorder" onclick="markAsReordered()" style="width: 100%; padding: 12px 32px;">Mark as Restocked</button>
+        <button class="btn-reorder" onclick="markAsReordered()" style="width: 100%; padding: 12px 32px;">Mark as Reordered</button>
       </div>
-      <h4 style="font-size: 13px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; color: var(--text-muted);">Ingredients from same source</h4>
     </div>
-    <div id="reorderIngredientsList" style="margin-top: 0;">
-      <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
+    <div id="reorderIngredientsList" style="margin-top: 0;"></div>
+  </div>
+</div>
+
+<!-- Confirm Delivery Modal -->
+<div class="modal-overlay" id="deliveryModal" onclick="if(event.target===this) closeDeliveryModal()">
+  <div class="modal-content">
+    <h3 style="margin:0 0 8px 0;">Confirm Delivery</h3>
+    <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">How many <strong id="deliveryUnitLabel">units</strong> did you receive?</p>
+    <div class="form-group">
+      <label for="deliveryQty">Quantity Received</label>
+      <input type="number" id="deliveryQty" class="form-input" min="0" step="1" placeholder="0">
+    </div>
+    <div style="display:flex; gap:12px; margin-top:24px;">
+      <button onclick="cancelOrder()" class="btn btn-danger" style="flex:1;">Cancel Order</button>
+      <button onclick="confirmDeliveryQty()" class="btn-reorder" style="flex:1; padding:10px 16px; justify-content:center;">Confirm Delivery</button>
     </div>
   </div>
 </div>
@@ -1470,10 +1483,10 @@
     reorderBtn.style.display = 'inline-block';
     
     if (ing.reorder_pending) {
-      reorderBtn.querySelector('.btn-text').textContent = 'Restock Processed';
-      reorderBtn.onclick = processReorder;
+      reorderBtn.querySelector('.btn-text').textContent = 'Confirm Delivery';
+      reorderBtn.onclick = openDeliveryModal;
     } else {
-      reorderBtn.querySelector('.btn-text').textContent = 'Restock';
+      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
     }
 
@@ -1961,8 +1974,8 @@
       
       // Update button
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.querySelector('.btn-text').textContent = 'Restock Processed';
-      reorderBtn.onclick = processReorder;
+      reorderBtn.querySelector('.btn-text').textContent = 'Confirm Delivery';
+      reorderBtn.onclick = openDeliveryModal;
       
       // Close modal
       closeReorderModal();
@@ -1974,11 +1987,69 @@
     }
   }
 
-  async function processReorder() {
+  function openDeliveryModal() {
     if (!currentIngredient) return;
-    
-    if (!await showConfirm('Have the goods been received? This will reset the reorder status.')) return;
-    
+    document.getElementById('deliveryUnitLabel').textContent = currentIngredient.unit || 'units';
+    document.getElementById('deliveryQty').value = '';
+    document.getElementById('deliveryModal').classList.add('active');
+  }
+
+  function closeDeliveryModal() {
+    document.getElementById('deliveryModal').classList.remove('active');
+  }
+
+  async function confirmDeliveryQty() {
+    const qty = parseFloat(document.getElementById('deliveryQty').value);
+    if (isNaN(qty) || qty < 0) {
+      showAlert('Please enter the quantity you received');
+      return;
+    }
+
+    closeDeliveryModal();
+    const newQty = (currentIngredient.quantity || 0) + qty;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: false, quantity: newQty })
+        .eq('id', currentIngredient.id);
+
+      if (error) throw error;
+
+      if (qty > 0) {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: currentIngredient.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(currentIngredient.quantity || 0),
+          new_value: String(newQty),
+          reason: 'restock',
+          reference_text: 'Delivery received'
+        }]);
+      }
+
+      currentIngredient.reorder_pending = false;
+      currentIngredient.quantity = newQty;
+
+      document.getElementById('quantity').value = newQty;
+      updateStatsDisplay();
+
+      const reorderBtn = document.getElementById('reorderBtn');
+      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
+      reorderBtn.onclick = handleReorderClick;
+
+      showSaveIndicator();
+    } catch (err) {
+      showAlert('Failed to confirm delivery: ' + err.message);
+    }
+  }
+
+  async function cancelOrder() {
+    if (!await showConfirm('Cancel this reorder? Stock will not be updated.')) return;
+    closeDeliveryModal();
+
     try {
       const { error } = await supabaseClient
         .from('ingredients')
@@ -1988,16 +2059,15 @@
       if (error) throw error;
 
       currentIngredient.reorder_pending = false;
-      
-      // Update button
+
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.querySelector('.btn-text').textContent = 'Restock';
+      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
-      
+
+      updateStatsDisplay();
       showSaveIndicator();
-    } catch (error) {
-      console.error('Error processing reorder:', error);
-      showAlert('Failed to process reorder');
+    } catch (err) {
+      showAlert('Failed to cancel order: ' + err.message);
     }
   }
 
@@ -2033,11 +2103,11 @@
       }
       
       if (!data || data.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No ingredients from this source</p>';
+        container.innerHTML = '';
         return;
       }
 
-      container.innerHTML = data.map(ing => {
+      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other ingredients from this source</h4>' + data.map(ing => {
         // Get stock status
         const qty = ing.quantity || 0;
         const minStock = ing.min_stock || 0;
@@ -2256,8 +2326,6 @@
           }]);
         
         // Reload history
-        loadHistory(currentIngredient.id);
-        
         // Check if out of stock and create notification
         if (newQuantity <= 0) {
           await createOutOfStockNotification(
@@ -2427,7 +2495,7 @@
               Open Ingredient
             </button>
             <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-              Restock
+              Reorder
             </button>
           ` : ''}
           <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
