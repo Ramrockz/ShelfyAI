@@ -326,6 +326,18 @@
         <div id="topProductsList"></div>
       </div>
 
+      <!-- Reorder Predictions -->
+      <div class="chart-card">
+        <h3>Reorder Predictions <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— based on usage over last 6 months</small></h3>
+        <div id="reorderList"></div>
+      </div>
+
+      <!-- Dead Stock -->
+      <div class="chart-card">
+        <h3>Dead Stock <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— no usage in the last 6 months</small></h3>
+        <div id="deadStockList"></div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -352,7 +364,7 @@
   }
 })();
 
-let allSales = [], allExpenses = [];
+let allSales = [], allExpenses = [], allIngredients = [], allIngHistory = [];
 let currentPeriod = '3m';
 let chartRevExp = null, chartChannel = null, chartCategory = null, chartForecast = null;
 
@@ -387,15 +399,33 @@ async function loadAnalytics() {
       return;
     }
 
-    const [salesRes, expensesRes] = await Promise.all([
+    const [salesRes, expensesRes, ingredientsRes] = await Promise.all([
       supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id),
-      supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id)
+      supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id),
+      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock').eq('profile_id', user.id)
     ]);
 
-    allSales    = salesRes.data    || [];
-    allExpenses = expensesRes.data || [];
+    allSales       = salesRes.data       || [];
+    allExpenses    = expensesRes.data    || [];
+    allIngredients = ingredientsRes.data || [];
+
+    // Fetch 6 months of quantity history for reorder + dead stock analysis
+    if (allIngredients.length > 0) {
+      const ingIds = allIngredients.map(i => i.id);
+      const since6m = new Date();
+      since6m.setMonth(since6m.getMonth() - 6);
+      const { data: histData } = await supabaseClient
+        .from('ingredient_history')
+        .select('ingredient_id, old_value, new_value, changed_at')
+        .in('ingredient_id', ingIds)
+        .eq('field_name', 'quantity')
+        .gte('changed_at', since6m.toISOString());
+      allIngHistory = histData || [];
+    }
 
     renderAnalytics();
+    renderReorderPredictions();
+    renderDeadStock();
   } catch (err) {
     console.error('Analytics load error:', err);
   }
@@ -658,6 +688,118 @@ function renderTopProducts(productMap) {
             <td>${d.units}</td>
             <td>€${d.revenue.toFixed(2)}</td>
           </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderReorderPredictions() {
+  const el = document.getElementById('reorderList');
+  if (!el) return;
+
+  if (!allIngredients.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No ingredients found</p>';
+    return;
+  }
+
+  // Sum consumption (negative changes) per ingredient over the 6-month window
+  const consumptionMap = {};
+  allIngHistory.forEach(h => {
+    const change = parseFloat(h.new_value) - parseFloat(h.old_value);
+    if (change >= 0) return;
+    consumptionMap[h.ingredient_id] = (consumptionMap[h.ingredient_id] || 0) + Math.abs(change);
+  });
+
+  const predictions = allIngredients
+    .map(ing => {
+      const totalConsumed = consumptionMap[ing.id] || 0;
+      if (totalConsumed === 0) return null;
+      const avgMonthly = totalConsumed / 6;
+      const currentQty = parseFloat(ing.quantity) || 0;
+      const daysLeft = avgMonthly > 0 ? (currentQty / (avgMonthly / 30)) : Infinity;
+      const minStock = parseFloat(ing.min_stock) || 0;
+      const belowMin = minStock > 0 && currentQty <= minStock;
+      return { ...ing, avgMonthly, daysLeft, belowMin };
+    })
+    .filter(p => p && (p.daysLeft <= 60 || p.belowMin))
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+
+  if (!predictions.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">All stock levels look healthy based on current usage</p>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="top-products-table">
+      <thead><tr>
+        <th>Ingredient</th><th>In Stock</th><th>Avg / Month</th><th>Days Left</th><th>Action</th>
+      </tr></thead>
+      <tbody>
+        ${predictions.map(p => {
+          const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days';
+          const isRed = p.daysLeft <= 14 || p.belowMin;
+          const statusColor = isRed ? 'var(--danger)' : 'var(--warning)';
+          const action = p.daysLeft < 1 ? 'Reorder Now' : p.belowMin ? 'Below Min Stock' : 'Reorder Soon';
+          return `<tr>
+            <td><a href="/ingredient-detail?id=${p.id}" style="color:var(--accent);text-decoration:none">${p.name}</a></td>
+            <td>${parseFloat(p.quantity).toFixed(1)} ${p.unit || ''}</td>
+            <td>${p.avgMonthly.toFixed(1)} ${p.unit || ''}</td>
+            <td style="font-weight:600;color:${statusColor}">${daysText}</td>
+            <td><span style="color:${statusColor};font-weight:600;font-size:12px">${action}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderDeadStock() {
+  const el = document.getElementById('deadStockList');
+  if (!el) return;
+
+  if (!allIngredients.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No ingredients found</p>';
+    return;
+  }
+
+  // IDs that had any consumption (negative change) in the last 6 months
+  const activeIds = new Set(
+    allIngHistory
+      .filter(h => parseFloat(h.new_value) - parseFloat(h.old_value) < 0)
+      .map(h => h.ingredient_id)
+  );
+
+  const dead = allIngredients
+    .filter(ing => {
+      const qty = parseFloat(ing.quantity) || 0;
+      return qty > 0 && !activeIds.has(ing.id);
+    })
+    .map(ing => ({
+      ...ing,
+      tiedUpValue: (parseFloat(ing.quantity) || 0) * (parseFloat(ing.cost_per_unit) || 0)
+    }))
+    .sort((a, b) => b.tiedUpValue - a.tiedUpValue);
+
+  if (!dead.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No dead stock — everything has been used in the last 6 months</p>';
+    return;
+  }
+
+  const totalTiedUp = dead.reduce((s, i) => s + i.tiedUpValue, 0);
+
+  el.innerHTML = `
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px">
+      ${dead.length} ingredient${dead.length > 1 ? 's' : ''} unused for 6+ months
+      &nbsp;·&nbsp; <strong style="color:var(--danger)">€${totalTiedUp.toFixed(2)}</strong> tied up in stock
+    </p>
+    <table class="top-products-table">
+      <thead><tr>
+        <th>Ingredient</th><th>In Stock</th><th>Tied-up Value</th>
+      </tr></thead>
+      <tbody>
+        ${dead.map(ing => `<tr>
+          <td><a href="/ingredient-detail?id=${ing.id}" style="color:var(--accent);text-decoration:none">${ing.name}</a></td>
+          <td>${parseFloat(ing.quantity).toFixed(1)} ${ing.unit || ''}</td>
+          <td style="color:var(--danger);font-weight:600">€${ing.tiedUpValue.toFixed(2)}</td>
+        </tr>`).join('')}
       </tbody>
     </table>`;
 }
