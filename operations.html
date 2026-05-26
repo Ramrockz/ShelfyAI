@@ -1009,9 +1009,10 @@
   .delivery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 10px; color: var(--text-muted); font-size: 14px; }
   .delivery-empty svg { opacity: 0.35; }
   @media (hover: hover) {
-    .delivery-row:hover { transform: translateX(4px); box-shadow: -3px 0 0 0 var(--accent), 0 4px 16px rgba(0,0,0,0.1); border-color: var(--accent); background: var(--bg-inner); }
+    .delivery-row:hover { border-color: var(--accent); background: var(--bg-inner); }
     .delivery-row:hover .delivery-name { color: var(--accent); }
   }
+  .delivery-row:active { opacity: 0.7; transition: opacity 0.05s; }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -2162,13 +2163,7 @@ function resolveConfirm(result) {
       container.innerHTML = pendingOrders.map(item => {
         const hasSource = item.source_url && item.source_url.trim() !== '';
 
-        // Build ordered date label (prefer reorder_date, fall back to updated_at)
-        const rawDate = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-        const orderedLabel = rawDate
-          ? 'Ordered ' + new Date(rawDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : 'Ordered';
-
-        // Build ETA label
+        // Build ETA label — only show if we can compute it
         let etaLabel = '';
         let etaBadgeClass = 'low';
         if (item.reorder_date && item.delivery_days) {
@@ -2189,7 +2184,6 @@ function resolveConfirm(result) {
             <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
               <div class="delivery-name">${escapeHtml(item.name)}</div>
               <div class="delivery-meta">
-                <span class="delivery-qty-badge low">${orderedLabel}</span>
                 ${etaLabel ? `<span class="delivery-qty-badge ${etaBadgeClass}">${etaLabel}</span>` : ''}
                 ${hasSource ? `<a class="delivery-source-link" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Supplier <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
               </div>
