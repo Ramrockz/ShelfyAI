@@ -245,13 +245,6 @@
     margin-top: 8px;
   }
 
-  .history-section {
-    margin-top: 24px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-  }
 
   .save-indicator {
     position: fixed;
@@ -723,16 +716,6 @@
       display: none !important;
     }
 
-    /* On mobile show chart + demand badge, hide only the table */
-    .history-section {
-      display: block !important;
-      order: 99;
-    }
-    .history-section h3:last-of-type,
-    #historyLog {
-      display: none !important;
-    }
-
     /* Reorder container elements: Title -> Stock Status -> Details -> Buttons */
     .container {
       padding: 16px 12px;
@@ -958,7 +941,6 @@
     }
   }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -1243,21 +1225,6 @@
     </div>
   </div>
 
-  <div class="history-section">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-      <h3 style="margin:0;">Quantity Development</h3>
-      <span id="demandBadge" style="display:none; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;"></span>
-    </div>
-    <div style="position:relative; height:220px; margin-bottom:28px;">
-      <canvas id="qtyChart"></canvas>
-      <p id="qtyChartEmpty" style="display:none; color:var(--text-muted); font-size:13px; text-align:center; padding-top:80px;">Not enough data to show chart</p>
-    </div>
-    <h3 style="margin-bottom:12px;">Quantity Change History</h3>
-    <div id="historyLog">
-      <p style="color: var(--text-muted); font-size: 13px;">Loading history...</p>
-    </div>
-  </div>
-
   <div class="save-indicator" id="saveIndicator">✓ Saved</div>
 
 </div>
@@ -1477,7 +1444,6 @@
 
     // Load related data
     loadRecipes(ing.id);
-    loadHistory(ing.id);
     
     // Always show reorder button
     const reorderBtn = document.getElementById('reorderBtn');
@@ -2110,160 +2076,6 @@
     return String(text).replace(/[&<>\"']/g, m => map[m]);
   }
 
-  let qtyChartInstance = null;
-
-  async function loadHistory(ingredientId) {
-    try {
-      // Fetch up to 12 months of history for chart + demand analysis
-      const since12mo = new Date();
-      since12mo.setFullYear(since12mo.getFullYear() - 1);
-
-      const { data: allData, error: allError } = await supabaseClient
-        .from('ingredient_history')
-        .select('*')
-        .eq('ingredient_id', ingredientId)
-        .eq('field_name', 'quantity')
-        .gte('changed_at', since12mo.toISOString())
-        .order('changed_at', { ascending: true });
-
-      // Draw chart
-      renderQtyChart(allData || []);
-      // Compute demand badge
-      renderDemandBadge(allData || []);
-
-      // For the table, use most recent 20 entries (descending)
-      const data = allData ? [...allData].reverse().slice(0, 20) : [];
-      const error = allError;
-
-      const container = document.getElementById('historyLog');
-      if (error || !data || data.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No history yet</p>';
-        return;
-      }
-
-      container.innerHTML = '<table style="width: 100%; border-collapse: collapse;">'
-        + '<thead><tr style="border-bottom: 1px solid var(--border); text-align: left;">'
-        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Date</th>'
-        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Old</th>'
-        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">New</th>'
-        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Change</th>'
-        + '<th style="padding: 8px; font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Reason</th>'
-        + '</tr></thead><tbody>'
-        + data.map(h => {
-            const change = parseFloat(h.new_value) - parseFloat(h.old_value);
-            const changeColor = change > 0 ? 'var(--success)' : 'var(--danger)';
-            const changeSymbol = change > 0 ? '+' : '';
-            let reasonText = 'Unknown';
-            if (h.reason === 'order' && h.reference_id) {
-              reasonText = `<a href="order-detail.html?id=${h.reference_id}" style="color: var(--accent); text-decoration: none; cursor: pointer;">Order: ${h.reference_text || h.reference_id}</a>`;
-            } else if (h.reason === 'order') {
-              reasonText = `Order: ${h.reference_text || 'N/A'}`;
-            } else if (h.reason === 'restock') {
-              reasonText = h.reference_text || 'Restocked';
-            } else if (h.reason === 'expense' && h.reference_id) {
-              reasonText = `<a href="expense-detail.html?id=${h.reference_id}" style="color: var(--accent); text-decoration: none; cursor: pointer;">Expense: ${h.reference_text || h.reference_id}</a>`;
-            } else if (h.reason === 'expense') {
-              reasonText = `Expense: ${h.reference_text || 'N/A'}`;
-            } else if (h.reason === 'manual') {
-              reasonText = 'Manual';
-            }
-            return `<tr style="border-bottom: 1px solid var(--border);">
-              <td style="padding: 8px; font-size: 13px;">${new Date(h.changed_at).toLocaleString()}</td>
-              <td style="padding: 8px; font-size: 13px;">${h.old_value}</td>
-              <td style="padding: 8px; font-size: 13px;">${h.new_value}</td>
-              <td style="padding: 8px; font-size: 13px; color: ${changeColor}; font-weight: 600;">${changeSymbol}${change}</td>
-              <td style="padding: 8px; font-size: 13px; color: var(--text-muted);">${reasonText}</td>
-            </tr>`;
-          }).join('')
-        + '</tbody></table>';
-    } catch (err) {
-      console.error('Error loading history:', err);
-      document.getElementById('historyLog').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading history</p>';
-    }
-  }
-
-  function renderQtyChart(data) {
-    const canvas = document.getElementById('qtyChart');
-    const emptyMsg = document.getElementById('qtyChartEmpty');
-    if (!canvas) return;
-
-    if (qtyChartInstance) { qtyChartInstance.destroy(); qtyChartInstance = null; }
-
-    if (!data || data.length < 2) {
-      canvas.style.display = 'none';
-      if (emptyMsg) emptyMsg.style.display = 'block';
-      return;
-    }
-    canvas.style.display = 'block';
-    if (emptyMsg) emptyMsg.style.display = 'none';
-
-    const minStock = parseFloat(document.getElementById('min_stock')?.value) || null;
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-    const textColor = isDark ? '#9ca3af' : '#6b7280';
-    const accentColor = '#06b6d4';
-
-    // Group by day — use last entry's new_value for each day
-    const dayMap = new Map();
-    data.forEach(h => {
-      const key = new Date(h.changed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-      dayMap.set(key, parseFloat(h.new_value)); // data is asc, so last write wins
-    });
-    const labels = Array.from(dayMap.keys());
-    const values = Array.from(dayMap.values());
-
-    const datasets = [{
-      label: 'Quantity',
-      data: values,
-      borderColor: accentColor,
-      backgroundColor: accentColor + '22',
-      fill: true,
-      tension: 0.3,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      borderWidth: 2,
-    }];
-
-    if (minStock !== null && minStock > 0) {
-      datasets.push({
-        label: 'Min Stock',
-        data: new Array(values.length).fill(minStock),
-        borderColor: '#f59e0b',
-        borderDash: [5, 4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-      });
-    }
-
-    qtyChartInstance = new Chart(canvas, {
-      type: 'line',
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: {
-            labels: { color: textColor, boxWidth: 12, font: { size: 11 } }
-          },
-          tooltip: { mode: 'index', intersect: false }
-        },
-        scales: {
-          x: {
-            ticks: { color: textColor, font: { size: 11 }, maxTicksLimit: 8, maxRotation: 0 },
-            grid: { color: gridColor }
-          },
-          y: {
-            ticks: { color: textColor, font: { size: 11 } },
-            grid: { color: gridColor },
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  }
-
   function stepQty(delta) {
     const input = document.getElementById('quantity');
     const current = parseFloat(input.value) || 0;
@@ -2272,60 +2084,6 @@
     input.value = next;
     input.dispatchEvent(new Event('input'));
     autoSave();
-  }
-
-  function renderDemandBadge(data) {
-    const badge = document.getElementById('demandBadge');
-    if (!badge || !data || data.length === 0) return;
-
-    const now = new Date();
-    const ms3  = new Date(now); ms3.setMonth(ms3.getMonth() - 3);
-    const ms12 = new Date(now); ms12.setFullYear(ms12.getFullYear() - 1);
-
-    // Sum of absolute negative changes (consumption) per month
-    let consumed3 = 0, months3 = new Set();
-    let consumed12 = 0, months12 = new Set();
-
-    data.forEach(h => {
-      const d = new Date(h.changed_at);
-      const change = parseFloat(h.new_value) - parseFloat(h.old_value);
-      if (change >= 0) return; // only consumption (decreases)
-      const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-      if (d >= ms12) {
-        consumed12 += Math.abs(change);
-        months12.add(monthKey);
-      }
-      if (d >= ms3) {
-        consumed3 += Math.abs(change);
-        months3.add(monthKey);
-      }
-    });
-
-    const avg3  = months3.size  > 0 ? consumed3  / 3  : 0;
-    const avg12 = months12.size > 0 ? consumed12 / 12 : 0;
-
-    // Need at least some data to make a call
-    if (avg12 === 0 && avg3 === 0) { badge.style.display = 'none'; return; }
-
-    let label, bg, color;
-    if (avg3 > avg12 * 1.2) {
-      label = '↑ High Demand'; bg = '#fef3c7'; color = '#92400e';
-    } else if (avg12 > 0 && avg3 < avg12 * 0.8) {
-      label = '↓ Low Demand'; bg = '#f3f4f6'; color = '#6b7280';
-    } else {
-      label = '→ Normal Demand'; bg = '#d1fae5'; color = '#065f46';
-    }
-
-    // Dark mode adjustments
-    if (document.documentElement.getAttribute('data-theme') === 'dark') {
-      bg = bg.replace('#fef3c7','#451a03').replace('#f3f4f6','#1f2937').replace('#d1fae5','#022c22');
-      color = color.replace('#92400e','#fbbf24').replace('#6b7280','#9ca3af').replace('#065f46','#34d399');
-    }
-
-    badge.textContent = label;
-    badge.style.background = bg;
-    badge.style.color = color;
-    badge.style.display = 'inline-block';
   }
 
   function updateStatsDisplay() {
