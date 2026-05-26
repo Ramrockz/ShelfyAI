@@ -2137,7 +2137,7 @@ function resolveConfirm(result) {
       // Query ingredients marked as reorder pending
       const { data: pendingOrders, error } = await supabaseClient
         .from('ingredients')
-        .select('id, name, unit, source_url, reorder_date, estimated_delivery, updated_at')
+        .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at')
         .eq('profile_id', user.id)
         .eq('reorder_pending', true)
         .order('updated_at', { ascending: false });
@@ -2189,7 +2189,7 @@ function resolveConfirm(result) {
               </div>
             </div>
             <div class="delivery-actions">
-              <button class="delivery-btn confirm" onclick="event.stopPropagation(); processDelivery('${item.id}', '${escapeHtml(item.name)}')" title="Mark as received">
+              <button class="delivery-btn confirm" onclick="event.stopPropagation(); openOpsDeliveryModal('${item.id}', '${escapeHtml(item.name)}', '${escapeHtml(item.unit || 'units')}', ${item.quantity || 0})" title="Confirm delivery">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
               <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}', '${escapeHtml(item.name)}')" title="Cancel reorder">
@@ -2206,26 +2206,58 @@ function resolveConfirm(result) {
     }
   }
 
-  async function processDelivery(ingredientId, ingredientName) {
-    if (!await showConfirm('Have the goods been received?')) return;
-    
+  let _opsDelivery = {};
+
+  function openOpsDeliveryModal(id, name, unit, currentQty) {
+    _opsDelivery = { id, name, unit, currentQty };
+    document.getElementById('opsDeliveryTitle').textContent = `Delivery: ${name}`;
+    document.getElementById('opsDeliveryUnitLabel').textContent = unit;
+    document.getElementById('opsDeliveryQty').value = '';
+    document.getElementById('opsDeliveryModal').classList.add('active');
+  }
+
+  function closeOpsDeliveryModal() {
+    document.getElementById('opsDeliveryModal').classList.remove('active');
+  }
+
+  async function confirmOpsDelivery() {
+    const qty = parseFloat(document.getElementById('opsDeliveryQty').value);
+    if (isNaN(qty) || qty < 0) {
+      showAlert('Please enter the quantity received');
+      return;
+    }
+    closeOpsDeliveryModal();
+
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      const newQty = _opsDelivery.currentQty + qty;
+
       const { error } = await supabaseClient
         .from('ingredients')
-        .update({ reorder_pending: false })
-        .eq('id', ingredientId)
+        .update({ reorder_pending: false, quantity: newQty })
+        .eq('id', _opsDelivery.id)
         .eq('profile_id', user.id);
 
       if (error) throw error;
 
-      // Reload the list
+      if (qty > 0) {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: _opsDelivery.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(_opsDelivery.currentQty),
+          new_value: String(newQty),
+          reason: 'restock',
+          reference_text: 'Delivery received'
+        }]);
+      }
+
       loadInboundStatus();
     } catch (error) {
-      console.error('Error processing delivery:', error);
-      showAlert('Failed to mark as received');
+      console.error('Error confirming delivery:', error);
+      showAlert('Failed to confirm delivery');
     }
   }
 
@@ -6119,6 +6151,23 @@ document.addEventListener('keydown', (e) => {
     <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="alertTitle">Alert</h3>
     <p id="alertMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
     <button style="width: 100%; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<!-- Delivery Quantity Modal -->
+<div class="modal-overlay" id="opsDeliveryModal" onclick="if(event.target===this) closeOpsDeliveryModal()">
+  <div class="modal-content" style="max-width:420px;">
+    <h3 id="opsDeliveryTitle" style="margin:0 0 8px 0;">Confirm Delivery</h3>
+    <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">How many <strong id="opsDeliveryUnitLabel">units</strong> did you receive?</p>
+    <div style="margin-bottom:20px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:8px;">Quantity Received</label>
+      <input type="number" id="opsDeliveryQty" min="0" step="1" placeholder="0"
+        style="width:100%; padding:12px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:14px; box-sizing:border-box;">
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button onclick="closeOpsDeliveryModal()" style="flex:1; background:var(--bg-panel); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
+      <button onclick="confirmOpsDelivery()" style="flex:1; background:var(--accent); color:#fff; border:none; padding:12px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Confirm Delivery</button>
+    </div>
   </div>
 </div>
 
