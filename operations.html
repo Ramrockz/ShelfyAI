@@ -134,7 +134,6 @@
 
   /* Mobile hero CTA and search — hidden on desktop */
   .mobile-hero-action { display: none; }
-  .mobile-search-wrapper { display: none; }
   .mobile-hero-btn {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     width: 100%; padding: 18px;
@@ -1053,41 +1052,18 @@
     /* Hide setup-only action cards on mobile */
     .core-actions { display: none !important; }
 
-    /* Search bar */
-    .mobile-search-wrapper { display: block; margin-bottom: 16px; }
-    #mobileStockSearch {
-      width: 100%;
-      padding: 12px 16px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text-main);
-      font-size: 15px;
-      box-sizing: border-box;
-      outline: none;
-    }
-    #mobileStockSearch:focus { border-color: var(--accent); }
-    #mobileStockResults { margin-top: 8px; }
-    .search-result-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      min-height: 44px;
-    }
-    .search-result-row:active { opacity: 0.7; }
-    .search-result-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
-    .search-result-qty { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
     
-    /* Operations grid: single column on mobile */
+    /* Operations grid: single column on mobile, edge-to-edge */
     .ops-grid {
       grid-template-columns: 1fr;
       gap: 16px;
+      margin-left: -16px;
+      margin-right: -16px;
+    }
+    .ops-grid .panel {
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
     }
 
     /* Hide CSV import on mobile */
@@ -1417,6 +1393,7 @@
   
   @media (max-width: 480px) {
     .hub-container { padding: 16px 12px; }
+    .ops-grid { margin-left: -12px; margin-right: -12px; }
     
     /* Core actions: 2 columns → 1 column on very small screens */
     .core-actions {
@@ -1927,12 +1904,6 @@
     </div>
   </section>
 
-  <!-- Mobile-only stock search -->
-  <div class="mobile-search-wrapper">
-    <input type="search" id="mobileStockSearch" placeholder="Search stock…" autocomplete="off">
-    <div id="mobileStockResults"></div>
-  </div>
-
   <!-- Stock alerts — shown on all screen sizes -->
   <div id="mobileStockAlerts"></div>
 
@@ -2107,26 +2078,6 @@ function resolveConfirm(result) {
     window.location.href = '/ingredients';
   }
 
-  function initMobileSearch() {
-    const input = document.getElementById('mobileStockSearch');
-    const results = document.getElementById('mobileStockResults');
-    if (!input || !results) return;
-    input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
-      results.innerHTML = '';
-      if (!q) return;
-      const matches = (window._dashIngredients || [])
-        .filter(i => i.name.toLowerCase().includes(q))
-        .slice(0, 8);
-      results.innerHTML = matches.length
-        ? matches.map(i => `
-            <div class="search-result-row" onclick="window.location.href='/ingredient-detail?id=${i.id}'">
-              <span class="search-result-name">${i.name}</span>
-              <span class="search-result-qty">${parseFloat(i.quantity) || 0} ${i.unit || ''}</span>
-            </div>`).join('')
-        : `<div class="search-result-row"><span class="search-result-name" style="color:var(--text-muted)">No results</span></div>`;
-    });
-  }
 
   // Load inbound status (pending deliveries)
   async function loadInboundStatus() {
@@ -5311,7 +5262,6 @@ document.addEventListener('DOMContentLoaded', () => {
     allowInput: false,
     disableMobile: true
   });
-  initMobileSearch();
 });
 
 async function loadOrderRecipeData() {
