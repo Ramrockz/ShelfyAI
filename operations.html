@@ -2138,7 +2138,7 @@ function resolveConfirm(result) {
       // Query ingredients marked as reorder pending
       const { data: pendingOrders, error } = await supabaseClient
         .from('ingredients')
-        .select('id, name, unit, source_url, reorder_date, delivery_days, updated_at')
+        .select('id, name, unit, source_url, reorder_date, estimated_delivery, updated_at')
         .eq('profile_id', user.id)
         .eq('reorder_pending', true)
         .order('updated_at', { ascending: false });
@@ -2167,9 +2167,9 @@ function resolveConfirm(result) {
         let etaLabel = '';
         let etaBadgeClass = 'low';
         const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-        if (orderBase && item.delivery_days) {
+        if (orderBase && item.estimated_delivery) {
           const eta = new Date(orderBase + 'T00:00:00');
-          eta.setDate(eta.getDate() + item.delivery_days);
+          eta.setDate(eta.getDate() + item.estimated_delivery);
           const today = new Date(); today.setHours(0, 0, 0, 0);
           const daysLeft = Math.round((eta - today) / 86400000);
           etaLabel = 'ETA ' + eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
