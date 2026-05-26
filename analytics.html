@@ -402,7 +402,7 @@ async function loadAnalytics() {
     const [salesRes, expensesRes, ingredientsRes] = await Promise.all([
       supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id),
       supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id),
-      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock').eq('profile_id', user.id)
+      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id)
     ]);
 
     allSales       = salesRes.data       || [];
@@ -767,10 +767,17 @@ function renderDeadStock() {
       .map(h => h.ingredient_id)
   );
 
+  const cutoff6m = new Date();
+  cutoff6m.setMonth(cutoff6m.getMonth() - 6);
+
   const dead = allIngredients
     .filter(ing => {
       const qty = parseFloat(ing.quantity) || 0;
-      return qty > 0 && !activeIds.has(ing.id);
+      if (qty <= 0) return false;
+      if (activeIds.has(ing.id)) return false;
+      // Skip ingredients created within the last 6 months — they haven't had time to be used
+      if (ing.created_at && new Date(ing.created_at) > cutoff6m) return false;
+      return true;
     })
     .map(ing => ({
       ...ing,
