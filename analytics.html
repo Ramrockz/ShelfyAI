@@ -166,10 +166,46 @@
   }
 
   @media (max-width: 768px) {
-    .analytics-main { padding: 16px; }
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .analytics-main {
+      padding: 12px 12px calc(12px + 60px + env(safe-area-inset-bottom));
+    }
+    .kpi-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .kpi-card { padding: 14px 16px; }
+    .kpi-value { font-size: 20px; }
+
     .charts-row { grid-template-columns: 1fr; }
-    .chart-card { padding: 16px; }
+    .chart-card { padding: 14px; margin-bottom: 12px; }
+    .chart-card h3 { font-size: 13px; margin-bottom: 14px; }
+
+    /* Limit chart height on mobile */
+    .chart-card canvas { max-height: 220px; height: 220px !important; }
+
+    /* Range pills: single scrollable row */
+    .range-pills {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .range-pills::-webkit-scrollbar { display: none; }
+    .range-pill { flex-shrink: 0; padding: 6px 14px; font-size: 12px; }
+
+    /* Tables: horizontal scroll */
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -14px;
+      padding: 0 14px;
+    }
+    .top-products-table { min-width: 340px; font-size: 12px; }
+    .top-products-table td, .top-products-table th { padding: 10px 4px; }
   }
 </style>
 </head>
@@ -198,7 +234,7 @@
       </span>
     </div>
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display:none">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
       <span id="notificationBadge" class="notification-badge" style="display:none">0</span>
       <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
         <div class="notification-header">
@@ -568,6 +604,7 @@ function renderRevExpChart(labels, revValues, expValues) {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 14 } } },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
@@ -600,9 +637,10 @@ function renderDoughnut(canvasId, map, refKey) {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         cutout: '62%',
         plugins: {
-          legend: { position: 'right', labels: { color: '#94a3b8', boxWidth: 12, padding: 14, font: { size: 12 } } },
+          legend: { position: window.innerWidth <= 768 ? 'bottom' : 'right', labels: { color: '#94a3b8', boxWidth: 12, padding: 14, font: { size: 12 } } },
           tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.parsed.toFixed(2)}` } }
         }
       }
@@ -651,6 +689,7 @@ function renderForecastChart(histLabels, histValues, fLabels, fValues) {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 14 } } },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
@@ -670,15 +709,10 @@ function renderTopProducts(productMap) {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No product data for this period</p>';
     return;
   }
-  el.innerHTML = `
+  el.innerHTML = `<div class="table-scroll">
     <table class="top-products-table">
       <thead>
-        <tr>
-          <th>#</th>
-          <th>Product</th>
-          <th>Units</th>
-          <th>Revenue</th>
-        </tr>
+        <tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th></tr>
       </thead>
       <tbody>
         ${sorted.map(([name, d], i) => `
@@ -689,7 +723,7 @@ function renderTopProducts(productMap) {
             <td>€${d.revenue.toFixed(2)}</td>
           </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
 }
 
 function renderReorderPredictions() {
@@ -728,10 +762,9 @@ function renderReorderPredictions() {
     return;
   }
 
-  el.innerHTML = `
-    <table class="top-products-table">
+  el.innerHTML = `<div class="table-scroll"><table class="top-products-table">
       <thead><tr>
-        <th>Ingredient</th><th>In Stock</th><th>Avg / Month</th><th>Days Left</th><th>Action</th>
+        <th>Ingredient</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Action</th>
       </tr></thead>
       <tbody>
         ${predictions.map(p => {
@@ -748,7 +781,7 @@ function renderReorderPredictions() {
           </tr>`;
         }).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
 }
 
 function renderDeadStock() {
@@ -797,7 +830,7 @@ function renderDeadStock() {
       ${dead.length} ingredient${dead.length > 1 ? 's' : ''} unused for 6+ months
       &nbsp;·&nbsp; <strong style="color:var(--danger)">€${totalTiedUp.toFixed(2)}</strong> tied up in stock
     </p>
-    <table class="top-products-table">
+    <div class="table-scroll"><table class="top-products-table">
       <thead><tr>
         <th>Ingredient</th><th>In Stock</th><th>Tied-up Value</th>
       </tr></thead>
@@ -808,7 +841,7 @@ function renderDeadStock() {
           <td style="color:var(--danger);font-weight:600">€${ing.tiedUpValue.toFixed(2)}</td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
 }
 </script>
 </body>
