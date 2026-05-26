@@ -35,7 +35,7 @@ function expandSynonyms(words) {
   }))];
 }
 
-function currentPage() {
+function getChatbotPage() {
   return window.location.pathname.replace(/\.html$/, '').replace(/^\//, '') || 'index';
 }
 
@@ -49,7 +49,7 @@ function scoreEntry(query, entry) {
     else if (eWords.some(ew => ew.startsWith(qw) || qw.startsWith(ew))) s += 1;
   }
   if (eText.includes(normalise(query))) s += 5;
-  if (entry.page && entry.page === currentPage()) s += 4;
+  if (entry.page && entry.page === getChatbotPage()) s += 4;
   return s;
 }
 
