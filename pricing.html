@@ -520,22 +520,36 @@
           authButton.textContent = 'Dashboard';
         }
 
-        // Update pricing plan buttons
-        const btnFree = document.getElementById('btn-free');
-        if (btnFree) {
-          btnFree.textContent = 'Current Plan';
-          btnFree.onclick = null;
-          btnFree.className = 'btn btn-current';
-        }
+        // Fetch actual tier to mark the correct plan as current
+        let userTier = 'free';
+        try {
+          const { data: settings } = await window.supabaseClient
+            .from('user_settings')
+            .select('tier')
+            .eq('user_id', session.user.id)
+            .single();
+          userTier = settings?.tier || 'free';
+        } catch (e) { /* leave as free */ }
 
-        const btnStarter = document.getElementById('btn-starter');
-        if (btnStarter) {
-          btnStarter.textContent = 'Upgrade';
-        }
+        const markCurrent = (id) => {
+          const btn = document.getElementById(id);
+          if (btn) { btn.textContent = 'Current Plan'; btn.onclick = null; btn.className = 'btn btn-current'; }
+        };
+        const markUpgrade = (id) => {
+          const btn = document.getElementById(id);
+          if (btn) { btn.textContent = 'Upgrade'; }
+        };
+        const markDowngrade = (id) => {
+          const btn = document.getElementById(id);
+          if (btn) { btn.textContent = 'Downgrade'; }
+        };
 
-        const btnPro = document.getElementById('btn-pro');
-        if (btnPro) {
-          btnPro.textContent = 'Upgrade';
+        if (userTier === 'pro') {
+          markDowngrade('btn-free'); markDowngrade('btn-starter'); markCurrent('btn-pro');
+        } else if (userTier === 'starter') {
+          markDowngrade('btn-free'); markCurrent('btn-starter'); markUpgrade('btn-pro');
+        } else {
+          markCurrent('btn-free'); markUpgrade('btn-starter'); markUpgrade('btn-pro');
         }
       }
     } catch (error) {

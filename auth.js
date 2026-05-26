@@ -38,6 +38,7 @@ const protectedPages = [
   'shopping-list',
   'orders',
   'order-detail',
+  'analytics',
   'settings'
 ];
 
