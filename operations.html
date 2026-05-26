@@ -342,7 +342,6 @@
   .ops-grid {
     display: grid;
     grid-template-columns: 1fr;
-    max-width: 680px;
     gap: 32px;
   }
 
@@ -2138,7 +2137,7 @@ function resolveConfirm(result) {
       // Query ingredients marked as reorder pending
       const { data: pendingOrders, error } = await supabaseClient
         .from('ingredients')
-        .select('id, name, quantity, unit, source_url, updated_at')
+        .select('id, name, unit, source_url, reorder_date, delivery_days, updated_at')
         .eq('profile_id', user.id)
         .eq('reorder_pending', true)
         .order('updated_at', { ascending: false });
@@ -2161,10 +2160,26 @@ function resolveConfirm(result) {
       }
 
       container.innerHTML = pendingOrders.map(item => {
-        const qty = parseFloat(item.quantity) || 0;
         const hasSource = item.source_url && item.source_url.trim() !== '';
-        const qtyClass = qty === 0 ? 'out' : 'low';
-        const qtyLabel = qty === 0 ? 'Out of stock' : `${qty} ${item.unit || ''}`;
+
+        // Build ordered date label (prefer reorder_date, fall back to updated_at)
+        const rawDate = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
+        const orderedLabel = rawDate
+          ? 'Ordered ' + new Date(rawDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'Ordered';
+
+        // Build ETA label
+        let etaLabel = '';
+        let etaBadgeClass = 'low';
+        if (item.reorder_date && item.delivery_days) {
+          const eta = new Date(item.reorder_date + 'T00:00:00');
+          eta.setDate(eta.getDate() + item.delivery_days);
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          const daysLeft = Math.round((eta - today) / 86400000);
+          etaLabel = 'ETA ' + eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (daysLeft < 0) { etaLabel += ' (overdue)'; etaBadgeClass = 'out'; }
+          else if (daysLeft <= 2) etaBadgeClass = 'out';
+        }
 
         return `
           <div class="delivery-row">
@@ -2174,7 +2189,8 @@ function resolveConfirm(result) {
             <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
               <div class="delivery-name">${escapeHtml(item.name)}</div>
               <div class="delivery-meta">
-                <span class="delivery-qty-badge ${qtyClass}">${qtyLabel}</span>
+                <span class="delivery-qty-badge low">${orderedLabel}</span>
+                ${etaLabel ? `<span class="delivery-qty-badge ${etaBadgeClass}">${etaLabel}</span>` : ''}
                 ${hasSource ? `<a class="delivery-source-link" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Supplier <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
               </div>
             </div>
