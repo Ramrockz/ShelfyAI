@@ -1660,7 +1660,7 @@
     if (!currentIngredient) return;
     
     // Ask if user wants to upload an expense
-    const uploadExpense = await showConfirm('Would you like to upload an expense receipt (invoice/bill) for this reorder?');
+    const uploadExpense = await showConfirm('Would you like to upload an expense receipt (invoice/bill) for this reorder?', 'Confirm', 'No', 'Yes');
     
     if (uploadExpense) {
       // Close reorder modal and open expense modal
@@ -2751,11 +2751,13 @@ function closeAlert() {
   document.getElementById('alertModal').classList.remove('active');
 }
 
-function showConfirm(message, title = 'Confirm') {
+function showConfirm(message, title = 'Confirm', cancelLabel = 'Cancel', confirmLabel = 'Confirm') {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmCancelBtn').textContent = cancelLabel;
+    document.getElementById('confirmOkBtn').textContent = confirmLabel;
     document.getElementById('confirmModal').classList.add('active');
   });
 }
@@ -2885,8 +2887,8 @@ document.addEventListener('keydown', (e) => {
     <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
     <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
     <div style="display: flex; gap: 12px;">
-      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
-      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+      <button id="confirmCancelBtn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
+      <button id="confirmOkBtn" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
     </div>
   </div>
 </div>
