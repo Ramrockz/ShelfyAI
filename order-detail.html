@@ -703,6 +703,11 @@
       }
     }
   }
+  const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+  if (cachedTier) {
+    const roleEl = document.querySelector('.user-menu-role');
+    if (roleEl) roleEl.textContent = cachedTier;
+  }
 })();
 </script>
 

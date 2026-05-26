@@ -137,39 +137,24 @@ async function initUserMenu() {
   try {
     const userEmailElement = document.getElementById('userMenuEmail');
     const userAvatar = document.getElementById('userAvatar');
-    
-    console.log('initUserMenu: Starting...');
-    console.log('initUserMenu: userEmailElement exists:', !!userEmailElement);
-    console.log('initUserMenu: userAvatar exists:', !!userAvatar);
-    
-    // Fetch user data
-    const user = await getCurrentUser();
-    
-    console.log('initUserMenu: User data:', user);
-    
-    if (!user ||!user.email) {
-      console.error('No user or user email found in initUserMenu');
-      if (userEmailElement) {
-        userEmailElement.textContent = 'Not logged in';
-      }
+
+    // getSession() reads from localStorage — no network needed, works immediately
+    // after OAuth redirect. getUser() requires a network round-trip and can fail
+    // or time out on the first page load after sign-in.
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
+
+    if (!user?.email) {
+      if (userEmailElement) userEmailElement.textContent = 'Not logged in';
       return;
     }
 
-    console.log('initUserMenu: User email:', user.email);
-
     // Guarantee a profiles row exists so FK constraints on other tables don't fail
     await ensureProfileExists(user);
-    
+
     if (userEmailElement) {
-      // Force update with user data - clear first then set
-      userEmailElement.textContent = '';
-      setTimeout(() => {
-        userEmailElement.textContent = user.email;
-        console.log('initUserMenu: Email set to:', user.email);
-      }, 0);
+      userEmailElement.textContent = user.email;
       sessionStorage.setItem('shelfy_user_email', user.email);
-    } else {
-      console.error('initUserMenu: userMenuEmail element not found in DOM');
     }
       
     // Load avatar and tier from database
@@ -179,11 +164,11 @@ async function initUserMenu() {
       .eq('user_id', user.id)
       .single();
 
+    const tierLabels = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' };
+    const tierLabel = tierLabels[settings?.tier] || 'Free Plan';
     const roleEl = document.querySelector('.user-menu-role');
-    if (roleEl) {
-      const tierLabels = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' };
-      roleEl.textContent = tierLabels[settings?.tier] || 'Free Plan';
-    }
+    if (roleEl) roleEl.textContent = tierLabel;
+    sessionStorage.setItem('shelfy_user_tier', tierLabel);
 
     if (userAvatar) {
       if (settings?.avatar_url) {

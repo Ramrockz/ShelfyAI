@@ -388,6 +388,7 @@
 (function() {
   const email = sessionStorage.getItem('shelfy_user_email');
   const avatar = sessionStorage.getItem('shelfy_user_avatar');
+  const tier = sessionStorage.getItem('shelfy_user_tier');
   if (email) {
     const emailEl = document.getElementById('userMenuEmail');
     const avatarEl = document.getElementById('userAvatar');
@@ -402,6 +403,10 @@
         avatarEl.textContent = email.charAt(0).toUpperCase();
       }
     }
+  }
+  if (tier) {
+    const roleEl = document.querySelector('.user-menu-role');
+    if (roleEl) roleEl.textContent = tier;
   }
 })();
 

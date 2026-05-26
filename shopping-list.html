@@ -508,6 +508,7 @@
   (function() {
     const cachedEmail = sessionStorage.getItem('shelfy_user_email');
     const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -525,6 +526,10 @@
           avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
         }
       }
+    }
+    if (cachedTier) {
+      const roleEl = document.querySelector('.user-menu-role');
+      if (roleEl) roleEl.textContent = cachedTier;
     }
   })();
 </script>
