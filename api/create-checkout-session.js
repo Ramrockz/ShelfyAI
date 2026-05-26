@@ -47,8 +47,39 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { tier, interval } = req.body;
-    
+    const { tier, interval, type } = req.body;
+
+    // Scan pack — one-time payment
+    if (type === 'scan_pack') {
+      const scanPackPriceId = process.env.STRIPE_SCAN_PACK_PRICE_ID;
+      if (!scanPackPriceId) {
+        return res.status(500).json({ error: 'Scan pack not configured. Set STRIPE_SCAN_PACK_PRICE_ID.' });
+      }
+
+      let stripeCustomerId;
+      const { data: existingSub } = await supabase
+        .from('subscriptions').select('stripe_customer_id').eq('profile_id', user.id).single();
+      if (existingSub?.stripe_customer_id) {
+        try { await stripe.customers.retrieve(existingSub.stripe_customer_id); stripeCustomerId = existingSub.stripe_customer_id; } catch (_) {}
+      }
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } });
+        stripeCustomerId = customer.id;
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [{ price: scanPackPriceId, quantity: 1 }],
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/settings.html?scan_pack=success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/pricing.html`,
+        metadata: { supabase_user_id: user.id, type: 'scan_pack' }
+      });
+
+      return res.status(200).json({ sessionId: session.id, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
+    }
+
     if (!tier || !interval || !PRICE_IDS[tier] || !PRICE_IDS[tier][interval]) {
       return res.status(400).json({ error: 'Invalid tier or interval' });
     }

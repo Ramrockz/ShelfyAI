@@ -40,6 +40,8 @@ module.exports = async (req, res) => {
         if (session.mode === 'subscription') {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
           await updateSubscription(subscription);
+        } else if (session.mode === 'payment' && session.metadata?.type === 'scan_pack') {
+          await handleScanPackPurchase(session);
         }
         break;
 
@@ -197,6 +199,26 @@ async function handleSubscriptionDeleted(subscription) {
     .eq('user_id', userId);
 
   console.log(`Subscription deleted for user ${userId}, reverted to free tier`);
+}
+
+async function handleScanPackPurchase(session) {
+  const userId = session.metadata?.supabase_user_id;
+  if (!userId) { console.error('Scan pack purchase: no user ID in metadata'); return; }
+
+  const { data: settings } = await supabase
+    .from('user_settings').select('bonus_scans').eq('user_id', userId).single();
+
+  const current = settings?.bonus_scans || 0;
+  const { error } = await supabase
+    .from('user_settings')
+    .update({ bonus_scans: current + 50 })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error adding bonus scans:', error);
+    throw new Error(`Failed to add bonus scans: ${error.message}`);
+  }
+  console.log(`Scan pack purchased: added 50 bonus scans for user ${userId} (total: ${current + 50})`);
 }
 
 async function handleFailedPayment(invoice) {

@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <!-- SEO Meta Tags -->
-<meta name="description" content="Simple, transparent pricing for inventory management. Free tier with unlimited tracking, or upgrade to Starter (€9.99/mo) and Pro (€19.99/mo) for advanced features." />
+<meta name="description" content="Simple, transparent pricing for inventory management. Free tier with unlimited tracking, or upgrade to Starter (€9.99/mo) and Pro (€24.99/mo) for advanced features." />
 <meta name="keywords" content="inventory software pricing, subscription plans, inventory management cost, affordable inventory software, small business pricing" />
 <link rel="canonical" href="https://www.shelfyai.com/pricing" />
 
 <!-- Open Graph Tags -->
 <meta property="og:title" content="ShelfyAI – Simple Pricing" />
-<meta property="og:description" content="Simple, transparent pricing for inventory management. Free tier with unlimited tracking, or upgrade to Starter (€9.99/mo) and Pro (€19.99/mo) for advanced features." />
+<meta property="og:description" content="Simple, transparent pricing for inventory management. Free tier with unlimited tracking, or upgrade to Starter (€9.99/mo) and Pro (€24.99/mo) for advanced features." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.shelfyai.com/pricing" />
 <meta property="og:image" content="https://www.shelfyai.com/favicon.png" />
@@ -269,7 +269,7 @@
       "name": "Free Plan",
       "price": "0",
       "priceCurrency": "EUR",
-      "description": "Unlimited AI ingredient imports plus 20 AI scans per month for orders and expenses"
+      "description": "Unlimited AI ingredient imports plus 5 AI scans per month for orders and expenses"
     },
     {
       "@type": "Offer",
@@ -290,7 +290,7 @@
     {
       "@type": "Offer",
       "name": "Pro Plan - Monthly",
-      "price": "19.99",
+      "price": "24.99",
       "priceCurrency": "EUR",
       "billingDuration": "P1M",
       "description": "Unlimited AI ingredient imports plus 300 AI scans per month for orders and expenses"
@@ -298,7 +298,7 @@
     {
       "@type": "Offer",
       "name": "Pro Plan - Yearly",
-      "price": "199",
+      "price": "239",
       "priceCurrency": "EUR",
       "billingDuration": "P1Y",
       "description": "Unlimited AI ingredient imports plus 300 AI scans per month for orders and expenses"
@@ -369,7 +369,7 @@
         <li><span class="check">✓</span> Unlimited Orders</li>
         <li><span class="check">✓</span> Unlimited Expenses</li>
         <li><span class="check">✓</span> AI Ingredient Import (Unlimited)</li>
-        <li><span class="check">✓</span> AI Scans / month: <strong>20</strong> <span style="color:var(--text-muted); font-size:12px;">(orders &amp; expenses)</span></li>
+        <li><span class="check">✓</span> AI Scans / month: <strong>5</strong> <span style="color:var(--text-muted); font-size:12px;">(orders &amp; expenses)</span></li>
         <li><span class="cross">✕</span> Order Dashboard</li>
         <li><span class="cross">✕</span> Expense Tracking</li>
       </ul>
@@ -405,7 +405,7 @@
       <p style="color:var(--text-muted); font-size:14px; margin-top:8px; min-height: 40px;">Full automation for growing makers.</p>
       
       <div class="price-wrap">
-        <div class="price" id="pro-price">€19.99<span>/mo</span></div>
+        <div class="price" id="pro-price">€24.99<span>/mo</span></div>
       </div>
 
       <ul class="features">
@@ -423,6 +423,17 @@
     </div>
 
   </div>
+
+  <!-- Scan Pack add-on -->
+  <div style="margin-top: 32px; text-align: center;">
+    <div style="display: inline-block; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px 32px; max-width: 420px; width: 100%;">
+      <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px;">Add-on</div>
+      <h3 style="margin: 0 0 4px; font-size: 20px;">Scan Pack</h3>
+      <p style="color: var(--text-muted); font-size: 14px; margin: 4px 0 16px;">+50 AI scans, never expire. Stack as many as you need.</p>
+      <div style="font-size: 28px; font-weight: 800; margin-bottom: 16px;">€4.99 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">one-time</span></div>
+      <button class="btn btn-pro" onclick="handleScanPackCheckout()" style="cursor: pointer; width: 100%;">Buy 50 Scans</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -435,14 +446,37 @@
 
     if (isYearly) {
       starterPrice.innerHTML = "€99<span>/year</span>";
-      proPrice.innerHTML = "€199<span>/year</span>";
+      proPrice.innerHTML = "€239<span>/year</span>";
       labelYearly.classList.add('active');
       labelMonthly.classList.remove('active');
     } else {
       starterPrice.innerHTML = "€9.99<span>/mo</span>";
-      proPrice.innerHTML = "€19.99<span>/mo</span>";
+      proPrice.innerHTML = "€24.99<span>/mo</span>";
       labelMonthly.classList.add('active');
       labelYearly.classList.remove('active');
+    }
+  }
+
+  async function handleScanPackCheckout() {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { window.location.href = '/login.html?redirect=pricing'; return; }
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ type: 'scan_pack' })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const stripe = Stripe(data.publishableKey);
+      await stripe.redirectToCheckout({ sessionId: data.sessionId });
+    } catch (err) {
+      alert('Failed to start checkout: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Buy 50 Scans';
     }
   }
 

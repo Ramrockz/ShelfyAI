@@ -97,13 +97,15 @@ module.exports = async (req, res) => {
     // Check usage limits — orders and expenses share a single monthly pool
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('tier')
+      .select('tier, bonus_scans')
       .eq('user_id', user.id)
       .single();
 
     const tier = settings?.tier || 'free';
-    const scanLimits = { free: 20, starter: 100, pro: 300 };
-    const scanLimit = scanLimits[tier] ?? 20;
+    const bonusScans = settings?.bonus_scans || 0;
+    const scanLimits = { free: 5, starter: 100, pro: 300 };
+    const scanLimit = scanLimits[tier] ?? 5;
+    const effectiveLimit = scanLimit + bonusScans;
 
     // Get current month's usage (YYYY-MM format)
     const now = new Date();
@@ -122,13 +124,13 @@ module.exports = async (req, res) => {
 
     const usageType = context === 'order' ? 'order' : context === 'expense' ? 'expense' : 'ingredient';
 
-    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Scans used: ${totalScansUsed}/${scanLimit} (monthly)`);
+    console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Scans used: ${totalScansUsed}/${effectiveLimit} (plan: ${scanLimit}, bonus: ${bonusScans})`);
 
-    if (usageType !== 'ingredient' && totalScansUsed >= scanLimit) {
+    if (usageType !== 'ingredient' && totalScansUsed >= effectiveLimit) {
       return res.status(429).json({
         error: 'Monthly limit reached',
-        message: `You've reached your monthly AI scan limit of ${scanLimit} (orders & expenses). Your limit will reset on the 1st of next month.`,
-        limit: scanLimit,
+        message: `You've reached your AI scan limit of ${effectiveLimit} (orders & expenses). ${bonusScans > 0 ? 'Purchase another Scan Pack to continue.' : 'Upgrade your plan or buy a Scan Pack to continue.'}`,
+        limit: effectiveLimit,
         used: totalScansUsed,
         tier
       });
@@ -300,6 +302,13 @@ module.exports = async (req, res) => {
       console.error(`Error incrementing ${usageType} usage:`, rpcError);
     } else {
       console.log(`Successfully incremented ${usageType} usage for user ${user.id}`, rpcData);
+    }
+
+    // Consume a bonus scan if this scan went past the plan limit
+    if (usageType !== 'ingredient' && bonusScans > 0 && totalScansUsed >= scanLimit) {
+      await supabase.from('user_settings')
+        .update({ bonus_scans: bonusScans - 1 })
+        .eq('user_id', user.id);
     }
 
     return res.status(200).json(result);
