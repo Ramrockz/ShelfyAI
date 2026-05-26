@@ -401,7 +401,11 @@
     border: none;
     cursor: pointer;
     transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
+  .btn-icon { display: none; }
 
   .btn-reorder:hover {
     opacity: 0.9;
@@ -699,6 +703,17 @@
     /* Hide favorite star on mobile */
     #starIcon {
       display: none !important;
+    }
+
+    /* Icon-only buttons on mobile */
+    .btn-text { display: none !important; }
+    .btn-icon { display: block !important; }
+    #reorderBtn, .btn.btn-outline, .btn.btn-danger {
+      padding: 8px !important;
+      min-width: 36px;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Hide Notes section on mobile */
@@ -1076,9 +1091,18 @@
     </div>
     <div style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
-      <button class="btn-reorder" style="display:none;" id="reorderBtn">Restock</button>
-      <button class="btn btn-outline" onclick="duplicateIngredient()">Copy</button>
-      <button class="btn btn-danger" onclick="deleteIngredient()">Delete</button>
+      <button class="btn-reorder" style="display:none;" id="reorderBtn">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <span class="btn-text">Restock</span>
+      </button>
+      <button class="btn btn-outline" onclick="duplicateIngredient()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span class="btn-text">Copy</span>
+      </button>
+      <button class="btn btn-danger" onclick="deleteIngredient()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        <span class="btn-text">Delete</span>
+      </button>
     </div>
   </div>
 
@@ -1446,10 +1470,10 @@
     reorderBtn.style.display = 'inline-block';
     
     if (ing.reorder_pending) {
-      reorderBtn.textContent = 'Restock Processed';
+      reorderBtn.querySelector('.btn-text').textContent = 'Restock Processed';
       reorderBtn.onclick = processReorder;
     } else {
-      reorderBtn.textContent = 'Restock';
+      reorderBtn.querySelector('.btn-text').textContent = 'Restock';
       reorderBtn.onclick = handleReorderClick;
     }
 
@@ -1937,7 +1961,7 @@
       
       // Update button
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.textContent = 'Restock Processed';
+      reorderBtn.querySelector('.btn-text').textContent = 'Restock Processed';
       reorderBtn.onclick = processReorder;
       
       // Close modal
@@ -1967,7 +1991,7 @@
       
       // Update button
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.textContent = 'Restock';
+      reorderBtn.querySelector('.btn-text').textContent = 'Restock';
       reorderBtn.onclick = handleReorderClick;
       
       showSaveIndicator();
