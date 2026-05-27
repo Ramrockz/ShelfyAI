@@ -39,16 +39,17 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
+  left: auto;
+  transform: translateY(-10px);
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  width: 380px;
+  width: 560px !important;
   max-height: 500px;
   overflow-y: auto;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-10px);
   transition: all 0.2s;
   z-index: 10000;
 }
@@ -106,10 +107,6 @@
   background: var(--bg-inner);
 }
 
-.notification-item.unread {
-  background: rgba(6, 182, 212, 0.05);
-}
-
 
 .notification-message {
   font-size: 14px;
@@ -127,7 +124,7 @@
 .notification-actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .notification-actions button {
@@ -188,12 +185,12 @@
     top: 60px !important;
     left: 50% !important;
     right: auto !important;
-    width: calc(100vw - 32px);
-    max-width: 380px;
-    max-height: 70vh;
     transform: translateX(-50%) translateY(-10px) !important;
+    width: calc(100vw - 32px);
+    max-width: 420px;
+    max-height: 70vh;
   }
-  
+
   .notification-dropdown.active {
     transform: translateX(-50%) translateY(0) !important;
   }
@@ -201,9 +198,15 @@
 
 @media (max-width: 480px) {
   .notification-dropdown {
-    width: calc(100vw - 24px);
-    max-width: none;
+    width: calc(100vw - 24px) !important;
+    max-width: none !important;
     max-height: calc(100vh - 80px);
+    left: 50% !important;
+    transform: translateX(-50%) translateY(-10px) !important;
+  }
+
+  .notification-dropdown.active {
+    transform: translateX(-50%) translateY(0) !important;
   }
   
   .notification-header {

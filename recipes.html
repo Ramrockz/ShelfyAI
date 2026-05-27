@@ -29,6 +29,7 @@
 <link rel="preconnect" href="https://qakldmfmdlwvehseaksy.supabase.co" crossorigin />
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -39,6 +40,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -113,7 +115,6 @@
     height: 16px;
     border-radius: 50%;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    animation: pulse 2s ease-in-out infinite;
   }
   
   .availability-indicator.green {
@@ -137,7 +138,6 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
   }
   .avail-dot.green  { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
   .avail-dot.orange { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.5); }
@@ -305,12 +305,18 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
   
-  .recipe-ingredient-scroll { 
-    overflow-y: auto; 
+  .recipe-ingredient-scroll {
+    overflow-y: auto;
     flex-grow: 1;
     min-height: 0;
     padding-right: 8px;
   }
+
+  #mobileStep2Screen { display: none; }
+  .recipe-cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .recipe-cat-chip { display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--text-muted); }
+  .recipe-cat-chip svg { width: 18px; height: 18px; stroke-width: 1.75; }
+  .recipe-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
   
   .recipe-ingredient { 
     padding: 14px; 
@@ -477,20 +483,6 @@
   .notification-item:hover {
     background: var(--bg-inner);
   }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
-  }
   .notification-message {
     font-size: 14px;
     color: var(--text-main);
@@ -601,7 +593,6 @@
     background: var(--accent);
     border-radius: 50%;
     border: none;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
     cursor: pointer;
     z-index: 999;
     transition: all 0.3s ease;
@@ -920,6 +911,85 @@
     .mobile-type-filter:active {
       transform: scale(0.96);
     }
+
+    /* Hide name input and dropzone — mobile uses step flow */
+    .recipe-name-section { display: none !important; }
+    #recipeDropzone { display: none !important; }
+
+    /* Ingredient selection */
+    .mob-ing-row.selected {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.08);
+    }
+    .mob-ing-row.selected .mob-ing-name { color: var(--accent); font-weight: 700; }
+
+    /* Step 2: full-screen overlay */
+    #mobileStep2Screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-main);
+      z-index: 10001;
+      flex-direction: column;
+    }
+    #mobileStep2Screen.active { display: flex; }
+    .ms2-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .ms2-back {
+      background: none; border: none;
+      color: var(--accent); font-size: 15px; font-weight: 600;
+      cursor: pointer; padding: 0;
+    }
+    .ms2-title { font-size: 17px; font-weight: 700; color: var(--text-main); }
+    .ms2-body {
+      flex: 1; overflow-y: auto;
+      padding: 0 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ms2-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .ms2-create-btn { width: 100%; padding: 16px; font-size: 16px; font-weight: 700; }
+
+    .mobile-qty-row {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .mobile-qty-top {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-bottom: 14px;
+    }
+    .mobile-qty-name {
+      font-size: 16px; font-weight: 700; color: var(--text-main); flex: 1;
+    }
+    .mobile-qty-unit-label { font-size: 13px; color: var(--text-muted); }
+    .mobile-qty-controls {
+      display: flex; align-items: center;
+      justify-content: center; gap: 20px;
+    }
+    .mobile-qty-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent); color: white; border: none;
+      font-size: 22px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .mobile-qty-val {
+      width: 72px; text-align: center;
+      font-size: 26px; font-weight: 800;
+      background: none; border: none;
+      color: var(--text-main); font-family: inherit;
+      -moz-appearance: textfield; appearance: textfield;
+    }
+    .mobile-qty-val::-webkit-outer-spin-button,
+    .mobile-qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
   }
 
   /* === Ingredient method modal === */
@@ -936,7 +1006,6 @@
   .method-card:hover {
     border-color: var(--accent);
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2);
   }
   .method-card img { filter: brightness(0) saturate(100%); }
   [data-theme="dark"] .method-card img { filter: brightness(0) invert(1); }
@@ -1169,21 +1238,23 @@
 <div class="recipe-overlay" id="recipeBuilderOverlay">
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
-      <div>
+      <div class="recipe-name-section">
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
       </div>
-      
+
       <!-- Mobile Ingredient Picker (visible only on mobile) -->
       <div class="mobile-ingredient-swiper">
         <input type="search" id="mobileRecipeSearch" placeholder="Search ingredients…" autocomplete="off">
+        <div id="mobileRecipeCatChips" class="recipe-cat-chips"></div>
         <div id="mobileRecipeIngList"></div>
       </div>
-      
+
       <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div></div>
-      <div class="mobile-recipe-actions">
-        <button class="btn btn-cancel" onclick="closeRecipeBuilder()">Cancel</button>
-        <button class="btn btn-primary" id="saveRecipeBtn" onclick="saveRecipe()">Create</button>
+
+      <!-- Step 1 action -->
+      <div class="mobile-recipe-actions" id="mobileActions1">
+        <button class="btn btn-primary" id="saveRecipeBtn" onclick="mobilePrimaryAction()" style="flex:1;">Create</button>
       </div>
     </div>
     <div class="recipe-panel">
@@ -1192,14 +1263,32 @@
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
       <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients()" />
-      
+      <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
+
       <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0;">
         All Ingredients
       </h4>
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
     </div>
   </div>
+
+  <!-- Step 2: Full-screen quantity review (mobile only) -->
+  <div id="mobileStep2Screen">
+    <div class="ms2-header">
+      <button class="ms2-back" onclick="goToMobileStep1()">← Back</button>
+      <span class="ms2-title">Set Quantities</span>
+      <div style="width:60px;"></div>
+    </div>
+    <div class="ms2-body" id="mobileQtyList"></div>
+    <div class="ms2-footer">
+      <input type="text" id="mobileRecipeNameInput" placeholder="Recipe name…"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:16px;background:var(--bg-inner);border:1.5px solid var(--border);border-radius:10px;color:var(--text-main);font-family:inherit;outline:none;margin-bottom:10px;"
+        onkeydown="if(event.key==='Enter')saveMobileRecipe()">
+      <button class="btn btn-primary ms2-create-btn" onclick="saveMobileRecipe()">Create Recipe</button>
+    </div>
+  </div>
 </div>
+
 
 <!-- Duplicate Recipe Modal -->
 <!-- Delete Recipe Modal -->
@@ -1225,6 +1314,7 @@ let cardsToShow = 10;
 let favoriteIngredients = new Set();
 let currentDeleteRecipeId = null;
 let currentDuplicateRecipeId = null;
+let currentEditingRecipeId = null;
 
 // Load ingredients from Supabase
 async function loadIngredients() {
@@ -1262,7 +1352,8 @@ async function loadIngredients() {
         min_stock: parseFloat(ing.min_stock) || 0,
         attributes: attributes,
         is_favorite: ing.is_favorite || false,
-        type: ing.type || 'Production'
+        type: ing.type || 'Production',
+        category: ing.category || null
       };
     });
     
@@ -1274,6 +1365,7 @@ async function loadIngredients() {
       }
     });
 
+    renderRecipeCatChips();
     renderIngredientList();
   } catch (error) {
     console.error('Error loading ingredients:', error);
@@ -1474,7 +1566,7 @@ function render() {
                                     const minStock = ingData ? (ingData.min_stock || 0) : 0;
                                     const nameColor = !ingData || available < required ? 'var(--danger)' : available <= minStock ? '#f59e0b' : 'var(--accent)';
                                     return `<div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px;">
-                                        <a href=""/ingredient-detail?id=${ing.ingredient_id || ing.id}" target="_blank" style="color: ${nameColor}; text-decoration: none; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                        <a href="/ingredient-detail?id=${ing.ingredient_id || ing.id}" style="color: ${nameColor}; text-decoration: none; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
                                             ${ing.ingredient_name || ing.name}
                                         </a>
                                     </div>`;
@@ -1492,13 +1584,13 @@ function render() {
                 return `
                 <div class="card-small">
                     <h4 style="cursor: pointer; display:flex; align-items:center; gap:8px; margin-bottom:0;">
-                      <span onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}" style="flex:1;">${r.name}</span>
+                      <span onclick="editRecipe('${r.id}')" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}" style="flex:1;">${r.name}</span>
                       <span class="star-icon ${r.is_favorite ? 'favorited' : ''}" onclick="event.stopPropagation();toggleRecipeFavorite('${r.id}')" title="${r.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">${r.is_favorite ? '★' : '☆'}</span>
                     </h4>
                     ${ingredientsList}
                     <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border); display: flex; align-items: center; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
                         <span style="color: var(--accent); cursor: pointer;" onclick="editRecipe('${r.id}')">Edit</span>
-                        <span style="color: var(--text-muted); cursor: pointer;" onclick="duplicateRecipe('${r.id}')">Duplicate</span>
+                        <span style="color: var(--accent); cursor: pointer;" onclick="duplicateRecipe('${r.id}')">Duplicate</span>
                         <span style="color: var(--danger); cursor: pointer;" onclick="deleteRecipe('${r.id}')">Delete</span>
                         <span class="avail-dot ${availability}" title="${availabilityTitle}" style="margin-left: auto;"></span>
                     </div>
@@ -1553,8 +1645,51 @@ function render() {
 }
 
 // --- BUILDER LOGIC ---
-function editRecipe(recipeId) {
-  window.location.href = `/recipe-detail?id=${recipeId}&from=${currentView}`;
+async function editRecipe(recipeId) {
+  if (window.innerWidth > 768) {
+    window.location.href = `/recipe-detail?id=${recipeId}&from=${currentView}`;
+    return;
+  }
+
+  // Mobile: open builder pre-populated
+  try {
+    const { data: fullRecipe, error } = await supabaseClient
+      .from('recipes').select('*').eq('id', recipeId).single();
+    if (error || !fullRecipe) { alert('Recipe not found'); return; }
+
+    currentRecipe = {};
+    currentEditingRecipeId = recipeId;
+
+    document.getElementById('recipeBuilderOverlay').classList.add('active');
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await loadIngredients();
+
+    // Pre-select ingredients
+    if (fullRecipe.components && Array.isArray(fullRecipe.components)) {
+      fullRecipe.components.forEach(comp => {
+        const id = comp.ingredient_id || comp.id;
+        const ing = ingredientData.find(i => i.id === id);
+        currentRecipe[id] = {
+          name: comp.ingredient_name || comp.name || (ing?.name ?? ''),
+          price: ing?.price ?? (comp.quantity ? comp.cost / comp.quantity : 0),
+          unit: comp.unit || ing?.unit || '',
+          quantity: comp.quantity || 1
+        };
+      });
+    }
+
+    // Pre-fill name in step 2 footer
+    const nameInput = document.getElementById('mobileRecipeNameInput');
+    if (nameInput) nameInput.value = fullRecipe.name;
+
+    renderMobileIngList();
+    updateMobileCreateBtn();
+    goToMobileStep1();
+    setTimeout(() => initMobileIngredientList(), 100);
+  } catch (err) {
+    console.error('Error opening recipe for edit:', err);
+    alert('Failed to load recipe.');
+  }
 }
 
 async function openBuilder() {
@@ -1573,18 +1708,24 @@ async function openBuilder() {
   }));
   
   await loadIngredients();
-  
-  // Initialize mobile swiper if on mobile
-  setTimeout(() => {
-    console.log('Window width:', window.innerWidth);
-    if (window.innerWidth <= 768) {
-      initMobileIngredientList();
-    }
-  }, 100);
+
+  const isMobile = window.innerWidth <= 768;
+  const btn = document.getElementById('saveRecipeBtn');
+  if (btn) btn.textContent = isMobile ? 'Next' : 'Create';
+
+  if (isMobile) {
+    // Ensure step 1 is shown
+    goToMobileStep1();
+    setTimeout(() => initMobileIngredientList(), 100);
+  }
 }
 
 function closeRecipeBuilder() {
   document.getElementById("recipeBuilderOverlay").classList.remove("active");
+  document.getElementById("mobileStep2Screen").classList.remove("active");
+  closeMobileNameModal();
+  recipeActiveCategoryFilter = null;
+  currentEditingRecipeId = null;
 }
 
 function closeNamingModal() {
@@ -1605,10 +1746,11 @@ function renderIngredientList() {
   // Get current recipe ingredient IDs
   const currentRecipeIds = new Set(Object.keys(currentRecipe));
   
-  // Filter out ingredients already in recipe, then apply search
+  // Filter out ingredients already in recipe, then apply search + category
   const availableIngredients = ingredientData.filter(item => !currentRecipeIds.has(item.id));
-  const filtered = availableIngredients.filter(item => 
-    item.name.toLowerCase().includes(searchQuery)
+  const filtered = availableIngredients.filter(item =>
+    item.name.toLowerCase().includes(searchQuery) &&
+    (!recipeActiveCategoryFilter || item.category === recipeActiveCategoryFilter)
   );
   
   // Clear list
@@ -1768,6 +1910,37 @@ async function toggleFavorite(id) {
   renderIngredientList();
 }
 
+const _recipeCategIconMap = {
+  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
+  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
+  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
+  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
+  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
+  'Packaging': 'package', 'Food': 'wheat'
+};
+let recipeActiveCategoryFilter = null;
+
+function renderRecipeCatChips() {
+  const presentCats = [...new Set(ingredientData.map(i => i.category).filter(Boolean))];
+  const chips = presentCats.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    const selected = recipeActiveCategoryFilter === cat;
+    return `<button type="button" class="recipe-cat-chip${selected ? ' selected' : ''}" onclick="toggleRecipeCatFilter('${cat}')" title="${cat}"><i data-lucide="${icon}"></i></button>`;
+  }).join('');
+  ['recipeCatChips', 'mobileRecipeCatChips'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = chips; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+  });
+}
+
+function toggleRecipeCatFilter(cat) {
+  recipeActiveCategoryFilter = recipeActiveCategoryFilter === cat ? null : cat;
+  renderRecipeCatChips();
+  renderIngredientList();
+  if (window.innerWidth <= 768) renderMobileIngList();
+}
+
 function filterRecipeIngredients() {
   renderIngredientList();
 }
@@ -1920,6 +2093,7 @@ function initMobileIngredientList() {
   if (!searchInput) return;
   searchInput.value = '';
   searchInput.addEventListener('input', renderMobileIngList);
+  renderRecipeCatChips();
   renderMobileIngList();
 }
 
@@ -1927,13 +2101,12 @@ function renderMobileIngList() {
   const container = document.getElementById('mobileRecipeIngList');
   if (!container) return;
   const q = (document.getElementById('mobileRecipeSearch')?.value || '').toLowerCase().trim();
-  const added = new Set(Object.keys(currentRecipe));
   const visible = ingredientData
-    .filter(i => !added.has(i.id))
-    .filter(i => !q || i.name.toLowerCase().includes(q));
+    .filter(i => !q || i.name.toLowerCase().includes(q))
+    .filter(i => !recipeActiveCategoryFilter || i.category === recipeActiveCategoryFilter);
 
   if (visible.length === 0) {
-    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">${q ? 'No results' : 'All ingredients added'}</div>`;
+    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">No results</div>`;
     return;
   }
 
@@ -1941,10 +2114,12 @@ function renderMobileIngList() {
     const qty = parseFloat(i.quantity) || 0;
     const min = parseFloat(i.min_stock) || 0;
     const dotColor = qty === 0 ? 'var(--danger)' : (min > 0 && qty < min) ? 'var(--warning)' : 'var(--success)';
-    return `<div class="mob-ing-row" onclick="mobileTapIngredient('${i.id}')">
+    const selected = !!currentRecipe[i.id];
+    return `<div class="mob-ing-row${selected ? ' selected' : ''}" onclick="mobileTapIngredient('${i.id}')">
       <span class="mob-ing-dot" style="background:${dotColor}"></span>
       <span class="mob-ing-name">${i.name}</span>
       <span class="mob-ing-qty">${qty} ${i.unit || ''}</span>
+      ${selected ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="16" height="16" style="color:var(--accent);flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
     </div>`;
   }).join('');
 }
@@ -1952,8 +2127,94 @@ function renderMobileIngList() {
 function mobileTapIngredient(id) {
   const item = ingredientData.find(i => i.id === id);
   if (!item) return;
-  addIngredientToRecipe({ id: item.id, name: item.name, price: item.price, unit: item.unit });
+  if (currentRecipe[id]) {
+    delete currentRecipe[id];
+  } else {
+    currentRecipe[id] = { name: item.name, price: item.price, unit: item.unit, quantity: 1 };
+  }
   renderMobileIngList();
+  updateMobileCreateBtn();
+}
+
+function mobilePrimaryAction() {
+  if (window.innerWidth > 768) { saveRecipe(); return; }
+  goToMobileStep2();
+}
+
+function goToMobileStep2() {
+  const count = Object.keys(currentRecipe).length;
+  if (count === 0) {
+    const list = document.getElementById('mobileRecipeIngList');
+    if (list) {
+      list.style.outline = '2px solid var(--danger)';
+      list.style.borderRadius = '10px';
+      setTimeout(() => { list.style.outline = ''; list.style.borderRadius = ''; }, 700);
+    }
+    return;
+  }
+  renderMobileQtyList();
+  const nameInput = document.getElementById('mobileRecipeNameInput');
+  if (nameInput) nameInput.value = '';
+  document.getElementById('mobileStep2Screen').classList.add('active');
+}
+
+function goToMobileStep1() {
+  document.getElementById('mobileStep2Screen').classList.remove('active');
+}
+
+function renderMobileQtyList() {
+  const container = document.getElementById('mobileQtyList');
+  if (!container) return;
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  container.innerHTML = Object.entries(currentRecipe).map(([id, item]) => `
+    <div class="mobile-qty-row">
+      <div class="mobile-qty-top">
+        <span class="mobile-qty-name">${esc(item.name)}</span>
+        <span class="mobile-qty-unit-label">${esc(item.unit || '')}</span>
+      </div>
+      <div class="mobile-qty-controls">
+        <button class="mobile-qty-btn" onclick="adjustMobileQty('${id}', -1)">−</button>
+        <input type="number" class="mobile-qty-val" data-id="${id}" value="${item.quantity}"
+          min="0.01" step="0.01" inputmode="decimal" oninput="updateMobileQty('${id}', this.value)">
+        <button class="mobile-qty-btn" onclick="adjustMobileQty('${id}', 1)">+</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateMobileQty(id, val) {
+  if (currentRecipe[id]) currentRecipe[id].quantity = parseFloat(val) || 1;
+}
+
+function adjustMobileQty(id, delta) {
+  if (!currentRecipe[id]) return;
+  const newQty = Math.max(0.01, Math.round(((currentRecipe[id].quantity || 1) + delta) * 100) / 100);
+  currentRecipe[id].quantity = newQty;
+  const input = document.querySelector(`.mobile-qty-val[data-id="${id}"]`);
+  if (input) input.value = newQty;
+}
+
+function updateMobileCreateBtn() {
+  const count = Object.keys(currentRecipe).length;
+  const btn = document.getElementById('saveRecipeBtn');
+  if (!btn || window.innerWidth > 768) return;
+  btn.textContent = count > 0 ? `Next (${count})` : 'Next';
+}
+
+function openMobileNameModal() { /* no-op — name input is now in step 2 footer */ }
+function closeMobileNameModal() { /* no-op */ }
+
+async function saveMobileRecipe() {
+  const nameInput = document.getElementById('mobileRecipeNameInput');
+  const name = nameInput.value.trim();
+  if (!name) {
+    nameInput.classList.add('shake');
+    setTimeout(() => nameInput.classList.remove('shake'), 500);
+    nameInput.focus();
+    return;
+  }
+  closeMobileNameModal();
+  await _doSaveRecipe(name);
 }
 
 function updateDisabledState() {
@@ -2036,76 +2297,61 @@ async function finalizeRecipe() {
   }
 }
 
+async function _doSaveRecipe(name) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) { alert('Please log in to save recipes'); return; }
+
+    let totalCost = 0;
+    const components = [];
+    for (const id in currentRecipe) {
+      const item = currentRecipe[id];
+      totalCost += item.price * item.quantity;
+      components.push({ ingredient_id: id, ingredient_name: item.name, quantity: item.quantity, unit: item.unit, cost: item.price * item.quantity });
+    }
+
+    if (currentEditingRecipeId) {
+      // Update existing recipe
+      const { error } = await supabaseClient
+        .from('recipes')
+        .update({ name, components, cost: totalCost })
+        .eq('id', currentEditingRecipeId);
+      if (error) throw error;
+      currentEditingRecipeId = null;
+    } else {
+      // Insert new recipe
+      const { data, error } = await supabaseClient
+        .from('recipes')
+        .insert({ name, components, cost: totalCost, status: 'ready', profile_id: user.id })
+        .select();
+      if (error) throw error;
+      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, status: 'ready' });
+    }
+
+    closeRecipeBuilder();
+    await loadRecipes();
+  } catch (error) {
+    console.error('Error saving recipe:', error);
+    alert('Failed to save recipe. Please try again.');
+  }
+}
+
 async function saveRecipe() {
+  if (window.innerWidth <= 768) { openMobileNameModal(); return; }
+
   const nameInput = document.getElementById('recipeNameInput');
   const name = nameInput.value.trim();
-  
   if (!name) {
     nameInput.classList.add('shake');
     nameInput.focus();
     setTimeout(() => nameInput.classList.remove('shake'), 500);
     return;
   }
-  
   if (Object.keys(currentRecipe).length === 0) {
     alert('Please add at least one ingredient');
     return;
   }
-  
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      alert('Please log in to save recipes');
-      return;
-    }
-    
-    // Calculate total cost
-    let totalCost = 0;
-    const components = [];
-    
-    for (const id in currentRecipe) {
-      const item = currentRecipe[id];
-      totalCost += item.price * item.quantity;
-      components.push({
-        ingredient_id: id,
-        ingredient_name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        cost: item.price * item.quantity
-      });
-    }
-    
-    // Save to Supabase
-    const { data, error } = await supabaseClient
-      .from('recipes')
-      .insert({
-        name: name,
-        components: components,
-        cost: totalCost,
-        status: 'ready',
-        profile_id: user.id
-      })
-      .select();
-    
-    if (error) throw error;
-    
-    // Add to local recipes array
-    recipes.unshift({
-      id: data[0].id,
-      name: name,
-      count: components.length,
-      cost: totalCost,
-      status: 'ready'
-    });
-    
-    // Close builder and refresh view
-    closeRecipeBuilder();
-    await loadRecipes();
-    
-  } catch (error) {
-    console.error('Error saving recipe:', error);
-    alert('Failed to save recipe. Please try again.');
-  }
+  await _doSaveRecipe(name);
 }
 
 async function duplicateRecipe(recipeId) {

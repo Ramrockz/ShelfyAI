@@ -27,6 +27,7 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -66,6 +67,19 @@
   .btn-danger:hover { background: var(--danger); color: #fff; }
   .btn-success { background: var(--accent); color: #fff; border: none; }
   .btn-success:hover { background: #2980b9; }
+
+  .detail-card-actions { display: flex; gap: 16px; align-items: center; padding-top: 6px; }
+  .detail-dup-link { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); cursor: pointer; }
+  .detail-dup-link:hover { text-decoration: underline; }
+  .detail-del-link { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--danger); cursor: pointer; }
+  .detail-del-link:hover { text-decoration: underline; }
+
+  /* Category chips for add-ingredient modal */
+  .detail-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .detail-cat-chip { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg-panel); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .detail-cat-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .detail-cat-chip.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
+  .detail-cat-chip svg { width: 14px; height: 14px; }
 
   /* ---------- GRID ---------- */
   .main-grid {
@@ -303,20 +317,6 @@
   }
   .notification-item:hover {
     background: var(--bg-inner);
-  }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
   }
   .notification-message {
     font-size: 14px;
@@ -833,29 +833,28 @@
 
   <div class="header">
     <div style="flex: 1;">
-      <input type="text" id="recipeName" value="Loading..." style="margin:0; font-size: 32px; font-weight: 700; background: transparent; border: none; color: var(--text-main); width: 100%; padding: 4px 8px; border-radius: 6px;" onfocus="this.style.background='var(--bg-inner)'; this.style.border='1px solid var(--accent)'" onblur="this.style.background='transparent'; this.style.border='none'; saveRecipeName()" />
+      <input type="text" id="recipeName" value="Loading..." style="margin:0; font-size: 32px; font-weight: 700; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-main); width: 100%; padding: 4px 0; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'; saveRecipeName()" />
       <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
         <span id="recipeStatus" style="font-size: 11px; padding: 5px 10px; border-radius: 6px; font-weight: 700; text-transform: uppercase; display: inline-block;"></span>
-        <span id="recipeCount" style="font-size: 13px; color: var(--text-muted);"></span>
       </div>
     </div>
-    <div style="display:flex; gap:12px; align-items: flex-start;">
-      <button class="btn btn-success" onclick="saveRecipe()">Save</button>
-      <button class="btn btn-outline" onclick="duplicateRecipe()">Duplicate</button>
-      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    <div class="detail-card-actions">
+      <span class="detail-dup-link" onclick="duplicateRecipe()">Duplicate</span>
+      <span class="detail-del-link" onclick="confirmDelete()">Delete</span>
     </div>
   </div>
 
   <div style="max-width: 100%;">
     
     <div class="panel">
-      <h3>Financial Breakdown</h3>
-      <div class="margin-card" id="financialCard">
-        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading financial data...</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
+        <h3 style="margin:0;">Ingredients</h3>
+        <div style="text-align:right;">
+          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.07em; margin-bottom:2px;">Production Cost</div>
+          <div id="productionCostDisplay" style="font-size:22px; font-weight:800; color:var(--text-main);">$0.00</div>
+        </div>
       </div>
-
-      <h3>Ingredients</h3>
-      <div id="ingredientsList" style="margin-top: 16px;">
+      <div id="ingredientsList">
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
       </div>
     </div>
@@ -978,37 +977,10 @@ async function renderRecipe() {
   // Header
   document.getElementById('recipeName').value = recipe.name || 'Unnamed Recipe';
 
-  // Financial breakdown
+  // Production cost display
   const cost = parseFloat(recipe.cost) || 0;
-  const retailPrice = parseFloat(recipe.retail_price) || (cost * 1.6); // Default retail price (60% markup)
-  const profit = retailPrice - cost;
-  const margin = retailPrice > 0 ? ((profit / retailPrice) * 100).toFixed(0) : 0;
-  const costPercent = retailPrice > 0 ? ((cost / retailPrice) * 100).toFixed(0) : 0;
-  const profitPercent = 100 - costPercent;
-
-  document.getElementById('financialCard').innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 16px;">
-      <div>
-        <label style="font-size:11px; color:var(--text-muted)">PRODUCTION COST</label>
-        <div style="font-size:32px; font-weight:800">$${cost.toFixed(2)}</div>
-      </div>
-      <div style="text-align:center;">
-        <label style="font-size:11px; color:var(--accent)">RETAIL PRICE</label>
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <span style="font-size:32px; font-weight:800; color:var(--accent)">$</span><input type="number" id="retailPriceInput" value="${retailPrice.toFixed(2)}" step="0.01" min="0" style="font-size:32px; font-weight:800; color:var(--accent); background: transparent; border: none; width: 100px; padding: 4px;" onfocus="this.style.background='var(--bg-inner)'; this.style.border='1px solid var(--accent)'; this.style.borderRadius='6px'" onblur="this.style.background='transparent'; this.style.border='none'; updateRetailPrice()" onchange="updateRetailPrice()" />
-        </div>
-      </div>
-      <div style="text-align:right">
-        <label style="font-size:11px; color:var(--profit)">PROFIT</label>
-        <div style="font-size:32px; font-weight:800; color:var(--profit)">$${profit.toFixed(2)}</div>
-      </div>
-    </div>
-
-    <div class="margin-bar-container" style="position: relative;">
-      <div class="bar-cost" style="width: ${costPercent}%"></div>
-      <div class="bar-profit" style="width: ${profitPercent}%"></div>
-    </div>
-  `;
+  const costEl = document.getElementById('productionCostDisplay');
+  if (costEl) costEl.textContent = `$${cost.toFixed(2)}`;
 
   // Ingredients List
   const components = recipe.components || [];
@@ -1090,20 +1062,16 @@ async function renderRecipe() {
     if (stock < requiredQty) canProduce = false;
     
     let indicatorColor = '';
-    let indicatorShadow = '';
-    
+
     if (stock === 0) {
       indicatorColor = '#ef4444';
-      indicatorShadow = '0 0 12px rgba(239, 68, 68, 0.5)';
     } else if (stock < requiredQty) {
       indicatorColor = '#f59e0b';
-      indicatorShadow = '0 0 12px rgba(245, 158, 11, 0.5)';
     } else {
       indicatorColor = '#10b981';
-      indicatorShadow = '0 0 12px rgba(16, 185, 129, 0.5)';
     }
-    
-    const statusIndicator = `<div style="width: 12px; height: 12px; border-radius: 50%; background: ${indicatorColor}; box-shadow: ${indicatorShadow};"></div>`;
+
+    const statusIndicator = `<div style="width: 10px; height: 10px; border-radius: 50%; background: ${indicatorColor};"></div>`;
     
     return `
       <div class="ingredient-card">
@@ -1132,24 +1100,19 @@ async function renderRecipe() {
   
   // Update recipe status badge
   const statusEl = document.getElementById('recipeStatus');
-  const countEl = document.getElementById('recipeCount');
-  
-  // Ensure maxRecipeCount is valid
+
   if (maxRecipeCount === Infinity || maxRecipeCount < 0) {
     maxRecipeCount = 0;
   }
-  
+
   if (canProduce && maxRecipeCount > 0) {
     statusEl.textContent = 'Can Produce';
     statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
     statusEl.style.color = 'var(--success)';
-    countEl.textContent = `Enough ingredients to create this recipe ${maxRecipeCount} time${maxRecipeCount !== 1 ? 's' : ''}`;
-    countEl.style.color = 'var(--success)';
   } else {
     statusEl.textContent = 'Cannot Produce';
     statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
     statusEl.style.color = 'var(--danger)';
-    countEl.textContent = '';
   }
   
   const addButtonHtml = `
@@ -1674,7 +1637,7 @@ async function removeIngredientFromRecipe(index) {
 async function updateRecipeInDatabase() {
   const totalCost = recipe.components.reduce((sum, comp) => sum + (comp.cost || 0), 0);
   recipe.cost = totalCost;
-  
+
   try {
     const { error } = await window.supabaseClient
       .from('recipes')
@@ -1685,6 +1648,8 @@ async function updateRecipeInDatabase() {
       .eq('id', recipeId);
 
     if (error) throw error;
+    const costEl = document.getElementById('productionCostDisplay');
+    if (costEl) costEl.textContent = `$${totalCost.toFixed(2)}`;
   } catch (error) {
     console.error('Error updating recipe:', error);
     showAlert('Failed to update recipe');
@@ -1790,22 +1755,18 @@ async function loadReorderIngredients(sourceUrl) {
       const minStock = ing.min_stock || 10;
       
       let indicatorColor = '';
-      let indicatorShadow = '';
-      
+
       if (stock === 0) {
         indicatorColor = '#ef4444';
-        indicatorShadow = '0 0 12px rgba(239, 68, 68, 0.5)';
       } else if (stock <= minStock) {
         indicatorColor = '#f59e0b';
-        indicatorShadow = '0 0 12px rgba(245, 158, 11, 0.5)';
       } else {
         indicatorColor = '#10b981';
-        indicatorShadow = '0 0 12px rgba(16, 185, 129, 0.5)';
       }
-      
+
       return `
         <div style="padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; position: relative;">
-          <div style="position: absolute; top: 12px; right: 12px; width: 12px; height: 12px; border-radius: 50%; background: ${indicatorColor}; box-shadow: ${indicatorShadow};"></div>
+          <div style="position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: ${indicatorColor};"></div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 24px;">
             <div>
               <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
@@ -1847,8 +1808,57 @@ async function markAsReordered() {
 
 // Add Ingredient Modal Functions
 let availableIngredients = [];
+let detailActiveCategoryFilter = null;
+
+const _detailCategoryMap = {
+  'Meat': 'beef',
+  'Seafood': 'fish',
+  'Dairy': 'milk',
+  'Produce': 'carrot',
+  'Bakery': 'croissant',
+  'Beverages': 'cup-soda',
+  'Oils & Fats': 'droplets',
+  'Spices & Herbs': 'leaf',
+  'Grains & Pasta': 'wheat',
+  'Canned Goods': 'package',
+  'Frozen Foods': 'snowflake',
+  'Snacks': 'cookie',
+  'Sauces & Condiments': 'bottle',
+  'Nuts & Seeds': 'circle-dot',
+  'Sweeteners': 'sugar',
+  'Alcohol': 'wine',
+  'Non-Alcoholic Drinks': 'coffee',
+  'Cleaning Supplies': 'spray-can',
+  'Packaging': 'box',
+  'Equipment': 'wrench',
+  'Other': 'tag',
+  'Poultry': 'drumstick',
+  'Vegetables': 'salad'
+};
+
+function renderDetailCatChips() {
+  const container = document.getElementById('detailCatChips');
+  if (!container) return;
+  const cats = [...new Set(availableIngredients.map(i => i.category).filter(Boolean))].sort();
+  if (cats.length === 0) { container.innerHTML = ''; return; }
+  container.innerHTML = cats.map(cat => {
+    const icon = _detailCategoryMap[cat] || 'tag';
+    const active = detailActiveCategoryFilter === cat ? ' active' : '';
+    return `<span class="detail-cat-chip${active}" onclick="toggleDetailCatFilter('${cat.replace(/'/g, "\\'")}')">
+      <i data-lucide="${icon}"></i>${cat}
+    </span>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleDetailCatFilter(cat) {
+  detailActiveCategoryFilter = (detailActiveCategoryFilter === cat) ? null : cat;
+  renderDetailCatChips();
+  renderAvailableIngredients();
+}
 
 async function openAddIngredientModal() {
+  detailActiveCategoryFilter = null;
   document.getElementById('addIngredientModal').classList.add('active');
   document.getElementById('ingredientSearchInput').value = '';
   
@@ -1863,12 +1873,12 @@ async function openAddIngredientModal() {
     try {
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) return;
-      
+
       const { data, error } = await window.supabaseClient
         .from('ingredients')
         .select('*')
         .eq('profile_id', user.id);
-      
+
       if (error) throw error;
       availableIngredients = data || [];
     } catch (error) {
@@ -1877,7 +1887,8 @@ async function openAddIngredientModal() {
       return;
     }
   }
-  
+
+  renderDetailCatChips();
   renderAvailableIngredients();
 }
 
@@ -1898,26 +1909,29 @@ function filterAvailableIngredients() {
 function renderAvailableIngredients() {
   const searchTerm = document.getElementById('ingredientSearchInput').value.toLowerCase();
   const container = document.getElementById('availableIngredientsList');
-  
+
   // Filter out ingredients already in the recipe
   const existingIds = new Set((recipe.components || []).map(c => c.ingredient_id));
   const notInRecipe = availableIngredients.filter(ing => !existingIds.has(ing.id));
-  
+
   const filtered = notInRecipe.filter(ing => {
+    // Category filter
+    if (detailActiveCategoryFilter && ing.category !== detailActiveCategoryFilter) return false;
+
     // Search in name
     if (ing.name.toLowerCase().includes(searchTerm)) return true;
-    
+
     // Search in custom attributes
     if (ing.custom_attributes) {
       try {
-        const parsed = typeof ing.custom_attributes === 'string' 
-          ? JSON.parse(ing.custom_attributes) 
+        const parsed = typeof ing.custom_attributes === 'string'
+          ? JSON.parse(ing.custom_attributes)
           : ing.custom_attributes;
         const attributeValues = Object.values(parsed).filter(v => v).join(' ').toLowerCase();
         if (attributeValues.includes(searchTerm)) return true;
       } catch (e) {}
     }
-    
+
     return false;
   });
   
@@ -1935,40 +1949,17 @@ function renderAvailableIngredients() {
       } catch (e) {}
     }
     
-    const stockColor = ing.quantity === 0 ? '#ef4444' : ing.quantity <= (ing.min_stock || 10) ? '#f59e0b' : '#10b981';
-    const stockShadow = ing.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : ing.quantity <= (ing.min_stock || 10) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
-    
+    const stockColor = ing.quantity === 0 ? '#ef4444' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '#f59e0b' : '#10b981';
+
     return `
-      <div style="
-        padding: 16px 20px; 
-        border: 2px solid var(--border); 
-        border-radius: 12px; 
-        cursor: pointer; 
-        transition: all 0.2s; 
-        background: var(--bg-panel);
-        position: relative;
-      " onclick="addIngredientToRecipe('${ing.id}')" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'">
-        
-        <div style="position: absolute; top: 16px; right: 20px; width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow};"></div>
-        
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding-right: 24px;">
-          <div style="flex: 1; min-width: 0; overflow: hidden;">
-            <div style="font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
-            ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">${attributes}</div>` : ''}
-          </div>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
-          <div style="display: flex; gap: 16px; align-items: center;">
-            <div>
-              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; font-weight: 700;">Price</div>
-              <div style="font-size: 15px; font-weight: 700; color: var(--accent);">$${(ing.cost_per_unit || 0).toFixed(2)}<span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">/${ing.unit || 'unit'}</span></div>
-            </div>
-            <div>
-              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; font-weight: 700;">Quantity</div>
-              <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">${(ing.quantity || 0).toFixed(1)} ${ing.unit || 'units'}</div>
-            </div>
-          </div>
+      <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); position: relative; display: flex; align-items: center; gap: 12px;"
+        onclick="addIngredientToRecipe('${ing.id}')"
+        onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'"
+        onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: ${stockColor}; flex-shrink: 0;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
+          ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
         </div>
       </div>
     `;
@@ -1985,7 +1976,7 @@ async function addIngredientToRecipe(ingredientId) {
     ingredient_name: ingredient.name,
     quantity: 1,
     unit: ingredient.unit || 'kg',
-    cost: (ingredient.price || 0) * 1, // Cost per quantity
+    cost: parseFloat(ingredient.cost_per_unit) || 0,
     attributes: ingredient.custom_attributes || ''
   };
   
@@ -2441,25 +2432,27 @@ if (typeof window !== 'undefined') {
 </div>
 
 <!-- Add Ingredient Modal -->
-<div class="recipe-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()">
-  <div class="recipe-builder" style="display: block; max-width: 600px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 85vh; overflow: hidden;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+<div class="recipe-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()" style="align-items: flex-start; padding: 5vh 0; overflow-y: auto;">
+  <div class="recipe-builder" style="display: flex; flex-direction: column; max-width: 900px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 80vh; overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Add Ingredient to Recipe</h3>
       <span onclick="closeAddIngredientModal()" style="cursor: pointer; color: var(--text-muted); font-size: 32px; line-height: 1; font-weight: 300; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
     </div>
-    
-    <input 
-      type="text" 
-      id="ingredientSearchInput" 
-      placeholder="Search by name..." 
-      oninput="filterAvailableIngredients()" 
-      style="width: 100%; padding: 14px 18px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-inner); color: var(--text-main); font-size: 14px; margin-bottom: 20px; box-sizing: border-box; transition: all 0.2s;"
+
+    <div id="detailCatChips" class="detail-cat-chips" style="flex-shrink: 0;"></div>
+
+    <input
+      type="text"
+      id="ingredientSearchInput"
+      placeholder="Search by name..."
+      oninput="filterAvailableIngredients()"
+      style="width: 100%; padding: 14px 18px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-inner); color: var(--text-main); font-size: 14px; margin-bottom: 16px; box-sizing: border-box; transition: all 0.2s; flex-shrink: 0;"
       onfocus="this.style.borderColor='var(--accent)'"
       onblur="this.style.borderColor='var(--border)'"
       autocomplete="off"
     />
-    
-    <div id="availableIngredientsList" style="max-height: 450px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">
+
+    <div id="availableIngredientsList" style="overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; flex: 1; min-height: 0;">
       <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
     </div>
   </div>

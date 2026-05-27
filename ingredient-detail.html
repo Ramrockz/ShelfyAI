@@ -27,6 +27,7 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -37,6 +38,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   .container {
@@ -61,8 +63,11 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 24px;
     margin-bottom: 32px;
   }
+  .detail-header > div:first-child { min-width: 0; flex: 1; }
+  .detail-header > div:last-child { flex-shrink: 0; }
 
   .breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; cursor: pointer; }
 
@@ -95,10 +100,19 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  .btn-outline { background: var(--bg-inner); color: var(--text-main); border: 1px solid var(--border); }
-  .btn-outline:hover { background: var(--border); }
-  .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+  .btn-outline { background: var(--bg-inner); color: var(--text-muted); border: 1px solid var(--border); font-size: 13px; padding: 7px 14px; border-radius: 8px; }
+  .btn-outline:hover { background: var(--border); color: var(--text-main); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); font-size: 13px; padding: 7px 14px; border-radius: 8px; }
   .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+  /* Desktop: text links */
+  .detail-dup-btn, .detail-del-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 0;
+  }
+  .detail-dup-btn { color: var(--accent); }
+  .detail-del-btn { color: var(--danger); }
+  .detail-dup-btn .btn-icon, .detail-del-btn .btn-icon { display: none; }
+  .detail-dup-btn .btn-text, .detail-del-btn .btn-text { display: inline; }
 
   .main-grid {
     display: grid;
@@ -235,6 +249,52 @@
     color: var(--text-main);
   }
 
+  .qty-adjust-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .qty-adjust-btn:hover { background: #0891b2; transform: scale(1.1); }
+  .qty-adjust-btn:active { transform: scale(0.95); }
+  #qtyDisplay:focus { background: var(--bg-inner); }
+
+  .cat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+  .cat-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: var(--bg-inner);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1 1 44px;
+    max-width: 54px;
+    color: var(--text-muted);
+  }
+  .cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
+  @media (hover: hover) and (pointer: fine) {
+    .cat-chip:hover { border-color: var(--accent); background: rgba(6,182,212,0.07); color: var(--accent); }
+  }
+  .cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+
   .status-badge {
     display: inline-block;
     padding: 6px 12px;
@@ -246,27 +306,6 @@
   }
 
 
-  .save-indicator {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--success);
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-
-  .save-indicator.show {
-    opacity: 1;
-  }
 
   .reorder-modal {
     position: fixed !important;
@@ -394,7 +433,7 @@
   .btn-reorder {
     background: var(--accent);
     color: #fff;
-    padding: 10px 20px;
+    padding: 8px 36px;
     border-radius: 8px;
     font-weight: 600;
     font-size: 13px;
@@ -403,12 +442,25 @@
     transition: 0.2s;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
   }
-  .btn-icon { display: none; }
+  .btn-icon { display: inline-block; vertical-align: middle; }
 
   .btn-reorder:hover {
     opacity: 0.9;
+  }
+
+  @keyframes truck-drive {
+    0%   { transform: translateX(0px); }
+    25%  { transform: translateX(3px); }
+    50%  { transform: translateX(0px); }
+    75%  { transform: translateX(-2px); }
+    100% { transform: translateX(0px); }
+  }
+
+  .truck-moving .btn-icon {
+    animation: truck-drive 0.5s ease-in-out infinite;
   }
 
   .drop-zone {
@@ -482,6 +534,25 @@
   .btn-capture:hover {
     opacity: 0.9;
   }
+
+  .modal-content input[type="text"],
+  .modal-content input[type="number"],
+  .modal-content input[type="url"] {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .modal-content input[type="text"]:focus,
+  .modal-content input[type="number"]:focus,
+  .modal-content input[type="url"]:focus { border-color: var(--accent); }
 
   /* ---------- CUSTOM MODALS ---------- */
   .modal-overlay { 
@@ -614,20 +685,6 @@
   .notification-item:hover {
     background: var(--bg-inner);
   }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
-  }
   .notification-message {
     font-size: 14px;
     color: var(--text-main);
@@ -705,15 +762,10 @@
       display: none !important;
     }
 
-    /* Icon-only buttons on mobile */
-    .btn-text { display: none !important; }
-    .btn-icon { display: block !important; }
-    #reorderBtn, .btn.btn-outline, .btn.btn-danger {
-      padding: 8px !important;
+    /* Reorder button on mobile */
+    #reorderBtn {
+      padding: 9px 10px !important;
       min-width: 36px;
-      display: inline-flex !important;
-      align-items: center;
-      justify-content: center;
     }
 
     /* Hide Notes section on mobile */
@@ -757,13 +809,13 @@
       margin-bottom: 16px;
     }
 
-    /* Buttons section - fixed to bottom */
+    /* Buttons section - fixed to bottom, 3-column icon grid */
     .detail-header > div:last-child {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      display: grid;
+      display: grid !important;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
       padding: 12px;
@@ -773,16 +825,34 @@
       box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 
-    /* Button order: Delete, Save, Reorder */
-    .detail-header .btn-danger {
-      order: 1;
-    }
-
-
     .detail-header .btn-reorder {
-      order: 3;
-      display: block !important;
+      display: inline-flex !important;
+      width: 100%;
+      justify-content: center;
+      padding: 10px !important;
     }
+
+    /* Duplicate + Delete become icon buttons on mobile */
+    .detail-dup-btn, .detail-del-btn {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border-radius: 8px;
+      width: 100%;
+    }
+    .detail-dup-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border) !important;
+      color: var(--accent);
+    }
+    .detail-del-btn {
+      background: var(--bg-panel);
+      border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      color: var(--danger);
+    }
+    .detail-dup-btn .btn-icon, .detail-del-btn .btn-icon { display: block !important; }
+    .detail-dup-btn .btn-text, .detail-del-btn .btn-text { display: none !important; }
 
     /* Main grid comes after header */
     .main-grid {
@@ -803,19 +873,6 @@
       order: 1;
     }
 
-    /* Save indicator after buttons */
-    .save-indicator {
-      order: 5;
-    }
-
-    .detail-header .btn,
-    .detail-header .btn-reorder,
-    .detail-header .btn-danger {
-      padding: 10px 8px;
-      font-size: 14px;
-      white-space: nowrap;
-      width: 100%;
-    }
 
     .header-title h1 {
       font-size: 24px;
@@ -933,15 +990,7 @@
       min-height: 44px;
     }
 
-    /* Stock status panel — make the numbers pop */
-    #stockDisplay {
-      font-size: 32px !important;
-      font-weight: 800 !important;
-    }
-    #costDisplay {
-      font-size: 24px !important;
-      font-weight: 700 !important;
-    }
+    /* Stock status panel */
     .stat-box {
       padding: 16px !important;
     }
@@ -1098,7 +1147,7 @@
 
 <div class="container">
   
-  <div class="breadcrumb" onclick="goBackToList()">← Back to Inventory</div>
+  <div class="breadcrumb" onclick="goBackToList()">← Back to Ingredients</div>
 
   <div class="detail-header">
     <div>
@@ -1107,16 +1156,15 @@
     </div>
     <div style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
-      <button class="btn-reorder" style="display:none;" id="reorderBtn">
+      <button class="btn-reorder" style="display:none;" id="reorderBtn" title="Mark as Reordered">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-        <span class="btn-text">Mark as Reordered</span>
       </button>
-      <button class="btn btn-outline" onclick="duplicateIngredient()">
-        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        <span class="btn-text">Copy</span>
+      <button class="detail-dup-btn" onclick="openDetailDuplicateModal()" title="Duplicate">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span class="btn-text">Duplicate</span>
       </button>
-      <button class="btn btn-danger" onclick="deleteIngredient()">
-        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      <button class="detail-del-btn" onclick="deleteIngredient()" title="Delete">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         <span class="btn-text">Delete</span>
       </button>
     </div>
@@ -1134,32 +1182,19 @@
           <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required onblur="autoSave()">
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="quantity">Quantity *</label>
-            <div style="position:relative;">
-              <input type="number" id="quantity" class="form-input" step="1" placeholder="0" required style="padding-right:36px; -moz-appearance:textfield;" onblur="autoSave()">
-              <div style="position:absolute; right:1px; top:1px; bottom:1px; width:30px; display:flex; flex-direction:column; border-left:1px solid var(--border); border-radius:0 7px 7px 0; overflow:hidden;">
-                <button type="button" onclick="stepQty(1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s; border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▲</button>
-                <button type="button" onclick="stepQty(-1)" style="flex:1; background:var(--bg-panel); border:none; cursor:pointer; color:var(--text-muted); font-size:10px; line-height:1; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg-panel)'">▼</button>
-              </div>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="unit">Unit *</label>
-            <select id="unit" class="form-input" required onchange="autoSave()">
-              <option value="">Select unit</option>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="g">Grams (g)</option>
-              <option value="l">Liters (l)</option>
-              <option value="ml">Milliliters (ml)</option>
-              <option value="cm">Centimeters (cm)</option>
-              <option value="pcs">Pieces (pcs)</option>
-              <option value="lb">Pounds (lb)</option>
-              <option value="oz">Ounces (oz)</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="unit">Unit *</label>
+          <select id="unit" class="form-input" required onchange="autoSave(); updateStatsDisplay()">
+            <option value="">Select unit</option>
+            <option value="kg">Kilograms (kg)</option>
+            <option value="g">Grams (g)</option>
+            <option value="l">Liters (l)</option>
+            <option value="ml">Milliliters (ml)</option>
+            <option value="cm">Centimeters (cm)</option>
+            <option value="pcs">Pieces (pcs)</option>
+            <option value="lb">Pounds (lb)</option>
+            <option value="oz">Ounces (oz)</option>
+          </select>
         </div>
 
         <div class="form-row">
@@ -1167,7 +1202,7 @@
             <label for="cost_per_unit">Cost per Unit *</label>
             <input type="number" id="cost_per_unit" class="form-input" step="0.01" placeholder="0.00" required onblur="autoSave()">
           </div>
-          
+
           <div class="form-group">
             <label for="sku">SKU</label>
             <input type="text" id="sku" class="form-input" placeholder="Stock Keeping Unit" onblur="autoSave()">
@@ -1188,21 +1223,33 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="type">Type *</label>
-            <select id="type" class="form-input" required onchange="autoSave()">
-              <option value="">Select type</option>
-              <option value="Production">Production</option>
-              <option value="Shipping">Shipping</option>
-              <option value="Freebies">Freebies</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="category">Category</label>
-            <input type="text" id="category" class="form-input" list="categoryList" placeholder="Type or select category" onblur="autoSave()">
-            <datalist id="categoryList"></datalist>
+        <div class="form-group">
+          <label>Category</label>
+          <input type="hidden" id="category">
+          <div class="cat-grid" id="catGrid">
+            <button type="button" class="cat-chip" data-value="Apparel"          onclick="selectCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
+            <button type="button" class="cat-chip" data-value="Wood"             onclick="selectCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
+            <button type="button" class="cat-chip" data-value="Boxes"            onclick="selectCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
+            <button type="button" class="cat-chip" data-value="Cards"            onclick="selectCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
+            <button type="button" class="cat-chip" data-value="Plants"           onclick="selectCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
+            <button type="button" class="cat-chip" data-value="Candy"            onclick="selectCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
+            <button type="button" class="cat-chip" data-value="Beverage"         onclick="selectCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
+            <button type="button" class="cat-chip" data-value="Jewelry"          onclick="selectCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
+            <button type="button" class="cat-chip" data-value="Party Supplies"   onclick="selectCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
+            <button type="button" class="cat-chip" data-value="Gaming"           onclick="selectCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
+            <button type="button" class="cat-chip" data-value="Toys"             onclick="selectCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
+            <button type="button" class="cat-chip" data-value="Office Supplies"  onclick="selectCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
+            <button type="button" class="cat-chip" data-value="Colors"           onclick="selectCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
+            <button type="button" class="cat-chip" data-value="Rope"             onclick="selectCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
+            <button type="button" class="cat-chip" data-value="Paper"            onclick="selectCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
+            <button type="button" class="cat-chip" data-value="Spool"            onclick="selectCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
+            <button type="button" class="cat-chip" data-value="Letter"           onclick="selectCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
+            <button type="button" class="cat-chip" data-value="Giveaway"         onclick="selectCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
+            <button type="button" class="cat-chip" data-value="Electronics"      onclick="selectCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
+            <button type="button" class="cat-chip" data-value="Printing Supplies" onclick="selectCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
+            <button type="button" class="cat-chip" data-value="Tools"            onclick="selectCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
+            <button type="button" class="cat-chip" data-value="Packaging"        onclick="selectCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
+            <button type="button" class="cat-chip" data-value="Food"             onclick="selectCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
           </div>
         </div>
       </div>
@@ -1228,19 +1275,14 @@
     <!-- Right Column: Stats & Status -->
     <div>
       <div class="panel" style="padding: 20px;">
-        <h3 style="font-size: 14px; margin-bottom: 16px;">Stock Status</h3>
-        
-        <div class="stat-box" style="padding: 12px; margin-bottom: 12px;">
-          <div class="stat-label" style="font-size: 10px;">Current Stock</div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="stat-value" id="stockDisplay" style="font-size: 20px;">0 units</div>
-            <span id="stockBadge" class="status-badge" style="font-size: 9px; padding: 4px 8px;"></span>
-          </div>
-        </div>
-
-        <div class="stat-box" style="padding: 12px; margin-bottom: 0;">
-          <div class="stat-label" style="font-size: 10px;">Unit Cost</div>
-          <div class="stat-value" id="costDisplay" style="font-size: 20px;">$0.00</div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+          <button class="qty-adjust-btn" onclick="adjustQty(-1)">−</button>
+          <span id="qtyDisplay" contenteditable="true" inputmode="decimal" spellcheck="false"
+            style="font-size: 40px; font-weight: 800; line-height: 1; color: var(--text-main); outline: none; min-width: 1ch; cursor: text; border-radius: 8px; padding: 2px 6px;"
+            onblur="commitQtyInput(this)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}if(event.key==='Escape'){this.textContent=parseFloat(currentIngredient?.quantity)||0;this.blur();}"
+            >0</span>
+          <button class="qty-adjust-btn" onclick="adjustQty(1)">+</button>
         </div>
       </div>
 
@@ -1261,7 +1303,6 @@
     </div>
   </div>
 
-  <div class="save-indicator" id="saveIndicator">✓ Saved</div>
 
 </div>
 
@@ -1289,15 +1330,11 @@
 <div class="modal-overlay modal-sheet" id="deliveryModal" onclick="if(event.target===this) closeDeliveryModal()">
   <div class="modal-content" style="position:relative;">
     <button onclick="closeDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">×</button>
-    <h3 style="margin:0 0 8px 0;">Confirm Delivery</h3>
-    <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">How many <strong id="deliveryUnitLabel">units</strong> did you receive?</p>
-    <div class="form-group">
-      <label for="deliveryQty">Quantity Received</label>
-      <input type="number" id="deliveryQty" class="form-input" min="0" step="1" placeholder="0">
-    </div>
-    <div style="display:flex; gap:12px; margin-top:24px;">
-      <button onclick="cancelOrder()" class="btn btn-danger" style="flex:1;">Cancel Order</button>
-      <button onclick="confirmDeliveryQty()" class="btn-reorder" style="flex:1; padding:10px 16px; justify-content:center;">Confirm Delivery</button>
+    <h3 style="margin:0 0 8px 0;">Delivery</h3>
+    <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px 0;">Mark this delivery as received or cancel it.</p>
+    <div style="display:flex; gap:12px;">
+      <button onclick="cancelOrder()" class="btn btn-danger" style="flex:1;">Cancel Delivery</button>
+      <button onclick="confirmDeliveryReceived()" class="btn-reorder" style="flex:1; padding:10px 16px; justify-content:center;">Received</button>
     </div>
   </div>
 </div>
@@ -1362,6 +1399,19 @@
   let initialFormState = null;
   let reorderAbortController = null;
   let _autoSaveTimer = null;
+
+  function selectCategory(value) {
+    document.getElementById('category').value = value;
+    updateCatChips();
+    autoSave();
+  }
+
+  function updateCatChips() {
+    const val = document.getElementById('category').value;
+    document.querySelectorAll('.cat-chip').forEach(chip => {
+      chip.classList.toggle('selected', chip.dataset.value === val);
+    });
+  }
 
   function autoSave() {
     clearTimeout(_autoSaveTimer);
@@ -1462,19 +1512,16 @@
 
     // Form fields
     document.getElementById('name').value = ing.name || '';
-    document.getElementById('quantity').value = ing.quantity || 0;
     document.getElementById('unit').value = ing.unit || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
     document.getElementById('category').value = ing.category || '';
     document.getElementById('min_stock').value = ing.min_stock || '';
     document.getElementById('sku').value = ing.sku || '';
-    document.getElementById('type').value = ing.type || '';
     document.getElementById('estimated_delivery').value = ing.estimated_delivery || '';
     document.getElementById('source_url').value = ing.source_url || '';
     document.getElementById('notes').value = ing.notes || '';
 
-    // Load categories for datalist
-    loadCategories();
+    updateCatChips();
 
     // Custom attributes
     if (ing.custom_attributes) {
@@ -1500,11 +1547,13 @@
     reorderBtn.style.display = 'inline-block';
     
     if (ing.reorder_pending) {
-      reorderBtn.querySelector('.btn-text').textContent = 'Confirm Delivery';
+      reorderBtn.title = 'Confirm Delivery';
       reorderBtn.onclick = openDeliveryModal;
+      reorderBtn.classList.add('truck-moving');
     } else {
-      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
+      reorderBtn.title = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
+      reorderBtn.classList.remove('truck-moving');
     }
 
     // Store initial state and setup change tracking
@@ -1528,13 +1577,11 @@
   function getCurrentFormState() {
     return {
       name: document.getElementById('name').value,
-      quantity: document.getElementById('quantity').value,
       unit: document.getElementById('unit').value,
       cost_per_unit: document.getElementById('cost_per_unit').value,
       category: document.getElementById('category').value,
       min_stock: document.getElementById('min_stock').value,
       sku: document.getElementById('sku').value,
-      type: document.getElementById('type').value,
       estimated_delivery: document.getElementById('estimated_delivery').value,
       source_url: document.getElementById('source_url').value,
       notes: document.getElementById('notes').value
@@ -1675,18 +1722,6 @@
 
   async function markAsReordered() {
     if (!currentIngredient) return;
-    
-    // Ask if user wants to upload an expense
-    const uploadExpense = await showConfirm('Would you like to upload an expense receipt (invoice/bill) for this reorder?', 'Confirm', 'No', 'Yes');
-    
-    if (uploadExpense) {
-      // Close reorder modal and open expense modal
-      closeReorderModal();
-      openExpenseModal();
-      return;
-    }
-    
-    // If no expense upload, complete the reorder directly
     await completeReorder();
   }
 
@@ -1988,16 +2023,16 @@
       if (error) throw error;
 
       currentIngredient.reorder_pending = true;
-      
+
       // Update button
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.querySelector('.btn-text').textContent = 'Confirm Delivery';
+      reorderBtn.title = 'Confirm Delivery';
       reorderBtn.onclick = openDeliveryModal;
+      reorderBtn.classList.add('truck-moving');
       
       // Close modal
       closeReorderModal();
       
-      showSaveIndicator();
     } catch (error) {
       console.error('Error marking as reordered:', error);
       showAlert('Failed to mark as reordered');
@@ -2006,8 +2041,6 @@
 
   function openDeliveryModal() {
     if (!currentIngredient) return;
-    document.getElementById('deliveryUnitLabel').textContent = currentIngredient.unit || 'units';
-    document.getElementById('deliveryQty').value = '';
     document.getElementById('deliveryModal').classList.add('active');
   }
 
@@ -2015,49 +2048,25 @@
     document.getElementById('deliveryModal').classList.remove('active');
   }
 
-  async function confirmDeliveryQty() {
-    const qty = parseFloat(document.getElementById('deliveryQty').value);
-    if (isNaN(qty) || qty < 0) {
-      showAlert('Please enter the quantity you received');
-      return;
-    }
-
+  async function confirmDeliveryReceived() {
     closeDeliveryModal();
-    const newQty = (currentIngredient.quantity || 0) + qty;
-
     try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-
       const { error } = await supabaseClient
         .from('ingredients')
-        .update({ reorder_pending: false, quantity: newQty })
+        .update({ reorder_pending: false })
         .eq('id', currentIngredient.id);
 
       if (error) throw error;
 
-      if (qty > 0) {
-        await supabaseClient.from('ingredient_history').insert([{
-          ingredient_id: currentIngredient.id,
-          profile_id: user.id,
-          field_name: 'quantity',
-          old_value: String(currentIngredient.quantity || 0),
-          new_value: String(newQty),
-          reason: 'restock',
-          reference_text: 'Delivery received'
-        }]);
-      }
-
       currentIngredient.reorder_pending = false;
-      currentIngredient.quantity = newQty;
-
-      document.getElementById('quantity').value = newQty;
-      updateStatsDisplay();
 
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
+      reorderBtn.title = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
+      reorderBtn.classList.remove('truck-moving');
 
-      showSaveIndicator();
+      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'Skip', 'Upload Receipt');
+      if (upload) openExpenseModal();
     } catch (err) {
       showAlert('Failed to confirm delivery: ' + err.message);
     }
@@ -2077,11 +2086,11 @@
       currentIngredient.reorder_pending = false;
 
       const reorderBtn = document.getElementById('reorderBtn');
-      reorderBtn.querySelector('.btn-text').textContent = 'Mark as Reordered';
+      reorderBtn.title = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
+      reorderBtn.classList.remove('truck-moving');
 
       updateStatsDisplay();
-      showSaveIndicator();
     } catch (err) {
       showAlert('Failed to cancel order: ' + err.message);
     }
@@ -2107,7 +2116,6 @@
         .eq('profile_id', user.id)
         .like('source_url', strippedUrl + '%')
         .neq('id', currentIngredient.id)
-        .order('name')
         .abortSignal(reorderAbortController?.signal);
 
       const container = document.getElementById('reorderIngredientsList');
@@ -2123,55 +2131,103 @@
         return;
       }
 
-      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other ingredients from this source</h4>' + data.map(ing => {
-        // Get stock status
+      // Sort: out of stock → low on stock → in stock
+      data.sort((a, b) => {
+        const rank = i => {
+          const qty = i.quantity || 0;
+          const min = i.min_stock || 0;
+          if (qty === 0) return 0;
+          if (min > 0 && qty < min) return 1;
+          return 2;
+        };
+        return rank(a) - rank(b);
+      });
+
+      const renderReorderItem = ing => {
         const qty = ing.quantity || 0;
         const minStock = ing.min_stock || 0;
-        let stockBadge = '';
-        let stockColor = '';
-        
+        let stockBadge = '', stockColor = '';
         if (qty === 0) {
-          stockBadge = 'Out of Stock';
-          stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
+          stockBadge = 'Out of Stock'; stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
         } else if (minStock > 0 && qty < minStock) {
-          stockBadge = 'Low on Stock';
-          stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
+          stockBadge = 'Low on Stock'; stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
         } else {
-          stockBadge = 'In Stock';
-          stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
+          stockBadge = 'In Stock'; stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
         }
-        
-        // Parse custom attributes to get only values
         let attrs = '';
         if (ing.custom_attributes) {
           try {
-            const customAttrs = typeof ing.custom_attributes === 'string' 
-              ? JSON.parse(ing.custom_attributes) 
-              : ing.custom_attributes;
+            const customAttrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
             const values = Object.values(customAttrs).filter(v => v && v.trim());
-            if (values.length > 0) {
-              attrs = values.join(', ');
-            }
-          } catch (e) {
-            console.error('Error parsing attributes:', e);
-          }
+            if (values.length > 0) attrs = values.join(', ');
+          } catch (e) {}
         }
-        
-        return `
-          <div class="ingredient-item">
-            <div class="ingredient-item-content">
-              <a href=""/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
-              ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
-              <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
-            </div>
-            <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+        return `<div class="ingredient-item">
+          <div class="ingredient-item-content">
+            <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
+            ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
+            <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
           </div>
-        `;
-      }).join('');
+          <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+        </div>`;
+      };
+
+      const isMobile = window.innerWidth <= 768;
+      const PAGE = 10;
+      const visible = isMobile ? data : data.slice(0, PAGE);
+      const remaining = isMobile ? 0 : data.length - PAGE;
+
+      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other ingredients from this source</h4>'
+        + '<div id="reorderItemsVisible">' + visible.map(renderReorderItem).join('') + '</div>'
+        + (remaining > 0 ? `<button id="reorderShowMore" onclick="showMoreReorderItems()" style="margin-top: 10px; width: 100%; padding: 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer;">Show ${remaining} more</button>` : '');
+
+      if (remaining > 0) {
+        window._reorderAllData = data;
+      }
     } catch (err) {
       console.error('Error loading reorder ingredients:', err);
       document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
     }
+  }
+
+  function showMoreReorderItems() {
+    const data = window._reorderAllData;
+    if (!data) return;
+    const btn = document.getElementById('reorderShowMore');
+    const visibleDiv = document.getElementById('reorderItemsVisible');
+    if (btn) btn.remove();
+
+    const renderReorderItem = ing => {
+      const qty = ing.quantity || 0;
+      const minStock = ing.min_stock || 0;
+      let stockBadge = '', stockColor = '';
+      if (qty === 0) {
+        stockBadge = 'Out of Stock'; stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
+      } else if (minStock > 0 && qty < minStock) {
+        stockBadge = 'Low on Stock'; stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
+      } else {
+        stockBadge = 'In Stock'; stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
+      }
+      let attrs = '';
+      if (ing.custom_attributes) {
+        try {
+          const customAttrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+          const values = Object.values(customAttrs).filter(v => v && v.trim());
+          if (values.length > 0) attrs = values.join(', ');
+        } catch (e) {}
+      }
+      return `<div class="ingredient-item">
+        <div class="ingredient-item-content">
+          <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
+          ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
+          <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
+        </div>
+        <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+      </div>`;
+    };
+
+    visibleDiv.innerHTML = data.map(renderReorderItem).join('');
+    window._reorderAllData = null;
   }
 
   function escapeHtml(text) {
@@ -2185,48 +2241,90 @@
     return String(text).replace(/[&<>\"']/g, m => map[m]);
   }
 
-  function stepQty(delta) {
-    const input = document.getElementById('quantity');
-    const current = parseFloat(input.value) || 0;
-    const step = parseFloat(input.step) || 1;
-    const next = Math.max(0, current + delta * step);
-    input.value = next;
-    input.dispatchEvent(new Event('input'));
-    autoSave();
+  async function adjustQty(delta) {
+    if (!currentIngredient) return;
+    const oldQty = parseFloat(currentIngredient.quantity) || 0;
+    const newQty = Math.max(0, oldQty + delta);
+    if (oldQty === newQty) return;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ quantity: newQty })
+        .eq('id', currentIngredient.id);
+      if (error) throw error;
+
+      if (user) {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: currentIngredient.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(oldQty),
+          new_value: String(newQty),
+          reason: 'manual',
+          reference_id: null,
+          reference_text: 'Manual adjustment'
+        }]);
+        if (newQty === 0 && oldQty > 0) {
+          await createOutOfStockNotification(currentIngredient.id, currentIngredient.name, user.id);
+        }
+      }
+
+      currentIngredient.quantity = newQty;
+      updateStatsDisplay();
+    } catch (err) {
+      showAlert('Failed to update quantity: ' + err.message);
+    }
+  }
+
+  async function commitQtyInput(el) {
+    if (!currentIngredient) return;
+    const newQty = Math.max(0, parseFloat(el.textContent) || 0);
+    const oldQty = parseFloat(currentIngredient.quantity) || 0;
+    if (newQty === oldQty) { updateStatsDisplay(); return; }
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ quantity: newQty })
+        .eq('id', currentIngredient.id);
+      if (error) throw error;
+
+      if (user) {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: currentIngredient.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(oldQty),
+          new_value: String(newQty),
+          reason: 'manual',
+          reference_id: null,
+          reference_text: 'Manual adjustment'
+        }]);
+        if (newQty === 0 && oldQty > 0) {
+          await createOutOfStockNotification(currentIngredient.id, currentIngredient.name, user.id);
+        }
+      }
+
+      currentIngredient.quantity = newQty;
+      updateStatsDisplay();
+    } catch (err) {
+      el.textContent = oldQty;
+      showAlert('Failed to update quantity: ' + err.message);
+    }
   }
 
   function updateStatsDisplay() {
-    const qty = parseFloat(document.getElementById('quantity').value) || 0;
-    const unit = document.getElementById('unit').value || 'units';
-    const cost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
-    const minStock = parseFloat(document.getElementById('min_stock').value) || 0;
-
-    // Stock display
-    document.getElementById('stockDisplay').textContent = `${qty} ${unit}`;
-    
-    // Stock badge - check reorder pending status first
-    const badge = document.getElementById('stockBadge');
-    
-    if (currentIngredient && currentIngredient.reorder_pending) {
-      badge.textContent = 'Reorder Pending';
-      badge.style.background = 'rgba(168, 85, 247, 0.1)';
-      badge.style.color = '#a855f7';
-    } else if (qty === 0) {
-      badge.textContent = 'Out of Stock';
-      badge.style.background = 'rgba(239, 68, 68, 0.1)';
-      badge.style.color = 'var(--danger)';
-    } else if (minStock > 0 && qty < minStock) {
-      badge.textContent = 'Low Stock';
-      badge.style.background = 'rgba(245, 158, 11, 0.1)';
-      badge.style.color = 'var(--warning)';
-    } else {
-      badge.textContent = 'In Stock';
-      badge.style.background = 'rgba(16, 185, 129, 0.1)';
-      badge.style.color = 'var(--success)';
-    }
-
-    // Cost display
-    document.getElementById('costDisplay').textContent = `$${cost.toFixed(2)}`;
+    const qty = parseFloat(currentIngredient?.quantity) || 0;
+    const minStock = parseFloat(currentIngredient?.min_stock) || 0;
+    let qtyColor = 'var(--success)';
+    if (qty === 0) qtyColor = 'var(--danger)';
+    else if (minStock > 0 && qty < minStock) qtyColor = 'var(--warning)';
+    const el = document.getElementById('qtyDisplay');
+    el.textContent = qty;
+    el.style.color = qtyColor;
   }
 
   function renderCustomAttributes() {
@@ -2288,7 +2386,6 @@
         starIcon.classList.remove('favorited');
       }
       
-      showSaveIndicator();
     } catch (error) {
       console.error('Error toggling favorite:', error);
       showAlert('Failed to update favorite status');
@@ -2298,18 +2395,13 @@
   async function saveAllChanges() {
     if (!currentIngredient) return;
 
-    const oldQuantity = currentIngredient.quantity;
-    const newQuantity = parseFloat(document.getElementById('quantity').value) || 0;
-
     const updateData = {
       name: document.getElementById('name').value,
-      quantity: newQuantity,
       unit: document.getElementById('unit').value,
       cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
       category: document.getElementById('category').value,
       min_stock: parseFloat(document.getElementById('min_stock').value) || null,
       sku: document.getElementById('sku').value || '',
-      type: document.getElementById('type').value,
       estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
       source_url: stripUrlParams(document.getElementById('source_url').value) || '',
       notes: document.getElementById('notes').value || '',
@@ -2326,37 +2418,11 @@
 
       if (error) throw error;
 
-      // Log quantity change if it changed
-      if (oldQuantity !== newQuantity) {
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
-            ingredient_id: currentIngredient.id,
-            profile_id: user.id,
-            field_name: 'quantity',
-            old_value: String(oldQuantity),
-            new_value: String(newQuantity),
-            reason: 'manual',
-            reference_id: null,
-            reference_text: 'Manual adjustment'
-          }]);
-        
-        // Reload history
-        // Check if out of stock and create notification
-        if (newQuantity <= 0) {
-          await createOutOfStockNotification(
-            currentIngredient.id,
-            updateData.name,
-            user.id
-          );
-        }
-      }
-
       currentIngredient = { ...currentIngredient, ...updateData };
       hasUnsavedChanges = false;
       initialFormState = getCurrentFormState();
-      showSaveIndicator();
-      
+      updateStatsDisplay();
+
       // Update header
       document.getElementById('ingredientName').textContent = updateData.name;
       
@@ -2365,12 +2431,102 @@
     }
   }
 
-  function showSaveIndicator() {
-    const indicator = document.getElementById('saveIndicator');
-    indicator.classList.add('show');
-    setTimeout(() => {
-      indicator.classList.remove('show');
-    }, 2000);
+  let detailDuplicateAttributes = {};
+
+  function openDetailDuplicateModal() {
+    if (!currentIngredient) return;
+    document.getElementById('detailDupName').value = currentIngredient.name + ' (Copy)';
+    document.getElementById('detailDupQty').value = parseFloat(currentIngredient.quantity) || 0;
+    document.getElementById('detailDupSourceUrl').value = currentIngredient.source_url || '';
+    detailDuplicateAttributes = {};
+    if (currentIngredient.custom_attributes) {
+      try {
+        detailDuplicateAttributes = typeof currentIngredient.custom_attributes === 'string'
+          ? JSON.parse(currentIngredient.custom_attributes)
+          : currentIngredient.custom_attributes;
+      } catch (e) {}
+    }
+    renderDetailDupAttributes();
+    document.getElementById('detailDuplicateModal').classList.add('active');
+  }
+
+  function closeDetailDuplicateModal() {
+    document.getElementById('detailDuplicateModal').classList.remove('active');
+    detailDuplicateAttributes = {};
+  }
+
+  function renderDetailDupAttributes() {
+    const container = document.getElementById('detailDupAttributesContainer');
+    container.innerHTML = '';
+    for (const [key, value] of Object.entries(detailDuplicateAttributes)) {
+      const div = document.createElement('div');
+      div.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+      div.innerHTML = `
+        <input type="text" value="${key}" onchange="updateDetailDupAttributeKey(this,'${key}')" placeholder="Key" style="flex:1;margin-bottom:0;padding:10px;" />
+        <input type="text" value="${value}" onchange="updateDetailDupAttributeValue('${key}',this.value)" placeholder="Value" style="flex:1;margin-bottom:0;padding:10px;" />
+        <button onclick="removeDetailDupAttribute('${key}')" style="background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:0 14px;cursor:pointer;font-weight:600;">×</button>`;
+      container.appendChild(div);
+    }
+  }
+
+  function addDetailDupAttribute() {
+    const newKey = `Attribute ${Object.keys(detailDuplicateAttributes).length + 1}`;
+    detailDuplicateAttributes[newKey] = '';
+    renderDetailDupAttributes();
+  }
+
+  function updateDetailDupAttributeKey(input, oldKey) {
+    const newKey = input.value.trim();
+    if (!newKey || newKey === oldKey) return;
+    const val = detailDuplicateAttributes[oldKey];
+    delete detailDuplicateAttributes[oldKey];
+    detailDuplicateAttributes[newKey] = val;
+    renderDetailDupAttributes();
+  }
+
+  function updateDetailDupAttributeValue(key, value) {
+    detailDuplicateAttributes[key] = value;
+  }
+
+  function removeDetailDupAttribute(key) {
+    delete detailDuplicateAttributes[key];
+    renderDetailDupAttributes();
+  }
+
+  async function saveDetailDuplicate(keepOpen = false) {
+    const name = document.getElementById('detailDupName').value.trim();
+    const qty = parseFloat(document.getElementById('detailDupQty').value) || 0;
+    const sourceUrl = document.getElementById('detailDupSourceUrl').value.trim();
+    if (!name) { showAlert('Please enter a name', 'Required'); return; }
+    if (!currentIngredient) return;
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) { showAlert('Please log in', 'Authentication Required'); return; }
+      const { data, error } = await supabaseClient
+        .from('ingredients')
+        .insert({
+          name,
+          quantity: qty,
+          unit: currentIngredient.unit,
+          cost_per_unit: currentIngredient.cost_per_unit,
+          category: currentIngredient.category,
+          type: currentIngredient.type,
+          min_stock: currentIngredient.min_stock,
+          estimated_delivery: currentIngredient.estimated_delivery,
+          notes: currentIngredient.notes || '',
+          sku: currentIngredient.sku || '',
+          source_url: sourceUrl || '',
+          custom_attributes: Object.keys(detailDuplicateAttributes).length > 0 ? JSON.stringify(detailDuplicateAttributes) : null,
+          profile_id: user.id
+        })
+        .select();
+      if (error) throw error;
+      const newIng = data[0];
+      closeDetailDuplicateModal();
+      window.location.href = `/ingredient-detail?id=${newIng.id}`;
+    } catch (err) {
+      showAlert('Failed to duplicate: ' + err.message, 'Error');
+    }
   }
 
   async function duplicateIngredient() {
@@ -2386,11 +2542,10 @@
       // Use currentIngredient as the source of truth so hidden fields (mobile) are included
       const duplicateData = {
         name: (document.getElementById('name')?.value || currentIngredient.name) + ' (Copy)',
-        quantity: parseFloat(document.getElementById('quantity')?.value ?? currentIngredient.quantity) || 0,
+        quantity: parseFloat(currentIngredient.quantity) || 0,
         unit: document.getElementById('unit')?.value || currentIngredient.unit || '',
         cost_per_unit: parseFloat(document.getElementById('cost_per_unit')?.value ?? currentIngredient.cost_per_unit) || 0,
         category: document.getElementById('category')?.value || currentIngredient.category || '',
-        type: document.getElementById('type')?.value || currentIngredient.type || '',
         min_stock: parseFloat(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock) || null,
         estimated_delivery: parseInt(document.getElementById('estimated_delivery')?.value ?? currentIngredient.estimated_delivery) || null,
         sku: document.getElementById('sku')?.value ?? currentIngredient.sku ?? '',
@@ -2444,10 +2599,6 @@
     window.location.href = `/ingredients?view=${from}`;
   }
 
-  // Auto-update stats when inputs change
-  ['quantity', 'unit', 'cost_per_unit', 'min_stock'].forEach(id => {
-    document.getElementById(id).addEventListener('input', updateStatsDisplay);
-  });
 
   // === Notification System ===
   let notificationsCache = [];
@@ -2702,6 +2853,7 @@
 
   loadIngredientDetail();
   initializeNotifications();
+  lucide.createIcons();
 </script>
 
 <!-- Feedback Widget -->
@@ -2888,6 +3040,28 @@ document.addEventListener('keydown', (e) => {
   }
 });
 </script>
+
+<!-- Duplicate Ingredient Modal -->
+<div class="modal-overlay" id="detailDuplicateModal" onclick="if(event.target===this)closeDetailDuplicateModal()">
+  <div class="modal-content" style="max-width: 600px;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Ingredient</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated ingredient</p>
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Name</label>
+    <input type="text" id="detailDupName" placeholder="Ingredient Name" style="margin-bottom: 16px;" />
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Quantity</label>
+    <input id="detailDupQty" type="number" step="0.01" placeholder="0" style="margin-bottom: 16px;" />
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Source URL</label>
+    <input type="text" id="detailDupSourceUrl" placeholder="https://" style="margin-bottom: 16px;" />
+    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Custom Attributes</label>
+    <div id="detailDupAttributesContainer" style="margin-bottom: 12px;"></div>
+    <button class="btn" style="background: var(--bg-inner); color: var(--text-main); width: 100%; padding: 10px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 16px;" onclick="addDetailDupAttribute()">+ Add Attribute</button>
+    <div style="display: flex; gap: 12px; margin-top: 8px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeDetailDuplicateModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="saveDetailDuplicate(false)">Create</button>
+      <button class="btn" style="flex: 1; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="saveDetailDuplicate(true)">Create more</button>
+    </div>
+  </div>
+</div>
 
 <!-- Custom Alert Modal -->
 <div class="modal-overlay modal-sheet" id="alertModal" onclick="if(event.target === this) closeAlert()">

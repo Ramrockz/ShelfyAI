@@ -41,6 +41,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -162,13 +163,11 @@
     opacity: 1;
     transform: scale(1);
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
   }
 
   .qty-hover-btn:hover {
     background: #0891b2;
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.5);
   }
 
   .qty-hover-btn:active {
@@ -346,6 +345,11 @@
     gap: 16px;
   }
 
+  .ing-cat-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .ing-cat-chip { display: flex; align-items: center; justify-content: center; padding: 10px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; flex: 1 1 44px; max-width: 54px; color: var(--text-muted); }
+  .ing-cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
+  .ing-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+
   /* Method selection cards */
   .method-card {
     background: var(--bg-panel);
@@ -472,20 +476,6 @@
   }
   .notification-item:hover {
     background: var(--bg-inner);
-  }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
   }
   .notification-message {
     font-size: 14px;
@@ -679,7 +669,6 @@
     background: var(--accent);
     border-radius: 50%;
     border: none;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
     cursor: pointer;
     z-index: 999;
     transition: all 0.3s ease;
@@ -700,46 +689,36 @@
     transform: translate(-50%, -50%);
   }
 
-  /* Mobile Type Filters */
+  /* Mobile Category Filters */
   .mobile-type-filters {
     display: none;
-    gap: 8px;
-    margin-bottom: 20px;
-    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
   }
-  
+
   .mobile-type-filter {
-    flex: 1;
-    padding: 12px 8px;
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-main);
+    padding: 9px;
+    background: var(--bg-panel);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1 1 40px;
+    max-width: 50px;
+    color: var(--text-muted);
   }
-  
+  .mobile-type-filter svg { width: 20px; height: 20px; stroke-width: 1.75; }
+
   .mobile-type-filter.active {
-    background: var(--accent);
     border-color: var(--accent);
-    color: white;
+    background: rgba(6,182,212,0.13);
+    color: var(--accent);
   }
-  
-  .mobile-type-filter img {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    filter: invert(var(--icon-invert, 0));
-  }
-  
-  .mobile-type-filter.active img {
-    filter: brightness(0) invert(1);
-  }
+
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
@@ -758,6 +737,8 @@
   }
   
   @media (max-width: 768px) {
+    .show-more-btn { display: none !important; }
+
     /* Hide sidebar on mobile */
     .sidebar {
       display: none;
@@ -1175,19 +1156,33 @@
 
   <main class="main" style="visibility: hidden;">
     <!-- Mobile Search Bar (visible only on mobile) -->
-    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="cardsToShow = 10; render()" />
+    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="cardsToShow = 15; render()" />
     
-    <!-- Mobile Type Filters (visible only on mobile) -->
+    <!-- Mobile Category Filters -->
     <div class="mobile-type-filters">
-      <div class="mobile-type-filter active" data-type="Production" onclick="filterByTypeMobile('Production')">
-        <img src="https://cdn-icons-png.flaticon.com/512/3501/3501844.png" alt="Production" />
-      </div>
-      <div class="mobile-type-filter" data-type="Shipping" onclick="filterByTypeMobile('Shipping')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1670/1670915.png" alt="Shipping" />
-      </div>
-      <div class="mobile-type-filter" data-type="Freebies" onclick="filterByTypeMobile('Freebies')">
-        <img src="https://cdn-icons-png.flaticon.com/512/726/726532.png" alt="Freebies" />
-      </div>
+      <div class="mobile-type-filter" data-cat="Apparel"          onclick="filterByCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></div>
+      <div class="mobile-type-filter" data-cat="Wood"             onclick="filterByCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></div>
+      <div class="mobile-type-filter" data-cat="Boxes"            onclick="filterByCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></div>
+      <div class="mobile-type-filter" data-cat="Cards"            onclick="filterByCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></div>
+      <div class="mobile-type-filter" data-cat="Plants"           onclick="filterByCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></div>
+      <div class="mobile-type-filter" data-cat="Candy"            onclick="filterByCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></div>
+      <div class="mobile-type-filter" data-cat="Beverage"         onclick="filterByCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></div>
+      <div class="mobile-type-filter" data-cat="Jewelry"          onclick="filterByCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></div>
+      <div class="mobile-type-filter" data-cat="Party Supplies"   onclick="filterByCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></div>
+      <div class="mobile-type-filter" data-cat="Gaming"           onclick="filterByCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></div>
+      <div class="mobile-type-filter" data-cat="Toys"             onclick="filterByCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></div>
+      <div class="mobile-type-filter" data-cat="Office Supplies"  onclick="filterByCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></div>
+      <div class="mobile-type-filter" data-cat="Colors"           onclick="filterByCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></div>
+      <div class="mobile-type-filter" data-cat="Rope"             onclick="filterByCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></div>
+      <div class="mobile-type-filter" data-cat="Paper"            onclick="filterByCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></div>
+      <div class="mobile-type-filter" data-cat="Spool"            onclick="filterByCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></div>
+      <div class="mobile-type-filter" data-cat="Letter"           onclick="filterByCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></div>
+      <div class="mobile-type-filter" data-cat="Giveaway"         onclick="filterByCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></div>
+      <div class="mobile-type-filter" data-cat="Electronics"      onclick="filterByCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></div>
+      <div class="mobile-type-filter" data-cat="Printing Supplies" onclick="filterByCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></div>
+      <div class="mobile-type-filter" data-cat="Tools"            onclick="filterByCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></div>
+      <div class="mobile-type-filter" data-cat="Packaging"        onclick="filterByCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></div>
+      <div class="mobile-type-filter" data-cat="Food"             onclick="filterByCategory('Food')"             title="Food"><i data-lucide="wheat"></i></div>
     </div>
 
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
@@ -1198,7 +1193,7 @@
         </div>
         <div id="filterBadges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;"></div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="cardsToShow = 10; render()" />
+      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="cardsToShow = 15; render()" />
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1208,12 +1203,11 @@
         <thead>
           <tr>
             <th style="width: 50px;">#</th>
-            <th class="sortable" onclick="sortTable('name')" style="width: 30%;">Name</th>
-            <th class="sortable" onclick="sortTable('type')" style="width: 12%;">Type</th>
-            <th class="sortable" onclick="sortTable('category')" style="width: 15%;">Category</th>
-            <th style="width: 20%;">Attributes</th>
+            <th class="sortable" onclick="sortTable('name')" style="width: 35%;">Name</th>
+            <th class="sortable" onclick="sortTable('category')" style="width: 8%;">Cat.</th>
+            <th style="width: 22%;">Attributes</th>
             <th class="sortable" onclick="sortTable('qty')" style="width: 10%;">Quantity</th>
-            <th style="width: 13%;">Action</th>
+            <th style="width: 15%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1342,21 +1336,33 @@
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="ing_type">Type *</label>
-          <select id="ing_type" required>
-            <option value="">Select type</option>
-            <option value="Production">Production</option>
-            <option value="Shipping">Shipping</option>
-            <option value="Freebies">Freebies</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="ing_category">Category</label>
-          <input type="text" id="ing_category" list="categoryList" placeholder="Type or select category">
-          <datalist id="categoryList"></datalist>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="hidden" id="ing_category">
+        <div class="ing-cat-grid">
+          <button type="button" class="ing-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Wood"             onclick="selectIngCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Boxes"            onclick="selectIngCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Cards"            onclick="selectIngCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Plants"           onclick="selectIngCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Candy"            onclick="selectIngCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Beverage"         onclick="selectIngCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Jewelry"          onclick="selectIngCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Party Supplies"   onclick="selectIngCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Gaming"           onclick="selectIngCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Toys"             onclick="selectIngCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Office Supplies"  onclick="selectIngCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Colors"           onclick="selectIngCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Rope"             onclick="selectIngCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Paper"            onclick="selectIngCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Spool"            onclick="selectIngCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Letter"           onclick="selectIngCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Giveaway"         onclick="selectIngCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Electronics"      onclick="selectIngCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Printing Supplies" onclick="selectIngCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Tools"            onclick="selectIngCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Packaging"        onclick="selectIngCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
+          <button type="button" class="ing-cat-chip" data-value="Food"             onclick="selectIngCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
         </div>
       </div>
 
@@ -1488,7 +1494,7 @@
     <div style="display: flex; gap: 12px; margin-top: 8px;">
       <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeDuplicateModal()">Cancel</button>
       <button class="btn btn-primary" style="flex: 1;" onclick="saveDuplicate(false)">Create</button>
-      <button class="btn btn-outline" style="flex: 1;" onclick="saveDuplicate(true)">Create & Add Another</button>
+      <button class="btn btn-outline" style="flex: 1;" onclick="saveDuplicate(true)">Create more</button>
     </div>
   </div>
 </div>
@@ -1525,7 +1531,7 @@ let sortBy = null;
 let sortOrder = 'asc';
 let listCurrentPage = 1;
 let itemsPerPage = 10;
-let cardsToShow = 10;
+let cardsToShow = 15;
 let confirmResolver = null;
 let uploadedFile = null;
 
@@ -1618,12 +1624,23 @@ async function loadIngredients() {
   }
 }
 
+function updateMobileCategoryVisibility() {
+  const presentCats = new Set(ingredients.map(i => i.category).filter(Boolean));
+  document.querySelectorAll('.mobile-type-filter').forEach(chip => {
+    chip.style.display = presentCats.has(chip.dataset.cat) ? 'flex' : 'none';
+  });
+}
+
+lucide.createIcons();
+
 // Call loadIngredients when page is ready
 loadIngredients().then(() => {
   // Show sidebar and main content after data is loaded
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
-  
+  renderTypeFilterCards();
+  updateMobileCategoryVisibility();
+
   // Check for inventory filter from operations page
   const inventoryFilter = sessionStorage.getItem('inventoryFilter');
   if (inventoryFilter) {
@@ -1773,7 +1790,7 @@ function closeManualModal() {
   document.getElementById('ing_unit').value = '';
   document.getElementById('ing_cost').value = '';
   document.getElementById('ing_category').value = '';
-  document.getElementById('ing_type').value = '';
+  document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.remove('selected'));
   document.getElementById('ing_min_stock').value = '';
   document.getElementById('ing_estimated_delivery').value = '';
   document.getElementById('ing_sku').value = '';
@@ -2527,7 +2544,7 @@ function switchView(view) {
   
   // Reset cards to show when switching to recent view
   if (view === 'recent') {
-    cardsToShow = 10;
+    cardsToShow = 15;
   }
   
   // Update URL to reflect current view (remove query parameter to rely on localStorage)
@@ -2548,21 +2565,19 @@ function switchView(view) {
   render();
 }
 
-// Mobile type filter state
-let activeMobileTypeFilter = 'Production';
+function filterByCategory(cat) {
+  if (activeCategoryFilter === cat) {
+    activeCategoryFilter = null;
+  } else {
+    activeCategoryFilter = cat;
+  }
 
-function filterByTypeMobile(type) {
-  activeMobileTypeFilter = type;
-  
-  // Update active state on buttons
   document.querySelectorAll('.mobile-type-filter').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.dataset.type === type) {
-      btn.classList.add('active');
-    }
+    btn.classList.toggle('active', btn.dataset.cat === activeCategoryFilter);
   });
-  
-  // Re-render with the filter
+
+  listCurrentPage = 1;
+  cardsToShow = 15;
   render();
 }
 
@@ -2581,11 +2596,8 @@ function renderTypeFilterCards() {
   const container = document.getElementById('typeFilterCards');
   if (!container) return;
 
-  // Render based on current navigation level
   if (navStack.length === 0) {
-    renderTypeLevel();
-  } else if (currentNavLevel === 'category') {
-    renderCategoryLevel();
+    renderCategoryChips();
   } else if (currentNavLevel === 'attribute_key') {
     renderAttributeKeyLevel();
   } else if (currentNavLevel === 'attribute_value') {
@@ -2593,40 +2605,39 @@ function renderTypeFilterCards() {
   }
 }
 
-function renderTypeLevel() {
-  const container = document.getElementById('typeFilterCards');
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '12px';
-  container.style.gridTemplateColumns = '';
-  
-  const types = ['Production', 'Shipping', 'Freebies'];
-  const typeIcons = {
-    'Production': 'https://cdn-icons-png.flaticon.com/512/3501/3501844.png',
-    'Shipping': 'https://cdn-icons-png.flaticon.com/512/1670/1670915.png',
-    'Freebies': 'https://cdn-icons-png.flaticon.com/512/726/726532.png'
-  };
+const _categoryIconMap = {
+  'Apparel': 'shirt',
+  'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora',
+  'Jewelry': 'gem', 'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2',
+  'Toys': 'drum', 'Office Supplies': 'paperclip', 'Colors': 'palette',
+  'Rope': 'lasso', 'Paper': 'origami', 'Spool': 'spool',
+  'Letter': 'mail', 'Giveaway': 'gift', 'Electronics': 'plug',
+  'Printing Supplies': 'printer', 'Tools': 'wrench', 'Packaging': 'package',
+  'Food': 'wheat'
+};
 
-  const cards = types.map(type => {
-    return `
-      <div onclick="drillDownToCategories('${type}')" style="
-        background: var(--bg-panel);
-        border: 2px solid var(--border);
-        border-radius: 12px;
-        padding: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 80px;
-      " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <img src="${typeIcons[type]}" alt="${type}" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px; object-fit: contain; display: block; filter: invert(var(--icon-invert, 0));" />
-      </div>
-    `;
+function renderCategoryChips() {
+  const container = document.getElementById('typeFilterCards');
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  container.style.flexDirection = '';
+  container.style.gap = '8px';
+
+  const presentCats = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
+
+  if (presentCats.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = presentCats.map(cat => {
+    const icon = _categoryIconMap[cat] || 'tag';
+    const sel = activeCategoryFilter === cat;
+    return `<button type="button" onclick="addCategoryFilter('${escapeHtml(cat)}')" title="${escapeHtml(cat)}" style="display:flex;align-items:center;justify-content:center;padding:12px;background:${sel ? 'rgba(6,182,212,0.13)' : 'var(--bg-inner)'};border:1.5px solid ${sel ? 'var(--accent)' : 'var(--border)'};border-radius:10px;cursor:pointer;transition:all 0.15s;color:${sel ? 'var(--accent)' : 'var(--text-muted)'};"><i data-lucide="${icon}"></i></button>`;
   }).join('');
 
-  container.innerHTML = cards;
+  lucide.createIcons();
 }
 
 function renderCategoryLevel() {
@@ -2705,14 +2716,13 @@ function renderAttributeKeyLevel() {
   container.style.gridTemplateColumns = '1fr 1fr';
   container.style.gap = '12px';
   
-  const selectedType = currentNavData.type;
   const selectedCategory = currentNavData.category;
   const selectedCategoryLower = selectedCategory ? selectedCategory.toLowerCase() : '';
-  
-  // Get all attribute keys for items matching type and category (case-insensitive, normalized)
+
+  // Get all attribute keys for items matching category (case-insensitive, normalized)
   const attributeKeysMap = new Map();
   ingredients
-    .filter(i => i.type === selectedType && i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
+    .filter(i => i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
     .forEach(i => {
       try {
         const attrs = typeof i.custom_attributes === 'string' 
@@ -2777,15 +2787,14 @@ function renderAttributeValueLevel() {
   container.style.gridTemplateColumns = '1fr 1fr';
   container.style.gap = '12px';
   
-  const selectedType = currentNavData.type;
   const selectedCategory = currentNavData.category;
   const selectedCategoryLower = selectedCategory ? selectedCategory.toLowerCase() : '';
   const selectedKey = currentNavData.attributeKey;
-  
+
   // Get all unique values for this attribute key
   const values = new Set();
   ingredients
-    .filter(i => i.type === selectedType && i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
+    .filter(i => i.category && i.category.toLowerCase() === selectedCategoryLower && i.custom_attributes)
     .forEach(i => {
       try {
         const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
@@ -2901,23 +2910,17 @@ function navigateBack() {
   currentNavLevel = previous.level;
   currentNavData = previous.data;
   
-  // Reset all filters when returning to type level
-  if (currentNavLevel === 'type') {
-    activeTypeFilter = null;
-    activeCategoryFilter = null;
+  // Reset attribute filters when returning to category chip level
+  if (navStack.length === 0) {
     activeAttributeFilters = {};
-    activeStatusFilter = null;
-    activeDeliveryFilter = null;
     listCurrentPage = 1;
     render();
   }
-  
+
   renderTypeFilterCards();
 }
 
 function applyFullFilter(value) {
-  // Apply all filters: type, category, and attribute value
-  activeTypeFilter = currentNavData.type;
   activeCategoryFilter = currentNavData.category;
   
   // Add/replace attribute filter using the current attribute key
@@ -2941,7 +2944,6 @@ function applyInventoryFilter(filterType) {
   activeDeliveryFilter = null;
   activeCategoryFilter = null;
   activeAttributeFilters = {};
-  activeMobileTypeFilter = null;
   document.querySelectorAll('.mobile-type-filter').forEach(btn => btn.classList.remove('active'));
   
   // Create a custom filter based on type
@@ -2955,6 +2957,13 @@ function applyInventoryFilter(filterType) {
       const minStock = parseFloat(i.min_stock) || 0;
       return minStock > 0 && qty > 0 && qty < minStock;
     });
+  } else if (filterType === 'needs-restocking') {
+    filteredIngredients = ingredients.filter(i => {
+      const qty = parseFloat(i.qty) || 0;
+      const minStock = parseFloat(i.min_stock) || 0;
+      return qty === 0 || (minStock > 0 && qty < minStock);
+    });
+    filteredIngredients.sort((a, b) => (parseFloat(a.qty) || 0) - (parseFloat(b.qty) || 0));
   } else if (filterType === 'dead-stock') {
     filteredIngredients = ingredients.filter(i => {
       const lastUpdate = new Date(i.updated_at || i.created_at);
@@ -2966,7 +2975,7 @@ function applyInventoryFilter(filterType) {
   window.inventoryFilteredList = filteredIngredients;
   window.inventoryFilterType = filterType;
   
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -3043,11 +3052,6 @@ function render() {
       return false;
     }
     
-    // Apply mobile type filter (only on mobile)
-    if (window.innerWidth <= 768 && activeMobileTypeFilter && i.type !== activeMobileTypeFilter) {
-      return false;
-    }
-    
     return true;
   });
   
@@ -3115,56 +3119,63 @@ function addAttributeFilter(value, key = null) {
   }
   
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
 function removeAttributeFilter(key) {
   delete activeAttributeFilters[key];
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
 function addCategoryFilter(value) {
-  activeCategoryFilter = value;
+  activeCategoryFilter = activeCategoryFilter === value ? null : value;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
+  renderTypeFilterCards();
+  // sync mobile chips
+  document.querySelectorAll('.mobile-type-filter').forEach(c => {
+    c.classList.toggle('active', c.dataset.cat === activeCategoryFilter);
+  });
 }
 
 function removeCategoryFilter() {
   activeCategoryFilter = null;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
+  renderTypeFilterCards();
+  document.querySelectorAll('.mobile-type-filter').forEach(c => c.classList.remove('active'));
 }
 
 function addStatusFilter(value) {
   activeStatusFilter = value;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
 function removeStatusFilter() {
   activeStatusFilter = null;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
 function addDeliveryFilter(value) {
   activeDeliveryFilter = value;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
 function removeDeliveryFilter() {
   activeDeliveryFilter = null;
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -3176,7 +3187,7 @@ function addTypeFilter(value) {
     activeTypeFilter = value;
   }
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -3189,7 +3200,7 @@ function removeTypeFilter() {
   currentNavData = {};
   
   listCurrentPage = 1;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -3252,11 +3263,13 @@ function renderFilterBadges() {
   if (window.inventoryFilterType) {
     const filterLabels = {
       'out-of-stock': 'Out of Stock',
-      'low-stock': 'Low on Stock'
+      'low-stock': 'Low on Stock',
+      'needs-restocking': 'Needs Restocking'
     };
     const filterColors = {
       'out-of-stock': '#ef4444',
-      'low-stock': '#f59e0b'
+      'low-stock': '#f59e0b',
+      'needs-restocking': '#ef4444'
     };
     badges.push(`
       <div class="filter-badge" style="background: ${filterColors[window.inventoryFilterType]};">
@@ -3273,7 +3286,7 @@ function renderFilterBadges() {
 function removeInventoryFilter() {
   window.inventoryFilteredList = null;
   window.inventoryFilterType = null;
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -3393,16 +3406,39 @@ function renderRecent(data) {
   // Add "Show More" button if there are more cards to display
   if (hasMoreCards) {
     container.innerHTML += `
-      <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
+      <div class="show-more-btn" style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
         <button onclick="showMoreCards()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOtherData.length - cardsToShow} remaining)</button>
       </div>
     `;
   }
+  if (hasMoreCards) {
+    container.innerHTML += `<div id="cardScrollSentinel" style="grid-column:1/-1; height:1px;"></div>`;
+  }
+  setupInfiniteScroll();
 }
 
 function showMoreCards() {
-  cardsToShow += 10;
+  cardsToShow += 15;
   render();
+}
+
+let _infiniteScrollObserver = null;
+function setupInfiniteScroll() {
+  if (_infiniteScrollObserver) {
+    _infiniteScrollObserver.disconnect();
+    _infiniteScrollObserver = null;
+  }
+  if (window.innerWidth > 768) return;
+  const sentinel = document.getElementById('cardScrollSentinel');
+  if (!sentinel) return;
+  _infiniteScrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      _infiniteScrollObserver.disconnect();
+      _infiniteScrollObserver = null;
+      showMoreCards();
+    }
+  }, { rootMargin: '200px' });
+  _infiniteScrollObserver.observe(sentinel);
 }
 
 function renderList(data) {
@@ -3511,8 +3547,7 @@ function renderList(data) {
             <strong style="cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
           </div>
         </td>
-        <td><span style="color:var(--text-main); font-weight: 500;">${escapeHtml(i.type || 'Production')}</span></td>
-        <td><span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; color:var(--accent); font-weight: 600;">${escapeHtml(i.category)}</span></td>
+        <td title="${escapeHtml(i.category || '')}"><i data-lucide="${_categoryIconMap[i.category] || 'tag'}" style="width:18px;height:18px;color:var(--accent);display:block;"></i></td>
         <td>${attributesHtml}</td>
         <td><div class="stepper"><button onclick="updateQty('${i.id}', -1)">-</button><span>${i.qty}</span><button onclick="updateQty('${i.id}', 1)">+</button></div></td>
         <td>
@@ -3525,6 +3560,7 @@ function renderList(data) {
   
   // Render pagination controls
   renderPagination(totalPages, data.length);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
@@ -3930,6 +3966,11 @@ function stripUrlParams(url) {
   }
 }
 
+function selectIngCategory(value) {
+  document.getElementById('ing_category').value = value;
+  document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.value === value));
+}
+
 async function saveIngredient(event) {
   if (event) event.preventDefault();
   
@@ -4019,7 +4060,6 @@ async function saveIngredient(event) {
     unit: document.getElementById('ing_unit').value,
     cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
     category: document.getElementById('ing_category').value,
-    type: document.getElementById('ing_type').value,
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
     sku: document.getElementById('ing_sku').value || '',
@@ -4154,7 +4194,7 @@ function sortTable(column) {
     sortBy = column;
     sortOrder = 'asc';
   }
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 

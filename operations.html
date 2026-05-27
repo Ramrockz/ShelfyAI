@@ -44,6 +44,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -169,7 +170,12 @@
     opacity: 1;
     pointer-events: auto;
   }
-  .modal-content { 
+  .ops-cat-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .ops-cat-chip { display: flex; align-items: center; justify-content: center; padding: 10px; background: var(--bg-main); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; flex: 1 1 44px; max-width: 54px; color: var(--text-muted); }
+  .ops-cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
+  .ops-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+
+  .modal-content {
     background: var(--bg-inner) !important;
     border: 1px solid var(--border); 
     border-radius: 20px; 
@@ -253,7 +259,6 @@
   .method-card:hover {
     border-color: var(--accent);
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2);
   }
 
   .method-card img {
@@ -776,20 +781,6 @@
   .notification-item:hover {
     background: var(--bg-inner);
   }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
-  }
   .notification-message {
     font-size: 14px;
     color: var(--text-main);
@@ -975,8 +966,7 @@
   #mobileStockAlerts { margin-bottom: 24px; }
   .stock-alert-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 8px; }
   .stock-alert-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; text-decoration: none; min-height: 44px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
-  .stock-alert-row:active { opacity: 0.7; transform: scale(0.98); }
-  @media (hover: hover) {
+  @media (hover: hover) and (pointer: fine) {
     .stock-alert-row:hover { transform: translateX(4px); box-shadow: -3px 0 0 0 var(--accent), 0 4px 16px rgba(0,0,0,0.12); border-color: var(--accent); background: var(--bg-inner); }
     .stock-alert-row:hover .stock-alert-name { color: var(--accent); }
     .stock-alert-row:hover .stock-alert-chevron { transform: translateX(2px); opacity: 1; }
@@ -990,7 +980,7 @@
   /* ---------- PENDING DELIVERIES ---------- */
   .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
   .delivery-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(6,182,212,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
-  .delivery-info { flex: 1; min-width: 0; cursor: pointer; }
+  .delivery-info { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
   .delivery-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
   .delivery-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .delivery-qty-badge { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
@@ -1001,17 +991,18 @@
   .delivery-source-link:hover { opacity: 1; text-decoration: underline; }
   .delivery-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .delivery-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s, transform 0.1s; }
-  .delivery-btn:hover { opacity: 0.85; transform: scale(1.08); }
-  .delivery-btn:active { transform: scale(0.94); }
+  @media (hover: hover) and (pointer: fine) {
+    .delivery-btn:hover { opacity: 0.85; transform: scale(1.08); }
+    .delivery-btn:active { transform: scale(0.94); }
+  }
   .delivery-btn.confirm { background: rgba(16,185,129,0.15); color: var(--success); }
   .delivery-btn.cancel { background: rgba(239,68,68,0.12); color: var(--danger); }
   .delivery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; gap: 10px; color: var(--text-muted); font-size: 14px; }
   .delivery-empty svg { opacity: 0.35; }
-  @media (hover: hover) {
+  @media (hover: hover) and (pointer: fine) {
     .delivery-row:hover { border-color: var(--accent); background: var(--bg-inner); }
     .delivery-row:hover .delivery-name { color: var(--accent); }
   }
-  .delivery-row:active { opacity: 0.7; transition: opacity 0.05s; }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -1065,6 +1056,12 @@
       border-left: none;
       border-right: none;
     }
+
+    /* Delivery rows: wrap buttons onto their own line so they're always reachable */
+    .delivery-row { flex-wrap: wrap; align-items: flex-start; }
+    .delivery-icon { margin-top: 3px; }
+    .delivery-info { flex: 1; }
+    .delivery-actions { flex: 0 0 100%; display: flex; justify-content: flex-end; padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--border); }
 
     /* Hide CSV import on mobile */
     #csv-method-card {
@@ -1876,7 +1873,6 @@
           Low on Stock
         </div>
       </div>
-
     </div>
   </section>
 
@@ -2021,7 +2017,6 @@ function resolveConfirm(result) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
-      // Fetch all ingredients with history
       const { data: ingredients, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at')
@@ -2032,37 +2027,18 @@ function resolveConfirm(result) {
       console.log('Total ingredients:', ingredients?.length || 0);
       window._dashIngredients = ingredients || [];
 
-      let outOfStockCount = 0;
-      let lowStockCount = 0;
-
-      ingredients.forEach(ing => {
-        const qty = parseFloat(ing.quantity) || 0;
-        const minStock = parseFloat(ing.min_stock) || 0;
-
-        // Out of stock
-        if (qty === 0) {
-          outOfStockCount++;
-        }
-        // Low on stock (but not out of stock)
-        else if (minStock > 0 && qty < minStock) {
-          lowStockCount++;
-        }
+      const outItems = ingredients.filter(i => (parseFloat(i.quantity) || 0) === 0);
+      const lowItems = ingredients.filter(i => {
+        const qty = parseFloat(i.quantity) || 0;
+        const min = parseFloat(i.min_stock) || 0;
+        return qty > 0 && min > 0 && qty < min;
       });
 
-      // Update counts in UI
-      document.getElementById('outOfStockCount').textContent = outOfStockCount;
-      document.getElementById('lowStockCount').textContent = lowStockCount;
+      document.getElementById('outOfStockCount').textContent = outItems.length;
+      document.getElementById('lowStockCount').textContent = lowItems.length;
 
-      // Populate mobile stock alerts list
       const alertsEl = document.getElementById('mobileStockAlerts');
       if (alertsEl) {
-        const outItems = ingredients.filter(i => parseFloat(i.quantity) === 0);
-        const lowItems = ingredients.filter(i => {
-          const qty = parseFloat(i.quantity) || 0;
-          const min = parseFloat(i.min_stock) || 0;
-          return qty > 0 && min > 0 && qty < min;
-        });
-
         if (outItems.length === 0 && lowItems.length === 0) {
           alertsEl.innerHTML = '';
         } else {
@@ -2074,14 +2050,16 @@ function resolveConfirm(result) {
               <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
               <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
             </div>`;
-          let html = '';
-          if (outItems.length) {
-            html += `<p class="stock-alert-section-title">Out of Stock</p>`;
-            html += outItems.map(i => row(i, 'var(--danger)')).join('');
-          }
-          if (lowItems.length) {
-            html += `<p class="stock-alert-section-title" style="margin-top:${outItems.length ? '16px' : '0'}">Low on Stock</p>`;
-            html += lowItems.map(i => row(i, 'var(--warning)')).join('');
+          const allItems = [...outItems.map(i => [i, 'var(--danger)']), ...lowItems.map(i => [i, 'var(--warning)'])];
+          const isMobile = window.innerWidth <= 768;
+          const PAGE = 10;
+          const visible = isMobile ? allItems : allItems.slice(0, PAGE);
+          const remaining = isMobile ? 0 : allItems.length - PAGE;
+          let html = `<p class="stock-alert-section-title">Needs Restocking</p>`;
+          html += `<div id="stockAlertRows">${visible.map(([i, c]) => row(i, c)).join('')}</div>`;
+          if (remaining > 0) {
+            html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">Show ${remaining} more</button>`;
+            window._stockAlertAll = allItems;
           }
           alertsEl.innerHTML = html;
         }
@@ -2092,6 +2070,24 @@ function resolveConfirm(result) {
       document.getElementById('outOfStockCount').textContent = '0';
       document.getElementById('lowStockCount').textContent = '0';
     }
+  }
+
+  function showMoreStockAlerts() {
+    const all = window._stockAlertAll;
+    if (!all) return;
+    const alertsEl = document.getElementById('mobileStockAlerts');
+    const row = (ing, color) => `
+      <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
+        <span class="stock-alert-dot" style="background:${color};"></span>
+        <span class="stock-alert-name">${ing.name}</span>
+        ${ing.reorder_pending ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>` : ''}
+        <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
+        <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`;
+    document.getElementById('stockAlertRows').innerHTML = all.map(([i, c]) => row(i, c)).join('');
+    const btn = document.getElementById('stockAlertShowMore');
+    if (btn) btn.remove();
+    window._stockAlertAll = null;
   }
 
   // Navigate to ingredients page with filter
@@ -2133,21 +2129,10 @@ function resolveConfirm(result) {
       }
 
       container.innerHTML = pendingOrders.map(item => {
-        const hasSource = item.source_url && item.source_url.trim() !== '';
-
-        // Build ETA label — only show if we can compute it
-        let etaLabel = '';
-        let etaBadgeClass = 'low';
         const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-        if (orderBase && item.estimated_delivery) {
-          const eta = new Date(orderBase + 'T00:00:00');
-          eta.setDate(eta.getDate() + item.estimated_delivery);
-          const today = new Date(); today.setHours(0, 0, 0, 0);
-          const daysLeft = Math.round((eta - today) / 86400000);
-          etaLabel = 'ETA ' + eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          if (daysLeft < 0) { etaLabel += ' (overdue)'; etaBadgeClass = 'out'; }
-          else if (daysLeft <= 2) etaBadgeClass = 'out';
-        }
+        const dateLabel = orderBase
+          ? new Date(orderBase + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '';
 
         return `
           <div class="delivery-row">
@@ -2156,16 +2141,13 @@ function resolveConfirm(result) {
             </div>
             <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
               <div class="delivery-name">${escapeHtml(item.name)}</div>
-              <div class="delivery-meta">
-                ${etaLabel ? `<span class="delivery-qty-badge ${etaBadgeClass}">${etaLabel}</span>` : ''}
-                ${hasSource ? `<a class="delivery-source-link" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Supplier <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
-              </div>
+              ${dateLabel ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${dateLabel}</div>` : ''}
             </div>
             <div class="delivery-actions">
-              <button class="delivery-btn confirm" onclick="event.stopPropagation(); openOpsDeliveryModal('${item.id}', '${escapeHtml(item.name)}', '${escapeHtml(item.unit || 'units')}', ${item.quantity || 0})" title="Confirm delivery">
+              <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')" title="Received (no receipt)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
-              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}', '${escapeHtml(item.name)}')" title="Cancel reorder">
+              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')" title="Cancel reorder">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -2179,63 +2161,29 @@ function resolveConfirm(result) {
     }
   }
 
-  let _opsDelivery = {};
-
-  function openOpsDeliveryModal(id, name, unit, currentQty) {
-    _opsDelivery = { id, name, unit, currentQty };
-    document.getElementById('opsDeliveryTitle').textContent = `Delivery: ${name}`;
-    document.getElementById('opsDeliveryUnitLabel').textContent = unit;
-    document.getElementById('opsDeliveryQty').value = '';
-    document.getElementById('opsDeliveryModal').classList.add('active');
-  }
-
-  function closeOpsDeliveryModal() {
-    document.getElementById('opsDeliveryModal').classList.remove('active');
-  }
-
-  async function confirmOpsDelivery() {
-    const qty = parseFloat(document.getElementById('opsDeliveryQty').value);
-    if (isNaN(qty) || qty < 0) {
-      showAlert('Please enter the quantity received');
-      return;
-    }
-    closeOpsDeliveryModal();
-
+  async function confirmOpsDelivery(ingredientId) {
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
-      const newQty = _opsDelivery.currentQty + qty;
-
       const { error } = await supabaseClient
         .from('ingredients')
-        .update({ reorder_pending: false, quantity: newQty })
-        .eq('id', _opsDelivery.id)
+        .update({ reorder_pending: false })
+        .eq('id', ingredientId)
         .eq('profile_id', user.id);
 
       if (error) throw error;
 
-      if (qty > 0) {
-        await supabaseClient.from('ingredient_history').insert([{
-          ingredient_id: _opsDelivery.id,
-          profile_id: user.id,
-          field_name: 'quantity',
-          old_value: String(_opsDelivery.currentQty),
-          new_value: String(newQty),
-          reason: 'restock',
-          reference_text: 'Delivery received'
-        }]);
-      }
-
       loadInboundStatus();
+
+      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'Skip', 'Upload Receipt');
+      if (upload) window.location.href = '/expenses';
     } catch (error) {
       console.error('Error confirming delivery:', error);
-      showAlert('Failed to confirm delivery');
     }
   }
 
-  async function cancelDelivery(ingredientId, ingredientName) {
-    if (!await showConfirm(`Cancel delivery for ${ingredientName}?`)) return;
+  async function cancelDelivery(ingredientId) {
     
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
@@ -2441,7 +2389,7 @@ async function openManualEntryModal() {
       // Update categories
       const uniqueCategories = [...new Set(ingredients.map(i => i.category).filter(c => c))];
       const datalist = document.getElementById('categoryList');
-      datalist.innerHTML = uniqueCategories.map(cat => `<option value="${cat}">`).join('');
+      if (datalist) datalist.innerHTML = uniqueCategories.map(cat => `<option value="${cat}">`).join('');
       
       // Update unit dropdown based on usage frequency
       const unitCounts = {};
@@ -2505,6 +2453,11 @@ function stripUrlParams(url) {
     // If URL is invalid, just return it as-is and let validation handle it
     return url;
   }
+}
+
+function selectIngCategory(value) {
+  document.getElementById('ing_category').value = value;
+  document.querySelectorAll('.ops-cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.value === value));
 }
 
 async function saveIngredient(event) {
@@ -2581,7 +2534,6 @@ async function saveIngredient(event) {
     unit: document.getElementById('ing_unit').value,
     cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
     category: document.getElementById('ing_category').value,
-    type: document.getElementById('ing_type').value,
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
     sku: document.getElementById('ing_sku').value || '',
@@ -2978,21 +2930,33 @@ function showImportStatus(message, type) {
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="ing_type">Type *</label>
-          <select id="ing_type" required>
-            <option value="">Select type</option>
-            <option value="Production">Production</option>
-            <option value="Shipping">Shipping</option>
-            <option value="Freebies">Freebies</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="ing_category">Category</label>
-          <input type="text" id="ing_category" list="categoryList" placeholder="Type or select category">
-          <datalist id="categoryList"></datalist>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="hidden" id="ing_category">
+        <div class="ops-cat-grid">
+          <button type="button" class="ops-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Wood"             onclick="selectIngCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Boxes"            onclick="selectIngCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Cards"            onclick="selectIngCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Plants"           onclick="selectIngCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Candy"            onclick="selectIngCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Beverage"         onclick="selectIngCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Jewelry"          onclick="selectIngCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Party Supplies"   onclick="selectIngCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Gaming"           onclick="selectIngCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Toys"             onclick="selectIngCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Office Supplies"  onclick="selectIngCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Colors"           onclick="selectIngCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Rope"             onclick="selectIngCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Paper"            onclick="selectIngCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Spool"            onclick="selectIngCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Letter"           onclick="selectIngCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Giveaway"         onclick="selectIngCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Electronics"      onclick="selectIngCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Printing Supplies" onclick="selectIngCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Tools"            onclick="selectIngCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Packaging"        onclick="selectIngCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
+          <button type="button" class="ops-cat-chip" data-value="Food"             onclick="selectIngCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
         </div>
       </div>
 
@@ -6126,24 +6090,6 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-<!-- Delivery Quantity Modal -->
-<div class="modal-overlay modal-sheet" id="opsDeliveryModal" onclick="if(event.target===this) closeOpsDeliveryModal()">
-  <div class="modal-content" style="max-width:420px; position:relative;">
-    <button onclick="closeOpsDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">×</button>
-    <h3 id="opsDeliveryTitle" style="margin:0 0 8px 0;">Confirm Delivery</h3>
-    <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">How many <strong id="opsDeliveryUnitLabel">units</strong> did you receive?</p>
-    <div style="margin-bottom:20px;">
-      <label style="display:block; font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:8px;">Quantity Received</label>
-      <input type="number" id="opsDeliveryQty" min="0" step="1" placeholder="0"
-        style="width:100%; padding:12px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:14px; box-sizing:border-box;">
-    </div>
-    <div style="display:flex; gap:12px;">
-      <button onclick="closeOpsDeliveryModal()" style="flex:1; background:var(--bg-panel); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
-      <button onclick="confirmOpsDelivery()" style="flex:1; background:var(--accent); color:#fff; border:none; padding:12px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">Confirm Delivery</button>
-    </div>
-  </div>
-</div>
-
 <!-- Custom Confirm Modal -->
 <div class="modal-overlay modal-sheet" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
   <div class="modal-content-custom">
@@ -6474,6 +6420,7 @@ async function handleSwitchSignUp(e) {
     </div>
   </div>
 </footer>
+<script>lucide.createIcons();</script>
 
 </body>
 </html>
