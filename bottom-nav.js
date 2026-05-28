@@ -79,7 +79,6 @@
         -webkit-user-select: none;
         user-select: none;
         -webkit-overflow-scrolling: touch;
-        padding-top: env(safe-area-inset-top, 0px);
       }
       input, textarea, select, [contenteditable] {
         -webkit-user-select: text !important;
@@ -88,9 +87,6 @@
       button:active, .btn:active, .view-btn:active, .card-small:active {
         opacity: 0.6;
         transition: opacity 0.05s;
-      }
-      .navbar {
-        padding-top: env(safe-area-inset-top, 0px) !important;
       }
       #bottom-nav {
         display: flex;
@@ -134,9 +130,8 @@
         display: none !important;
       }
       .navbar {
-        padding: 0 16px !important;
-        height: 52px !important;
-        min-height: 52px !important;
+        padding: env(safe-area-inset-top, 0px) 16px 0 !important;
+        min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
       }
       .navbar .nav-links,
       .navbar .hamburger,

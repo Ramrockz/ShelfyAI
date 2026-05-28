@@ -2,6 +2,7 @@
 // Shared notification functionality across all pages
 
 let notificationsCache = [];
+let notificationReorderMap = {}; // ingredient_id -> reorder_pending
 let notificationCheckInterval = null;
 
 // Initialize notifications on page load
@@ -13,7 +14,7 @@ async function initializeNotifications() {
       bellElement.style.display = 'flex';
     }
     await loadNotifications();
-    
+
     // Check for new notifications every 30 seconds
     notificationCheckInterval = setInterval(loadNotifications, 30000);
   }
@@ -24,17 +25,31 @@ async function loadNotifications() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
-    
+
     const { data: notifications, error } = await supabaseClient
       .from('notifications')
       .select('*')
       .eq('profile_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
-    
+
     if (error) throw error;
-    
+
     notificationsCache = notifications || [];
+
+    // Fetch reorder_pending status for all ingredient IDs in notifications
+    const ingIds = [...new Set(notificationsCache.map(n => n.ingredient_id).filter(Boolean))];
+    if (ingIds.length > 0) {
+      const { data: ingredients } = await supabaseClient
+        .from('ingredients')
+        .select('id, reorder_pending')
+        .in('id', ingIds);
+      notificationReorderMap = {};
+      (ingredients || []).forEach(ing => { notificationReorderMap[ing.id] = ing.reorder_pending; });
+    } else {
+      notificationReorderMap = {};
+    }
+
     renderNotifications();
     updateNotificationBadge();
   } catch (error) {
@@ -46,7 +61,7 @@ async function loadNotifications() {
 function renderNotifications() {
   const listContainer = document.getElementById('notificationList');
   if (!listContainer) return;
-  
+
   if (notificationsCache.length === 0) {
     listContainer.innerHTML = `
       <div class="notification-empty">
@@ -58,24 +73,28 @@ function renderNotifications() {
     `;
     return;
   }
-  
-  listContainer.innerHTML = notificationsCache.map(notification => `
+
+  listContainer.innerHTML = notificationsCache.map(notification => {
+    const isPending = notification.ingredient_id && notificationReorderMap[notification.ingredient_id];
+    const truckBtn = notification.ingredient_id ? `
+      <button class="notif-reorder-btn${isPending ? ' notif-reorder-pending' : ''}" title="${isPending ? 'Confirm Delivery' : 'Reorder'}" onclick="${isPending ? `openIngredient('${notification.ingredient_id}')` : `markAsReordered('${notification.ingredient_id}', '${notification.id}')`}; event.stopPropagation();">
+        <span class="truck-anim-icon${isPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
+      </button>
+    ` : '';
+    return `
     <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
          data-notification-id="${notification.id}"
          onmouseenter="markAsRead('${notification.id}')">
       <div class="notification-message">${notification.message}</div>
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">
-        ${notification.ingredient_id ? `
-          <button class="notif-reorder-btn" title="Reorder" onclick="markAsReordered('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </button>
-          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
-        ` : ''}
+        ${truckBtn}
+        ${notification.ingredient_id ? `<span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>` : ''}
         <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
