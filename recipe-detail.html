@@ -1943,7 +1943,7 @@ async function rdmConfirmDelivery() {
     if (error) throw error;
     if (ingredientStockMap[id]) ingredientStockMap[id].reorder_pending = false;
     currentReorderIngredient = null;
-    renderMobileOverlay();
+    if (window.innerWidth > 768) { renderRecipe(); } else { renderMobileOverlay(); }
     const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt');
     if (upload) window.location.href = `ingredient-detail.html?id=${id}&openExpense=true`;
   } catch (err) {
@@ -1954,52 +1954,53 @@ async function rdmConfirmDelivery() {
 async function rdmCancelDelivery() {
   if (!currentReorderIngredient) return;
   closeRdmDeliveryModal();
+  const id = currentReorderIngredient.id;
   try {
     const { error } = await window.supabaseClient
       .from('ingredients')
       .update({ reorder_pending: false })
-      .eq('id', currentReorderIngredient.id);
+      .eq('id', id);
     if (error) throw error;
-    const id = currentReorderIngredient.id;
     if (ingredientStockMap[id]) ingredientStockMap[id].reorder_pending = false;
     currentReorderIngredient = null;
-    renderMobileOverlay();
+    if (window.innerWidth > 768) { renderRecipe(); } else { renderMobileOverlay(); }
   } catch (err) {
     showAlert('Failed to cancel delivery: ' + err.message);
   }
 }
 
-function openReorderModal() {
+async function openReorderModal() {
   if (!currentReorderIngredient) return;
-  
+
+  if (!currentReorderIngredient.source_url || !currentReorderIngredient.source_url.trim()) {
+    const goTo = await showConfirm('This ingredient has no source URL. Go to its settings to add one?', 'Source URL Missing');
+    if (goTo) window.location.href = `ingredient-detail.html?id=${currentReorderIngredient.id}`;
+    currentReorderIngredient = null;
+    return;
+  }
+
   const modal = document.getElementById('reorderModal');
   const link = document.getElementById('sourceUrlLink');
   const display = document.getElementById('sourceUrlDisplay');
   const ingredientName = document.getElementById('reorderIngredientName');
-  
+
   ingredientName.textContent = currentReorderIngredient.name;
-  
-  if (currentReorderIngredient.source_url) {
-    link.textContent = currentReorderIngredient.source_url;
-    display.dataset.url = currentReorderIngredient.source_url;
-    display.style.display = 'flex';
-  } else {
-    display.style.display = 'none';
-  }
-  
+  link.textContent = currentReorderIngredient.source_url;
+  display.dataset.url = currentReorderIngredient.source_url;
+  display.style.display = 'flex';
+
   modal.classList.add('active');
-  
-  if (currentReorderIngredient.source_url) {
-    loadReorderIngredients(currentReorderIngredient.source_url);
-  } else {
-    document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No source URL available</p>';
-  }
+  loadReorderIngredients(currentReorderIngredient.source_url);
 }
 
 function closeReorderModal() {
   document.getElementById('reorderModal').classList.remove('active');
   currentReorderIngredient = null;
-  renderMobileOverlay();
+  if (window.innerWidth > 768) {
+    renderRecipe();
+  } else {
+    renderMobileOverlay();
+  }
 }
 
 async function loadReorderIngredients(sourceUrl) {
