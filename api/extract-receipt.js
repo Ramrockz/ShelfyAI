@@ -114,22 +114,22 @@ module.exports = async (req, res) => {
 
     const { data: usageRecords } = await supabase
       .from('ai_usage_tracking')
-      .select('order_count, expense_count')
+      .select('ingredient_count, order_count, expense_count')
       .eq('user_id', user.id)
       .gte('date', `${yearMonth}-01`)
       .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const totalScansUsed = usageRecords?.reduce((sum, record) =>
-      sum + (record.order_count || 0) + (record.expense_count || 0), 0) || 0;
+    const totalScansUsed = usageRecords?.reduce((sum, r) =>
+      sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0) || 0;
 
     const usageType = context === 'order' ? 'order' : context === 'expense' ? 'expense' : 'ingredient';
 
     console.log(`Usage check - Tier: ${tier}, Type: ${usageType}, Scans used: ${totalScansUsed}/${effectiveLimit} (plan: ${scanLimit}, bonus: ${bonusScans})`);
 
-    if (usageType !== 'ingredient' && totalScansUsed >= effectiveLimit) {
+    if (totalScansUsed >= effectiveLimit) {
       return res.status(429).json({
         error: 'Monthly limit reached',
-        message: `You've reached your AI scan limit of ${effectiveLimit} (orders & expenses). ${bonusScans > 0 ? 'Purchase another Scan Pack to continue.' : 'Upgrade your plan or buy a Scan Pack to continue.'}`,
+        message: `You've reached your AI scan limit of ${effectiveLimit}. ${bonusScans > 0 ? 'Purchase another Scan Pack to continue.' : 'Upgrade your plan or buy a Scan Pack to continue.'}`,
         limit: effectiveLimit,
         used: totalScansUsed,
         tier
@@ -274,15 +274,17 @@ module.exports = async (req, res) => {
       console.log('Item:', JSON.stringify(extractedData.item, null, 2));
       console.log('Attributes:', JSON.stringify(extractedData.attributes, null, 2));
       
+      const ingItem = extractedData.item || {};
+      if (!ingItem.SKU && ingItem.name) ingItem.SKU = ingItem.name;
       result = {
         success: true,
         data: {
           vendor: extractedData.vendor || null,
-          item: extractedData.item || {},
+          item: ingItem,
           attributes: extractedData.attributes || {},
           amount: extractedData.amount || null,
           date: extractedData.date || null,
-          description: extractedData.item?.name || null
+          description: ingItem.name || null
         }
       };
     }

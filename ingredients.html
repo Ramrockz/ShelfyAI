@@ -273,12 +273,12 @@
     animation: shake-field 0.45s;
   }
 
-  .modal-content { 
+  .modal-content {
     background: var(--bg-inner) !important;
-    border: 1px solid var(--border); 
-    border-radius: 20px; 
-    padding: 32px; 
-    width: 90%; 
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
     max-width: 600px !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     max-height: 90vh;
@@ -488,35 +488,6 @@
     color: var(--text-muted);
     margin-bottom: 12px;
   }
-  .notification-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .notification-actions button {
-    padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-main);
-    color: var(--text-main);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 600;
-  }
-  .notification-actions button:hover {
-    background: var(--bg-panel);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .notification-actions button.delete-btn {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .notification-actions button.delete-btn:hover {
-    background: var(--danger);
-    color: white;
-  }
   .notification-empty {
     padding: 40px 20px;
     text-align: center;
@@ -531,131 +502,10 @@
 
   /* Loader Animation */
   .loader-container {
-    width: 200px;
-    height: 200px;
-    background: var(--bg-panel);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 20px auto;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .loader {
-    position: relative;
-    width: 75px;
-    height: 100px;
-    margin-top: -10px;
-  }
-  .loader__bar {
-    position: absolute;
-    bottom: 0;
-    width: 10px;
-    height: 50%;
-    background: #06b6d4;
-    transform-origin: center bottom;
-  }
-  [data-theme="dark"] .loader__bar {
-    background: #fff;
-  }
-  .loader__bar:nth-child(1) {
-    left: 0px;
-    transform: scale(1, 0.2);
-    -webkit-animation: barUp1 4s infinite;
-    animation: barUp1 4s infinite;
-  }
-  .loader__bar:nth-child(2) {
-    left: 15px;
-    transform: scale(1, 0.4);
-    animation: barUp2 4s infinite;
-  }
-  .loader__bar:nth-child(3) {
-    left: 30px;
-    transform: scale(1, 0.6);
-    animation: barUp3 4s infinite;
-  }
-  .loader__bar:nth-child(4) {
-    left: 45px;
-    transform: scale(1, 0.8);
-    animation: barUp4 4s infinite;
-  }
-  .loader__bar:nth-child(5) {
-    left: 60px;
-    transform: scale(1, 1);
-    animation: barUp5 4s infinite;
-  }
-  .loader__ball {
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    width: 10px;
-    height: 10px;
-    background: #06b6d4;
-    border-radius: 50%;
-    animation: ball 4s infinite;
-  }
-  [data-theme="dark"] .loader__ball {
-    background: #fff;
-  }
-
-  @keyframes ball {
-    0% { transform: translate(0, 0); }
-    5% { transform: translate(8px, -14px); }
-    10% { transform: translate(15px, -10px); }
-    17% { transform: translate(23px, -24px); }
-    20% { transform: translate(30px, -20px); }
-    27% { transform: translate(38px, -34px); }
-    30% { transform: translate(45px, -30px); }
-    37% { transform: translate(53px, -44px); }
-    40% { transform: translate(60px, -40px); }
-    50% { transform: translate(60px, 0); }
-    57% { transform: translate(53px, -14px); }
-    60% { transform: translate(45px, -10px); }
-    67% { transform: translate(37px, -24px); }
-    70% { transform: translate(30px, -20px); }
-    77% { transform: translate(22px, -34px); }
-    80% { transform: translate(15px, -30px); }
-    87% { transform: translate(7px, -44px); }
-    90% { transform: translate(0, -40px); }
-    100% { transform: translate(0, 0); }
-  }
-
-  @keyframes barUp1 {
-    0% { transform: scale(1, 0.2); }
-    40% { transform: scale(1, 0.2); }
-    50% { transform: scale(1, 1); }
-    90% { transform: scale(1, 1); }
-    100% { transform: scale(1, 0.2); }
-  }
-
-  @keyframes barUp2 {
-    0% { transform: scale(1, 0.4); }
-    40% { transform: scale(1, 0.4); }
-    50% { transform: scale(1, 0.8); }
-    90% { transform: scale(1, 0.8); }
-    100% { transform: scale(1, 0.4); }
-  }
-
-  @keyframes barUp3 {
-    0% { transform: scale(1, 0.6); }
-    100% { transform: scale(1, 0.6); }
-  }
-
-  @keyframes barUp4 {
-    0% { transform: scale(1, 0.8); }
-    40% { transform: scale(1, 0.8); }
-    50% { transform: scale(1, 0.4); }
-    90% { transform: scale(1, 0.4); }
-    100% { transform: scale(1, 0.8); }
-  }
-
-  @keyframes barUp5 {
-    0% { transform: scale(1, 1); }
-    40% { transform: scale(1, 1); }
-    50% { transform: scale(1, 0.2); }
-    90% { transform: scale(1, 0.2); }
-    100% { transform: scale(1, 1); }
+    padding: 40px 0;
   }
 
   /* Floating Action Button (hidden by default, shown on mobile) */
@@ -1002,12 +852,13 @@
   }
   .btn-restock:hover { opacity: 0.9; }
 </style>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1204,7 +1055,7 @@
           <tr>
             <th style="width: 50px;">#</th>
             <th class="sortable" onclick="sortTable('name')" style="width: 35%;">Name</th>
-            <th class="sortable" onclick="sortTable('category')" style="width: 8%;">Cat.</th>
+            <th class="sortable" onclick="sortTable('category')" style="width: 8%;">Category</th>
             <th style="width: 22%;">Attributes</th>
             <th class="sortable" onclick="sortTable('qty')" style="width: 10%;">Quantity</th>
             <th style="width: 15%;">Action</th>
@@ -1456,19 +1307,19 @@
 </div>
 
 <div class="modal-overlay" id="urlModal" onclick="if(event.target === this) closeURLModal()">
-  <div class="modal-content" style="max-width: 500px;">
+  <div class="modal-content" id="urlModalContent" style="max-width: 500px;">
     <h3 style="margin: 0 0 20px 0;">Import from URL</h3>
-    
+
     <div class="form-group">
       <label for="urlInput">Product URL</label>
       <input type="url" id="urlInput" placeholder="https://supplier.com/product" style="width: 100%;">
     </div>
-    
+
     <div id="importStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    
+
     <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeURLModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex: 1;" id="processUrlBtn" onclick="handleURLImport()">Process</button>
+      <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeURLModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" style="flex: 1;" id="processUrlBtn" onclick="handleURLImport()">Process</button>
     </div>
   </div>
 </div>
@@ -1602,7 +1453,8 @@ async function loadIngredients() {
       min_stock: item.min_stock || 0,
       reorder_point: item.reorder_point || 10,
       max_stock: item.max_stock || null,
-      source_url: item.source_url || ''
+      source_url: item.source_url || '',
+      reorder_pending: item.reorder_pending || false
     }));
     
     // Check URL for view parameter, otherwise use saved or default view
@@ -1692,26 +1544,23 @@ async function checkAIUsage() {
       .single();
 
     const tier = settings?.tier || 'free';
-    const limits = {
-      free: { ingredients: 25 },
-      starter: { ingredients: 50 },
-      pro: { ingredients: 100 }
-    };
+    const scanLimits = { free: 20, starter: 100, pro: 300 };
+    const limit = scanLimits[tier] ?? 20;
 
-    // Get current month's usage
+    // Get current month's usage (unified pool: ingredients + orders + expenses)
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    
+
     const { data: usageRecords } = await window.supabaseClient
       .from('ai_usage_tracking')
-      .select('ingredient_count')
+      .select('ingredient_count, order_count, expense_count')
       .eq('user_id', session.user.id)
       .gte('date', `${yearMonth}-01`)
       .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const used = usageRecords ? usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) : 0;
-    const limit = limits[tier].ingredients;
+    const used = usageRecords ? usageRecords.reduce((sum, r) =>
+      sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0) : 0;
 
     aiUsageStatus = {
       used,
@@ -1778,6 +1627,13 @@ function selectMethod(method) {
   } else if (method === 'image') {
     document.getElementById('imageModal').classList.add('active');
   } else if (method === 'url') {
+    hideGlobalLoader();
+    document.getElementById('urlModalContent').style.display = '';
+    const processBtn = document.getElementById('processUrlBtn');
+    if (processBtn) { processBtn.disabled = false; processBtn.textContent = 'Process'; }
+    const urlStatus = document.getElementById('importStatus');
+    if (urlStatus) { urlStatus.style.display = 'none'; urlStatus.innerHTML = ''; }
+    document.getElementById('urlInput').value = '';
     document.getElementById('urlModal').classList.add('active');
   }
 }
@@ -1809,6 +1665,12 @@ function closeImageModal() {
 function closeURLModal() {
   document.getElementById('urlModal').classList.remove('active');
   document.getElementById('urlInput').value = '';
+  hideGlobalLoader();
+  document.getElementById('urlModalContent').style.display = '';
+  const processBtn = document.getElementById('processUrlBtn');
+  if (processBtn) { processBtn.disabled = false; processBtn.textContent = 'Process'; }
+  const statusDiv = document.getElementById('importStatus');
+  if (statusDiv) { statusDiv.style.display = 'none'; statusDiv.innerHTML = ''; }
 }
 
 function handleImageUpload(event) {
@@ -1913,18 +1775,7 @@ function showUploadStatus(message, type) {
   
   // Show loader animation if extracting
   if (message.toLowerCase().includes('extracting')) {
-    statusDiv.innerHTML = `
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__ball"></div>
-        </div>
-      </div>
-    `;
+    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="chameleon-loader.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
     statusDiv.style.background = 'transparent';
     statusDiv.style.border = 'none';
     statusDiv.style.borderRadius = '0';
@@ -1962,49 +1813,12 @@ function showImportStatus(message, type) {
   
   // Show loader animation if extracting
   if (message.toLowerCase().includes('extracting')) {
-    // Hide form elements
-    const urlModal = document.getElementById('urlModal');
-    const modalContent = urlModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
-      formElements.forEach(el => {
-        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
-          el.style.display = 'none';
-        }
-      });
-    }
-    
-    statusDiv.innerHTML = `
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__ball"></div>
-        </div>
-      </div>
-    `;
-    statusDiv.style.background = 'transparent';
-    statusDiv.style.border = 'none';
-    statusDiv.style.borderRadius = '0';
-    statusDiv.style.boxShadow = 'none';
-    statusDiv.style.textAlign = 'center';
-    statusDiv.style.padding = '0';
-    statusDiv.style.marginTop = '0';
+    showGlobalLoader();
+    document.getElementById('urlModalContent').style.display = 'none';
   } else {
-    // Show form elements again
-    const urlModal = document.getElementById('urlModal');
-    const modalContent = urlModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
-      formElements.forEach(el => {
-        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
-          el.style.display = '';
-        }
-      });
-    }
+    // Restore modal content, hide loader
+    hideGlobalLoader();
+    document.getElementById('urlModalContent').style.display = '';
     
     statusDiv.textContent = message;
     statusDiv.style.textAlign = 'left';
@@ -2434,8 +2248,6 @@ async function handleURLImport() {
         `;
         container.appendChild(row);
       }
-      
-      showImportStatus('Data imported successfully!', 'success');
       
       // Check if user just reached their daily limit
       console.log('[URL Import - Ingredients] Checking AI usage after successful extraction');
@@ -3336,7 +3148,7 @@ function renderRecent(data) {
     const starIcon = i.is_favorite ? '★' : '☆';
     const starClass = i.is_favorite ? 'favorited' : '';
     const safeName = escapeHtml(i.name);
-    let qtyColor = 'var(--success)';
+    let qtyColor = 'var(--text-main)';
     if (i.qty === 0) qtyColor = 'var(--danger)';
     else if (i.min_stock && i.qty < i.min_stock) qtyColor = 'var(--warning)';
     let attributesText = '';
@@ -3361,10 +3173,11 @@ function renderRecent(data) {
     }
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
     attributesText = attributesText ? categoryBadge + ' • ' + attributesText : categoryBadge;
+    const truckHtml = i.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" onclick="event.stopPropagation(); openRestockModal('${i.id}')" title="Delivery pending" style="cursor:pointer; color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : '';
     return `<div class="card-small">
         <h4>
           <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
-          <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
         </h4>
         ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
         <div style="display: flex; justify-content: center; margin: 12px 0;">
@@ -3385,9 +3198,13 @@ function renderRecent(data) {
 
   const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
 
-  const favData = data.filter(i => i.is_favorite);
-  const allOtherData = data.filter(i => !i.is_favorite);
-  const otherData = allOtherData.slice(0, cardsToShow);
+  const favData      = data.filter(i => i.is_favorite);
+  const nonFavData   = data.filter(i => !i.is_favorite);
+  const outOfStock   = nonFavData.filter(i => (i.qty ?? i.quantity) === 0);
+  const lowStock     = nonFavData.filter(i => { const q = i.qty ?? i.quantity; return q > 0 && i.min_stock > 0 && q < i.min_stock; });
+  const normalIds    = new Set([...outOfStock, ...lowStock].map(i => i.id));
+  const allOtherData = nonFavData.filter(i => !normalIds.has(i.id));
+  const otherData    = allOtherData.slice(0, cardsToShow);
   const hasMoreCards = allOtherData.length > cardsToShow;
 
   container.innerHTML = '';
@@ -3395,11 +3212,18 @@ function renderRecent(data) {
   if (favData.length > 0) {
     container.innerHTML += sectionLbl('Favorites');
     favData.forEach(i => { container.innerHTML += buildIngCard(i); });
-    if (otherData.length > 0) {
-      container.innerHTML += sectionLbl('All Ingredients');
-      otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
-    }
-  } else {
+  }
+  if (outOfStock.length > 0) {
+    container.innerHTML += sectionLbl('Out of Stock');
+    outOfStock.forEach(i => { container.innerHTML += buildIngCard(i); });
+  }
+  if (lowStock.length > 0) {
+    container.innerHTML += sectionLbl('Low on Stock');
+    lowStock.forEach(i => { container.innerHTML += buildIngCard(i); });
+  }
+  if (otherData.length > 0) {
+    const needsLabel = favData.length > 0 || outOfStock.length > 0 || lowStock.length > 0;
+    if (needsLabel) container.innerHTML += sectionLbl('All Ingredients');
     otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   
@@ -3545,9 +3369,10 @@ function renderList(data) {
           <div style="display: flex; align-items: center; gap: 8px;">
             <span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer; flex-shrink: 0;">${starIcon}</span>
             <strong style="cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
+            ${s.key !== 'in' ? `<span class="stock-pill ${s.key}">${s.label}</span>` : ''}
           </div>
         </td>
-        <td title="${escapeHtml(i.category || '')}"><i data-lucide="${_categoryIconMap[i.category] || 'tag'}" style="width:18px;height:18px;color:var(--accent);display:block;"></i></td>
+        <td title="${escapeHtml(i.category || '')}" style="cursor:pointer;" onclick="addCategoryFilter('${escapeHtml(i.category || '')}')"><i data-lucide="${_categoryIconMap[i.category] || 'tag'}" style="width:18px;height:18px;color:${activeCategoryFilter === i.category ? 'var(--accent)' : 'var(--text-muted)'};display:block;transition:color 0.15s;"></i></td>
         <td>${attributesHtml}</td>
         <td><div class="stepper"><button onclick="updateQty('${i.id}', -1)">-</button><span>${i.qty}</span><button onclick="updateQty('${i.id}', 1)">+</button></div></td>
         <td>
@@ -3955,14 +3780,13 @@ function addAttributeRow() {
 }
 
 // Extract domain from URL for consistent restocking (e.g., https://www.textil-grosshandel.eu)
-function stripUrlParams(url) {
-  if (!url || !url.trim()) return url;
+function extractBaseDomain(url) {
+  if (!url || !url.trim()) return '';
   try {
-    const urlObj = new URL(url);
-    return urlObj.origin;
+    const normalized = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    return new URL(normalized).hostname.replace(/^www\./i, '');
   } catch {
-    // If URL is invalid, just return it as-is and let validation handle it
-    return url;
+    return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split(/[/?#]/)[0];
   }
 }
 
@@ -4063,7 +3887,7 @@ async function saveIngredient(event) {
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
     sku: document.getElementById('ing_sku').value || '',
-    source_url: stripUrlParams(document.getElementById('ing_source_url').value) || '',
+    source_url: document.getElementById('ing_source_url').value || '',
     notes: '',
     custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null
   };
@@ -4632,7 +4456,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
@@ -4753,12 +4577,12 @@ async function handleSwitchSignUp(e) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
-      const strippedUrl = stripUrlParams(sourceUrl);
+      const baseDomain = extractBaseDomain(sourceUrl);
       const { data, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
         .eq('profile_id', user.id)
-        .like('source_url', strippedUrl + '%')
+        .ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentId)
         .order('name')
         .abortSignal(_restockAbortController.signal);
@@ -4853,5 +4677,16 @@ async function handleSwitchSignUp(e) {
   }
 </script>
 
+
+<div id="globalLoader" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
+  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;" loop autoplay></lottie-player>
+</div>
+</div>
+
+<script>
+const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json','cat_loader_4.json','cat_loader_5.json','cat_loader_6.json'];
+function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
+function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
+</script>
 </body>
 </html>

@@ -33,6 +33,7 @@
   document.documentElement.style.visibility = 'hidden';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
@@ -76,10 +77,10 @@
 
   /* Category chips for add-ingredient modal */
   .detail-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .detail-cat-chip { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg-panel); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .detail-cat-chip { display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-panel); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
   .detail-cat-chip:hover { border-color: var(--accent); color: var(--accent); }
   .detail-cat-chip.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
-  .detail-cat-chip svg { width: 14px; height: 14px; }
+  .detail-cat-chip svg { width: 20px; height: 20px; }
 
   /* ---------- GRID ---------- */
   .main-grid {
@@ -158,7 +159,7 @@
   .stat-value { font-size: 24px; font-weight: 800; }
 
   /* ---------- RECIPE BUILDER MODAL ---------- */
-  .recipe-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .recipe-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; }
   .recipe-overlay.active { display: flex; }
   .recipe-builder { background: var(--bg-main); border-radius: 24px; width: 90%; max-width: 1400px; height: 85vh; display: grid; grid-template-columns: 1fr 1.2fr; gap: 0; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
   .recipe-panel { padding: 32px; overflow-y: auto; }
@@ -370,6 +371,9 @@
     opacity: 0.5;
   }
 
+  /* Mobile view overlay — hidden until JS activates it */
+  #mobileViewOverlay { display: none; }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
     .container { padding: 24px 16px; }
@@ -381,7 +385,103 @@
     }
   }
   
+  @media (min-width: 769px) {
+    #recipeStatus { display: none; }
+  }
+
   @media (max-width: 768px) {
+    /* Keep bottom nav above the mobile overlay */
+    #bottom-nav { z-index: 10005 !important; }
+    /* Alert / confirm modals must sit above everything */
+    #alertModal, #confirmModal { z-index: 10006 !important; }
+    #rdmDeliveryModal { z-index: 10006 !important; }
+
+    /* === Full-screen recipe view overlay (ms2-style) === */
+    #mobileViewOverlay {
+      flex-direction: column;
+      position: fixed;
+      inset: 0;
+      background: var(--bg-main);
+      z-index: 10002;
+    }
+    .rdm-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .rdm-fav-btn {
+      background: none; border: none; font-size: 24px; cursor: pointer;
+      color: var(--text-muted); padding: 0; min-width: 60px; text-align: right;
+      line-height: 1; transition: color 0.2s, transform 0.15s;
+    }
+    .rdm-fav-btn:active { transform: scale(1.2); }
+    .rdm-fav-btn.favorited { color: #fbbf24; }
+    .rdm-title {
+      font-size: 17px; font-weight: 700; color: var(--text-main);
+      text-align: center; flex: 1; min-width: 0; margin: 0 8px;
+      background: none; border: none; border-bottom: 2px solid transparent;
+      outline: none; font-family: inherit; padding: 2px 0;
+      transition: border-color 0.2s;
+    }
+    .rdm-title:focus { border-bottom-color: var(--accent); }
+    .rdm-body {
+      flex: 1; overflow-y: auto; padding: 0 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .rdm-qty-row {
+      padding: 20px 0; border-bottom: 1px solid var(--border);
+    }
+    .rdm-qty-top {
+      display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px;
+    }
+    .rdm-qty-name { font-size: 16px; font-weight: 700; color: var(--text-main); flex: 1; }
+    .rdm-qty-unit { font-size: 13px; color: var(--text-muted); }
+    .rdm-qty-controls {
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+    }
+    .rdm-qty-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--accent); color: white; border: none;
+      font-size: 22px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .rdm-qty-val {
+      width: 72px; text-align: center; font-size: 26px; font-weight: 800;
+      background: none; border: none; color: var(--text-main); font-family: inherit;
+      -moz-appearance: textfield; appearance: textfield;
+    }
+    .rdm-qty-val::-webkit-outer-spin-button,
+    .rdm-qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .rdm-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+    .rdm-cost-label {
+      font-size: 12px; text-transform: uppercase; color: var(--text-muted);
+      font-weight: 700; letter-spacing: 0.07em;
+    }
+    .rdm-cost-value {
+      font-size: 18px; font-weight: 800; color: var(--text-main);
+    }
+    .rdm-add-ing-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px; margin: 16px 0;
+      color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer;
+      border: 2px dashed var(--border); border-radius: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .rdm-add-ing-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
+    .rdm-swap-btn {
+      background: var(--bg-inner); border: 1px solid var(--border);
+      border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+    .rdm-swap-btn.reordering {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     /* Hide chat and feedback widgets on mobile */
     #chat-widget,
     #feedback-widget {
@@ -404,31 +504,16 @@
       display: none !important;
     }
 
-    .container { 
+    .container {
       padding: 16px 12px;
-      padding-bottom: 180px;
+      padding-bottom: 24px;
     }
-    
+
     /* Header: stack buttons on mobile */
     .header {
       flex-direction: column;
       align-items: stretch;
       gap: 16px;
-    }
-
-    /* Buttons section - fixed to bottom */
-    .header > div:last-child {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      gap: 8px;
-      padding: 12px;
-      background: var(--bg-main);
-      border-top: 1px solid var(--border);
-      z-index: 1000;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 
     /* Hide Save button on mobile */
@@ -525,22 +610,6 @@
       margin: 0 auto;
     }
 
-    /* Remove and Reorder buttons - smaller icons */
-    .ingredient-card button[onclick*="removeIngredient"],
-    .ingredient-card button[onclick*="reorderIngredient"] {
-      flex: 1;
-      max-width: 60px;
-      padding: 8px !important;
-      height: 32px;
-      font-size: 12px;
-    }
-
-    /* Make reorder icon smaller */
-    .ingredient-card button[onclick*="reorderIngredient"] img {
-      width: 12px !important;
-      height: 12px !important;
-    }
-
     /* Add Ingredient Modal - mobile optimizations */
     #availableIngredientsList > div {
       padding: 12px 16px !important;
@@ -567,23 +636,11 @@
       width: 100% !important;
     }
 
-    /* Hide price and quantity in add ingredient modal */
-    #availableIngredientsList > div > div:last-child {
-      display: none !important;
-    }
-
     /* Ensure Ingredients h3 is visible */
     .panel h3:not(:first-of-type) {
       font-size: 20px;
       margin-top: 0;
       margin-bottom: 16px;
-    }
-
-    /* Add Ingredient card - make prominent on mobile */
-    .ingredient-card[onclick*="openAddIngredientModal"] {
-      padding: 24px;
-      text-align: center;
-      border-width: 2px;
     }
 
     /* Ingredients table - make scrollable */
@@ -615,6 +672,11 @@
     /* Builder overlay */
     .recipe-overlay {
       padding: 16px;
+    }
+
+    /* Modals must appear above the mobile view overlay */
+    #addIngredientModal, #reorderModal {
+      z-index: 10003 !important;
     }
     
     .recipe-builder {
@@ -658,6 +720,24 @@
     .modal-overlay.active .modal-content-custom,
     .modal-overlay.active .reorder-modal-content,
     .modal-overlay.active .production-modal-content {
+      transform: translateY(0) !important;
+    }
+
+    /* Bottom sheet for alert/confirm on mobile */
+    .modal-overlay.modal-sheet {
+      align-items: flex-end !important;
+      padding: 0 !important;
+    }
+    .modal-overlay.modal-sheet .modal-content {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      border-radius: 20px 20px 0 0 !important;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+      transform: translateY(100%) !important;
+      transition: transform 0.3s ease !important;
+    }
+    .modal-overlay.modal-sheet.active .modal-content {
       transform: translateY(0) !important;
     }
     .modal-content::before,
@@ -704,7 +784,7 @@
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -829,7 +909,6 @@
 </script>
 
 <div class="container">
-  <div class="breadcrumb" onclick="window.history.back()">← Back to Recipes</div>
 
   <div class="header">
     <div style="flex: 1;">
@@ -839,6 +918,7 @@
       </div>
     </div>
     <div class="detail-card-actions">
+      <button id="detailFavBtn" onclick="toggleDetailFavorite()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:4px;transition:color 0.2s,transform 0.15s;line-height:1;" title="Toggle favorite">☆</button>
       <span class="detail-dup-link" onclick="duplicateRecipe()">Duplicate</span>
       <span class="detail-del-link" onclick="confirmDelete()">Delete</span>
     </div>
@@ -866,6 +946,7 @@
 let recipeId = null;
 let recipe = null;
 let confirmResolver = null;
+let ingredientStockMap = {};
 
 // Custom modal functions
 function showAlert(message, title = 'Alert') {
@@ -985,33 +1066,35 @@ async function renderRecipe() {
   // Ingredients List
   const components = recipe.components || [];
   let canProduce = true;
+  let hasOutOfStock = false;
+  let hasLowStock = false;
   
   // Fetch ingredient stock info
   const ingredientIds = components.map(c => c.ingredient_id || c.id).filter(Boolean);
-  let ingredientStockMap = {};
-  
+  ingredientStockMap = {};
+
   if (ingredientIds.length > 0) {
     try {
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) {
         console.error('No user found when fetching stock');
       } else {
-        console.log('Fetching stock for ingredient IDs:', ingredientIds);
         const { data: ingredients, error: stockError } = await window.supabaseClient
           .from('ingredients')
-          .select('id, quantity')
+          .select('id, quantity, min_stock, reorder_pending')
           .eq('profile_id', user.id)
           .in('id', ingredientIds);
-        
+
         if (stockError) {
           console.error('Supabase error fetching stock:', stockError);
         }
-        
+
         if (ingredients) {
-          console.log('Fetched ingredient stock data:', ingredients);
           ingredients.forEach(ing => {
             ingredientStockMap[ing.id] = {
-              quantity: ing.quantity || 0
+              quantity: ing.quantity || 0,
+              min_stock: ing.min_stock || 0,
+              reorder_pending: ing.reorder_pending || false
             };
           });
         }
@@ -1059,39 +1142,33 @@ async function renderRecipe() {
     console.log('Ingredient:', comp.ingredient_name || comp.name, 'ID:', ingredientId, 'Stock:', stock, 'Required:', requiredQty);
     
     // Recipe can't be produced if required quantity exceeds available stock
-    if (stock < requiredQty) canProduce = false;
-    
-    let indicatorColor = '';
+    if (stock === 0) { canProduce = false; hasOutOfStock = true; }
+    else if (stock < requiredQty) { canProduce = false; hasLowStock = true; }
 
-    if (stock === 0) {
-      indicatorColor = '#ef4444';
-    } else if (stock < requiredQty) {
-      indicatorColor = '#f59e0b';
-    } else {
-      indicatorColor = '#10b981';
-    }
+    const stockPill = stock === 0 ? '<span class="stock-pill out">Out</span>' : stock < requiredQty ? '<span class="stock-pill low">Low</span>' : '';
+    const isReorderPending = !!(ingredientStockMap[ingredientId]?.reorder_pending);
 
-    const statusIndicator = `<div style="width: 10px; height: 10px; border-radius: 50%; background: ${indicatorColor};"></div>`;
-    
     return `
       <div class="ingredient-card">
-        <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
-          <div style="flex: 1;">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-              <strong style="font-size: 16px; cursor: pointer; color: var(--accent);" onclick="window.location.href='/ingredient-detail?id=${ingredientId}'" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${comp.ingredient_name || comp.name || 'Unknown ingredient'}</strong>
-              ${statusIndicator}
-              <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">$${(comp.cost || 0).toFixed(2)}</span>
-            </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="flex: 1; min-width: 0;">
+            <strong style="font-size: 16px; cursor: pointer; color: var(--text-main); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location.href='/ingredient-detail?id=${ingredientId}'" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${comp.ingredient_name || comp.name || 'Unknown ingredient'} ${stockPill}</strong>
             ${attributes ? `<div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">${attributes}</div>` : ''}
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; background: var(--card-bg); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);">
-              <button onclick="decreaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" title="Decrease quantity">−</button>
-              <span style="color: var(--text-main); font-size: 14px; font-weight: 600; min-width: 60px; text-align: center;">${comp.quantity || 0}</span>
-              <button onclick="increaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" title="Increase quantity">+</button>
+          <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            <span style="color: var(--text-muted); font-size: 13px; font-weight: 600; min-width: 44px; text-align: right;">$${(comp.cost || 0).toFixed(2)}</span>
+            <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-inner); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);">
+              <button onclick="decreaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">−</button>
+              <span style="color: var(--text-main); font-size: 14px; font-weight: 600; min-width: 28px; text-align: center;">${comp.quantity || 0}</span>
+              <button onclick="increaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">+</button>
             </div>
-            <button onclick="removeIngredientFromRecipe(${origIndex})" style="background: var(--danger); border: none; color: white; cursor: pointer; font-size: 14px; padding: 8px 12px; border-radius: 6px; font-weight: 600; height: 38px;" title="Remove from recipe">✕</button>
-            <button onclick="reorderIngredient('${ingredientId}')" style="background: var(--accent); border: none; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; height: 38px;" title="Reorder ingredient"><img src="https://cdn-icons-png.flaticon.com/512/12067/12067684.png" style="width: 16px; height: 16px; filter: brightness(0) invert(1);" alt="Reorder"></button>
+            <button onclick="removeIngredientFromRecipe(${origIndex})" style="background: var(--danger); border: none; color: white; cursor: pointer; font-size: 14px; padding: 0; width: 36px; height: 36px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; justify-content: center;" title="Remove">✕</button>
+            <button onclick="openSwapModal(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+            </button>
+            <button onclick="reorderIngredient('${ingredientId}')" style="background: var(--bg-inner); border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">
+              <span class="truck-anim-icon${isReorderPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
+            </button>
           </div>
         </div>
       </div>
@@ -1109,10 +1186,14 @@ async function renderRecipe() {
     statusEl.textContent = 'Can Produce';
     statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
     statusEl.style.color = 'var(--success)';
-  } else {
-    statusEl.textContent = 'Cannot Produce';
+  } else if (hasOutOfStock) {
+    statusEl.textContent = 'Ingredient out of stock';
     statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
     statusEl.style.color = 'var(--danger)';
+  } else {
+    statusEl.textContent = 'Ingredient low on stock';
+    statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
+    statusEl.style.color = 'var(--warning)';
   }
   
   const addButtonHtml = `
@@ -1129,6 +1210,144 @@ async function renderRecipe() {
   } else {
     document.getElementById('ingredientsList').innerHTML = ingredientsHtml + addButtonHtml;
   }
+
+  renderMobileOverlay();
+  _syncFavBtns();
+}
+
+// ---- Mobile view overlay ----
+
+let swapTargetIndex = null;
+
+async function openSwapModal(index) {
+  swapTargetIndex = index;
+  const titleEl = document.querySelector('#addIngredientModal h3');
+  if (titleEl) titleEl.textContent = 'Swap Ingredient';
+  await openAddIngredientModal();
+
+  // Pre-filter by the swapped ingredient's category
+  const comp = recipe.components[index];
+  const swapIngId = comp?.ingredient_id || comp?.id;
+  if (swapIngId) {
+    const swapIng = availableIngredients.find(i => i.id === swapIngId);
+    if (swapIng?.category) {
+      detailActiveCategoryFilter = swapIng.category;
+      renderDetailCatChips();
+      renderAvailableIngredients();
+    }
+  }
+}
+
+function closeSwapModal() {
+  swapTargetIndex = null;
+  const titleEl = document.querySelector('#addIngredientModal h3');
+  if (titleEl) titleEl.textContent = 'Add Ingredient to Recipe';
+  document.getElementById('addIngredientModal').classList.remove('active');
+}
+
+function renderMobileOverlay() {
+  if (window.innerWidth > 768 || !recipe) return;
+  const overlay = document.getElementById('mobileViewOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+
+  const titleEl = document.getElementById('rdmTitle');
+  if (titleEl && document.activeElement !== titleEl) titleEl.value = recipe.name || '';
+  const cost = parseFloat(recipe.cost) || 0;
+  document.getElementById('rdmCostDisplay').textContent = `$${cost.toFixed(2)}`;
+  _syncFavBtns();
+
+  const components = recipe.components || [];
+  const container = document.getElementById('rdmQtyList');
+
+  const addIngBtn = `
+    <div class="rdm-add-ing-btn" onclick="openAddIngredientModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Ingredient
+    </div>`;
+
+  if (components.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:32px 0 0;color:var(--text-muted);">No ingredients yet.</div>` + addIngBtn;
+    return;
+  }
+  container.innerHTML = components.map((comp, index) => {
+    const ingId = comp.ingredient_id || comp.id;
+    const stock = ingredientStockMap[ingId];
+    const qty = stock?.quantity ?? null;
+    const minStock = stock?.min_stock ?? 0;
+    const stockPill2 = qty === null ? '' : qty === 0 ? '<span class="stock-pill out">Out</span>' : qty < minStock ? '<span class="stock-pill low">Low</span>' : '';
+    return `
+    <div class="rdm-qty-row">
+      <div class="rdm-qty-top">
+        <span class="rdm-qty-name">${comp.ingredient_name || comp.name || 'Unknown'} ${stockPill2}</span>
+      </div>
+      <div class="rdm-qty-controls">
+        <button class="rdm-qty-btn" onclick="decreaseIngredientQuantity(${index})">−</button>
+        <input type="number" class="rdm-qty-val" value="${comp.quantity || 1}"
+          min="0.01" step="0.01" inputmode="decimal"
+          onchange="rdmSetQty(${index}, this.value)">
+        <button class="rdm-qty-btn" onclick="increaseIngredientQuantity(${index})">+</button>
+        <button class="rdm-swap-btn" onclick="openSwapModal(${index})" title="Swap ingredient">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+        </button>
+        <button class="rdm-swap-btn${(currentReorderIngredient?.id === ingId || ingredientStockMap[ingId]?.reorder_pending) ? ' reordering' : ''}" onclick="reorderIngredient('${ingId}')" title="Restock">
+          <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
+        </button>
+      </div>
+    </div>
+  `;
+  }).join('') + addIngBtn;
+}
+
+async function rdmSetQty(index, val) {
+  const comp = recipe.components[index];
+  if (!comp) return;
+  const pricePerUnit = comp.quantity > 0 ? (comp.cost || 0) / comp.quantity : 0;
+  comp.quantity = Math.max(0.01, parseFloat(val) || 1);
+  comp.cost = pricePerUnit * comp.quantity;
+  await updateRecipeInDatabase();
+  renderMobileOverlay();
+}
+
+function goToEdit() {
+  window.location.href = `/recipes?edit=${recipeId}`;
+}
+
+async function saveMobileRecipeName() {
+  const input = document.getElementById('rdmTitle');
+  const newName = input?.value?.trim();
+  if (!newName || newName === recipe?.name) return;
+  recipe.name = newName;
+  const desktopInput = document.getElementById('recipeName');
+  if (desktopInput) desktopInput.value = newName;
+  const { error } = await window.supabaseClient
+    .from('recipes').update({ name: newName }).eq('id', recipeId);
+  if (error) console.error('Error saving recipe name:', error);
+}
+
+async function toggleDetailFavorite() {
+  if (!recipe) return;
+  recipe.is_favorite = !recipe.is_favorite;
+  _syncFavBtns();
+  const { error } = await window.supabaseClient
+    .from('recipes')
+    .update({ is_favorite: recipe.is_favorite })
+    .eq('id', recipeId);
+  if (error) {
+    recipe.is_favorite = !recipe.is_favorite;
+    _syncFavBtns();
+    console.error('Error updating favorite:', error);
+  }
+}
+
+function _syncFavBtns() {
+  const fav = recipe?.is_favorite;
+  [document.getElementById('rdmFavBtn'), document.getElementById('detailFavBtn')].forEach(btn => {
+    if (!btn) return;
+    btn.textContent = fav ? '★' : '☆';
+    btn.style.color = fav ? '#fbbf24' : '';
+    if (btn.id === 'rdmFavBtn') btn.classList.toggle('favorited', !!fav);
+  });
 }
 
 // Recipe Builder Variables
@@ -1311,22 +1530,21 @@ function createIngredientElement(item) {
   }
   
   const minStock = item.min_stock || 0;
-  const stockColor = item.quantity === 0 ? 'var(--danger)' : (minStock > 0 && item.quantity <= minStock) ? 'var(--warning)' : 'var(--success)';
+  const ingPill = item.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (minStock > 0 && item.quantity <= minStock) ? '<span class="stock-pill low">Low</span>' : '';
   const isFavorite = favoriteIngredients.has(item.id);
   const starFill = isFavorite ? 'var(--warning)' : 'none';
   const starStroke = isFavorite ? 'var(--warning)' : 'var(--text-muted)';
-  
+
   el.innerHTML = `
     <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
       <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name}</div>
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name} ${ingPill}</div>
         ${attributesHtml}
-        <div style="font-size: 11px; margin-top: 4px;">
-          <span style="color: ${stockColor}; font-weight: 600;">${item.quantity.toFixed(1)} ${item.unit}</span>
-          <span style="color: var(--text-muted);"> in stock</span>
+        <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">
+          ${item.quantity.toFixed(1)} ${item.unit} in stock
         </div>
       </div>
     </div>
@@ -1618,13 +1836,15 @@ async function increaseIngredientQuantity(index) {
 
 async function decreaseIngredientQuantity(index) {
   const comp = recipe.components[index];
-  if (comp.quantity > 1) {
-    const pricePerUnit = (comp.cost || 0) / (comp.quantity || 1);
-    comp.quantity -= 1;
-    comp.cost = pricePerUnit * comp.quantity;
-    await updateRecipeInDatabase();
-    renderRecipe();
+  if ((comp.quantity || 1) <= 1) {
+    await removeIngredientFromRecipe(index);
+    return;
   }
+  const pricePerUnit = (comp.cost || 0) / (comp.quantity || 1);
+  comp.quantity -= 1;
+  comp.cost = pricePerUnit * comp.quantity;
+  await updateRecipeInDatabase();
+  renderRecipe();
 }
 
 async function removeIngredientFromRecipe(index) {
@@ -1686,14 +1906,64 @@ async function reorderIngredient(ingredientId) {
       .select('*')
       .eq('id', ingredientId)
       .single();
-    
+
     if (error) throw error;
-    
+
     currentReorderIngredient = ingredient;
-    openReorderModal();
+    renderMobileOverlay();
+
+    if (ingredient.reorder_pending) {
+      openRdmDeliveryModal();
+    } else {
+      openReorderModal();
+    }
   } catch (error) {
     console.error('Error loading ingredient:', error);
     showAlert('Failed to load ingredient details');
+  }
+}
+
+function openRdmDeliveryModal() {
+  document.getElementById('rdmDeliveryModal').classList.add('active');
+}
+
+function closeRdmDeliveryModal() {
+  document.getElementById('rdmDeliveryModal').classList.remove('active');
+}
+
+async function rdmConfirmDelivery() {
+  if (!currentReorderIngredient) return;
+  closeRdmDeliveryModal();
+  try {
+    const { error } = await window.supabaseClient
+      .from('ingredients')
+      .update({ reorder_pending: false })
+      .eq('id', currentReorderIngredient.id);
+    if (error) throw error;
+    const id = currentReorderIngredient.id;
+    if (ingredientStockMap[id]) ingredientStockMap[id].reorder_pending = false;
+    currentReorderIngredient = null;
+    renderMobileOverlay();
+  } catch (err) {
+    showAlert('Failed to confirm delivery: ' + err.message);
+  }
+}
+
+async function rdmCancelDelivery() {
+  if (!currentReorderIngredient) return;
+  closeRdmDeliveryModal();
+  try {
+    const { error } = await window.supabaseClient
+      .from('ingredients')
+      .update({ reorder_pending: false })
+      .eq('id', currentReorderIngredient.id);
+    if (error) throw error;
+    const id = currentReorderIngredient.id;
+    if (ingredientStockMap[id]) ingredientStockMap[id].reorder_pending = false;
+    currentReorderIngredient = null;
+    renderMobileOverlay();
+  } catch (err) {
+    showAlert('Failed to cancel delivery: ' + err.message);
   }
 }
 
@@ -1727,6 +1997,7 @@ function openReorderModal() {
 function closeReorderModal() {
   document.getElementById('reorderModal').classList.remove('active');
   currentReorderIngredient = null;
+  renderMobileOverlay();
 }
 
 async function loadReorderIngredients(sourceUrl) {
@@ -1798,7 +2069,9 @@ async function markAsReordered() {
     
     if (error) throw error;
 
-    showAlert(`${currentReorderIngredient.name} marked as reordered`);
+    // Persist animation state locally so truck keeps animating after modal closes
+    const ingId = currentReorderIngredient.id;
+    if (ingredientStockMap[ingId]) ingredientStockMap[ingId].reorder_pending = true;
     closeReorderModal();
   } catch (error) {
     console.error('Error creating reorder:', error);
@@ -1811,29 +2084,15 @@ let availableIngredients = [];
 let detailActiveCategoryFilter = null;
 
 const _detailCategoryMap = {
-  'Meat': 'beef',
-  'Seafood': 'fish',
-  'Dairy': 'milk',
-  'Produce': 'carrot',
-  'Bakery': 'croissant',
-  'Beverages': 'cup-soda',
-  'Oils & Fats': 'droplets',
-  'Spices & Herbs': 'leaf',
-  'Grains & Pasta': 'wheat',
-  'Canned Goods': 'package',
-  'Frozen Foods': 'snowflake',
-  'Snacks': 'cookie',
-  'Sauces & Condiments': 'bottle',
-  'Nuts & Seeds': 'circle-dot',
-  'Sweeteners': 'sugar',
-  'Alcohol': 'wine',
-  'Non-Alcoholic Drinks': 'coffee',
-  'Cleaning Supplies': 'spray-can',
-  'Packaging': 'box',
-  'Equipment': 'wrench',
-  'Other': 'tag',
-  'Poultry': 'drumstick',
-  'Vegetables': 'salad'
+  'Apparel': 'shirt',
+  'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora',
+  'Jewelry': 'gem', 'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2',
+  'Toys': 'drum', 'Office Supplies': 'paperclip', 'Colors': 'palette',
+  'Rope': 'lasso', 'Paper': 'origami', 'Spool': 'spool',
+  'Letter': 'mail', 'Giveaway': 'gift', 'Electronics': 'plug',
+  'Printing Supplies': 'printer', 'Tools': 'wrench', 'Packaging': 'package',
+  'Food': 'wheat'
 };
 
 function renderDetailCatChips() {
@@ -1844,8 +2103,8 @@ function renderDetailCatChips() {
   container.innerHTML = cats.map(cat => {
     const icon = _detailCategoryMap[cat] || 'tag';
     const active = detailActiveCategoryFilter === cat ? ' active' : '';
-    return `<span class="detail-cat-chip${active}" onclick="toggleDetailCatFilter('${cat.replace(/'/g, "\\'")}')">
-      <i data-lucide="${icon}"></i>${cat}
+    return `<span class="detail-cat-chip${active}" title="${cat}" onclick="toggleDetailCatFilter('${cat.replace(/'/g, "\\'")}')">
+      <i data-lucide="${icon}"></i>
     </span>`;
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1893,6 +2152,9 @@ async function openAddIngredientModal() {
 }
 
 function closeAddIngredientModal() {
+  swapTargetIndex = null;
+  const titleEl = document.querySelector('#addIngredientModal h3');
+  if (titleEl) titleEl.textContent = 'Add Ingredient to Recipe';
   document.getElementById('addIngredientModal').classList.remove('active');
   
   // Show bottom buttons on mobile
@@ -1910,9 +2172,14 @@ function renderAvailableIngredients() {
   const searchTerm = document.getElementById('ingredientSearchInput').value.toLowerCase();
   const container = document.getElementById('availableIngredientsList');
 
-  // Filter out ingredients already in the recipe
-  const existingIds = new Set((recipe.components || []).map(c => c.ingredient_id));
-  const notInRecipe = availableIngredients.filter(ing => !existingIds.has(ing.id));
+  // In swap mode show all ingredients; when adding, filter out existing ones
+  const existingIds = new Set((recipe.components || []).map(c => c.ingredient_id || c.id).filter(Boolean));
+  const swapIngredientId = swapTargetIndex !== null
+    ? (recipe.components[swapTargetIndex]?.ingredient_id || null)
+    : null;
+  const notInRecipe = swapTargetIndex !== null
+    ? availableIngredients
+    : availableIngredients.filter(ing => !existingIds.has(ing.id));
 
   const filtered = notInRecipe.filter(ing => {
     // Category filter
@@ -1949,17 +2216,20 @@ function renderAvailableIngredients() {
       } catch (e) {}
     }
     
-    const stockColor = ing.quantity === 0 ? '#ef4444' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '#f59e0b' : '#10b981';
+    const swapPill = ing.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '<span class="stock-pill low">Low</span>' : '';
+    const isCurrentSwap = swapIngredientId && ing.id === swapIngredientId;
 
     return `
-      <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); position: relative; display: flex; align-items: center; gap: 12px;"
-        onclick="addIngredientToRecipe('${ing.id}')"
-        onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'"
-        onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'">
-        <div style="width: 10px; height: 10px; border-radius: 50%; background: ${stockColor}; flex-shrink: 0;"></div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
-          ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
+      <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: ${isCurrentSwap ? 'default' : 'pointer'}; transition: all 0.2s; background: var(--bg-panel); ${isCurrentSwap ? 'opacity:0.35; pointer-events:none;' : ''}"
+        onclick="${isCurrentSwap ? '' : `addIngredientToRecipe('${ing.id}')`}"
+        onmouseover="${isCurrentSwap ? '' : "this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'"}"
+        onmouseout="${isCurrentSwap ? '' : "this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'"}">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
+            ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
+          </div>
+          ${swapPill}
         </div>
       </div>
     `;
@@ -1969,20 +2239,33 @@ function renderAvailableIngredients() {
 async function addIngredientToRecipe(ingredientId) {
   const ingredient = availableIngredients.find(i => i.id === ingredientId);
   if (!ingredient) return;
-  
-  // Add to recipe components
-  const newComponent = {
-    ingredient_id: ingredientId,
-    ingredient_name: ingredient.name,
-    quantity: 1,
-    unit: ingredient.unit || 'kg',
-    cost: parseFloat(ingredient.cost_per_unit) || 0,
-    attributes: ingredient.custom_attributes || ''
-  };
-  
+
   recipe.components = recipe.components || [];
-  recipe.components.push(newComponent);
-  
+
+  if (swapTargetIndex !== null) {
+    // Swap mode: replace the ingredient at swapTargetIndex, preserve quantity
+    const existing = recipe.components[swapTargetIndex] || {};
+    recipe.components[swapTargetIndex] = {
+      ingredient_id: ingredientId,
+      ingredient_name: ingredient.name,
+      quantity: existing.quantity || 1,
+      unit: ingredient.unit || '',
+      cost: (parseFloat(ingredient.cost_per_unit) || 0) * (existing.quantity || 1),
+      attributes: ingredient.custom_attributes || ''
+    };
+    closeSwapModal();
+  } else {
+    recipe.components.unshift({
+      ingredient_id: ingredientId,
+      ingredient_name: ingredient.name,
+      quantity: 1,
+      unit: ingredient.unit || '',
+      cost: parseFloat(ingredient.cost_per_unit) || 0,
+      attributes: ingredient.custom_attributes || ''
+    });
+    closeAddIngredientModal();
+  }
+
   await updateRecipeInDatabase();
   renderRecipe();
   renderAvailableIngredients();
@@ -2401,6 +2684,20 @@ if (typeof window !== 'undefined') {
 }
 </script>
 
+<!-- Mobile view overlay (ms2-style, mobile only) -->
+<div id="mobileViewOverlay">
+  <div class="rdm-header">
+    <div style="min-width:60px;"></div>
+    <input type="text" class="rdm-title" id="rdmTitle" value="Recipe" onblur="saveMobileRecipeName()">
+    <button class="rdm-fav-btn" id="rdmFavBtn" onclick="toggleDetailFavorite()">☆</button>
+  </div>
+  <div class="rdm-body" id="rdmQtyList"></div>
+  <div class="rdm-footer">
+    <div class="rdm-cost-label">Production Cost</div>
+    <div class="rdm-cost-value" id="rdmCostDisplay">$0.00</div>
+  </div>
+</div>
+
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target === this) closeRecipeBuilder()">
   <div class="recipe-builder">
@@ -2482,6 +2779,19 @@ if (typeof window !== 'undefined') {
     
     <div id="reorderIngredientsList" style="max-height: 300px; overflow-y: auto;">
       <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Delivery Confirmation Modal (recipe-detail mobile) -->
+<div class="modal-overlay modal-sheet" id="rdmDeliveryModal" onclick="if(event.target===this) closeRdmDeliveryModal()">
+  <div class="modal-content" style="position:relative;">
+    <button onclick="closeRdmDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">×</button>
+    <h3 style="margin:0 0 8px 0;">Delivery</h3>
+    <p style="color:var(--text-muted);font-size:14px;margin:0 0 24px 0;">Mark this delivery as received or cancel it.</p>
+    <div style="display:flex;gap:12px;">
+      <button onclick="rdmCancelDelivery()" style="flex:1;padding:12px;background:var(--danger);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Cancel Delivery</button>
+      <button onclick="rdmConfirmDelivery()" style="flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Received</button>
     </div>
   </div>
 </div>
@@ -2756,7 +3066,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>

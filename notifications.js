@@ -60,26 +60,24 @@ function renderNotifications() {
   }
   
   listContainer.innerHTML = notificationsCache.map(notification => `
-    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+    <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
          data-notification-id="${notification.id}"
          onmouseenter="markAsRead('${notification.id}')">
       <div class="notification-message">${notification.message}</div>
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">
         ${notification.ingredient_id ? `
-          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
-            Open Ingredient
+          <button class="notif-reorder-btn" title="Reorder" onclick="markAsReordered('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </button>
-          <button onclick="markAsReordered('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            Mark as Reordered
-          </button>
+          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
         ` : ''}
-        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
-          Delete
-        </button>
+        <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
       </div>
     </div>
   `).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Update notification badge count
@@ -212,40 +210,9 @@ function openIngredient(ingredientId) {
   window.location.href = `ingredient-detail.html?id=${ingredientId}`;
 }
 
-// Mark ingredient as reordered (phase 1 of two-phase reorder flow)
-async function markAsReordered(ingredientId, notificationId) {
-  try {
-    const { data: ingredient, error: fetchError } = await supabaseClient
-      .from('ingredients')
-      .select('name, unit')
-      .eq('id', ingredientId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const today = new Date().toISOString().split('T')[0];
-    const { error: updateError } = await supabaseClient
-      .from('ingredients')
-      .update({ reorder_pending: true, reorder_date: today })
-      .eq('id', ingredientId);
-
-    if (updateError) throw updateError;
-
-    if (typeof showNotification === 'function') {
-      showNotification(`${ingredient.name} marked as reordered — confirm delivery when it arrives`, 'success');
-    }
-
-    await deleteNotification(notificationId);
-
-    if (typeof loadRecentUpdates === 'function') await loadRecentUpdates();
-    if (typeof loadIngredients === 'function') await loadIngredients();
-    if (typeof loadPendingDeliveries === 'function') await loadPendingDeliveries();
-  } catch (error) {
-    console.error('Error marking ingredient as reordered:', error);
-    if (typeof showNotification === 'function') {
-      showNotification('Failed to mark as reordered', 'error');
-    }
-  }
+// Open reorder modal for an ingredient (navigates to ingredient detail with openReorder=true)
+function markAsReordered(ingredientId, notificationId) {
+  window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
 }
 
 // Create notification for out-of-stock ingredient

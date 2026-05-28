@@ -79,7 +79,8 @@
   }
 
   .btn-delete {
-    padding: 10px 18px;
+    padding: 9px 10px;
+    min-width: 36px;
     border: 1px solid #ef4444;
     border-radius: 8px;
     cursor: pointer;
@@ -253,48 +254,6 @@
     background: var(--border);
   }
 
-  .notification-toast {
-    position: fixed;
-    top: 24px;
-    right: 24px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 24px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    z-index: 10001;
-    display: none;
-    min-width: 300px;
-  }
-
-  .notification-toast.active {
-    display: block;
-    animation: slideIn 0.3s ease-out;
-  }
-
-  .notification-toast.success {
-    border-color: #22c55e;
-  }
-
-  .notification-toast.error {
-    border-color: #ef4444;
-  }
-
-  @keyframes slideIn {
-    from {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  #notificationMessage {
-    color: var(--text-main);
-    font-weight: 600;
-  }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -415,7 +374,7 @@
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -517,15 +476,14 @@
 </nav>
 
 <div class="container">
-  <div class="breadcrumb" onclick="window.location.href='/expenses'">← Back to Expenses</div>
   
   <div class="detail-header">
     <div class="header-title">
       <h1 id="expenseTitle">Expense Details</h1>
     </div>
     <div class="header-actions">
-      <button class="btn-delete" onclick="showDeleteModal()" title="Delete this expense">
-        🗑️ Delete Expense
+      <button class="btn-delete" onclick="showDeleteModal()" title="Delete Expense">
+        <i data-lucide="trash-2"></i>
       </button>
     </div>
   </div>
@@ -588,10 +546,6 @@
   </div>
 </div>
 
-<!-- Notification Toast -->
-<div class="notification-toast" id="notificationToast">
-  <div id="notificationMessage"></div>
-</div>
 
 <script>
 // Use supabaseClient from auth.js
@@ -756,15 +710,7 @@ async function confirmDelete() {
 }
 
 function showNotification(message, type = 'success') {
-  const toast = document.getElementById('notificationToast');
-  const messageEl = document.getElementById('notificationMessage');
-  
-  messageEl.textContent = message;
-  toast.className = `notification-toast ${type} active`;
-  
-  setTimeout(() => {
-    toast.classList.remove('active');
-  }, 4000);
+  if (type === 'error') console.error(message);
 }
 
 // Notification System
@@ -825,16 +771,12 @@ function renderNotifications() {
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">
         ${notification.ingredient_id ? `
-          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
-            Open Ingredient
+          <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </button>
-          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            Restock
-          </button>
+          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
         ` : ''}
-        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
-          Delete
-        </button>
+        <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
       </div>
     </div>
   `).join('');
@@ -999,7 +941,7 @@ initializeNotifications();
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
@@ -1010,6 +952,8 @@ initializeNotifications();
     </div>
   </div>
 </footer>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
 
 </body>
 </html>

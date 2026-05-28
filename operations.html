@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -124,12 +124,13 @@
   }
 
   .btn-action-cyan {
-    background: #06b6d4;
-    color: #fff;
+    background: #fff;
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .btn-action-cyan:hover {
-    background: #0891b2;
+    background: var(--accent);
     color: #fff;
   }
 
@@ -561,7 +562,12 @@
     outline: none;
     border-color: var(--accent);
   }
-  
+
+  .recipe-cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .recipe-cat-chip { display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--text-muted); }
+  .recipe-cat-chip svg { width: 18px; height: 18px; stroke-width: 1.75; }
+  .recipe-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+
   .notification {
     position: fixed;
     top: 24px;
@@ -792,35 +798,6 @@
     color: var(--text-muted);
     margin-bottom: 12px;
   }
-  .notification-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .notification-actions button {
-    padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-main);
-    color: var(--text-main);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 600;
-  }
-  .notification-actions button:hover {
-    background: var(--bg-panel);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .notification-actions button.delete-btn {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .notification-actions button.delete-btn:hover {
-    background: var(--danger);
-    color: white;
-  }
   .notification-empty {
     padding: 40px 20px;
     text-align: center;
@@ -835,131 +812,10 @@
 
   /* Loader Animation */
   .loader-container {
-    width: 200px;
-    height: 200px;
-    background: var(--bg-panel);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 20px auto;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .loader {
-    position: relative;
-    width: 75px;
-    height: 100px;
-    margin-top: -10px;
-  }
-  .loader__bar {
-    position: absolute;
-    bottom: 0;
-    width: 10px;
-    height: 50%;
-    background: #06b6d4;
-    transform-origin: center bottom;
-  }
-  [data-theme="dark"] .loader__bar {
-    background: #fff;
-  }
-  .loader__bar:nth-child(1) {
-    left: 0px;
-    transform: scale(1, 0.2);
-    -webkit-animation: barUp1 4s infinite;
-    animation: barUp1 4s infinite;
-  }
-  .loader__bar:nth-child(2) {
-    left: 15px;
-    transform: scale(1, 0.4);
-    animation: barUp2 4s infinite;
-  }
-  .loader__bar:nth-child(3) {
-    left: 30px;
-    transform: scale(1, 0.6);
-    animation: barUp3 4s infinite;
-  }
-  .loader__bar:nth-child(4) {
-    left: 45px;
-    transform: scale(1, 0.8);
-    animation: barUp4 4s infinite;
-  }
-  .loader__bar:nth-child(5) {
-    left: 60px;
-    transform: scale(1, 1);
-    animation: barUp5 4s infinite;
-  }
-  .loader__ball {
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    width: 10px;
-    height: 10px;
-    background: #06b6d4;
-    border-radius: 50%;
-    animation: ball 4s infinite;
-  }
-  [data-theme="dark"] .loader__ball {
-    background: #fff;
-  }
-
-  @keyframes ball {
-    0% { transform: translate(0, 0); }
-    5% { transform: translate(8px, -14px); }
-    10% { transform: translate(15px, -10px); }
-    17% { transform: translate(23px, -24px); }
-    20% { transform: translate(30px, -20px); }
-    27% { transform: translate(38px, -34px); }
-    30% { transform: translate(45px, -30px); }
-    37% { transform: translate(53px, -44px); }
-    40% { transform: translate(60px, -40px); }
-    50% { transform: translate(60px, 0); }
-    57% { transform: translate(53px, -14px); }
-    60% { transform: translate(45px, -10px); }
-    67% { transform: translate(37px, -24px); }
-    70% { transform: translate(30px, -20px); }
-    77% { transform: translate(22px, -34px); }
-    80% { transform: translate(15px, -30px); }
-    87% { transform: translate(7px, -44px); }
-    90% { transform: translate(0, -40px); }
-    100% { transform: translate(0, 0); }
-  }
-
-  @keyframes barUp1 {
-    0% { transform: scale(1, 0.2); }
-    40% { transform: scale(1, 0.2); }
-    50% { transform: scale(1, 1); }
-    90% { transform: scale(1, 1); }
-    100% { transform: scale(1, 0.2); }
-  }
-
-  @keyframes barUp2 {
-    0% { transform: scale(1, 0.4); }
-    40% { transform: scale(1, 0.4); }
-    50% { transform: scale(1, 0.8); }
-    90% { transform: scale(1, 0.8); }
-    100% { transform: scale(1, 0.4); }
-  }
-
-  @keyframes barUp3 {
-    0% { transform: scale(1, 0.6); }
-    100% { transform: scale(1, 0.6); }
-  }
-
-  @keyframes barUp4 {
-    0% { transform: scale(1, 0.8); }
-    40% { transform: scale(1, 0.8); }
-    50% { transform: scale(1, 0.4); }
-    90% { transform: scale(1, 0.4); }
-    100% { transform: scale(1, 0.8); }
-  }
-
-  @keyframes barUp5 {
-    0% { transform: scale(1, 1); }
-    40% { transform: scale(1, 1); }
-    50% { transform: scale(1, 0.2); }
-    90% { transform: scale(1, 0.2); }
-    100% { transform: scale(1, 1); }
+    padding: 40px 0;
   }
 
   /* ---------- STOCK ALERTS (shown on all screen sizes) ---------- */
@@ -979,7 +835,7 @@
 
   /* ---------- PENDING DELIVERIES ---------- */
   .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
-  .delivery-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(6,182,212,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
+  .delivery-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-muted); }
   .delivery-info { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
   .delivery-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
   .delivery-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -990,7 +846,7 @@
   .delivery-source-link { font-size: 12px; color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 3px; opacity: 0.85; }
   .delivery-source-link:hover { opacity: 1; text-decoration: underline; }
   .delivery-actions { display: flex; gap: 6px; flex-shrink: 0; }
-  .delivery-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s, transform 0.1s; }
+  .delivery-btn { padding: 6px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: opacity 0.15s, transform 0.1s; }
   @media (hover: hover) and (pointer: fine) {
     .delivery-btn:hover { opacity: 0.85; transform: scale(1.08); }
     .delivery-btn:active { transform: scale(0.94); }
@@ -1061,7 +917,8 @@
     .delivery-row { flex-wrap: wrap; align-items: flex-start; }
     .delivery-icon { margin-top: 3px; }
     .delivery-info { flex: 1; }
-    .delivery-actions { flex: 0 0 100%; display: flex; justify-content: flex-end; padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--border); }
+    .delivery-actions { flex: 0 0 100%; display: flex; gap: 8px; padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--border); }
+    .delivery-actions .delivery-btn { flex: 1; height: 36px; font-size: 13px; }
 
     /* Hide CSV import on mobile */
     #csv-method-card {
@@ -1716,12 +1573,13 @@
   .inv-change-pill.low { background: rgba(245,158,11,0.1); color: #f59e0b; }
 
 </style>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1952,11 +1810,15 @@ function closeAlert() {
   document.getElementById('alertModal').classList.remove('active');
 }
 
-function showConfirm(message, title = 'Confirm') {
+function showConfirm(message, title = 'Confirm', cancelLabel = 'No', confirmLabel = 'Yes') {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    const okBtn = document.getElementById('confirmOkBtn');
+    if (cancelBtn) cancelBtn.textContent = cancelLabel;
+    if (okBtn) okBtn.textContent = confirmLabel;
     document.getElementById('confirmModal').classList.add('active');
   });
 }
@@ -2042,21 +1904,21 @@ function resolveConfirm(result) {
         if (outItems.length === 0 && lowItems.length === 0) {
           alertsEl.innerHTML = '';
         } else {
-          const row = (ing, color) => `
+          const row = (ing, isOut) => `
             <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
-              <span class="stock-alert-dot" style="background:${color};"></span>
+              <span class="stock-pill ${isOut ? 'out' : 'low'}" style="margin-left:0;">${isOut ? 'Out' : 'Low'}</span>
               <span class="stock-alert-name">${ing.name}</span>
-              ${ing.reorder_pending ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>` : ''}
+              ${ing.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : ''}
               <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
               <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
             </div>`;
-          const allItems = [...outItems.map(i => [i, 'var(--danger)']), ...lowItems.map(i => [i, 'var(--warning)'])];
+          const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])];
           const isMobile = window.innerWidth <= 768;
           const PAGE = 10;
           const visible = isMobile ? allItems : allItems.slice(0, PAGE);
           const remaining = isMobile ? 0 : allItems.length - PAGE;
           let html = `<p class="stock-alert-section-title">Needs Restocking</p>`;
-          html += `<div id="stockAlertRows">${visible.map(([i, c]) => row(i, c)).join('')}</div>`;
+          html += `<div id="stockAlertRows">${visible.map(([i, isOut]) => row(i, isOut)).join('')}</div>`;
           if (remaining > 0) {
             html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">Show ${remaining} more</button>`;
             window._stockAlertAll = allItems;
@@ -2076,15 +1938,15 @@ function resolveConfirm(result) {
     const all = window._stockAlertAll;
     if (!all) return;
     const alertsEl = document.getElementById('mobileStockAlerts');
-    const row = (ing, color) => `
+    const row = (ing, isOut) => `
       <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
-        <span class="stock-alert-dot" style="background:${color};"></span>
+        <span class="stock-pill ${isOut ? 'out' : 'low'}" style="margin-left:0;">${isOut ? 'Out' : 'Low'}</span>
         <span class="stock-alert-name">${ing.name}</span>
-        ${ing.reorder_pending ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>` : ''}
+        ${ing.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : ''}
         <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
         <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
       </div>`;
-    document.getElementById('stockAlertRows').innerHTML = all.map(([i, c]) => row(i, c)).join('');
+    document.getElementById('stockAlertRows').innerHTML = all.map(([i, isOut]) => row(i, isOut)).join('');
     const btn = document.getElementById('stockAlertShowMore');
     if (btn) btn.remove();
     window._stockAlertAll = null;
@@ -2130,9 +1992,12 @@ function resolveConfirm(result) {
 
       container.innerHTML = pendingOrders.map(item => {
         const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-        const dateLabel = orderBase
-          ? new Date(orderBase + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : '';
+        let dateLabel = '';
+        if (orderBase) {
+          const eta = new Date(orderBase + 'T00:00:00');
+          if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery));
+          dateLabel = eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
 
         return `
           <div class="delivery-row">
@@ -2144,12 +2009,8 @@ function resolveConfirm(result) {
               ${dateLabel ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${dateLabel}</div>` : ''}
             </div>
             <div class="delivery-actions">
-              <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')" title="Received (no receipt)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
-              </button>
-              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')" title="Cancel reorder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
+              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')">Cancel</button>
+              <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')">Received</button>
             </div>
           </div>`;
       }).join('');
@@ -2175,8 +2036,9 @@ function resolveConfirm(result) {
       if (error) throw error;
 
       loadInboundStatus();
+      loadInventoryStatus();
 
-      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'Skip', 'Upload Receipt');
+      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
       if (upload) window.location.href = '/expenses';
     } catch (error) {
       console.error('Error confirming delivery:', error);
@@ -2197,8 +2059,8 @@ function resolveConfirm(result) {
 
       if (error) throw error;
 
-      // Reload the list
       loadInboundStatus();
+      loadInventoryStatus();
     } catch (error) {
       console.error('Error canceling delivery:', error);
       showAlert('Failed to cancel delivery');
@@ -2822,25 +2684,9 @@ function showImportStatus(message, type) {
       });
     }
     
-    statusDiv.innerHTML = `
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__ball"></div>
-        </div>
-      </div>
-    `;
-    statusDiv.style.background = 'transparent';
-    statusDiv.style.border = 'none';
-    statusDiv.style.borderRadius = '0';
-    statusDiv.style.textAlign = 'center';
-    statusDiv.style.padding = '0';
-    statusDiv.style.marginTop = '0';
+    showGlobalLoader();
   } else {
+    hideGlobalLoader();
     // Show form elements again
     const urlModal = document.getElementById('urlImportModal');
     const modalContent = urlModal?.querySelector('.modal-content');
@@ -3310,10 +3156,7 @@ function showImportStatus(message, type) {
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
       <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients()" />
-      
-      <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0;">
-        All Ingredients
-      </h4>
+      <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
     </div>
   </div>
@@ -4461,26 +4304,9 @@ function showUploadStatus(message, type) {
       });
     }
     
-    statusDiv.innerHTML = `
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__bar"></div>
-          <div class="loader__ball"></div>
-        </div>
-      </div>
-    `;
-    statusDiv.style.background = 'transparent';
-    statusDiv.style.border = 'none';
-    statusDiv.style.borderRadius = '0';
-    statusDiv.style.boxShadow = 'none';
-    statusDiv.style.textAlign = 'center';
-    statusDiv.style.padding = '0';
-    statusDiv.style.marginTop = '0';
+    showGlobalLoader();
   } else {
+    hideGlobalLoader();
     // Show form elements again
     const imageModal = document.getElementById('imageUploadModal');
     const modalContent = imageModal?.querySelector('.modal-content');
@@ -4545,7 +4371,8 @@ async function openRecipeBuilder() {
   }
   
   currentRecipeComponents = {};
-  
+  recipeActiveCategoryFilter = null;
+
   await loadRecipeIngredients();
   setupRecipeDropzone();
   
@@ -4594,15 +4421,45 @@ async function loadRecipeIngredients() {
         min_stock: parseFloat(ing.min_stock) || 0,
         attributes: attributes,
         is_favorite: ing.is_favorite || false,
+        category: ing.category || '',
         type: ing.type || 'Production'
       };
     });
 
+    renderRecipeCatChips();
     renderRecipeIngredientList();
   } catch (error) {
     console.error('Error loading ingredients:', error);
     showNotification('Failed to load ingredients', 'error');
   }
+}
+
+const _recipeCategIconMap = {
+  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
+  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
+  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
+  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
+  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
+  'Packaging': 'package', 'Food': 'wheat'
+};
+let recipeActiveCategoryFilter = null;
+
+function renderRecipeCatChips() {
+  const presentCats = [...new Set(recipeIngredientData.map(i => i.category).filter(Boolean))];
+  const chips = presentCats.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    const selected = recipeActiveCategoryFilter === cat;
+    return `<button type="button" class="recipe-cat-chip${selected ? ' selected' : ''}" onclick="toggleRecipeCatFilter('${cat}')" title="${cat}"><i data-lucide="${icon}"></i></button>`;
+  }).join('');
+  const el = document.getElementById('recipeCatChips');
+  if (el) { el.innerHTML = chips; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+}
+
+function toggleRecipeCatFilter(cat) {
+  recipeActiveCategoryFilter = recipeActiveCategoryFilter === cat ? null : cat;
+  renderRecipeCatChips();
+  renderRecipeIngredientList();
 }
 
 function renderRecipeIngredientList() {
@@ -4612,9 +4469,12 @@ function renderRecipeIngredientList() {
   // Get current recipe ingredient IDs
   const currentRecipeIds = new Set(Object.keys(currentRecipeComponents));
   
-  // Filter out ingredients already in recipe
-  const availableIngredients = recipeIngredientData.filter(item => !currentRecipeIds.has(item.id));
-  
+  // Filter out ingredients already in recipe, and apply category filter
+  const availableIngredients = recipeIngredientData.filter(item =>
+    !currentRecipeIds.has(item.id) &&
+    (!recipeActiveCategoryFilter || item.category === recipeActiveCategoryFilter)
+  );
+
   const filtered = availableIngredients.filter(item => {
     // Search in name
     if (item.name.toLowerCase().includes(searchQuery)) {
@@ -4696,27 +4556,21 @@ function createRecipeIngredientElement(item) {
     }
   }
   
-  // Stock indicator using min_stock threshold
   const minStock = item.min_stock || 0;
-  const stockColor = item.quantity === 0 ? '#ef4444' : (minStock > 0 && item.quantity <= minStock) ? '#f59e0b' : '#10b981';
-  const stockShadow = item.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : (minStock > 0 && item.quantity <= minStock) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
-  
+  const ingPill = item.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (minStock > 0 && item.quantity <= minStock) ? '<span class="stock-pill low">Low</span>' : '';
   const starFill = item.is_favorite ? 'var(--warning)' : 'none';
   const starStroke = item.is_favorite ? 'var(--warning)' : 'var(--text-muted)';
-  
+
   el.innerHTML = `
-    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%; position: relative;">
+    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
       <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name}</div>
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name} ${ingPill}</div>
         ${attributesHtml}
-        <div style="font-size: 11px; margin-top: 4px;">
-          <span style="color: var(--text-muted);">${item.quantity.toFixed(1)} ${item.unit} in stock</span>
-        </div>
+        <div style="font-size: 11px; margin-top: 4px; color: var(--text-muted);">${item.quantity.toFixed(1)} ${item.unit} in stock</div>
       </div>
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow}; flex-shrink: 0; margin-top: 4px;"></div>
     </div>
   `;
   
@@ -5051,23 +4905,15 @@ function createSwipeCard(item) {
     }
   }
   
-  // Calculate stock status
   const qty = item.quantity || 0;
   const minStock = item.min_stock || 0;
-  let stockColor = '';
-  if (qty <= 0) {
-    stockColor = '#ef4444'; // Red - out of stock
-  } else if (qty <= minStock) {
-    stockColor = '#f59e0b'; // Yellow - low stock
-  } else {
-    stockColor = '#10b981'; // Green - in stock
-  }
-  
+  const cardPill = qty <= 0 ? '<span class="stock-pill out">Out</span>' : (minStock > 0 && qty <= minStock) ? '<span class="stock-pill low">Low</span>' : '';
+
   card.innerHTML = `
-    <div style="position: absolute; top: 16px; right: 16px; width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: 0 0 0 3px var(--bg-panel);"></div>
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;">
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; gap: 6px;">
       <div class="swipe-card-name">${item.name}</div>
       ${attributesHtml}
+      ${cardPill}
     </div>
   `;
   
@@ -5285,9 +5131,9 @@ function _recipeStockStatus(recipe) {
 }
 
 function _stockBadge(status) {
-  if (status === 'in')  return '<span class="picker-dot green"></span>';
-  if (status === 'low') return '<span class="picker-dot orange"></span>';
-  return '<span class="picker-dot red"></span>';
+  if (status === 'low') return '<span class="stock-pill low">Low</span>';
+  if (status !== 'in')  return '<span class="stock-pill out">Out</span>';
+  return '';
 }
 
 async function _getLastUsedRecipes() {
@@ -6096,8 +5942,8 @@ document.addEventListener('keydown', (e) => {
     <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
     <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
     <div style="display: flex; gap: 12px;">
-      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
-      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+      <button id="confirmCancelBtn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">No</button>
+      <button id="confirmOkBtn" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Yes</button>
     </div>
   </div>
 </div>
@@ -6409,7 +6255,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
@@ -6422,5 +6268,16 @@ async function handleSwitchSignUp(e) {
 </footer>
 <script>lucide.createIcons();</script>
 
+
+<div id="globalLoader" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
+  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;" loop autoplay></lottie-player>
+</div>
+</div>
+
+<script>
+const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json','cat_loader_4.json','cat_loader_5.json','cat_loader_6.json'];
+function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
+function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
+</script>
 </body>
 </html>

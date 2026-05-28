@@ -80,16 +80,21 @@ a {
 }
 
 .logo {
-  font-weight: 800;
-  font-size: 20px;
-  background: linear-gradient(to right, var(--accent), var(--text-muted));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   cursor: pointer;
   flex-shrink: 0;
-  min-width: 150px;
+  display: flex;
+  align-items: center;
 }
+
+.logo img {
+  height: 48px;
+  width: auto;
+  display: block;
+}
+
+.logo-dark { display: none !important; }
+[data-theme="dark"] .logo-light { display: none !important; }
+[data-theme="dark"] .logo-dark { display: block !important; }
 
 .nav-links {
   display: flex !important;
@@ -846,6 +851,24 @@ tr:hover td {
   transform: translateY(-6px) rotate(-45deg);
 }
 
+/* ---------- STOCK PILLS ---------- */
+.stock-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+  vertical-align: middle;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.stock-pill.out { background: rgba(239,68,68,0.12); color: var(--danger); }
+.stock-pill.low { background: rgba(245,158,11,0.12); color: var(--warning); }
+
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 968px) {
   .navbar {
@@ -911,18 +934,27 @@ tr:hover td {
   }
 
   .logo {
-    font-size: 14px;
-    min-width: 100px;
-    position: static;
-    flex-shrink: 0;
+    display: none;
   }
 
-  /* Show nav-actions on mobile - aligned to the right */
+  /* Mobile nav-actions: stretch full width so user icon sits left, bell sits right */
   .nav-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    margin-left: 0;
+    flex: 1;
+  }
+
+  /* User icon → far left */
+  .user-menu {
+    order: -1;
+  }
+
+  /* Notification bell → far right (before hamburger) */
+  .notification-bell {
     margin-left: auto;
+    order: 2;
   }
   
   /* Compact theme toggle on mobile */
@@ -1151,5 +1183,58 @@ tr:hover td {
   background: linear-gradient(90deg, var(--bg-panel) 25%, var(--bg-inner) 50%, var(--bg-panel) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.2s infinite;
+}
+
+/* ================================
+   Truck icon animations (shared)
+   ================================ */
+@keyframes truckBodyBounce {
+  0%, 100% { transform: translateY(0); }
+  25%       { transform: translateY(-1px); }
+  50%       { transform: translateY(0); }
+  75%       { transform: translateY(-0.5px); }
+}
+@keyframes truckWheelSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes truckSpeedLine {
+  0%   { opacity: 0;   transform: translateX(0px)   scaleX(0.2); }
+  20%  { opacity: 0.7; transform: translateX(-4px)  scaleX(1);   }
+  60%  { opacity: 0.5; transform: translateX(-10px) scaleX(0.8); }
+  100% { opacity: 0;   transform: translateX(-16px) scaleX(0.3); }
+}
+
+.truck-anim-icon { display: inline-flex; align-items: center; justify-content: center; }
+.truck-anim-icon svg { overflow: visible !important; }
+.truck-speed { opacity: 0; transform-origin: right center; }
+
+/* .truck-anim-active, .truck-moving (ingredient-detail), .reordering (recipe-detail) all trigger the same animation */
+.truck-anim-active .truck-body,
+.truck-moving .truck-body,
+.reordering .truck-body {
+  animation: truckBodyBounce 0.8s ease-in-out infinite;
+}
+.truck-anim-active .truck-wheel,
+.truck-moving .truck-wheel,
+.reordering .truck-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: truckWheelSpin 1s linear infinite;
+}
+.truck-anim-active .truck-speed,
+.truck-moving .truck-speed,
+.reordering .truck-speed {
+  animation: truckSpeedLine 1s ease-out infinite;
+}
+.truck-anim-active .truck-speed-2,
+.truck-moving .truck-speed-2,
+.reordering .truck-speed-2 { animation-delay: 0.15s; }
+.truck-anim-active .truck-speed-3,
+.truck-moving .truck-speed-3,
+.reordering .truck-speed-3 { animation-delay: 0.3s; }
+
+@media (min-width: 769px) {
+  .truck-anim-icon svg { width: 22px !important; height: 22px !important; }
 }
 

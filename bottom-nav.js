@@ -27,6 +27,9 @@
   ];
 
   const rawPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+
+  const publicPages = ['index', 'login', 'pricing', 'docs', 'faq', 'sandbox', 'blog'];
+  if (publicPages.includes(rawPage) || window.location.pathname === '/') return;
   const parentMap = {
     'ingredient-detail': 'ingredients',
     'recipe-detail': 'recipes',

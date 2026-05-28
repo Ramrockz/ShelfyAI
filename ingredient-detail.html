@@ -451,17 +451,6 @@
     opacity: 0.9;
   }
 
-  @keyframes truck-drive {
-    0%   { transform: translateX(0px); }
-    25%  { transform: translateX(3px); }
-    50%  { transform: translateX(0px); }
-    75%  { transform: translateX(-2px); }
-    100% { transform: translateX(0px); }
-  }
-
-  .truck-moving .btn-icon {
-    animation: truck-drive 0.5s ease-in-out infinite;
-  }
 
   .drop-zone {
     border: 2px dashed var(--border);
@@ -695,35 +684,6 @@
     font-size: 12px;
     color: var(--text-muted);
     margin-bottom: 12px;
-  }
-  .notification-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .notification-actions button {
-    padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-main);
-    color: var(--text-main);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 600;
-  }
-  .notification-actions button:hover {
-    background: var(--bg-panel);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .notification-actions button.delete-btn {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .notification-actions button.delete-btn:hover {
-    background: var(--danger);
-    color: white;
   }
   .notification-empty {
     padding: 40px 20px;
@@ -1021,7 +981,7 @@
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1147,7 +1107,6 @@
 
 <div class="container">
   
-  <div class="breadcrumb" onclick="goBackToList()">← Back to Ingredients</div>
 
   <div class="detail-header">
     <div>
@@ -1157,7 +1116,7 @@
     <div style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn" title="Mark as Reordered">
-        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
       </button>
       <button class="detail-dup-btn" onclick="openDetailDuplicateModal()" title="Duplicate">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1563,14 +1522,13 @@
   }
 
   // Extract domain from URL for consistent restocking (e.g., https://www.textil-grosshandel.eu)
-  function stripUrlParams(url) {
-    if (!url || !url.trim()) return url;
+  function extractBaseDomain(url) {
+    if (!url || !url.trim()) return '';
     try {
-      const urlObj = new URL(url);
-      return urlObj.origin;
+      const normalized = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+      return new URL(normalized).hostname.replace(/^www\./i, '');
     } catch {
-      // If URL is invalid, just return it as-is and let validation handle it
-      return url;
+      return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split(/[/?#]/)[0];
     }
   }
 
@@ -2109,12 +2067,12 @@
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
-      const strippedUrl = stripUrlParams(sourceUrl);
+      const baseDomain = extractBaseDomain(sourceUrl);
       const { data, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
         .eq('profile_id', user.id)
-        .like('source_url', strippedUrl + '%')
+        .ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentIngredient.id)
         .abortSignal(reorderAbortController?.signal);
 
@@ -2146,14 +2104,11 @@
       const renderReorderItem = ing => {
         const qty = ing.quantity || 0;
         const minStock = ing.min_stock || 0;
-        let stockBadge = '', stockColor = '';
-        if (qty === 0) {
-          stockBadge = 'Out of Stock'; stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
-        } else if (minStock > 0 && qty < minStock) {
-          stockBadge = 'Low on Stock'; stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
-        } else {
-          stockBadge = 'In Stock'; stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
-        }
+        const stockBadge = qty === 0
+          ? '<span class="stock-pill out">Out</span>'
+          : (minStock > 0 && qty < minStock)
+          ? '<span class="stock-pill low">Low</span>'
+          : '';
         let attrs = '';
         if (ing.custom_attributes) {
           try {
@@ -2168,7 +2123,7 @@
             ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
             <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
           </div>
-          <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+          ${stockBadge}
         </div>`;
       };
 
@@ -2200,14 +2155,11 @@
     const renderReorderItem = ing => {
       const qty = ing.quantity || 0;
       const minStock = ing.min_stock || 0;
-      let stockBadge = '', stockColor = '';
-      if (qty === 0) {
-        stockBadge = 'Out of Stock'; stockColor = 'background: rgba(239, 68, 68, 0.1); color: var(--danger);';
-      } else if (minStock > 0 && qty < minStock) {
-        stockBadge = 'Low on Stock'; stockColor = 'background: rgba(245, 158, 11, 0.1); color: var(--warning);';
-      } else {
-        stockBadge = 'In Stock'; stockColor = 'background: rgba(16, 185, 129, 0.1); color: var(--success);';
-      }
+      const stockBadge = qty === 0
+        ? '<span class="stock-pill out">Out</span>'
+        : (minStock > 0 && qty < minStock)
+        ? '<span class="stock-pill low">Low</span>'
+        : '';
       let attrs = '';
       if (ing.custom_attributes) {
         try {
@@ -2222,7 +2174,7 @@
           ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
           <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
         </div>
-        <span class="status-badge" style="${stockColor}">${stockBadge}</span>
+        ${stockBadge}
       </div>`;
     };
 
@@ -2319,7 +2271,7 @@
   function updateStatsDisplay() {
     const qty = parseFloat(currentIngredient?.quantity) || 0;
     const minStock = parseFloat(currentIngredient?.min_stock) || 0;
-    let qtyColor = 'var(--success)';
+    let qtyColor = 'var(--text-main)';
     if (qty === 0) qtyColor = 'var(--danger)';
     else if (minStock > 0 && qty < minStock) qtyColor = 'var(--warning)';
     const el = document.getElementById('qtyDisplay');
@@ -2403,7 +2355,7 @@
       min_stock: parseFloat(document.getElementById('min_stock').value) || null,
       sku: document.getElementById('sku').value || '',
       estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
-      source_url: stripUrlParams(document.getElementById('source_url').value) || '',
+      source_url: document.getElementById('source_url').value || '',
       notes: document.getElementById('notes').value || '',
       custom_attributes: Object.keys(customAttributes).length > 0 ? JSON.stringify(customAttributes) : null
     };
@@ -2658,16 +2610,12 @@
         <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
         <div class="notification-actions">
           ${notification.ingredient_id ? `
-            <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
-              Open Ingredient
+            <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             </button>
-            <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-              Reorder
-            </button>
+            <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
           ` : ''}
-          <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
-            Delete
-          </button>
+          <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
         </div>
       </div>
     `).join('');
@@ -3350,7 +3298,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>

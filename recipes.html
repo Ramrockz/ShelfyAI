@@ -62,11 +62,11 @@
   .cta p { font-size: 12px; color: rgba(255,255,255,0.9); margin-bottom: 16px; line-height: 1.4; }
 
   .btn { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
-  .btn-primary { background: #fff; color: var(--accent); }
-  .btn-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #0891b2; border-color: #0891b2; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
   /* ---------- MAIN CONTENT ---------- */
-  .main { padding: 32px 36px; position: relative; }
+  .main { padding: 32px 36px; position: relative; min-width: 0; overflow-x: hidden; }
   
   .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
 
@@ -77,10 +77,31 @@
 
   .filter-trigger { background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
 
-  /* ---------- CARDS (SMALL CARDS) ---------- */
-  .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-  .card-small { background: var(--bg-panel); border: 2px solid var(--border); border-radius: 20px; padding: 28px; transition: all 0.3s ease; animation: slideIn 0.3s ease; box-shadow: 0 2px 12px rgba(0,0,0,0.08); position: relative; }
-  .card-small:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  /* ---------- RECIPE CARDS ---------- */
+  .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start; min-width: 0; }
+  .card-small { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s ease; animation: slideIn 0.3s ease; }
+  .card-small h4 { margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: flex-start; gap: 8px; }
+  .card-small h4 .name { flex: 1; cursor: pointer; min-width: 0; line-height: 1.3; word-break: break-word; }
+  .card-small h4 .name:hover { color: var(--accent); }
+  .card-small .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .card-small .divider { height: 1px; background: var(--border); margin: 0 0 16px 0; }
+  .card-actions { display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
+  .card-actions span { cursor: pointer; text-transform: uppercase; }
+  .card-actions .edit-link { color: var(--accent); }
+  .card-actions .delete-link { color: var(--danger); }
+  /* list view rows kept for list tab */
+  .recipe-rows-group { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; max-width: 100%; }
+  .recipe-row { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; animation: slideIn 0.3s ease; min-width: 0; overflow: hidden; }
+  .recipe-row:last-child { border-bottom: none; }
+  .recipe-row:hover { background: var(--bg-inner); }
+  .recipe-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .recipe-row-name { font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recipe-row-meta { font-size: 12px; color: var(--text-muted); }
+  .recipe-row-cost { font-size: 14px; font-weight: 700; color: var(--text-main); flex-shrink: 0; }
+  .recipe-row-action { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.5; transition: opacity 0.15s; }
+  .recipe-row-action:hover { opacity: 1; }
+  .recipe-row-action.dup { color: var(--accent); }
+  .recipe-row-action.del { color: var(--danger); }
   
   @keyframes slideIn {
     from {
@@ -93,14 +114,10 @@
     }
   }
   
-  .card-small h4 { margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: var(--text-main); }
-  .card-small h4 { display: flex; align-items: center; gap: 8px; }
-  .card-small h4 .name { flex: 1; cursor: pointer; }
-  .card-small h4 .name:hover { color: var(--accent); }
-  .star-icon { cursor: pointer; font-size: 18px; transition: 0.2s; }
+  .star-icon { cursor: pointer; font-size: 18px; transition: 0.2s; flex-shrink: 0; }
   .star-icon:hover { transform: scale(1.2); }
   .star-icon.favorited { color: #fbbf24; }
-  .star-icon:not(.favorited) { color: var(--text-muted); opacity: 0.5; }
+  .star-icon:not(.favorited) { color: var(--text-muted); opacity: 0.4; }
   .icon { font-size: 24px; margin-bottom: 16px; display: block; }
   .icon img { filter: brightness(0); transition: filter 0.3s; }
   [data-theme="dark"] .icon img { filter: brightness(0) invert(1); }
@@ -132,16 +149,6 @@
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
   }
 
-  /* inline dot variant used inside card h4 */
-  .avail-dot {
-    flex-shrink: 0;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  }
-  .avail-dot.green  { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
-  .avail-dot.orange { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.5); }
-  .avail-dot.red    { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); }
   
   @keyframes pulse {
     0%, 100% {
@@ -157,7 +164,6 @@
   table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; table-layout: fixed; }
   th { padding: 14px 20px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); position: relative; resize: horizontal; overflow: auto; }
   td { padding: 16px 20px; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
 
   /* ---------- BUILDER OVERLAYS (EXACTLY YOUR CODE) ---------- */
   .recipe-overlay { 
@@ -612,6 +618,13 @@
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
+    /* Keep bottom nav above all builder overlays */
+    #bottom-nav { z-index: 10005 !important; }
+
+    /* Prevent builder content from hiding behind bottom nav */
+    .recipe-panel-left { padding-bottom: 76px !important; }
+    #mobileStep2Screen { padding-bottom: 60px; }
+
     /* Hide sidebar on mobile */
     .sidebar {
       display: none;
@@ -641,26 +654,10 @@
       max-width: none !important;
     }
     
-    /* Adjust card grid for mobile */
-    .recent-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    
-    /* Card adjustments */
-    .card-small {
-      padding: 20px;
-      max-width: 100%;
-      overflow: hidden;
-    }
-    
-    .card-small h4 {
-      font-size: 18px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
+    /* Mobile row adjustments */
+    .recipe-row { padding: 14px 16px; gap: 12px; }
+    .recipe-row-name { font-size: 14px; }
+
     /* Hide CSV import on mobile */
     #csv-method-card {
       display: none !important;
@@ -836,7 +833,6 @@
       min-height: 44px;
     }
     .mob-ing-row:active { opacity: 0.7; }
-    .mob-ing-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     .mob-ing-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
     .mob-ing-qty { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
     
@@ -912,8 +908,7 @@
       transform: scale(0.96);
     }
 
-    /* Hide name input and dropzone — mobile uses step flow */
-    .recipe-name-section { display: none !important; }
+    /* Hide dropzone on mobile step 1 */
     #recipeDropzone { display: none !important; }
 
     /* Ingredient selection */
@@ -1012,50 +1007,19 @@
 
   /* === Loader animation === */
   .loader-container {
-    width: 200px; height: 200px;
-    background: var(--bg-panel);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin: 20px auto;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
   }
-  .loader { position: relative; width: 75px; height: 100px; margin-top: -10px; }
-  .loader__bar {
-    position: absolute; bottom: 0; width: 10px; height: 50%;
-    background: #06b6d4; transform-origin: center bottom;
-  }
-  [data-theme="dark"] .loader__bar { background: #fff; }
-  .loader__bar:nth-child(1) { left: 0px; transform: scale(1,.2); animation: barUp1 4s infinite; }
-  .loader__bar:nth-child(2) { left: 15px; transform: scale(1,.4); animation: barUp2 4s infinite; }
-  .loader__bar:nth-child(3) { left: 30px; transform: scale(1,.6); animation: barUp3 4s infinite; }
-  .loader__bar:nth-child(4) { left: 45px; transform: scale(1,.8); animation: barUp4 4s infinite; }
-  .loader__bar:nth-child(5) { left: 60px; transform: scale(1,1);  animation: barUp5 4s infinite; }
-  .loader__ball {
-    position: absolute; bottom: 10px; left: 0;
-    width: 10px; height: 10px; background: #06b6d4;
-    border-radius: 50%; animation: ball 4s infinite;
-  }
-  [data-theme="dark"] .loader__ball { background: #fff; }
-  @keyframes ball {
-    0%{transform:translate(0,0)} 5%{transform:translate(8px,-14px)} 10%{transform:translate(15px,-10px)}
-    17%{transform:translate(23px,-24px)} 20%{transform:translate(30px,-20px)} 27%{transform:translate(38px,-34px)}
-    30%{transform:translate(45px,-30px)} 37%{transform:translate(53px,-44px)} 40%{transform:translate(60px,-40px)}
-    50%{transform:translate(60px,0)} 57%{transform:translate(53px,-14px)} 60%{transform:translate(45px,-10px)}
-    67%{transform:translate(37px,-24px)} 70%{transform:translate(30px,-20px)} 77%{transform:translate(22px,-34px)}
-    80%{transform:translate(15px,-30px)} 87%{transform:translate(7px,-44px)} 90%{transform:translate(0,-40px)} 100%{transform:translate(0,0)}
-  }
-  @keyframes barUp1{0%{transform:scale(1,.2)}40%{transform:scale(1,.2)}50%{transform:scale(1,1)}90%{transform:scale(1,1)}100%{transform:scale(1,.2)}}
-  @keyframes barUp2{0%{transform:scale(1,.4)}40%{transform:scale(1,.4)}50%{transform:scale(1,.8)}90%{transform:scale(1,.8)}100%{transform:scale(1,.4)}}
-  @keyframes barUp3{0%{transform:scale(1,.6)}100%{transform:scale(1,.6)}}
-  @keyframes barUp4{0%{transform:scale(1,.8)}40%{transform:scale(1,.8)}50%{transform:scale(1,.4)}90%{transform:scale(1,.4)}100%{transform:scale(1,.8)}}
-  @keyframes barUp5{0%{transform:scale(1,1)}40%{transform:scale(1,1)}50%{transform:scale(1,.2)}90%{transform:scale(1,.2)}100%{transform:scale(1,1)}}
 </style>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1239,8 +1203,8 @@
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
       <div class="recipe-name-section">
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
-        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Recipe Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required style="text-align: center;" />
       </div>
 
       <!-- Mobile Ingredient Picker (visible only on mobile) -->
@@ -1315,6 +1279,8 @@ let favoriteIngredients = new Set();
 let currentDeleteRecipeId = null;
 let currentDuplicateRecipeId = null;
 let currentEditingRecipeId = null;
+let currentEditReturnUrl = null;
+let currentEditingRecipeName = null;
 
 // Load ingredients from Supabase
 async function loadIngredients() {
@@ -1518,14 +1484,14 @@ function render() {
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = isFirstTime ? 'none' : '';
             container.innerHTML = isFirstTime ? `
-              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+              <div style="text-align:center; padding:60px 20px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px; opacity:0.5;"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
                 <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No recipes yet</h3>
                 <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Bundle ingredients into a recipe — then use it to deduct stock in one tap</p>
                 <button onclick="openBuilder()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Create Recipe</button>
               </div>
             ` : `
-              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+              <div style="text-align:center; padding:60px 20px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="margin-bottom:12px; opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <p style="color:var(--text-muted); font-size:15px; margin:0;">No recipes match your search</p>
               </div>
@@ -1533,82 +1499,66 @@ function render() {
         } else {
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = '';
-            const favData = allData.filter(r => r.is_favorite);
-            const allOtherData = allData.filter(r => !r.is_favorite);
-            const otherData = allOtherData.slice(0, cardsToShow);
-            const hasMore = allOtherData.length > cardsToShow;
-            const hasFavs = favData.length > 0;
-            const sectionLabel = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
-            const buildCards = arr => arr.map(r => {
-                // Get ingredients list if available
-                let ingredientsList = '';
-                if (r.components && Array.isArray(r.components) && r.components.length > 0) {
-                    // Sort ingredients alphabetically by name
-                    const sortedComponents = [...r.components].sort((a, b) => {
-                        const nameA = (a.ingredient_name || a.name || '').toLowerCase();
-                        const nameB = (b.ingredient_name || b.name || '').toLowerCase();
-                        return nameA.localeCompare(nameB);
-                    });
-                    
-                    ingredientsList = `
-                        <div style="margin: 16px 0; padding: 16px; background: var(--bg-inner); border-radius: 12px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;" onclick="toggleIngredients('${r.id}')">
-                                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">Ingredients (${r.components.length})</div>
-                                <svg id="chevron-${r.id}" style="width: 16px; height: 16px; transition: transform 0.2s; transform: rotate(-90deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </div>
-                            <div id="ingredients-${r.id}" style="display: none; margin-top: 10px;">
-                                ${sortedComponents.map(ing => {
-                                    const ingData = ingredientData.find(i => i.id === (ing.ingredient_id || ing.id));
-                                    const required = ing.quantity || 0;
-                                    const available = ingData ? (ingData.quantity || 0) : 0;
-                                    const minStock = ingData ? (ingData.min_stock || 0) : 0;
-                                    const nameColor = !ingData || available < required ? 'var(--danger)' : available <= minStock ? '#f59e0b' : 'var(--accent)';
-                                    return `<div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px;">
-                                        <a href="/ingredient-detail?id=${ing.ingredient_id || ing.id}" style="color: ${nameColor}; text-decoration: none; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
-                                            ${ing.ingredient_name || ing.name}
-                                        </a>
-                                    </div>`;
-                                }).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                const availability = checkRecipeAvailability(r);
-                const availabilityTitle = availability === 'green' ? 'All ingredients available' : 
-                                         availability === 'orange' ? 'Some ingredients available' : 
-                                         'Ingredients missing or insufficient';
-                
-                return `
-                <div class="card-small">
-                    <h4 style="cursor: pointer; display:flex; align-items:center; gap:8px; margin-bottom:0;">
-                      <span onclick="editRecipe('${r.id}')" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}" style="flex:1;">${r.name}</span>
-                      <span class="star-icon ${r.is_favorite ? 'favorited' : ''}" onclick="event.stopPropagation();toggleRecipeFavorite('${r.id}')" title="${r.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">${r.is_favorite ? '★' : '☆'}</span>
-                    </h4>
-                    ${ingredientsList}
-                    <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border); display: flex; align-items: center; gap: 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
-                        <span style="color: var(--accent); cursor: pointer;" onclick="editRecipe('${r.id}')">Edit</span>
-                        <span style="color: var(--accent); cursor: pointer;" onclick="duplicateRecipe('${r.id}')">Duplicate</span>
-                        <span style="color: var(--danger); cursor: pointer;" onclick="deleteRecipe('${r.id}')">Delete</span>
-                        <span class="avail-dot ${availability}" title="${availabilityTitle}" style="margin-left: auto;"></span>
+
+            const favData    = allData.filter(r => r.is_favorite);
+            const nonFavData = allData.filter(r => !r.is_favorite);
+            const outOfIng   = nonFavData.filter(r => checkRecipeAvailability(r) === 'red');
+            const lowOnIng   = nonFavData.filter(r => checkRecipeAvailability(r) === 'orange');
+            const specialIds = new Set([...outOfIng, ...lowOnIng].map(r => r.id));
+            const allOther   = nonFavData.filter(r => !specialIds.has(r.id));
+            const otherData  = allOther.slice(0, cardsToShow);
+            const hasMore    = allOther.length > cardsToShow;
+
+            const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
+
+            const buildCard = r => {
+                const componentCount = r.components?.length || 0;
+                const starClass = r.is_favorite ? 'favorited' : '';
+                const starIcon  = r.is_favorite ? '★' : '☆';
+                return `<div class="card-small">
+                  <h4>
+                    <span class="name" onclick="editRecipe('${r.id}')" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from='+currentView,'_blank')}">${r.name}</span>
+                    <span class="star-icon ${starClass}" onclick="event.stopPropagation(); toggleRecipeFavorite('${r.id}')">${starIcon}</span>
+                  </h4>
+                  <div class="meta">${componentCount} ingredient${componentCount !== 1 ? 's' : ''}</div>
+                  <div style="display:flex; justify-content:center; margin:12px 0;">
+                    <div style="text-align:center;">
+                      <div style="font-size:32px; font-weight:800; color:var(--text-main);">$${r.cost.toFixed(2)}</div>
                     </div>
+                  </div>
+                  <div class="divider"></div>
+                  <div class="card-actions">
+                    <span class="edit-link" onclick="editRecipe('${r.id}')">Edit</span>
+                    <span class="edit-link" onclick="duplicateRecipe('${r.id}')">Duplicate</span>
+                    <span class="delete-link" onclick="deleteRecipe('${r.id}')">Delete</span>
+                  </div>
                 </div>`;
-            });
-            if (hasFavs) {
-                container.innerHTML = sectionLabel('Favorites') + buildCards(favData).join('')
-                    + sectionLabel('All Recipes') + buildCards(otherData).join('');
-            } else {
-                container.innerHTML = buildCards(otherData).join('');
+            };
+
+            const hasOtherSections = favData.length > 0 || outOfIng.length > 0 || lowOnIng.length > 0;
+            let html = '';
+            if (favData.length > 0) {
+                html += sectionLbl('Favorites');
+                html += favData.map(buildCard).join('');
             }
-            
+            if (outOfIng.length > 0) {
+                html += sectionLbl('Out of Ingredient');
+                html += outOfIng.map(buildCard).join('');
+            }
+            if (lowOnIng.length > 0) {
+                html += sectionLbl('Low on Ingredient');
+                html += lowOnIng.map(buildCard).join('');
+            }
+            if (otherData.length > 0) {
+                if (hasOtherSections) html += sectionLbl('All Recipes');
+                html += otherData.map(buildCard).join('');
+            }
+            container.innerHTML = html;
+
             if (hasMore) {
-                container.innerHTML += `
-                    <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
-                        <button onclick="showMoreRecipes()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOtherData.length - cardsToShow} remaining)</button>
-                    </div>
-                `;
+                container.innerHTML += `<div style="grid-column:1/-1; display:flex; justify-content:center; margin-top:20px;">
+                    <button onclick="showMoreRecipes()" style="padding:12px 32px; background:var(--bg-panel); color:var(--text-main); border:2px solid var(--border); border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOther.length - cardsToShow} remaining)</button>
+                </div>`;
             }
         }
     } else if (currentView === 'list') {
@@ -1626,13 +1576,13 @@ function render() {
             let rowIndex = 0;
             const buildRow = r => {
                 rowIndex++;
-                const color = r.status === 'ready' ? 'var(--success)' : (r.status === 'low' ? 'var(--warning)' : 'var(--danger)');
+                const statusPill = r.status === 'ready' ? '' : r.status === 'low' ? '<span class="stock-pill low">Low</span>' : '<span class="stock-pill out">Out</span>';
                 return `<tr style="cursor: pointer;" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from=' + currentView,'_blank')}">
                         <td style="color: var(--text-muted); font-weight: 600;">${rowIndex}</td>
                         <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView"><strong>${r.is_favorite ? '⭐ ' : ''}${r.name}</strong></td>
                         <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView">${r.count}</td>
                         <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView">$${r.cost.toFixed(2)}</td>
-                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView"><span class="status-dot" style="background:${color}"></span> ${r.status}</td>
+                        <td onclick="window.location.href='/recipe-detail?id=${r.id}&from=' + currentView">${statusPill} ${r.status === 'ready' ? 'Ready' : r.status === 'low' ? 'Low stock' : 'Out of stock'}</td>
                         <td>
                             <span style="color:var(--accent); cursor:pointer; font-weight:700; margin-right: 12px;" onclick="editRecipe('${r.id}')">EDIT</span>
                             <span style="color:var(--text-muted); cursor:pointer; font-weight:700; margin-right: 12px;" onclick="duplicateRecipe('${r.id}')">DUPLICATE</span>
@@ -1646,50 +1596,7 @@ function render() {
 
 // --- BUILDER LOGIC ---
 async function editRecipe(recipeId) {
-  if (window.innerWidth > 768) {
-    window.location.href = `/recipe-detail?id=${recipeId}&from=${currentView}`;
-    return;
-  }
-
-  // Mobile: open builder pre-populated
-  try {
-    const { data: fullRecipe, error } = await supabaseClient
-      .from('recipes').select('*').eq('id', recipeId).single();
-    if (error || !fullRecipe) { alert('Recipe not found'); return; }
-
-    currentRecipe = {};
-    currentEditingRecipeId = recipeId;
-
-    document.getElementById('recipeBuilderOverlay').classList.add('active');
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await loadIngredients();
-
-    // Pre-select ingredients
-    if (fullRecipe.components && Array.isArray(fullRecipe.components)) {
-      fullRecipe.components.forEach(comp => {
-        const id = comp.ingredient_id || comp.id;
-        const ing = ingredientData.find(i => i.id === id);
-        currentRecipe[id] = {
-          name: comp.ingredient_name || comp.name || (ing?.name ?? ''),
-          price: ing?.price ?? (comp.quantity ? comp.cost / comp.quantity : 0),
-          unit: comp.unit || ing?.unit || '',
-          quantity: comp.quantity || 1
-        };
-      });
-    }
-
-    // Pre-fill name in step 2 footer
-    const nameInput = document.getElementById('mobileRecipeNameInput');
-    if (nameInput) nameInput.value = fullRecipe.name;
-
-    renderMobileIngList();
-    updateMobileCreateBtn();
-    goToMobileStep1();
-    setTimeout(() => initMobileIngredientList(), 100);
-  } catch (err) {
-    console.error('Error opening recipe for edit:', err);
-    alert('Failed to load recipe.');
-  }
+  window.location.href = `/recipe-detail?id=${recipeId}&from=${currentView}`;
 }
 
 async function openBuilder() {
@@ -1711,10 +1618,9 @@ async function openBuilder() {
 
   const isMobile = window.innerWidth <= 768;
   const btn = document.getElementById('saveRecipeBtn');
-  if (btn) btn.textContent = isMobile ? 'Next' : 'Create';
+  if (btn) btn.textContent = isMobile ? 'Create Recipe' : 'Create';
 
   if (isMobile) {
-    // Ensure step 1 is shown
     goToMobileStep1();
     setTimeout(() => initMobileIngredientList(), 100);
   }
@@ -1726,6 +1632,8 @@ function closeRecipeBuilder() {
   closeMobileNameModal();
   recipeActiveCategoryFilter = null;
   currentEditingRecipeId = null;
+  currentEditReturnUrl = null;
+  currentEditingRecipeName = null;
 }
 
 function closeNamingModal() {
@@ -1816,28 +1724,21 @@ function createIngredientElement(item) {
     }
   }
   
-  // Stock indicator using min_stock threshold
   const minStock = item.min_stock || 0;
-  const stockColor = item.quantity === 0 ? '#ef4444' : (minStock > 0 && item.quantity <= minStock) ? '#f59e0b' : '#10b981';
-  const stockShadow = item.quantity === 0 ? '0 0 12px rgba(239, 68, 68, 0.5)' : (minStock > 0 && item.quantity <= minStock) ? '0 0 12px rgba(245, 158, 11, 0.5)' : '0 0 12px rgba(16, 185, 129, 0.5)';
-  
+  const ingPill = item.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (minStock > 0 && item.quantity <= minStock) ? '<span class="stock-pill low">Low</span>' : '';
   const isFavorite = favoriteIngredients.has(item.id);
   const starFill = isFavorite ? 'var(--warning)' : 'none';
   const starStroke = isFavorite ? 'var(--warning)' : 'var(--text-muted)';
-  
+
   el.innerHTML = `
-    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%; position: relative;">
+    <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink: 0; margin-top: 2px; pointer-events: none; opacity: 0.6;">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
       <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name}</div>
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${item.name} ${ingPill}</div>
         ${attributesHtml}
-        <div style="font-size: 11px; margin-top: 4px;">
-          <span style="color: var(--text-muted);">${item.quantity.toFixed(1)} ${item.unit} in stock</span>
-        </div>
       </div>
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: ${stockShadow}; flex-shrink: 0; margin-top: 4px;"></div>
     </div>
   `;
   
@@ -2113,13 +2014,12 @@ function renderMobileIngList() {
   container.innerHTML = visible.map(i => {
     const qty = parseFloat(i.quantity) || 0;
     const min = parseFloat(i.min_stock) || 0;
-    const dotColor = qty === 0 ? 'var(--danger)' : (min > 0 && qty < min) ? 'var(--warning)' : 'var(--success)';
+    const pill = qty === 0 ? '<span class="stock-pill out">Out</span>' : (min > 0 && qty < min) ? '<span class="stock-pill low">Low</span>' : '';
     const selected = !!currentRecipe[i.id];
     return `<div class="mob-ing-row${selected ? ' selected' : ''}" onclick="mobileTapIngredient('${i.id}')">
-      <span class="mob-ing-dot" style="background:${dotColor}"></span>
       <span class="mob-ing-name">${i.name}</span>
-      <span class="mob-ing-qty">${qty} ${i.unit || ''}</span>
-      ${selected ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="16" height="16" style="color:var(--accent);flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+      ${pill}
+      ${selected ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="16" height="16" style="color:var(--accent);flex-shrink:0;margin-left:auto;"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
     </div>`;
   }).join('');
 }
@@ -2138,10 +2038,25 @@ function mobileTapIngredient(id) {
 
 function mobilePrimaryAction() {
   if (window.innerWidth > 768) { saveRecipe(); return; }
-  goToMobileStep2();
+  saveMobileRecipe();
 }
 
 function goToMobileStep2() {
+  const isEditing = !!currentEditingRecipeId;
+  const titleEl = document.querySelector('#mobileStep2Screen .ms2-title');
+  if (titleEl) titleEl.textContent = isEditing ? 'Edit Recipe' : 'Set Quantities';
+  const ctaBtn = document.querySelector('#mobileStep2Screen .ms2-create-btn');
+  if (ctaBtn) ctaBtn.textContent = isEditing ? 'Save Changes' : 'Create Recipe';
+  const nameInput = document.getElementById('mobileRecipeNameInput');
+  if (nameInput) {
+    if (isEditing) {
+      nameInput.style.display = 'none';
+    } else {
+      nameInput.style.display = '';
+      nameInput.value = '';
+    }
+  }
+
   const count = Object.keys(currentRecipe).length;
   if (count === 0) {
     const list = document.getElementById('mobileRecipeIngList');
@@ -2153,8 +2068,6 @@ function goToMobileStep2() {
     return;
   }
   renderMobileQtyList();
-  const nameInput = document.getElementById('mobileRecipeNameInput');
-  if (nameInput) nameInput.value = '';
   document.getElementById('mobileStep2Screen').classList.add('active');
 }
 
@@ -2198,22 +2111,31 @@ function updateMobileCreateBtn() {
   const count = Object.keys(currentRecipe).length;
   const btn = document.getElementById('saveRecipeBtn');
   if (!btn || window.innerWidth > 768) return;
-  btn.textContent = count > 0 ? `Next (${count})` : 'Next';
+  const label = currentEditingRecipeId ? 'Save Changes' : 'Create Recipe';
+  btn.textContent = count > 0 ? `${label} (${count})` : label;
 }
 
 function openMobileNameModal() { /* no-op — name input is now in step 2 footer */ }
 function closeMobileNameModal() { /* no-op */ }
 
 async function saveMobileRecipe() {
-  const nameInput = document.getElementById('mobileRecipeNameInput');
-  const name = nameInput.value.trim();
-  if (!name) {
-    nameInput.classList.add('shake');
-    setTimeout(() => nameInput.classList.remove('shake'), 500);
-    nameInput.focus();
+  let name;
+  if (currentEditingRecipeId && currentEditingRecipeName) {
+    name = currentEditingRecipeName;
+  } else {
+    const nameInput = document.getElementById('recipeNameInput');
+    name = nameInput?.value?.trim();
+    if (!name) {
+      nameInput?.classList.add('shake');
+      setTimeout(() => nameInput?.classList.remove('shake'), 500);
+      nameInput?.focus();
+      return;
+    }
+  }
+  if (Object.keys(currentRecipe).length === 0) {
+    alert('Please add at least one ingredient');
     return;
   }
-  closeMobileNameModal();
   await _doSaveRecipe(name);
 }
 
@@ -2312,12 +2234,17 @@ async function _doSaveRecipe(name) {
 
     if (currentEditingRecipeId) {
       // Update existing recipe
+      const editId = currentEditingRecipeId;
+      const returnUrl = currentEditReturnUrl;
       const { error } = await supabaseClient
         .from('recipes')
         .update({ name, components, cost: totalCost })
-        .eq('id', currentEditingRecipeId);
+        .eq('id', editId);
       if (error) throw error;
-      currentEditingRecipeId = null;
+      closeRecipeBuilder();
+      if (returnUrl) { window.location.href = returnUrl; return; }
+      await loadRecipes();
+      return;
     } else {
       // Insert new recipe
       const { data, error } = await supabaseClient
@@ -2357,100 +2284,36 @@ async function saveRecipe() {
 async function duplicateRecipe(recipeId) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      alert('Please log in to duplicate recipes');
-      return;
-    }
-    
-    // Fetch the full recipe data from Supabase
-    const { data: fullRecipe, error: fetchError } = await supabaseClient
+    if (!user) return;
+
+    const original = recipes.find(r => r.id === recipeId || r.id == recipeId);
+    if (!original) return;
+
+    const { data: inserted, error } = await supabaseClient
       .from('recipes')
-      .select('*')
-      .eq('id', recipeId)
+      .insert({
+        profile_id: user.id,
+        name: `${original.name} (copy)`,
+        cost: original.cost || 0,
+        components: original.components || [],
+        status: original.status || 'ready',
+        is_favorite: false
+      })
+      .select()
       .single();
 
-    if (fetchError) throw fetchError;
-    if (!fullRecipe) {
-      alert('Recipe not found');
-      return;
-    }
-    
-    // Open builder first
-    currentRecipe = {};
-    document.getElementById('recipeBuilderOverlay').classList.add('active');
-    
-    // Wait for overlay to be visible
-    await new Promise(resolve => requestAnimationFrame(() => {
-      requestAnimationFrame(resolve);
-    }));
-    
-    // Load ingredients
-    await loadIngredients();
-    
-    // Set recipe name
-    document.getElementById('recipeNameInput').value = `${fullRecipe.name} (Copy)`;
-    
-    // Pre-populate dropzone with existing recipe ingredients
-    const dropzone = document.getElementById('recipeDropzone');
-    dropzone.innerHTML = '';
-    
-    let totalCost = 0;
-    if (fullRecipe.components && Array.isArray(fullRecipe.components)) {
-      fullRecipe.components.forEach(comp => {
-        const ingredientId = comp.ingredient_id || comp.id;
-        
-        // Add to currentRecipe using ingredient_id
-        currentRecipe[ingredientId] = {
-          name: comp.ingredient_name || comp.name,
-          price: comp.cost / comp.quantity || 0,
-          unit: comp.unit || 'kg',
-          quantity: comp.quantity || 1
-        };
-        
-        const itemCost = comp.cost || 0;
-        totalCost += itemCost;
-        
-        // Get ingredient attributes from ingredientData
-        const fullIng = ingredientData.find(i => i.id === ingredientId);
-        let attributesText = '';
-        if (fullIng && fullIng.attributes && typeof fullIng.attributes === 'object') {
-          const attrs = Object.entries(fullIng.attributes).slice(0, 3);
-          if (attrs.length > 0) {
-            attributesText = ' · ' + attrs.map(([key, val]) => val).join(' · ');
-          }
-        }
-        
-        // Create drop item with +/- buttons
-        const row = document.createElement('div');
-        row.className = 'drop-item';
-        row.dataset.id = ingredientId;
-        row.innerHTML = `
-          <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1; min-width: 0;">
-            <div style="flex: 1; min-width: 0;">
-              <strong style="display: block; font-size: 16px; margin-bottom: 2px;">${comp.ingredient_name || comp.name}</strong>
-              ${attributesText ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${attributesText.substring(3)}</div>` : ''}
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-              <button onclick="adjustQuantity('${ingredientId}', -1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">-</button>
-              <span style="color: var(--text-main); font-size: 16px; min-width: 60px; text-align: center; font-weight: 700;" data-qty="${ingredientId}">${comp.quantity}</span>
-              <button onclick="adjustQuantity('${ingredientId}', 1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">+</button>
-              <span style="color: var(--danger); font-size: 24px; cursor: pointer; font-weight: 300; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onclick="removeIngredient('${ingredientId}')">&times;</span>
-            </div>
-          </div>
-        `;
-        dropzone.appendChild(row);
-      });
-    }
-    
-    const display = document.getElementById('recipeTotalCostDisplay');
-    if (display) {
-      display.textContent = `$${totalCost.toFixed(2)}`;
-    }
-    updateDisabledState();
-    
-  } catch (error) {
-    console.error('Error duplicating recipe:', error);
-    alert('Failed to load recipe for duplication');
+    if (error) throw error;
+
+    // Add to local list and re-render without a full reload
+    recipes.push({
+      ...inserted,
+      components: inserted.components || [],
+      is_favorite: false
+    });
+    render();
+  } catch (err) {
+    console.error('Error duplicating recipe:', err);
+    alert('Failed to duplicate recipe');
   }
 }
 
@@ -2556,23 +2419,15 @@ function createSwipeCard(item) {
     }
   }
   
-  // Calculate stock status
   const qty = item.quantity || 0;
   const minStock = item.min_stock || 0;
-  let stockColor = '';
-  if (qty <= 0) {
-    stockColor = 'var(--danger)'; // Red - out of stock
-  } else if (qty <= minStock) {
-    stockColor = 'var(--warning)'; // Yellow - low stock
-  } else {
-    stockColor = 'var(--success)'; // Green - in stock
-  }
-  
+  const cardPill = qty <= 0 ? '<span class="stock-pill out">Out</span>' : (minStock > 0 && qty <= minStock) ? '<span class="stock-pill low">Low</span>' : '';
+
   card.innerHTML = `
-    <div style="position: absolute; top: 16px; right: 16px; width: 12px; height: 12px; border-radius: 50%; background: ${stockColor}; box-shadow: 0 0 0 3px var(--bg-panel);"></div>
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;">
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; gap: 6px;">
       <div class="swipe-card-name">${item.name}</div>
       ${attributesHtml}
+      ${cardPill}
     </div>
   `;
   
@@ -2719,10 +2574,59 @@ function updateSwipeDots() {
   }
 }
 
+// Open builder at step 1 with an existing recipe's ingredients pre-selected
+// (used when navigating from recipe-detail's "Edit" button on mobile)
+async function openBuilderForRecipe(recipeId) {
+  if (window.innerWidth > 768) {
+    window.location.href = `/recipe-detail?id=${recipeId}`;
+    return;
+  }
+  try {
+    const { data: fullRecipe, error } = await supabaseClient
+      .from('recipes').select('*').eq('id', recipeId).single();
+    if (error || !fullRecipe) { alert('Recipe not found'); return; }
+
+    currentRecipe = {};
+    currentEditingRecipeId = recipeId;
+    currentEditReturnUrl = `/recipe-detail?id=${recipeId}`;
+    currentEditingRecipeName = fullRecipe.name || '';
+
+    document.getElementById('recipeBuilderOverlay').classList.add('active');
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await loadIngredients();
+
+    if (fullRecipe.components && Array.isArray(fullRecipe.components)) {
+      fullRecipe.components.forEach(comp => {
+        const id = comp.ingredient_id || comp.id;
+        const ing = ingredientData.find(i => i.id === id);
+        currentRecipe[id] = {
+          name: comp.ingredient_name || comp.name || (ing?.name ?? ''),
+          price: ing?.price ?? (comp.quantity > 0 ? comp.cost / comp.quantity : 0),
+          unit: comp.unit || ing?.unit || '',
+          quantity: comp.quantity || 1
+        };
+      });
+    }
+
+    document.getElementById('recipeNameInput').value = fullRecipe.name || '';
+
+    renderMobileIngList();
+    updateMobileCreateBtn();
+    goToMobileStep1();
+    setTimeout(() => initMobileIngredientList(), 100);
+  } catch (err) {
+    console.error('Error opening builder:', err);
+    alert('Failed to load recipe.');
+  }
+}
+
 // Initialize
 (async function() {
   await loadIngredients();
   await loadRecipes();
+  // If navigated from recipe-detail's Edit button, open the builder
+  const editId = new URLSearchParams(window.location.search).get('edit');
+  if (editId) openBuilderForRecipe(editId);
 })();
 
 // Auto-highlight active page in navigation
@@ -3786,11 +3690,9 @@ function showImportStatus(message, type) {
   const el = document.getElementById('ingImportStatus');
   el.style.display = 'block';
   if (message.toLowerCase().includes('extracting')) {
-    const modal = document.getElementById('ingUrlImportModal');
-    modal?.querySelectorAll('.modal-content > *').forEach(el2 => { if (el2.id !== 'ingImportStatus') el2.style.display = 'none'; });
-    el.innerHTML = `<div class="loader-container"><div class="loader"><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__ball"></div></div></div>`;
-    el.style.cssText = 'display:block;background:transparent;border:none;text-align:center;padding:0;margin-top:0;';
+    showGlobalLoader();
   } else {
+    hideGlobalLoader();
     const modal = document.getElementById('ingUrlImportModal');
     modal?.querySelectorAll('.modal-content > *').forEach(el2 => { if (el2.id !== 'ingImportStatus') el2.style.display = ''; });
     el.textContent = message;
@@ -3936,9 +3838,9 @@ function showUploadStatus(message, type) {
   const el = document.getElementById('ingUploadStatus');
   el.style.display = 'block';
   if (message.toLowerCase().includes('extracting')) {
-    el.innerHTML = `<div class="loader-container"><div class="loader"><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__ball"></div></div></div>`;
-    el.style.cssText = 'display:block;background:transparent;border:none;text-align:center;padding:0;margin-top:0;';
+    showGlobalLoader();
   } else {
+    hideGlobalLoader();
     el.textContent = message;
     el.style.cssText = `display:block;padding:12px;font-size:13px;background:${type==='error'?'rgba(239,68,68,0.1)':type==='success'?'rgba(16,185,129,0.1)':'rgba(59,130,246,0.1)'};color:${type==='error'?'var(--danger)':type==='success'?'var(--success)':'#3b82f6'};`;
   }
@@ -3970,7 +3872,7 @@ function showUploadStatus(message, type) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
@@ -3982,5 +3884,15 @@ function showUploadStatus(message, type) {
   </div>
 </footer>
 
+<div id="globalLoader" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
+  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;" loop autoplay></lottie-player>
+</div>
+</div>
+
+<script>
+const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json','cat_loader_4.json','cat_loader_5.json','cat_loader_6.json'];
+function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
+function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
+</script>
 </body>
 </html>

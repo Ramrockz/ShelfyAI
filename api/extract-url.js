@@ -70,6 +70,42 @@ module.exports = async (req, res) => {
 
     console.log('User authenticated:', user.id);
 
+    // Unified limit check (ingredients + orders + expenses share one pool)
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('tier, bonus_scans')
+      .eq('user_id', user.id)
+      .single();
+
+    const tier = settings?.tier || 'free';
+    const bonusScans = settings?.bonus_scans || 0;
+    const scanLimits = { free: 20, starter: 100, pro: 300 };
+    const effectiveLimit = (scanLimits[tier] ?? 20) + bonusScans;
+
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+    const { data: usageRecords } = await supabase
+      .from('ai_usage_tracking')
+      .select('ingredient_count, order_count, expense_count')
+      .eq('user_id', user.id)
+      .gte('date', `${yearMonth}-01`)
+      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
+
+    const totalUsed = usageRecords?.reduce((sum, r) =>
+      sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0) || 0;
+
+    if (totalUsed >= effectiveLimit) {
+      return res.status(429).json({
+        error: 'Monthly limit reached',
+        message: `You've reached your AI scan limit of ${effectiveLimit}. ${bonusScans > 0 ? 'Purchase another Scan Pack to continue.' : 'Upgrade your plan or buy a Scan Pack to continue.'}`,
+        limit: effectiveLimit,
+        used: totalUsed,
+        tier
+      });
+    }
+
     // Define the extraction query using AgentQL's query language
     const extractionQuery = `{
   vendor(The name of the vendor/supplier)
@@ -135,7 +171,7 @@ module.exports = async (req, res) => {
         name: extractedData.item?.name || null,
         price: extractedData.item?.price || null,
         estimated_delivery: extractedData.item?.shipping_time || null,
-        sku: extractedData.item?.SKU || null,
+        sku: extractedData.item?.SKU || extractedData.item?.name || null,
         product_category: extractedData.item?.product_category || null,
         quantity: quantity === 0 ? 1 : quantity,
         unit: extractedData.item?.unit || null,

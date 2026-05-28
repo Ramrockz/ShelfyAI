@@ -27,6 +27,7 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -308,20 +309,6 @@
   .notification-item:hover {
     background: var(--bg-inner);
   }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
-  }
   .notification-message {
     font-size: 14px;
     color: var(--text-main);
@@ -332,35 +319,6 @@
     font-size: 12px;
     color: var(--text-muted);
     margin-bottom: 12px;
-  }
-  .notification-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .notification-actions button {
-    padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-main);
-    color: var(--text-main);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 600;
-  }
-  .notification-actions button:hover {
-    background: var(--bg-panel);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .notification-actions button.delete-btn {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .notification-actions button.delete-btn:hover {
-    background: var(--danger);
-    color: white;
   }
   .notification-empty {
     padding: 40px 20px;
@@ -385,7 +343,6 @@
     background: var(--accent);
     border-radius: 50%;
     border: none;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
     cursor: pointer;
     z-index: 999;
     transition: all 0.3s ease;
@@ -549,7 +506,7 @@
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1820,16 +1777,12 @@ function renderNotifications() {
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">
         ${notification.ingredient_id ? `
-          <button onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">
-            Open Ingredient
+          <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </button>
-          <button onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            Restock
-          </button>
+          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
         ` : ''}
-        <button class="delete-btn" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">
-          Delete
-        </button>
+        <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
       </div>
     </div>
   `).join('');
@@ -2246,7 +2199,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>

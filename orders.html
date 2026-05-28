@@ -27,6 +27,7 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <script>
   // Hide page immediately
@@ -40,6 +41,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -137,7 +139,11 @@
   tbody tr:hover { background: var(--bg-inner); cursor: pointer; }
 
   .btn-action {
-    padding: 6px 12px;
+    padding: 7px 10px;
+    min-width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 700;
@@ -390,20 +396,6 @@
   .notification-item:hover {
     background: var(--bg-inner);
   }
-  .notification-item.unread {
-    background: rgba(6, 182, 212, 0.05);
-  }
-  .notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #06b6d4;
-    border-radius: 50%;
-  }
   .notification-message {
     font-size: 14px;
     color: var(--text-main);
@@ -467,7 +459,6 @@
     background: var(--accent);
     border-radius: 50%;
     border: none;
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
     cursor: pointer;
     z-index: 999;
     transition: all 0.3s ease;
@@ -502,7 +493,6 @@
   .method-card:hover {
     border-color: var(--accent);
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2);
   }
   .method-card img {
     filter: brightness(0) saturate(100%);
@@ -512,17 +502,7 @@
   }
 
   /* Loader animation for AI processing */
-  .loader-container { display:flex; align-items:center; justify-content:center; padding:48px 0; }
-  .loader { display:flex; gap:6px; align-items:flex-end; height:40px; }
-  .loader__bar { width:6px; border-radius:4px; background:var(--accent); animation:loader-bar 1.2s ease-in-out infinite; }
-  .loader__bar:nth-child(1){animation-delay:0s;}
-  .loader__bar:nth-child(2){animation-delay:.1s;}
-  .loader__bar:nth-child(3){animation-delay:.2s;}
-  .loader__bar:nth-child(4){animation-delay:.3s;}
-  .loader__bar:nth-child(5){animation-delay:.4s;}
-  .loader__ball { width:10px; height:10px; border-radius:50%; background:var(--accent); animation:loader-ball 1.2s ease-in-out infinite; align-self:center; }
-  @keyframes loader-bar { 0%,100%{height:10px}50%{height:36px} }
-  @keyframes loader-ball { 0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)} }
+  .loader-container { display:flex; align-items:center; justify-content:center; padding:40px 0; }
 
   @keyframes slideInRight {
     from { opacity: 0; transform: translateX(100px); }
@@ -758,10 +738,6 @@
   .inv-change-qty .new-ok { font-weight: 700; color: #10b981; } .inv-change-qty .new-low { font-weight: 700; color: #f59e0b; } .inv-change-qty .new-oos { font-weight: 700; color: #ef4444; }
   .inv-change-pill { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
   .inv-change-pill.oos { background: rgba(239,68,68,0.1); color: #ef4444; } .inv-change-pill.low { background: rgba(245,158,11,0.1); color: #f59e0b; }
-  .recipe-oos-toast { position: fixed; z-index: 99999; background: #1e293b; color: #f87171; font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 8px; border: 1px solid rgba(248,113,113,0.35); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.28); animation: oosToastIn 0.18s ease both; }
-  @keyframes oosToastIn { from { opacity: 0; transform: translateY(6px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .recipe-oos-toast.hiding { animation: oosToastOut 0.22s ease forwards; }
-  @keyframes oosToastOut { to { opacity: 0; transform: translateY(-4px) scale(0.94); } }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -901,12 +877,13 @@
     .container { padding: 20px 12px; }
   }
 </style>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 
 <body>
 
 <nav class="navbar">
-  <a href="/operations" class="logo">ShelfyAI</a>
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
@@ -1349,11 +1326,11 @@ function renderRecent(filtered) {
         <div class="order-date">${date}</div>
         <div style="display: flex; gap: 8px; margin-top: 12px;">
           ${status === 'processed' ? `
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e; flex: 1;">Fulfilled</button>
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; flex: 1;">Shipped</button>
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444; flex: 1;">Refunded</button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e; flex: 1;" title="Mark as Fulfilled"><i data-lucide="check"></i></button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; flex: 1;" title="Mark as Shipped"><i data-lucide="package"></i></button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444; flex: 1;" title="Mark as Refunded"><i data-lucide="undo-2"></i></button>
           ` : status === 'fulfilled' ? `
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; width: 100%;">Shipped</button>
+            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; width: 100%;" title="Mark as Shipped"><i data-lucide="package"></i></button>
           ` : ''}
         </div>
       </div>
@@ -1367,6 +1344,7 @@ function renderRecent(filtered) {
       </div>
     `;
   }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function showMoreOrders() {
@@ -1598,10 +1576,8 @@ function setupDropZones() {
         // Re-render
         render();
         
-        showNotification(`Order moved to ${newStatus}`, 'success');
       } catch (err) {
         console.error('Error updating order status:', err);
-        showNotification('Failed to update order status', 'error');
       }
       
       draggedOrderId = null;
@@ -2480,7 +2456,7 @@ async function handleSwitchSignUp(e) {
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
           <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
-          <a href="/sandbox" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Playground</a>
+
           <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
           <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
         </div>
@@ -2563,9 +2539,9 @@ function _recipeStockStatus(recipe) {
 }
 
 function _stockBadge(status) {
-  if (status === 'in')  return '<span class="picker-dot green"></span>';
-  if (status === 'low') return '<span class="picker-dot orange"></span>';
-  return '<span class="picker-dot red"></span>';
+  if (status === 'low') return '<span class="stock-pill low">Low</span>';
+  if (status !== 'in')  return '<span class="stock-pill out">Out</span>';
+  return '';
 }
 
 async function _getLastUsedRecipes() {
@@ -2588,14 +2564,14 @@ async function _getLastUsedRecipes() {
 }
 
 function _renderRecipeCard(recipe) {
-  const price = recipe.retail_price || (recipe.cost ? recipe.cost * 1.6 : 0);
+  const price = parseFloat(recipe.cost) || 0;
   const status = _recipeStockStatus(recipe);
   const badge = _stockBadge(status);
   const isFav = orderFavoriteIds.has(recipe.id);
   const esc = recipe.name.replace(/'/g, "\\'");
   const cantBuild = status === 'out';
   return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
-      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price});${cantBuild ? 'showOosToast(event)' : ''}">
+      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price})">
     <button class="fav-btn${isFav ? ' is-fav' : ''}"
       onclick="event.stopPropagation();toggleOrderFavorite('${recipe.id}')"
       style="pointer-events:auto"
@@ -2825,34 +2801,6 @@ function closeManualOrderModal() {
 
 function _escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function showOosToast(event) {
-  event.stopPropagation();
-  document.querySelectorAll('.recipe-oos-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'recipe-oos-toast';
-  toast.textContent = 'Can be processed but not produced.';
-  document.body.appendChild(toast);
-  const btn = document.getElementById('orderContinueBtn');
-  const tw = toast.offsetWidth || 260;
-  let x, y;
-  if (btn) {
-    const r = btn.getBoundingClientRect();
-    x = r.left + r.width / 2 - tw / 2;
-    y = r.top - toast.offsetHeight - 10;
-  } else {
-    x = window.innerWidth / 2 - tw / 2;
-    y = event.clientY - 46;
-  }
-  x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
-  y = Math.max(8, y);
-  toast.style.left = x + 'px';
-  toast.style.top  = y + 'px';
-  const remove = () => { toast.classList.add('hiding'); setTimeout(() => toast.remove(), 240); };
-  const timer = setTimeout(remove, 1500);
-  const clickaway = () => { clearTimeout(timer); remove(); document.removeEventListener('click', clickaway); };
-  setTimeout(() => document.addEventListener('click', clickaway), 60);
 }
 
 function _updateStatusRestriction() {
@@ -3162,9 +3110,9 @@ function showOrderUploadStatus(message, type) {
     if (dropZone) dropZone.style.display = 'none';
     const preview = document.getElementById('orderUploadPreview');
     if (preview) preview.style.display = 'none';
-    statusDiv.innerHTML = '<div class="loader-container"><div class="loader"><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__bar"></div><div class="loader__ball"></div></div></div>';
-    statusDiv.style.cssText = 'display:block;background:transparent;border:none;text-align:center;padding:0;margin-top:0;';
+    showGlobalLoader();
   } else {
+    hideGlobalLoader();
     statusDiv.textContent = message;
     statusDiv.style.cssText = `display:block;font-size:13px;padding:12px;border-radius:8px;margin-top:16px;border:none;background:${type==='error'?'rgba(239,68,68,0.1)':type==='success'?'rgba(16,185,129,0.1)':'rgba(59,130,246,0.1)'};color:${type==='error'?'var(--danger)':type==='success'?'var(--success)':'#3b82f6'};`;
   }
@@ -3449,9 +3397,9 @@ async function confirmMappedOrder() {
     const items = [], selectedOrderRecipes = [];
     mappedRecipes.forEach(mapping => {
       if (mapping.selectedRecipe) {
-        const retailPrice = mapping.selectedRecipe.retail_price || ((parseFloat(mapping.selectedRecipe.cost) || 0) * 1.6);
-        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: retailPrice });
-        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: retailPrice });
+        const recipeCostPrice = parseFloat(mapping.selectedRecipe.cost) || 0;
+        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
+        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
       } else {
         items.push({ name: mapping.itemData.name, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
       }
@@ -3594,6 +3542,15 @@ async function submitFeedback() {
 }
 </script>
 
+<div id="globalLoader" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
+  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;" loop autoplay></lottie-player>
+</div>
+</div>
+
+<script>
+const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json','cat_loader_4.json','cat_loader_5.json','cat_loader_6.json'];
+function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
+function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
+</script>
 </body>
-</html>
 </html>
