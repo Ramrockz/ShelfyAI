@@ -1934,16 +1934,18 @@ function closeRdmDeliveryModal() {
 async function rdmConfirmDelivery() {
   if (!currentReorderIngredient) return;
   closeRdmDeliveryModal();
+  const id = currentReorderIngredient.id;
   try {
     const { error } = await window.supabaseClient
       .from('ingredients')
       .update({ reorder_pending: false })
-      .eq('id', currentReorderIngredient.id);
+      .eq('id', id);
     if (error) throw error;
-    const id = currentReorderIngredient.id;
     if (ingredientStockMap[id]) ingredientStockMap[id].reorder_pending = false;
     currentReorderIngredient = null;
     renderMobileOverlay();
+    const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt');
+    if (upload) window.location.href = `ingredient-detail.html?id=${id}&openExpense=true`;
   } catch (err) {
     showAlert('Failed to confirm delivery: ' + err.message);
   }
@@ -2063,7 +2065,10 @@ async function markAsReordered() {
     
     const { error } = await window.supabaseClient
       .from('ingredients')
-      .update({ reorder_pending: true })
+      .update({
+        reorder_pending: true,
+        reorder_date: new Date().toISOString().split('T')[0]
+      })
       .eq('id', currentReorderIngredient.id)
       .eq('profile_id', user.id);
     

@@ -1424,9 +1424,16 @@
       // Check if we should auto-open the reorder modal
       const openReorder = urlParams.get('openReorder');
       if (openReorder === 'true' && data.source_url && data.source_url.trim()) {
-        // Small delay to ensure everything is loaded
         setTimeout(() => {
           openReorderModal();
+        }, 300);
+      }
+
+      // Check if we should auto-open the expense modal (e.g. redirected after delivery confirmation)
+      const openExpense = urlParams.get('openExpense');
+      if (openExpense === 'true') {
+        setTimeout(() => {
+          openExpenseModal();
         }, 300);
       }
     } catch (err) {
