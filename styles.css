@@ -933,22 +933,27 @@ tr:hover td {
     justify-content: space-between;
   }
 
-  .logo {
-    display: none;
+  .logo img {
+    height: 32px;
   }
 
-  /* Mobile nav-actions: stretch full width so user icon sits left, bell sits right */
+  /* Logged-in: hide logo, stretch nav-actions full-width, avatar far left */
+  .navbar:has(.user-menu) .logo {
+    display: none;
+  }
+  .navbar:has(.user-menu) .nav-actions {
+    flex: 1;
+    margin-left: 0;
+  }
+  .navbar:has(.user-menu) .user-menu {
+    order: -1;
+  }
+
+  /* Mobile nav-actions (logged-out): sit on the right, no stretch */
   .nav-actions {
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-left: 0;
-    flex: 1;
-  }
-
-  /* User icon → far left */
-  .user-menu {
-    order: -1;
   }
 
   /* Notification bell → far right (before hamburger) */
@@ -1160,13 +1165,14 @@ tr:hover td {
     font-size: 16px !important;
   }
 
-  /* Notification dropdown — prevent overflow off left edge on small screens */
-  .notification-dropdown {
-    width: calc(100vw - 32px) !important;
-    right: -8px !important;
-    left: auto !important;
-    max-height: 70vh;
-    overflow-y: auto;
+  /* Ensure dropdowns appear above full-screen overlays (e.g. recipe-detail mobile view, z-index 10002).
+     Anchor left so the panel opens near the avatar (which sits at the left of the nav). */
+  .user-menu-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    left: 8px !important;
+    right: auto !important;
+    z-index: 20000 !important;
   }
 }
 
@@ -1221,8 +1227,33 @@ tr:hover td {
   100% { opacity: 0;   transform: translateX(-16px) scaleX(0.3); }
 }
 
+/* Nav inline search — hidden on desktop, shown between avatar and bell on mobile */
+.nav-search-input { display: none; }
+
+@media (max-width: 640px) {
+  .nav-search-input {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    order: 1;
+    background: var(--bg-inner);
+    border: none;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 14px;
+    color: var(--text-main);
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+  }
+  /* Hide theme toggle to make room for the search */
+  .navbar:has(.nav-search-input) .theme-toggle-wrapper {
+    display: none;
+  }
+}
+
 .truck-anim-icon { display: inline-flex; align-items: center; justify-content: center; }
-.truck-anim-icon svg { overflow: visible !important; }
+.truck-anim-icon svg { overflow: visible !important; width: 16px !important; height: 16px !important; }
 .truck-speed { opacity: 0; transform-origin: right center; }
 
 /* .truck-anim-active, .truck-moving (ingredient-detail), .reordering (recipe-detail) all trigger the same animation */
@@ -1250,7 +1281,4 @@ tr:hover td {
 .truck-moving .truck-speed-3,
 .reordering .truck-speed-3 { animation-delay: 0.3s; }
 
-@media (min-width: 769px) {
-  .truck-anim-icon svg { width: 22px !important; height: 22px !important; }
-}
 

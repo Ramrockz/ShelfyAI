@@ -503,10 +503,9 @@
       margin-bottom: 20px;
     }
     
-    /* Search bar full width */
-    .top-bar input[type="text"] {
-      width: 100% !important;
-      max-width: none !important;
+    /* Hide desktop search bar on mobile — replaced by nav search */
+    #searchRecipes {
+      display: none !important;
     }
     
     /* Mobile row adjustments */
@@ -898,7 +897,8 @@
         </svg>
       </span>
     </div>
-    
+    <input class="nav-search-input" id="navSearchInput" placeholder="Search recipes…" oninput="cardsToShow = 10; render()">
+
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1324,7 +1324,7 @@ function showMoreRecipes() {
 }
 
 function render() {
-    const q = document.getElementById('searchRecipes').value.toLowerCase();
+    const q = (document.getElementById('searchRecipes')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
     const allData = recipes.filter(r => r.name.toLowerCase().includes(q));
     // favorites first
     const data = [

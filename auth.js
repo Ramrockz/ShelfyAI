@@ -110,6 +110,46 @@ async function isAuthenticated() {
   return !!session;
 }
 
+// Safely apply an avatar URL: shows the initial letter immediately, then replaces
+// it with the image only after the image confirms it loaded. Falls back to the
+// letter (and busts the cache) if the URL is broken.
+function applyAvatarUrl(avatarEl, url, fallbackLetter) {
+  if (!avatarEl) return;
+  // Always show the letter first so there's never an empty circle
+  avatarEl.style.backgroundImage = '';
+  avatarEl.style.backgroundSize = '';
+  avatarEl.style.backgroundPosition = '';
+  avatarEl.textContent = fallbackLetter;
+  if (!url || url === 'null') return;
+  const img = new Image();
+  img.onload = () => {
+    avatarEl.style.backgroundImage = `url(${url})`;
+    avatarEl.style.backgroundSize = 'cover';
+    avatarEl.style.backgroundPosition = 'center';
+    avatarEl.textContent = '';
+  };
+  img.onerror = () => {
+    try { sessionStorage.setItem('shelfy_user_avatar', 'null'); } catch (e) {}
+  };
+  img.src = url;
+}
+
+// On every page load, re-validate the inline-cache avatar so a stale/broken URL
+// never leaves an empty circle (inline scripts run before this DOMContentLoaded).
+document.addEventListener('DOMContentLoaded', () => {
+  const avatarEl = document.getElementById('userAvatar');
+  const emailEl  = document.getElementById('userMenuEmail');
+  const roleEl   = document.querySelector('.user-menu-role');
+  const cachedEmail  = sessionStorage.getItem('shelfy_user_email');
+  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+  const cachedTier   = sessionStorage.getItem('shelfy_user_tier');
+  if (cachedEmail && emailEl) emailEl.textContent = cachedEmail;
+  if (cachedTier && roleEl) roleEl.textContent = cachedTier;
+  if (avatarEl && cachedAvatar && cachedAvatar !== 'null' && cachedEmail) {
+    applyAvatarUrl(avatarEl, cachedAvatar, cachedEmail.charAt(0).toUpperCase());
+  }
+});
+
 // User menu functions
 function toggleUserMenu() {
   const button = document.getElementById('userMenuButton');
@@ -149,13 +189,19 @@ async function initUserMenu() {
       return;
     }
 
-    // Guarantee a profiles row exists so FK constraints on other tables don't fail
-    await ensureProfileExists(user);
-
+    // Cache email unconditionally — DOM may not be ready yet if auth.js ran in <head>
+    sessionStorage.setItem('shelfy_user_email', user.email);
     if (userEmailElement) {
       userEmailElement.textContent = user.email;
-      sessionStorage.setItem('shelfy_user_email', user.email);
     }
+    // Show initial letter right away as a safe fallback
+    if (userAvatar) {
+      userAvatar.textContent = user.email.charAt(0).toUpperCase();
+      userAvatar.style.backgroundImage = '';
+    }
+
+    // Guarantee a profiles row exists so FK constraints on other tables don't fail
+    await ensureProfileExists(user);
       
     // Load avatar and tier from database
     const { data: settings } = await supabaseClient
@@ -170,21 +216,9 @@ async function initUserMenu() {
     if (roleEl) roleEl.textContent = tierLabel;
     sessionStorage.setItem('shelfy_user_tier', tierLabel);
 
-    if (userAvatar) {
-      if (settings?.avatar_url) {
-        // Show avatar image
-        userAvatar.style.backgroundImage = `url(${settings.avatar_url})`;
-        userAvatar.style.backgroundSize = 'cover';
-        userAvatar.style.backgroundPosition = 'center';
-        userAvatar.textContent = '';
-        sessionStorage.setItem('shelfy_user_avatar', settings.avatar_url);
-      } else {
-        // Show initial
-        userAvatar.style.backgroundImage = '';
-        userAvatar.textContent = user.email.charAt(0).toUpperCase();
-        sessionStorage.setItem('shelfy_user_avatar', 'null');
-      }
-    }
+    const avatarUrl = settings?.avatar_url || null;
+    try { sessionStorage.setItem('shelfy_user_avatar', avatarUrl || 'null'); } catch (e) {}
+    applyAvatarUrl(userAvatar, avatarUrl, user.email.charAt(0).toUpperCase());
     
     console.log('initUserMenu: Completed successfully');
   } catch (error) {

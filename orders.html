@@ -805,9 +805,9 @@
       text-overflow: ellipsis;
     }
 
-    /* Mobile search input */
+    /* Mobile search input — replaced by nav search */
     #mobileSearchInput {
-      display: block !important;
+      display: none !important;
     }
     
     #searchInput {
@@ -907,7 +907,8 @@
         </svg>
       </span>
     </div>
-    
+    <input class="nav-search-input" id="navSearchInput" placeholder="Search orders…" oninput="render()">
+
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1264,7 +1265,7 @@ function switchView(view) {
   
   
 function render() {
-  const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearchInput')?.value || '').toLowerCase();
+  const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
   
   let filtered = orders.filter(order => {
     const searchString = `${order.customer || ''} ${order.source || ''} ${order.order_reference || ''} ${order.notes || ''}`.toLowerCase();
