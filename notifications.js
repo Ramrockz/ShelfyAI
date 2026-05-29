@@ -84,7 +84,8 @@ function renderNotifications() {
     return `
     <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
          data-notification-id="${notification.id}"
-         onmouseenter="markAsRead('${notification.id}')">
+         onmouseenter="markAsRead('${notification.id}')"
+         ${notification.ingredient_id ? `onclick="openIngredient('${notification.ingredient_id}')"` : ''}>
       <div class="notification-message">${notification.message}</div>
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">

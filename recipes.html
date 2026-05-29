@@ -62,8 +62,8 @@
   .cta p { font-size: 12px; color: rgba(255,255,255,0.9); margin-bottom: 16px; line-height: 1.4; }
 
   .btn { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
-  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-primary:hover { background: #0891b2; border-color: #0891b2; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .btn-primary { background: #fff; color: var(--accent); }
+  .btn-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
   /* ---------- MAIN CONTENT ---------- */
   .main { padding: 32px 36px; position: relative; min-width: 0; overflow-x: hidden; }
@@ -475,6 +475,8 @@
   @media (max-width: 768px) {
     /* Keep bottom nav above all builder overlays */
     #bottom-nav { z-index: 10005 !important; }
+    /* Delete modal must sit above bottom nav */
+    #deleteRecipeModal { z-index: 10010 !important; }
 
     /* Prevent builder content from hiding behind bottom nav */
     .recipe-panel-left { padding-bottom: 76px !important; }
@@ -1111,7 +1113,7 @@
 
 <!-- Duplicate Recipe Modal -->
 <!-- Delete Recipe Modal -->
-<div class="modal-overlay" id="deleteRecipeModal" style="display: none;" onclick="if(event.target === this) closeDeleteRecipeModal()">
+<div class="modal-overlay modal-sheet" id="deleteRecipeModal" onclick="if(event.target === this) closeDeleteRecipeModal()">
   <div class="modal-content" style="max-width: 400px;">
     <h3 style="margin-top:0; margin-bottom: 16px;">Delete Recipe</h3>
     <p style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;">Are you sure you want to delete "<span id="deleteRecipeName"></span>"? This action cannot be undone.</p>
@@ -1364,7 +1366,7 @@ function render() {
             const otherData  = allOther.slice(0, cardsToShow);
             const hasMore    = allOther.length > cardsToShow;
 
-            const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
+            const sectionLbl = (label, count) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}<span style="font-weight:500;letter-spacing:0;">(${count})</span></div>`;
 
             const buildCard = r => {
                 const componentCount = r.components?.length || 0;
@@ -1393,19 +1395,19 @@ function render() {
             const hasOtherSections = favData.length > 0 || outOfIng.length > 0 || lowOnIng.length > 0;
             let html = '';
             if (favData.length > 0) {
-                html += sectionLbl('Favorites');
+                html += sectionLbl('Favorites', favData.length);
                 html += favData.map(buildCard).join('');
             }
             if (outOfIng.length > 0) {
-                html += sectionLbl('Out of Ingredient');
+                html += sectionLbl('Out of Ingredient', outOfIng.length);
                 html += outOfIng.map(buildCard).join('');
             }
             if (lowOnIng.length > 0) {
-                html += sectionLbl('Low on Ingredient');
+                html += sectionLbl('Low on Ingredient', lowOnIng.length);
                 html += lowOnIng.map(buildCard).join('');
             }
             if (otherData.length > 0) {
-                if (hasOtherSections) html += sectionLbl('All Recipes');
+                if (hasOtherSections) html += sectionLbl('All Recipes', allOther.length);
                 html += otherData.map(buildCard).join('');
             }
             container.innerHTML = html;
@@ -2159,8 +2161,8 @@ async function duplicateRecipe(recipeId) {
 
     if (error) throw error;
 
-    // Add to local list and re-render without a full reload
-    recipes.push({
+    // Prepend so the duplicate appears first in its section
+    recipes.unshift({
       ...inserted,
       components: inserted.components || [],
       is_favorite: false

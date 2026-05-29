@@ -699,10 +699,7 @@ async function confirmDelete() {
 
     if (error) throw error;
 
-    showNotification('Expense deleted successfully', 'success');
-    setTimeout(() => {
-      window.location.href = '/expenses';
-    }, 1500);
+    window.location.href = '/expenses';
   } catch (error) {
     console.error('Error deleting expense:', error);
     showNotification('Failed to delete expense: ' + error.message, 'error');

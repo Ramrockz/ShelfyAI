@@ -1207,10 +1207,7 @@ async function confirmDelete() {
 
     if (error) throw error;
 
-    showNotification('Order deleted successfully', 'success');
-    setTimeout(() => {
-      window.location.href = '/orders';
-    }, 1500);
+    window.location.href = '/orders';
   } catch (error) {
     console.error('Error deleting order:', error);
     showNotification('Failed to delete order: ' + error.message, 'error');

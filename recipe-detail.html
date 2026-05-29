@@ -57,23 +57,49 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 24px;
     margin-bottom: 32px;
   }
+  .header > div:first-child { min-width: 0; flex: 1; }
+  .header > div:last-child { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+
+  .detail-title-input {
+    font-size: 26px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    outline: none;
+    font-family: inherit;
+    color: var(--text-main);
+    padding: 2px 0;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .detail-title-input:focus { border-bottom-color: var(--accent); }
 
   .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: 0.2s; }
   .btn-primary { background: #fff; color: #000; }
   .btn-outline { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
   .btn-outline:hover { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-  .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
-  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-danger-style { background: transparent; color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .btn-danger-style:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn-success { background: var(--accent); color: #fff; border: none; }
   .btn-success:hover { background: #2980b9; }
 
-  .detail-card-actions { display: flex; gap: 16px; align-items: center; padding-top: 6px; }
-  .detail-dup-link { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); cursor: pointer; }
-  .detail-dup-link:hover { text-decoration: underline; }
-  .detail-del-link { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--danger); cursor: pointer; }
-  .detail-del-link:hover { text-decoration: underline; }
+  /* Desktop: text-link style CTAs */
+  .detail-dup-btn, .detail-del-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 4px 0; font-family: inherit;
+  }
+  .detail-dup-btn { color: var(--accent); }
+  .detail-del-btn { color: var(--danger); }
+  .detail-dup-btn .btn-icon, .detail-del-btn .btn-icon { display: none; }
+  .detail-dup-btn .btn-text, .detail-del-btn .btn-text { display: inline; }
+  .detail-dup-btn:hover { opacity: 0.7; }
+  .detail-del-btn:hover { opacity: 0.7; }
 
   /* Category chips for add-ingredient modal */
   .detail-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -262,7 +288,7 @@
     }
     .rdm-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      padding: 16px 20px; flex-shrink: 0;
     }
     .ingredient-item {
       display: flex;
@@ -276,21 +302,19 @@
     }
     .ingredient-item-content { flex: 1; }
     .ingredient-item-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; display: block; }
-    .rdm-name-row {
-      position: relative; display: flex; align-items: center;
+    .rdm-name-section {
+      padding: 0 20px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
-    .rdm-name-row:focus-within { border-bottom-color: var(--accent); }
+    .rdm-name-section:focus-within { border-bottom-color: var(--accent); }
     .rdm-title {
-      flex: 1; min-width: 0; box-sizing: border-box;
-      font-size: 17px; font-weight: 700; color: var(--text-main);
-      background: none; border: none; outline: none; font-family: inherit;
-      padding: 12px 20px; padding-right: 44px;
+      display: block; width: 100%; box-sizing: border-box;
+      font-size: 17px; font-weight: 500; color: var(--text-main);
+      background: none; border: none;
+      outline: none; font-family: inherit;
+      padding: 12px 0;
       transition: none;
-    }
-    .rdm-edit-icon {
-      position: absolute; right: 16px; pointer-events: none;
-      color: var(--text-muted); opacity: 0.5; flex-shrink: 0;
     }
     .rdm-body {
       flex: 1; overflow-y: auto; padding: 0 20px;
@@ -320,18 +344,7 @@
     }
     .rdm-qty-val::-webkit-outer-spin-button,
     .rdm-qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
-    .rdm-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 20px; border-top: 1px solid var(--border); flex-shrink: 0;
-      padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    }
-    .rdm-cost-label {
-      font-size: 12px; text-transform: uppercase; color: var(--text-muted);
-      font-weight: 700; letter-spacing: 0.07em;
-    }
-    .rdm-cost-value {
-      font-size: 18px; font-weight: 800; color: var(--text-main);
-    }
+    .rdm-footer { display: none; }
     .rdm-add-ing-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 14px; margin: 16px 0;
@@ -380,27 +393,34 @@
 
     /* Header: stack buttons on mobile */
     .header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 16px;
     }
 
-    /* Hide Save button on mobile */
-    .header button[onclick="saveRecipe()"] {
-      display: none !important;
-    }
-
-    .header .btn {
-      padding: 10px 8px;
-      font-size: 14px;
-      white-space: nowrap;
-      width: 100%;
-    }
-
-    .header h1,
     #recipeName {
-      font-size: 24px !important;
+      font-size: 22px !important;
     }
+
+    .detail-dup-btn, .detail-del-btn {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .detail-dup-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border) !important;
+      color: var(--accent);
+    }
+    .detail-del-btn {
+      background: var(--bg-panel);
+      border: 1px solid rgba(239,68,68,0.3) !important;
+      color: var(--danger);
+    }
+    .detail-dup-btn .btn-icon, .detail-del-btn .btn-icon { display: block !important; }
+    .detail-dup-btn .btn-text, .detail-del-btn .btn-text { display: none !important; }
 
     /* Main grid: single column on mobile */
     .main-grid {
@@ -780,16 +800,22 @@
 <div class="container">
 
   <div class="header">
-    <div style="flex: 1;">
-      <input type="text" id="recipeName" value="Loading..." style="margin:0; font-size: 32px; font-weight: 700; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-main); width: 100%; padding: 4px 0; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'; saveRecipeName()" />
-      <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-        <span id="recipeStatus" style="font-size: 11px; padding: 5px 10px; border-radius: 6px; font-weight: 700; text-transform: uppercase; display: inline-block;"></span>
+    <div>
+      <input type="text" id="recipeName" class="detail-title-input" value="Loading…" onblur="saveRecipeName()">
+      <div style="margin-top:6px;">
+        <span id="recipeStatus" style="font-size:11px; padding:4px 10px; border-radius:6px; font-weight:700; text-transform:uppercase; display:inline-block;"></span>
       </div>
     </div>
-    <div class="detail-card-actions">
+    <div>
       <button id="detailFavBtn" onclick="toggleDetailFavorite()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:4px;transition:color 0.2s,transform 0.15s;line-height:1;" title="Toggle favorite">☆</button>
-      <span class="detail-dup-link" onclick="duplicateRecipe()">Duplicate</span>
-      <span class="detail-del-link" onclick="confirmDelete()">Delete</span>
+      <button class="detail-dup-btn" onclick="duplicateRecipe()" title="Duplicate">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span class="btn-text">Duplicate</span>
+      </button>
+      <button class="detail-del-btn" onclick="confirmDelete()" title="Delete">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        <span class="btn-text">Delete</span>
+      </button>
     </div>
   </div>
 
@@ -798,11 +824,9 @@
     <div class="panel">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
         <h3 style="margin:0;">Ingredients</h3>
-        <div style="text-align:right;">
-          <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.07em; margin-bottom:2px;">Production Cost</div>
-          <div id="productionCostDisplay" style="font-size:22px; font-weight:800; color:var(--text-main);">$0.00</div>
-        </div>
       </div>
+      <!-- hidden: still updated by JS but no longer displayed -->
+      <div id="productionCostDisplay" style="display:none;">$0.00</div>
       <div id="ingredientsList">
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
       </div>
@@ -828,11 +852,16 @@ function closeAlert() {
   document.getElementById('alertModal').classList.remove('active');
 }
 
-function showConfirm(message, title = 'Confirm') {
+function showConfirm(message, title = 'Confirm', confirmLabel = 'Confirm', isDanger = false) {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
+    const okBtn = document.getElementById('confirmOkBtn');
+    if (okBtn) {
+      okBtn.textContent = confirmLabel;
+      okBtn.style.background = isDanger ? 'var(--danger)' : 'var(--accent)';
+    }
     document.getElementById('confirmModal').classList.add('active');
   });
 }
@@ -1051,18 +1080,20 @@ async function renderRecipe() {
     maxRecipeCount = 0;
   }
 
-  if (canProduce && maxRecipeCount > 0) {
-    statusEl.textContent = 'Can Produce';
-    statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
-    statusEl.style.color = 'var(--success)';
-  } else if (hasOutOfStock) {
-    statusEl.textContent = 'Ingredient out of stock';
-    statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
-    statusEl.style.color = 'var(--danger)';
-  } else {
-    statusEl.textContent = 'Ingredient low on stock';
-    statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
-    statusEl.style.color = 'var(--warning)';
+  if (statusEl) {
+    if (canProduce && maxRecipeCount > 0) {
+      statusEl.textContent = 'Can Produce';
+      statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
+      statusEl.style.color = 'var(--success)';
+    } else if (hasOutOfStock) {
+      statusEl.textContent = 'Ingredient out of stock';
+      statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+      statusEl.style.color = 'var(--danger)';
+    } else {
+      statusEl.textContent = 'Ingredient low on stock';
+      statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
+      statusEl.style.color = 'var(--warning)';
+    }
   }
   
   const addButtonHtml = `
@@ -1119,6 +1150,8 @@ function renderMobileOverlay() {
   const overlay = document.getElementById('mobileViewOverlay');
   if (!overlay) return;
   overlay.style.display = 'flex';
+  const bottomNav = document.getElementById('bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'none';
 
   // .navbar has z-index:1000 which creates a stacking context below the overlay (z-index:10002).
   // Moving the dropdowns to <body> puts them in the root stacking context so their own
@@ -1661,8 +1694,29 @@ async function saveRecipeChanges() {
 }
 
 async function duplicateRecipe() {
-  if (await showConfirm('Create a duplicate of this recipe?')) {
-    window.location.href = `/recipes?duplicate=${recipeId}`;
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: inserted, error } = await window.supabaseClient
+      .from('recipes')
+      .insert({
+        profile_id: user.id,
+        name: `${recipe.name} (Copy)`,
+        cost: recipe.cost || 0,
+        components: recipe.components || [],
+        status: recipe.status || 'ready',
+        is_favorite: false
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    window.location.href = `/recipe-detail?id=${inserted.id}`;
+  } catch (err) {
+    console.error('Error duplicating recipe:', err);
+    showAlert('Failed to duplicate recipe');
   }
 }
 
@@ -1765,7 +1819,8 @@ async function updateRecipeInDatabase() {
 }
 
 async function confirmDelete() {
-  if (!await showConfirm("Are you sure you want to delete this recipe? This action cannot be undone.")) return;
+  const name = recipe?.name || 'this recipe';
+  if (!await showConfirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`, 'Delete Recipe', 'Delete', true)) return;
   
   try {
     const { error } = await window.supabaseClient
@@ -1775,10 +1830,7 @@ async function confirmDelete() {
 
     if (error) throw error;
     
-    showAlert('Recipe deleted successfully');
-    setTimeout(() => {
-      window.location.href = "/recipes";
-    }, 1500);
+    window.location.href = "/recipes";
   } catch (error) {
     console.error('Error deleting recipe:', error);
     showAlert('Failed to delete recipe');
@@ -2015,7 +2067,7 @@ function showMoreReorderItemsRDM() {
   }
 }
 
-async function markAsReordered() {
+async function rdmMarkAsReordered() {
   if (!currentReorderIngredient) return;
   
   try {
@@ -2419,25 +2471,32 @@ document.addEventListener('keydown', (e) => {
 <!-- Mobile view overlay (ms2-style, mobile only) -->
 <div id="mobileViewOverlay">
   <div class="rdm-header">
-    <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;">
+    <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
       <div id="rdmUserAvatar" class="user-avatar" style="width:32px;height:32px;font-size:13px;flex-shrink:0;">U</div>
     </button>
-    <div class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="padding:6px;">
+    <div class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="padding:6px;flex-shrink:0;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:22px;height:22px;display:block;">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
       </svg>
     </div>
   </div>
-  <div class="rdm-name-row">
+  <div class="rdm-name-section">
     <input type="text" class="rdm-title" id="rdmTitle" value="Recipe" onblur="saveMobileRecipeName()">
-    <svg class="rdm-edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
   </div>
   <div class="rdm-body" id="rdmQtyList"></div>
-  <div class="rdm-footer">
-    <div class="rdm-cost-label">Production Cost</div>
-    <div class="rdm-cost-value" id="rdmCostDisplay">$0.00</div>
+  <div id="rdmCostDisplay" style="display:none;">$0.00</div>
+  <div style="display:flex; gap:12px; padding:12px 20px; padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); border-top:1px solid #e5e7eb; flex-shrink:0;">
+    <button onclick="duplicateRecipe()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#06b6d4; color:#ffffff; border:2px solid #06b6d4; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Duplicate
+    </button>
+    <button onclick="confirmDelete()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#ffffff; color:#ef4444; border:2px solid rgba(239,68,68,0.4); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      Delete
+    </button>
   </div>
 </div>
+
 
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target === this) closeRecipeBuilder()">
@@ -2511,7 +2570,7 @@ document.addEventListener('keydown', (e) => {
       </svg>
     </div>
     
-    <button onclick="markAsReordered()" style="width: 100%; padding: 12px 32px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Mark as Reordered</button>
+    <button onclick="rdmMarkAsReordered()" style="width: 100%; padding: 12px 32px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Mark as Reordered</button>
     
     <div id="reorderIngredientsList" style="max-height: 300px; overflow-y: auto;">
       <p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>
@@ -2548,7 +2607,7 @@ document.addEventListener('keydown', (e) => {
     <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
     <div style="display: flex; gap: 12px;">
       <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
-      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
+      <button id="confirmOkBtn" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
     </div>
   </div>
 </div>

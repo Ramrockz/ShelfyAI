@@ -62,12 +62,36 @@
   .detail-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 24px;
     margin-bottom: 32px;
   }
   .detail-header > div:first-child { min-width: 0; flex: 1; }
   .detail-header > div:last-child { flex-shrink: 0; }
+
+  .detail-title-input {
+    font-size: 26px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    outline: none;
+    font-family: inherit;
+    color: var(--text-main);
+    padding: 2px 0;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .detail-title-input:focus { border-bottom-color: var(--accent); }
+
+  /* Desktop: hide mobile-only name title; name lives inside the panel */
+  #name-mobile { display: none; }
+  @media (max-width: 768px) {
+    #name-mobile { display: block; }
+    #name-desktop-group { display: none; }
+    .ingredient-details-h3 { display: none; }
+    .detail-header { margin-bottom: 12px; }
+  }
 
   .breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; cursor: pointer; }
 
@@ -160,6 +184,7 @@
   .form-group {
     margin-bottom: 16px;
   }
+  .form-group:last-child { margin-bottom: 0; }
 
   .form-group label {
     display: block;
@@ -1110,8 +1135,7 @@
 
   <div class="detail-header">
     <div>
-      <h1 id="ingredientName" style="margin:0;">Loading...</h1>
-      <div id="ingredientAttributes" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;"></div>
+      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Ingredient name…" required oninput="document.getElementById('name').value=this.value" onblur="document.getElementById('name').value=this.value;autoSave()">
     </div>
     <div style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
@@ -1133,14 +1157,13 @@
     
     <!-- Left Column: Main Details -->
     <div class="panel">
-      <h3>Ingredient Details</h3>
-      
+      <h3 class="ingredient-details-h3">Ingredient Details</h3>
+
       <div class="form-section">
-        <div class="form-group">
+        <div class="form-group" id="name-desktop-group">
           <label for="name">Name *</label>
           <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required onblur="autoSave()">
         </div>
-
         <div class="form-group">
           <label for="unit">Unit *</label>
           <select id="unit" class="form-input" required onchange="autoSave(); updateStatsDisplay()">
@@ -1237,7 +1260,7 @@
         <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
           <button class="qty-adjust-btn" onclick="adjustQty(-1)">−</button>
           <span id="qtyDisplay" contenteditable="true" inputmode="decimal" spellcheck="false"
-            style="font-size: 40px; font-weight: 800; line-height: 1; color: var(--text-main); outline: none; min-width: 1ch; cursor: text; border-radius: 8px; padding: 2px 6px;"
+            style="font-size: 40px; font-weight: 800; line-height: 1; color: var(--success); outline: none; min-width: 1ch; cursor: text; border-radius: 8px; padding: 2px 6px;"
             onblur="commitQtyInput(this)"
             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}if(event.key==='Escape'){this.textContent=parseFloat(currentIngredient?.quantity)||0;this.blur();}"
             >0</span>
@@ -1442,30 +1465,6 @@
   }
 
   function displayIngredient(ing) {
-    // Header
-    document.getElementById('ingredientName').textContent = ing.name;
-    
-    // Display attributes under title (values only)
-    const attrsElement = document.getElementById('ingredientAttributes');
-    if (ing.custom_attributes) {
-      try {
-        const customAttrs = typeof ing.custom_attributes === 'string' 
-          ? JSON.parse(ing.custom_attributes) 
-          : ing.custom_attributes;
-        const values = Object.values(customAttrs).filter(v => v && v.trim());
-        if (values.length > 0) {
-          attrsElement.textContent = values.join(' • ');
-        } else {
-          attrsElement.textContent = '';
-        }
-      } catch (e) {
-        console.error('Error parsing attributes:', e);
-        attrsElement.textContent = '';
-      }
-    } else {
-      attrsElement.textContent = '';
-    }
-    
     // Favorite star
     const starIcon = document.getElementById('starIcon');
     if (ing.is_favorite) {
@@ -1478,6 +1477,8 @@
 
     // Form fields
     document.getElementById('name').value = ing.name || '';
+    const mobileNameEl = document.getElementById('name-mobile');
+    if (mobileNameEl) mobileNameEl.value = ing.name || '';
     document.getElementById('unit').value = ing.unit || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
     document.getElementById('category').value = ing.category || '';
@@ -2278,7 +2279,7 @@
   function updateStatsDisplay() {
     const qty = parseFloat(currentIngredient?.quantity) || 0;
     const minStock = parseFloat(currentIngredient?.min_stock) || 0;
-    let qtyColor = 'var(--text-main)';
+    let qtyColor = 'var(--success)';
     if (qty === 0) qtyColor = 'var(--danger)';
     else if (minStock > 0 && qty < minStock) qtyColor = 'var(--warning)';
     const el = document.getElementById('qtyDisplay');
@@ -2313,6 +2314,7 @@
       delete customAttributes[oldKey];
     }
     customAttributes[newKey] = newValue;
+    autoSave();
   }
 
   function removeCustomAttribute(key) {
@@ -2382,9 +2384,6 @@
       initialFormState = getCurrentFormState();
       updateStatsDisplay();
 
-      // Update header
-      document.getElementById('ingredientName').textContent = updateData.name;
-      
     } catch (err) {
       showAlert('Failed to save changes: ' + err.message);
     }
@@ -2534,7 +2533,7 @@
   async function deleteIngredient() {
     if (!currentIngredient) return;
     
-    if (!await showConfirm(`Delete "${currentIngredient.name}"? This cannot be undone.`)) return;
+    if (!await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient', 'Cancel', 'Delete', true)) return;
 
     try {
       const { error } = await supabaseClient
@@ -2561,6 +2560,7 @@
 
   // === Notification System ===
   let notificationsCache = [];
+  let notificationReorderMap = {};
   let notificationCheckInterval = null;
 
   async function initializeNotifications() {
@@ -2587,6 +2587,18 @@
       if (error) throw error;
       
       notificationsCache = notifications || [];
+
+      // Fetch reorder_pending for each ingredient referenced in notifications
+      const ingIds = [...new Set(notificationsCache.map(n => n.ingredient_id).filter(Boolean))];
+      if (ingIds.length > 0) {
+        const { data: ings } = await supabaseClient
+          .from('ingredients').select('id, reorder_pending').in('id', ingIds);
+        notificationReorderMap = {};
+        (ings || []).forEach(ing => { notificationReorderMap[ing.id] = ing.reorder_pending; });
+      } else {
+        notificationReorderMap = {};
+      }
+
       renderNotifications();
       updateNotificationBadge();
     } catch (error) {
@@ -2610,15 +2622,16 @@
     }
     
     listContainer.innerHTML = notificationsCache.map(notification => `
-      <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
+      <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
            data-notification-id="${notification.id}"
-           onmouseenter="markAsRead('${notification.id}')">
+           onmouseenter="markAsRead('${notification.id}')"
+           ${notification.ingredient_id ? `onclick="openIngredient('${notification.ingredient_id}')"` : ''}>
         <div class="notification-message">${notification.message}</div>
         <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
         <div class="notification-actions">
           ${notification.ingredient_id ? `
-            <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-              <span class="truck-anim-icon truck-anim-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
+            <button class="notif-reorder-btn" title="${notificationReorderMap[notification.ingredient_id] ? 'Confirm Delivery' : 'Reorder'}" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
+              <span class="truck-anim-icon${notificationReorderMap[notification.ingredient_id] ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
             </button>
             <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
           ` : ''}
@@ -2875,13 +2888,15 @@ function closeAlert() {
   document.getElementById('alertModal').classList.remove('active');
 }
 
-function showConfirm(message, title = 'Confirm', cancelLabel = 'Cancel', confirmLabel = 'Confirm') {
+function showConfirm(message, title = 'Confirm', cancelLabel = 'Cancel', confirmLabel = 'Confirm', isDanger = false) {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     document.getElementById('confirmCancelBtn').textContent = cancelLabel;
-    document.getElementById('confirmOkBtn').textContent = confirmLabel;
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = confirmLabel;
+    okBtn.style.background = isDanger ? 'var(--danger)' : 'var(--accent)';
     document.getElementById('confirmModal').classList.add('active');
   });
 }

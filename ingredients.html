@@ -1365,7 +1365,7 @@
     <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
     <div style="display: flex; gap: 12px;">
       <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="resolveConfirm(false)">Cancel</button>
-      <button class="btn btn-primary" style="flex: 1;" onclick="resolveConfirm(true)">Confirm</button>
+      <button id="confirmOkBtn" class="btn btn-primary" style="flex: 1;" onclick="resolveConfirm(true)">Confirm</button>
     </div>
   </div>
 </div>
@@ -1397,11 +1397,17 @@ function closeAlert() {
   document.getElementById('alertModal').classList.remove('active');
 }
 
-function showConfirm(message, title = 'Confirm') {
+function showConfirm(message, title = 'Confirm', confirmLabel = 'Confirm', isDanger = false) {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
+    const okBtn = document.getElementById('confirmOkBtn');
+    if (okBtn) {
+      okBtn.textContent = confirmLabel;
+      okBtn.style.background = isDanger ? 'var(--danger)' : '';
+      okBtn.style.color = isDanger ? '#fff' : '';
+    }
     document.getElementById('confirmModal').classList.add('active');
   });
 }
@@ -3149,7 +3155,7 @@ function renderRecent(data) {
     const starIcon = i.is_favorite ? '★' : '☆';
     const starClass = i.is_favorite ? 'favorited' : '';
     const safeName = escapeHtml(i.name);
-    let qtyColor = 'var(--text-main)';
+    let qtyColor = 'var(--success)';
     if (i.qty === 0) qtyColor = 'var(--danger)';
     else if (i.min_stock && i.qty < i.min_stock) qtyColor = 'var(--warning)';
     let attributesText = '';
@@ -3197,7 +3203,7 @@ function renderRecent(data) {
       </div>`;
   };
 
-  const sectionLbl = (label) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}</div>`;
+  const sectionLbl = (label, count) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}<span style="font-weight:500;letter-spacing:0;">(${count})</span></div>`;
 
   const favData      = data.filter(i => i.is_favorite);
   const nonFavData   = data.filter(i => !i.is_favorite);
@@ -3211,20 +3217,20 @@ function renderRecent(data) {
   container.innerHTML = '';
 
   if (favData.length > 0) {
-    container.innerHTML += sectionLbl('Favorites');
+    container.innerHTML += sectionLbl('Favorites', favData.length);
     favData.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   if (outOfStock.length > 0) {
-    container.innerHTML += sectionLbl('Out of Stock');
+    container.innerHTML += sectionLbl('Out of Stock', outOfStock.length);
     outOfStock.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   if (lowStock.length > 0) {
-    container.innerHTML += sectionLbl('Low on Stock');
+    container.innerHTML += sectionLbl('Low on Stock', lowStock.length);
     lowStock.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   if (otherData.length > 0) {
     const needsLabel = favData.length > 0 || outOfStock.length > 0 || lowStock.length > 0;
-    if (needsLabel) container.innerHTML += sectionLbl('All Ingredients');
+    if (needsLabel) container.innerHTML += sectionLbl('All Ingredients', allOtherData.length);
     otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   
@@ -3520,7 +3526,7 @@ function editIngredient(id) {
 }
 
 async function deleteIng(id) { 
-  const confirmed = await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient');
+  const confirmed = await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient', 'Delete', true);
   if (!confirmed) return;
   
   try {
