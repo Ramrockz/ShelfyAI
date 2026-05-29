@@ -848,11 +848,15 @@ async function loadOrder() {
       return;
     }
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await window.supabaseClient
       .from('sales')
       .select('*')
       .eq('id', orderId)
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .single();
 
     if (error) throw error;
@@ -876,10 +880,14 @@ async function loadRecipes() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await window.supabaseClient
       .from('recipes')
       .select('id, name, cost, retail_price')
-      .eq('profile_id', user.id);
+      .eq('profile_id', user.id)
+      .eq('store_id', storeId);
 
     if (error) throw error;
     
@@ -1045,11 +1053,15 @@ async function loadAffectedIngredients() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Query ingredient_history for this order
     const { data: historyEntries, error } = await window.supabaseClient
       .from('ingredient_history')
       .select('*, ingredients:ingredient_id(name, unit)')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .eq('reason', 'order')
       .eq('reference_id', orderId)
       .order('changed_at', { ascending: false });
@@ -1440,6 +1452,7 @@ initializeNotifications();
 </footer>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
+<script src="store-modal.js"></script>
 
 </body>
 </html>

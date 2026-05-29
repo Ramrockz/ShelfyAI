@@ -1427,6 +1427,9 @@
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const { data, error } = await supabaseClient
         .from('ingredients')
         .select('*')
@@ -1559,10 +1562,14 @@
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const { data: ingredients } = await supabaseClient
         .from('ingredients')
         .select('category')
         .eq('profile_id', user.id)
+        .eq('store_id', storeId)
         .not('category', 'is', null);
       
       if (ingredients) {
@@ -1585,10 +1592,14 @@
         return;
       }
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const { data: recipes, error } = await supabaseClient
         .from('recipes')
         .select('*')
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .eq('store_id', storeId);
 
       if (error) throw error;
 
@@ -2075,11 +2086,15 @@
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const baseDomain = extractBaseDomain(sourceUrl);
       const { data, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
         .eq('profile_id', user.id)
+        .eq('store_id', storeId)
         .ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentIngredient.id)
         .abortSignal(reorderAbortController?.signal);
@@ -2371,6 +2386,10 @@
 
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
+
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+      updateData.store_id = storeId;
       
       const { error } = await supabaseClient
         .from('ingredients')
@@ -2460,6 +2479,10 @@
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) { showAlert('Please log in', 'Authentication Required'); return; }
+
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const { data, error } = await supabaseClient
         .from('ingredients')
         .insert({
@@ -2475,7 +2498,8 @@
           sku: currentIngredient.sku || '',
           source_url: sourceUrl || '',
           custom_attributes: Object.keys(detailDuplicateAttributes).length > 0 ? JSON.stringify(detailDuplicateAttributes) : null,
-          profile_id: user.id
+          profile_id: user.id,
+          store_id: storeId
         })
         .select();
       if (error) throw error;
@@ -2497,6 +2521,9 @@
         return;
       }
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       // Use currentIngredient as the source of truth so hidden fields (mobile) are included
       const duplicateData = {
         name: (document.getElementById('name')?.value || currentIngredient.name) + ' (Copy)',
@@ -2510,7 +2537,8 @@
         source_url: document.getElementById('source_url')?.value ?? currentIngredient.source_url ?? '',
         notes: document.getElementById('notes')?.value ?? currentIngredient.notes ?? '',
         custom_attributes: currentIngredient.custom_attributes || null,
-        profile_id: user.id
+        profile_id: user.id,
+        store_id: storeId
       };
 
       const { data, error } = await supabaseClient
@@ -3332,5 +3360,6 @@ async function handleSwitchSignUp(e) {
   </div>
 </footer>
 
+<script src="store-modal.js"></script>
 </body>
 </html>

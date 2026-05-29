@@ -26,12 +26,15 @@ async function loadNotifications() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    const { data: notifications, error } = await supabaseClient
+    const storeId = typeof getStoreId === 'function' ? getStoreId() : (window.currentStoreId || localStorage.getItem('shelfy_store_id'));
+    let notifQuery = supabaseClient
       .from('notifications')
       .select('*')
       .eq('profile_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
+    if (storeId) notifQuery = notifQuery.eq('store_id', storeId);
+    const { data: notifications, error } = await notifQuery;
 
     if (error) throw error;
 
@@ -250,6 +253,7 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
       return;
     }
 
+    const _storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { error: insertError } = await supabaseClient
       .from('notifications')
       .insert([{
@@ -257,7 +261,8 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
         type: 'ingredient_out_of_stock',
         ingredient_id: ingredientId,
         message: `Ingredient ${ingredientName} has run out of stock`,
-        is_read: false
+        is_read: false,
+        ..._storeId ? { store_id: _storeId } : {}
       }]);
     
     if (insertError) throw insertError;

@@ -104,6 +104,54 @@ async function ensureProfileExists(user) {
   }
 }
 
+// Ensures the user has at least one store; sets window.currentStoreId / window.currentStoreName
+async function ensureStoreExists(user) {
+  if (!user) return;
+  if (window.currentStoreId) return; // already set this session
+  try {
+    const { data: stores } = await supabaseClient
+      .from('stores')
+      .select('id, name')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: true });
+
+    let list = stores || [];
+
+    // Auto-create default store on first login
+    if (list.length === 0) {
+      const defaultName = (user.email.split('@')[0] || 'My') + "'s Store";
+      const { data: created } = await supabaseClient
+        .from('stores')
+        .insert({ owner_id: user.id, name: defaultName })
+        .select('id, name')
+        .single();
+      if (created) list = [created];
+    }
+
+    // Validate saved store id
+    const savedId = localStorage.getItem('shelfy_store_id');
+    const valid = list.find(s => s.id === savedId);
+    const active = valid || list[0];
+
+    if (active) {
+      localStorage.setItem('shelfy_store_id', active.id);
+      localStorage.setItem('shelfy_store_name', active.name);
+      window.currentStoreId   = active.id;
+      window.currentStoreName = active.name;
+    }
+  } catch (err) {
+    console.error('ensureStoreExists error:', err);
+    // Fallback: use whatever is in localStorage
+    window.currentStoreId   = localStorage.getItem('shelfy_store_id') || null;
+    window.currentStoreName = localStorage.getItem('shelfy_store_name') || null;
+  }
+}
+
+// Convenience getter — safe to call before ensureStoreExists resolves
+function getStoreId() {
+  return window.currentStoreId || localStorage.getItem('shelfy_store_id');
+}
+
 // Check if user is authenticated
 async function isAuthenticated() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -202,7 +250,10 @@ async function initUserMenu() {
 
     // Guarantee a profiles row exists so FK constraints on other tables don't fail
     await ensureProfileExists(user);
-      
+
+    // Ensure the user has a store and set window.currentStoreId / window.currentStoreName
+    await ensureStoreExists(user);
+
     // Load avatar and tier from database
     const { data: settings } = await supabaseClient
       .from('user_settings')
@@ -219,7 +270,31 @@ async function initUserMenu() {
     const avatarUrl = settings?.avatar_url || null;
     try { sessionStorage.setItem('shelfy_user_avatar', avatarUrl || 'null'); } catch (e) {}
     applyAvatarUrl(userAvatar, avatarUrl, user.email.charAt(0).toUpperCase());
-    
+
+    // Show active store name in menu header and nav
+    if (window.currentStoreName) {
+      // User menu: insert store name below the role line
+      const menuHeader = document.querySelector('.user-menu-header');
+      if (menuHeader && !document.getElementById('userMenuStore')) {
+        const div = document.createElement('div');
+        div.id = 'userMenuStore';
+        div.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:2px;';
+        div.textContent = window.currentStoreName;
+        menuHeader.appendChild(div);
+      }
+      // Nav span (operations dashboard)
+      const navStore = document.getElementById('activeStoreName');
+      if (navStore) { navStore.textContent = window.currentStoreName; navStore.style.display = ''; }
+    }
+
+    // Relabel "Switch Account" → "Switch Store" in user menu
+    document.querySelectorAll('.user-menu-item').forEach(item => {
+      if (item.getAttribute('onclick')?.includes('switchAccount')) {
+        const span = item.querySelector('span');
+        if (span && span.textContent.trim() === 'Switch Account') span.textContent = 'Switch Store';
+      }
+    });
+
     console.log('initUserMenu: Completed successfully');
   } catch (error) {
     console.error('Error initializing user menu:', error);
@@ -231,13 +306,15 @@ function openSettings() {
   window.location.href = '/settings';
 }
 
-// Switch account function (placeholder)
+// Switch account / store — opens store switcher if available, falls back to account modal
 async function switchAccount() {
-  const modal = document.getElementById('switchAccountModal');
-  if (modal) {
-    modal.classList.add('active');
-  }
   toggleUserMenu();
+  if (typeof openStoreModal === 'function') {
+    openStoreModal();
+  } else {
+    const modal = document.getElementById('switchAccountModal');
+    if (modal) modal.classList.add('active');
+  }
 }
 
 // Handle OAuth / magic-link callback: Supabase puts #access_token=... in the hash.

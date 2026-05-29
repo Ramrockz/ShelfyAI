@@ -892,15 +892,19 @@ async function loadRecipe() {
       return;
     }
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await window.supabaseClient
       .from('recipes')
       .select('*')
       .eq('id', recipeId)
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .single();
 
     if (error) throw error;
-    
+
     if (!data) {
       showAlert('Recipe not found');
       setTimeout(() => {
@@ -917,6 +921,7 @@ async function loadRecipe() {
           .from('ingredients')
           .select('id, name, custom_attributes')
           .eq('profile_id', user.id)
+          .eq('store_id', storeId)
           .in('id', ingredientIds);
         
         if (ingredients) {
@@ -972,10 +977,14 @@ async function renderRecipe() {
       if (!user) {
         console.error('No user found when fetching stock');
       } else {
+        if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+        const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
         const { data: ingredients, error: stockError } = await window.supabaseClient
           .from('ingredients')
           .select('id, quantity, min_stock, reorder_pending')
           .eq('profile_id', user.id)
+          .eq('store_id', storeId)
           .in('id', ingredientIds);
 
         if (stockError) {
@@ -1347,10 +1356,14 @@ async function loadIngredientsForBuilder() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await window.supabaseClient
       .from('ingredients')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -1691,10 +1704,14 @@ async function duplicateRecipe() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data: inserted, error } = await window.supabaseClient
       .from('recipes')
       .insert({
         profile_id: user.id,
+        store_id: storeId,
         name: `${recipe.name} (Copy)`,
         cost: recipe.cost || 0,
         components: recipe.components || [],
@@ -1952,11 +1969,15 @@ async function loadReorderIngredients(sourceUrl) {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const baseDomain = extractBaseDomain(sourceUrl);
     const { data, error } = await window.supabaseClient
       .from('ingredients')
       .select('id, name, quantity, unit, min_stock, custom_attributes')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .ilike('source_url', `%${baseDomain}%`);
 
     if (error) throw error;
@@ -2142,10 +2163,14 @@ async function openAddIngredientModal() {
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const { data, error } = await window.supabaseClient
         .from('ingredients')
         .select('*')
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .eq('store_id', storeId);
 
       if (error) throw error;
       availableIngredients = data || [];
@@ -2868,5 +2893,6 @@ async function handleSwitchSignUp(e) {
   </div>
 </footer>
 
+<script src="store-modal.js"></script>
 </body>
 </html>

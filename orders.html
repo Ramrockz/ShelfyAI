@@ -1221,10 +1221,14 @@ async function loadOrders() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await supabaseClient
       .from('sales')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('sale_date', { ascending: false });
 
     if (error) throw error;
@@ -1722,7 +1726,10 @@ async function saveOrder(event) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    
+
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Collect items
     const rows = document.querySelectorAll('.item-row');
     const items = [];
@@ -1750,6 +1757,7 @@ async function saveOrder(event) {
     
     const orderData = {
       profile_id: user.id,
+      store_id: storeId,
       sale_date: document.getElementById('order_date').value,
       customer: document.getElementById('order_customer').value,
       source: document.getElementById('order_source').value,
@@ -1797,11 +1805,13 @@ async function saveOrder(event) {
 
 async function updateInventoryForOrder(items, userId, saleId, orderReference) {
   try {
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     // Fetch all recipes to match against items
     const { data: recipes, error: recipesError } = await supabaseClient
       .from('recipes')
       .select('*')
-      .eq('profile_id', userId);
+      .eq('profile_id', userId)
+      .eq('store_id', storeId);
     
     if (recipesError) throw recipesError;
     if (!recipes || recipes.length === 0) return;
@@ -1852,6 +1862,7 @@ async function updateInventoryForOrder(items, userId, saleId, orderReference) {
       .from('ingredients')
       .select('id, quantity, name')
       .eq('profile_id', userId)
+      .eq('store_id', storeId)
       .in('id', ingredientIds);
     
     if (ingredientsError) throw ingredientsError;
@@ -2507,9 +2518,11 @@ let orderMinMap = {};
 async function loadOrderRecipeData() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
   const [{ data: recipes }, { data: ingredients }] = await Promise.all([
-    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).order('name'),
-    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id)
+    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).eq('store_id', storeId).order('name'),
+    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id).eq('store_id', storeId)
   ]);
   orderStockMap = {}; orderMinMap = {};
   if (ingredients) ingredients.forEach(i => {
@@ -2935,6 +2948,8 @@ async function saveManualOrder(event) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     if (orderRecipes.length === 0) { showOrderNotification('Please select at least one recipe', 'warning'); return; }
     const customer = document.getElementById('new_order_customer').value.trim();
     const status = document.getElementById('new_order_status').value;
@@ -2947,6 +2962,7 @@ async function saveManualOrder(event) {
     const items = orderRecipes.map(recipe => ({ name: recipe.name, quantity: recipe.quantity, price: recipe.price }));
     const salesRecord = {
       profile_id: user.id,
+      store_id: storeId,
       sale_date: saleDate,
       customer: customer || 'Unknown Customer',
       source: 'Manual Entry',
@@ -3396,6 +3412,8 @@ async function confirmMappedOrder() {
     if (!customer) { showOrderNotification('Please enter a customer name', 'error'); return; }
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const items = [], selectedOrderRecipes = [];
     mappedRecipes.forEach(mapping => {
       if (mapping.selectedRecipe) {
@@ -3411,6 +3429,7 @@ async function confirmMappedOrder() {
     const orderReference = document.getElementById('mapped_reference').value || null;
     const salesRecord = {
       profile_id: user.id,
+      store_id: storeId,
       sale_date: new Date().toISOString(),
       customer: customer,
       source: 'Image Upload',
@@ -3554,5 +3573,6 @@ const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json'
 function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
 function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
 </script>
+<script src="store-modal.js"></script>
 </body>
 </html>

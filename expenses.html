@@ -881,10 +881,14 @@ async function loadExpenses() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await supabaseClient
       .from('expenses')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('expense_date', { ascending: false });
 
     if (error) throw error;
@@ -1157,13 +1161,17 @@ function editExpense(expenseId) {
 
 async function saveExpense(event) {
   event.preventDefault();
-  
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    
+
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const expenseData = {
       profile_id: user.id,
+      store_id: storeId,
       description: document.getElementById('expense_description').value,
       amount: parseFloat(document.getElementById('expense_amount').value) || 0,
       expense_date: document.getElementById('expense_date').value,
@@ -1460,7 +1468,9 @@ async function showIngredientMappingModal(expenseData) {
 
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
-  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, cost_per_unit').eq('profile_id', user.id);
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, cost_per_unit').eq('profile_id', user.id).eq('store_id', storeId);
   allIngredientsCache = ingredients || [];
 
   if (itemName && allIngredientsCache.length > 0) {
@@ -1565,6 +1575,7 @@ async function confirmIngredientMapping() {
 }
 
 async function saveExpenseFromMapping(userId) {
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
   const d = pendingExpenseData;
   const description = d.description || d.item?.name || '';
   const amount = d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null;
@@ -1578,6 +1589,7 @@ async function saveExpenseFromMapping(userId) {
 
   const { error } = await supabaseClient.from('expenses').insert([{
     profile_id: userId,
+    store_id: storeId,
     description,
     amount: amount || null,
     expense_date: expenseDate,
@@ -2305,6 +2317,7 @@ async function submitFeedback() {
   currentStep = 3;
 }
 </script>
+<script src="store-modal.js"></script>
 
 </body>
 </html>

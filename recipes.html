@@ -1145,10 +1145,14 @@ async function loadIngredients() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await supabaseClient
       .from('ingredients')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -1201,10 +1205,14 @@ async function loadRecipes() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await supabaseClient
       .from('recipes')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -2018,18 +2026,21 @@ async function finalizeRecipe() {
     alert('Please enter a recipe name');
     return;
   }
-  
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
       alert('Please log in to save recipes');
       return;
     }
-    
+
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Calculate total cost
     let totalCost = 0;
     const components = [];
-    
+
     for (const id in currentRecipe) {
       const item = currentRecipe[id];
       totalCost += item.price * item.quantity;
@@ -2041,7 +2052,7 @@ async function finalizeRecipe() {
         cost: item.price * item.quantity
       });
     }
-    
+
     // Save to Supabase
     const { data, error } = await supabaseClient
       .from('recipes')
@@ -2050,7 +2061,8 @@ async function finalizeRecipe() {
         components: components,
         cost: totalCost,
         status: 'ready',
-        profile_id: user.id
+        profile_id: user.id,
+        store_id: storeId
       })
       .select();
     
@@ -2081,6 +2093,9 @@ async function _doSaveRecipe(name) {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) { alert('Please log in to save recipes'); return; }
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     let totalCost = 0;
     const components = [];
     for (const id in currentRecipe) {
@@ -2106,7 +2121,7 @@ async function _doSaveRecipe(name) {
       // Insert new recipe
       const { data, error } = await supabaseClient
         .from('recipes')
-        .insert({ name, components, cost: totalCost, status: 'ready', profile_id: user.id })
+        .insert({ name, components, cost: totalCost, status: 'ready', profile_id: user.id, store_id: storeId })
         .select();
       if (error) throw error;
       recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, status: 'ready' });
@@ -2143,6 +2158,9 @@ async function duplicateRecipe(recipeId) {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const original = recipes.find(r => r.id === recipeId || r.id == recipeId);
     if (!original) return;
 
@@ -2150,6 +2168,7 @@ async function duplicateRecipe(recipeId) {
       .from('recipes')
       .insert({
         profile_id: user.id,
+        store_id: storeId,
         name: `${original.name} (copy)`,
         cost: original.cost || 0,
         components: original.components || [],
@@ -3519,5 +3538,6 @@ const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json'
 function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
 function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
 </script>
+<script src="store-modal.js"></script>
 </body>
 </html>

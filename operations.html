@@ -862,6 +862,7 @@
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
+    #activeStoreName { display: none !important; }
     .hub-container { padding: 20px 16px; }
     
     /* Inventory status: 3 columns → 1 column on mobile */
@@ -1605,6 +1606,7 @@
     </div>
     
     <!-- Notification Bell -->
+    <span id="activeStoreName" onclick="openStoreModal()" style="font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;display:none;padding:4px 8px;border-radius:6px;transition:background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"></span>
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
@@ -1878,11 +1880,14 @@ function resolveConfirm(result) {
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       const { data: ingredients, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at')
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .eq('store_id', storeId);
 
       if (error) throw error;
 
@@ -1965,11 +1970,15 @@ function resolveConfirm(result) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       // Query ingredients marked as reorder pending
       const { data: pendingOrders, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at')
         .eq('profile_id', user.id)
+        .eq('store_id', storeId)
         .eq('reorder_pending', true)
         .order('updated_at', { ascending: false });
 
@@ -2241,10 +2250,13 @@ async function openManualEntryModal() {
   // Load existing categories and units
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (user) {
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data: ingredients } = await supabaseClient
       .from('ingredients')
       .select('category, unit')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
     
     if (ingredients) {
@@ -2389,8 +2401,11 @@ async function saveIngredient(event) {
     }
   });
   
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
   const formData = {
     profile_id: user.id,
+    store_id: storeId,
     name: document.getElementById('ing_name').value,
     quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
     unit: document.getElementById('ing_unit').value,
@@ -3687,6 +3702,8 @@ async function createSalesEntry(orderData) {
   // Get current user
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
   
   // Parse date from German format (e.g., "21. Jan. 2026")
   const parseSaleDate = (dateStr) => {
@@ -3733,6 +3750,7 @@ async function createSalesEntry(orderData) {
   // Build sales record
   const salesRecord = {
     profile_id: user.id,
+    store_id: storeId,
     sale_date: parseSaleDate(orderData.date),
     customer: orderData.customer || 'Unknown Customer', // Customer name
     source: 'Manual Upload', // Sales channel - could be extracted later
@@ -3799,11 +3817,14 @@ async function matchItemToRecipes(itemData) {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
     
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     // Fetch all recipes
     const { data: recipes, error } = await supabaseClient
       .from('recipes')
       .select('*')
-      .eq('profile_id', user.id);
+      .eq('profile_id', user.id)
+      .eq('store_id', storeId);
     
     if (error) throw error;
     if (!recipes || recipes.length === 0) return [];
@@ -4058,10 +4079,13 @@ async function searchRecipesForMapping(index, searchTerm) {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
     
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data: allRecipes, error } = await supabaseClient
       .from('recipes')
       .select('id, name, cost')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .ilike('name', `%${searchTerm}%`)
       .limit(10);
     
@@ -4202,7 +4226,9 @@ async function confirmMappedOrder() {
     
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Build items and order recipes arrays
     const items = [];
     const orderRecipes = [];
@@ -4241,6 +4267,7 @@ async function confirmMappedOrder() {
     // Create sales record
     const salesRecord = {
       profile_id: user.id,
+      store_id: storeId,
       sale_date: new Date().toISOString(),
       customer: customer,
       source: 'Image Upload',
@@ -4392,10 +4419,13 @@ async function loadRecipeIngredients() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data, error } = await supabaseClient
       .from('ingredients')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -4776,6 +4806,8 @@ async function saveRecipe() {
       });
     }
     
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     // Save to Supabase
     const { data, error } = await supabaseClient
       .from('recipes')
@@ -4784,7 +4816,8 @@ async function saveRecipe() {
         components: components,
         cost: totalCost,
         status: 'ready',
-        profile_id: user.id
+        profile_id: user.id,
+        store_id: storeId
       })
       .select();
     
@@ -5099,9 +5132,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadOrderRecipeData() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
   const [{ data: recipes }, { data: ingredients }] = await Promise.all([
-    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).order('name'),
-    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id)
+    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).eq('store_id', storeId).order('name'),
+    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id).eq('store_id', storeId)
   ]);
   orderStockMap = {}; orderMinMap = {};
   if (ingredients) ingredients.forEach(i => {
@@ -5140,7 +5175,9 @@ async function _getLastUsedRecipes() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
-    const { data: sales } = await supabaseClient.from('sales').select('items').eq('profile_id', user.id)
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    const { data: sales } = await supabaseClient.from('sales').select('items').eq('profile_id', user.id).eq('store_id', storeId)
       .not('items', 'is', null).order('sale_date', { ascending: false }).limit(20);
     if (!sales) return [];
     const seen = new Set(), names = [];
@@ -5405,10 +5442,13 @@ async function _populateCustomerSuggestions() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data } = await supabaseClient
       .from('sales')
       .select('customer')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .not('customer', 'is', null)
       .order('sale_date', { ascending: false })
       .limit(100);
@@ -5598,9 +5638,13 @@ async function saveManualOrder(event) {
       price: recipe.price
     }));
     
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Build sales record
     const salesRecord = {
       profile_id: user.id,
+      store_id: storeId,
       sale_date: saleDate,
       customer: customer || 'Unknown Customer',
       source: 'Manual Entry',
@@ -6279,5 +6323,6 @@ const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json'
 function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
 function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
 </script>
+<script src="store-modal.js"></script>
 </body>
 </html>

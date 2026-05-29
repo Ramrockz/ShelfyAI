@@ -579,11 +579,15 @@ async function loadExpense() {
       return;
     }
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await window.supabaseClient
       .from('expenses')
       .select('*')
       .eq('id', expenseId)
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .single();
 
     if (error) throw error;
@@ -625,6 +629,9 @@ async function loadAffectedIngredients() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data: historyEntries, error } = await window.supabaseClient
       .from('ingredient_history')
       .select(`
@@ -636,6 +643,7 @@ async function loadAffectedIngredients() {
         )
       `)
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .eq('reason', 'expense')
       .eq('reference_id', expenseId)
       .order('changed_at', { ascending: false });
@@ -951,6 +959,7 @@ initializeNotifications();
 </footer>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
+<script src="store-modal.js"></script>
 
 </body>
 </html>

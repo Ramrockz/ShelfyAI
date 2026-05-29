@@ -727,11 +727,14 @@
     try {
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) return;
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       const { data, error } = await window.supabaseClient
         .from('ingredients')
         .select('*')
         .eq('profile_id', user.id)
+        .eq('store_id', storeId)
         .order('name');
 
       if (error) throw error;
@@ -1768,5 +1771,6 @@ async function handleSwitchSignUp(e) {
   </div>
 </footer>
 
+<script src="store-modal.js"></script>
 </body>
 </html>

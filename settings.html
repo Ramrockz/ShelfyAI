@@ -1314,7 +1314,28 @@ function updateUsageBar(barId, used, limit) {
 }
 
 // Avatar functions
-function handleAvatarUpload(event) {
+function resizeAvatarImage(file, maxSize = 200, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleAvatarUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -1323,31 +1344,25 @@ function handleAvatarUpload(event) {
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return;
 
-    const avatarData = e.target.result;
-    
-    // Save to database
-    const { error } = await supabaseClient
-      .from('user_settings')
-      .update({ avatar_url: avatarData })
-      .eq('user_id', user.id);
+  const avatarData = await resizeAvatarImage(file);
 
-    if (error) {
-      console.error('Error saving avatar:', error);
-      alert('Failed to save avatar');
-      return;
-    }
-    
-    // Update cache for instant header refresh on next page
-    sessionStorage.setItem('shelfy_user_avatar', avatarData);
-    
-    document.getElementById('avatarPreview').innerHTML = `<img src="${avatarData}" alt="Avatar">`;
-  };
-  reader.readAsDataURL(file);
+  const { error } = await supabaseClient
+    .from('user_settings')
+    .update({ avatar_url: avatarData })
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Error saving avatar:', error);
+    alert('Failed to save avatar');
+    return;
+  }
+
+  try { sessionStorage.setItem('shelfy_user_avatar', avatarData); } catch (e) {}
+
+  document.getElementById('avatarPreview').innerHTML = `<img src="${avatarData}" alt="Avatar">`;
 }
 
 async function removeAvatar() {
@@ -1737,10 +1752,13 @@ async function downloadOrders(e) {
     btn.disabled = true;
     btn.innerHTML = 'Downloading...';
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data, error } = await supabaseClient
       .from('sales')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -1789,10 +1807,13 @@ async function downloadExpenses(e) {
     btn.disabled = true;
     btn.innerHTML = 'Downloading...';
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const { data, error } = await supabaseClient
       .from('expenses')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('expense_date', { ascending: false });
 
     if (error) throw error;
@@ -2570,5 +2591,6 @@ window.handleSubscribe = async function() {
 }
 </script>
 
+<script src="store-modal.js"></script>
 </body>
 </html>

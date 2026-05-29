@@ -1436,10 +1436,14 @@ async function loadIngredients() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     const { data, error } = await supabaseClient
       .from('ingredients')
       .select('*')
       .eq('profile_id', user.id)
+      .eq('store_id', storeId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -2307,6 +2311,9 @@ function handleCSVUpload(event) {
         return;
       }
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const ingredientsToInsert = [];
       
       for (let i = 1; i < lines.length; i++) {
@@ -2320,6 +2327,7 @@ function handleCSVUpload(event) {
         }
         const ingredient = {
           profile_id: user.id,
+          store_id: storeId,
           name: values[0] || 'Unnamed',
           quantity: parseFloat(values[1]) || 0,
           unit: values[2] || 'units',
@@ -3644,20 +3652,23 @@ async function saveDuplicate(keepOpen = false) {
   const name = document.getElementById('dupName').value.trim();
   const qty = parseFloat(document.getElementById('dupQty').value) || 0;
   const sourceUrl = document.getElementById('dupSourceUrl').value.trim();
-  
+
   if (!name) {
     showAlert('Please enter a name', 'Required');
     return;
   }
-  
+
   if (!currentDuplicateIngredient) return;
-  
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
       showAlert('Please log in to duplicate ingredients', 'Authentication Required');
       return;
     }
+
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     
     // Load full ingredient data to get unit
     const { data: fullData, error: loadError } = await supabaseClient
@@ -3684,7 +3695,8 @@ async function saveDuplicate(keepOpen = false) {
         sku: fullData.sku || '',
         source_url: sourceUrl || '',
         custom_attributes: Object.keys(duplicateAttributes).length > 0 ? JSON.stringify(duplicateAttributes) : null,
-        profile_id: user.id
+        profile_id: user.id,
+        store_id: storeId
       })
       .select();
     
@@ -3804,14 +3816,17 @@ function selectIngCategory(value) {
 
 async function saveIngredient(event) {
   if (event) event.preventDefault();
-  
+
   // Get current authenticated user
   const { data: { user } } = await supabaseClient.auth.getUser();
-  
+
   if (!user) {
     showAlert('You must be logged in to add ingredients', 'Authentication Required');
     return;
   }
+
+  if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
   // Shake-validate all required fields
   const invalidFields = [];
@@ -3886,6 +3901,7 @@ async function saveIngredient(event) {
   
   const formData = {
     profile_id: user.id,
+    store_id: storeId,
     name: document.getElementById('ing_name').value,
     quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
     unit: document.getElementById('ing_unit').value,
@@ -4584,11 +4600,15 @@ async function handleSwitchSignUp(e) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
       const baseDomain = extractBaseDomain(sourceUrl);
       const { data, error } = await supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
         .eq('profile_id', user.id)
+        .eq('store_id', storeId)
         .ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentId)
         .order('name')
@@ -4695,5 +4715,6 @@ const _LOADER_ANIMS=['cat_loader_1.json','cat_loader_2.json','cat_loader_3.json'
 function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load(_LOADER_ANIMS[Math.floor(Math.random()*_LOADER_ANIMS.length)]);}
 function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
 </script>
+<script src="store-modal.js"></script>
 </body>
 </html>

@@ -427,6 +427,8 @@ async function loadAnalytics() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
     let tier = 'free';
     const { data: subscription } = await supabaseClient
@@ -446,9 +448,9 @@ async function loadAnalytics() {
     }
 
     const [salesRes, expensesRes, ingredientsRes] = await Promise.all([
-      supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id),
-      supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id),
-      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id)
+      supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id).eq('store_id', storeId),
+      supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id).eq('store_id', storeId),
+      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id).eq('store_id', storeId)
     ]);
 
     allSales       = salesRes.data       || [];
@@ -942,5 +944,6 @@ async function submitFeedback() {
   currentStep = 3;
 }
 </script>
+<script src="store-modal.js"></script>
 </body>
 </html>
