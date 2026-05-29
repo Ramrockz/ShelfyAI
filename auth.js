@@ -303,9 +303,6 @@ async function initUserMenu() {
         div.textContent = window.currentStoreName;
         menuHeader.appendChild(div);
       }
-      // Nav span (operations dashboard)
-      const navStore = document.getElementById('activeStoreName');
-      if (navStore) { navStore.textContent = window.currentStoreName; navStore.style.display = ''; }
     }
 
     // Relabel "Switch Account" → "Switch Store" and inject "Switch Accounts" below it
