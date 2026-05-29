@@ -1754,12 +1754,13 @@ async function downloadOrders(e) {
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data, error } = await supabaseClient
+    let _q1 = supabaseClient
       .from('sales')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.order('created_at', { ascending: false });
+    const { data, error } = await _q1;
 
     if (error) throw error;
 
@@ -1809,12 +1810,13 @@ async function downloadExpenses(e) {
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data, error } = await supabaseClient
+    let _q2 = supabaseClient
       .from('expenses')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('expense_date', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q2 = _q2.eq('store_id', storeId);
+    _q2 = _q2.order('expense_date', { ascending: false });
+    const { data, error } = await _q2;
 
     if (error) throw error;
 

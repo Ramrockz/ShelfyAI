@@ -582,13 +582,14 @@ async function loadExpense() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await window.supabaseClient
+    let _q1 = window.supabaseClient
       .from('expenses')
       .select('*')
       .eq('id', expenseId)
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .single();
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.single();
+    const { data, error } = await _q1;
 
     if (error) throw error;
     
@@ -632,7 +633,7 @@ async function loadAffectedIngredients() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data: historyEntries, error } = await window.supabaseClient
+    let _q2 = window.supabaseClient
       .from('ingredient_history')
       .select(`
         *,
@@ -642,11 +643,12 @@ async function loadAffectedIngredients() {
           unit
         )
       `)
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .eq('reason', 'expense')
+      .eq('profile_id', user.id);
+    if (storeId) _q2 = _q2.eq('store_id', storeId);
+    _q2 = _q2.eq('reason', 'expense')
       .eq('reference_id', expenseId)
       .order('changed_at', { ascending: false });
+    const { data: historyEntries, error } = await _q2;
 
     if (error) throw error;
 

@@ -447,11 +447,13 @@ async function loadAnalytics() {
       return;
     }
 
-    const [salesRes, expensesRes, ingredientsRes] = await Promise.all([
-      supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id).eq('store_id', storeId),
-      supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id).eq('store_id', storeId),
-      supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id).eq('store_id', storeId)
-    ]);
+    let _qs = supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id);
+    if (storeId) _qs = _qs.eq('store_id', storeId);
+    let _qe = supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id);
+    if (storeId) _qe = _qe.eq('store_id', storeId);
+    let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id);
+    if (storeId) _qin = _qin.eq('store_id', storeId);
+    const [salesRes, expensesRes, ingredientsRes] = await Promise.all([_qs, _qe, _qin]);
 
     allSales       = salesRes.data       || [];
     allExpenses    = expensesRes.data    || [];

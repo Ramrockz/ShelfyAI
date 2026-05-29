@@ -1565,12 +1565,13 @@
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      const { data: ingredients } = await supabaseClient
+      let _q1 = supabaseClient
         .from('ingredients')
         .select('category')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId)
-        .not('category', 'is', null);
+        .eq('profile_id', user.id);
+      if (storeId) _q1 = _q1.eq('store_id', storeId);
+      _q1 = _q1.not('category', 'is', null);
+      const { data: ingredients } = await _q1;
       
       if (ingredients) {
         const uniqueCategories = [...new Set(ingredients.map(i => i.category).filter(c => c))];
@@ -1595,11 +1596,12 @@
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      const { data: recipes, error } = await supabaseClient
+      let _q2 = supabaseClient
         .from('recipes')
         .select('*')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId);
+        .eq('profile_id', user.id);
+      if (storeId) _q2 = _q2.eq('store_id', storeId);
+      const { data: recipes, error } = await _q2;
 
       if (error) throw error;
 
@@ -2090,14 +2092,15 @@
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       const baseDomain = extractBaseDomain(sourceUrl);
-      const { data, error } = await supabaseClient
+      let _q3 = supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId)
-        .ilike('source_url', `%${baseDomain}%`)
+        .eq('profile_id', user.id);
+      if (storeId) _q3 = _q3.eq('store_id', storeId);
+      _q3 = _q3.ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentIngredient.id)
         .abortSignal(reorderAbortController?.signal);
+      const { data, error } = await _q3;
 
       const container = document.getElementById('reorderIngredientsList');
       if (error) {

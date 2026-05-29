@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -18,7 +18,7 @@
 </script>
 <link rel="icon" type="image/png" href="favicon.png" />
 <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#06b6d4" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="ShelfyAI" />
@@ -675,7 +675,6 @@
 </script>
 
 <div class="container">
-  <div class="breadcrumb" onclick="window.location.href='/orders'">← Back to Orders</div>
   
   <div class="detail-header">
     <div class="header-title">
@@ -851,13 +850,14 @@ async function loadOrder() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await window.supabaseClient
+    let _q1 = window.supabaseClient
       .from('sales')
       .select('*')
       .eq('id', orderId)
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .single();
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.single();
+    const { data, error } = await _q1;
 
     if (error) throw error;
     
@@ -883,14 +883,15 @@ async function loadRecipes() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await window.supabaseClient
+    let _q2 = window.supabaseClient
       .from('recipes')
       .select('id, name, cost, retail_price')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId);
+      .eq('profile_id', user.id);
+    if (storeId) _q2 = _q2.eq('store_id', storeId);
+    const { data, error } = await _q2;
 
     if (error) throw error;
-    
+
     recipes = data || [];
   } catch (error) {
     console.error('Error loading recipes:', error);
@@ -1057,14 +1058,15 @@ async function loadAffectedIngredients() {
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
     // Query ingredient_history for this order
-    const { data: historyEntries, error } = await window.supabaseClient
+    let _q3 = window.supabaseClient
       .from('ingredient_history')
       .select('*, ingredients:ingredient_id(name, unit)')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .eq('reason', 'order')
+      .eq('profile_id', user.id);
+    if (storeId) _q3 = _q3.eq('store_id', storeId);
+    _q3 = _q3.eq('reason', 'order')
       .eq('reference_id', orderId)
       .order('changed_at', { ascending: false });
+    const { data: historyEntries, error } = await _q3;
 
     if (error) throw error;
 
@@ -1219,7 +1221,10 @@ async function confirmDelete() {
 
     if (error) throw error;
 
-    window.location.href = '/orders';
+    showNotification('Order deleted successfully', 'success');
+    setTimeout(() => {
+      window.location.href = '/orders';
+    }, 1500);
   } catch (error) {
     console.error('Error deleting order:', error);
     showNotification('Failed to delete order: ' + error.message, 'error');
@@ -1282,7 +1287,7 @@ function renderNotifications() {
       <div class="notification-actions">
         ${notification.ingredient_id ? `
           <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            <span class="truck-anim-icon truck-anim-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </button>
           <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
         ` : ''}
@@ -1452,7 +1457,6 @@ initializeNotifications();
 </footer>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
-<script src="store-modal.js"></script>
 
 </body>
 </html>

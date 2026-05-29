@@ -1,4 +1,9 @@
 // ShelfyAI Supabase Authentication
+// Eagerly hydrate store from localStorage so it's available synchronously
+// before any async auth/store setup has a chance to run.
+window.currentStoreId   = localStorage.getItem('shelfy_store_id')   || null;
+window.currentStoreName = localStorage.getItem('shelfy_store_name') || null;
+
 // Replace these with your actual Supabase credentials
 const SUPABASE_URL = 'https://qakldmfmdlwvehseaksy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFha2xkbWZtZGx3dmVoc2Vha3N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MzUyNjksImV4cCI6MjA4NDAxMTI2OX0.9lJCzZMUzAUeKEtRTvSpubK6Zp2Pem757IStLd-ZV8E';

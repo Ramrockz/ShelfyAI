@@ -1224,15 +1224,16 @@ async function loadOrders() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await supabaseClient
+    let _q1 = supabaseClient
       .from('sales')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('sale_date', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.order('sale_date', { ascending: false });
+    const { data, error } = await _q1;
 
     if (error) throw error;
-    
+
     orders = data || [];
     console.log('Loaded orders:', orders);
   } catch (error) {
@@ -1807,12 +1808,13 @@ async function updateInventoryForOrder(items, userId, saleId, orderReference) {
   try {
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     // Fetch all recipes to match against items
-    const { data: recipes, error: recipesError } = await supabaseClient
+    let _q2 = supabaseClient
       .from('recipes')
       .select('*')
-      .eq('profile_id', userId)
-      .eq('store_id', storeId);
-    
+      .eq('profile_id', userId);
+    if (storeId) _q2 = _q2.eq('store_id', storeId);
+    const { data: recipes, error: recipesError } = await _q2;
+
     if (recipesError) throw recipesError;
     if (!recipes || recipes.length === 0) return;
     
@@ -1858,13 +1860,14 @@ async function updateInventoryForOrder(items, userId, saleId, orderReference) {
     const ingredientIds = Object.keys(ingredientDeductions);
     if (ingredientIds.length === 0) return;
     
-    const { data: ingredients, error: ingredientsError } = await supabaseClient
+    let _q3 = supabaseClient
       .from('ingredients')
       .select('id, quantity, name')
-      .eq('profile_id', userId)
-      .eq('store_id', storeId)
-      .in('id', ingredientIds);
-    
+      .eq('profile_id', userId);
+    if (storeId) _q3 = _q3.eq('store_id', storeId);
+    _q3 = _q3.in('id', ingredientIds);
+    const { data: ingredients, error: ingredientsError } = await _q3;
+
     if (ingredientsError) throw ingredientsError;
     
     // Update each ingredient quantity and create history entries
@@ -2520,10 +2523,12 @@ async function loadOrderRecipeData() {
   if (!user) return;
   if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
   const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-  const [{ data: recipes }, { data: ingredients }] = await Promise.all([
-    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).eq('store_id', storeId).order('name'),
-    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id).eq('store_id', storeId)
-  ]);
+  let _qr = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+  if (storeId) _qr = _qr.eq('store_id', storeId);
+  _qr = _qr.order('name');
+  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id);
+  if (storeId) _qi = _qi.eq('store_id', storeId);
+  const [{ data: recipes }, { data: ingredients }] = await Promise.all([_qr, _qi]);
   orderStockMap = {}; orderMinMap = {};
   if (ingredients) ingredients.forEach(i => {
     orderStockMap[i.id] = parseFloat(i.quantity) || 0;

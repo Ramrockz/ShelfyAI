@@ -895,13 +895,14 @@ async function loadRecipe() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await window.supabaseClient
+    let _q1 = window.supabaseClient
       .from('recipes')
       .select('*')
       .eq('id', recipeId)
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .single();
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.single();
+    const { data, error } = await _q1;
 
     if (error) throw error;
 
@@ -917,12 +918,13 @@ async function loadRecipe() {
     if (data.components && data.components.length > 0) {
       const ingredientIds = data.components.map(c => c.ingredient_id || c.id).filter(Boolean);
       if (ingredientIds.length > 0) {
-        const { data: ingredients } = await window.supabaseClient
+        let _q2 = window.supabaseClient
           .from('ingredients')
           .select('id, name, custom_attributes')
-          .eq('profile_id', user.id)
-          .eq('store_id', storeId)
-          .in('id', ingredientIds);
+          .eq('profile_id', user.id);
+        if (storeId) _q2 = _q2.eq('store_id', storeId);
+        _q2 = _q2.in('id', ingredientIds);
+        const { data: ingredients } = await _q2;
         
         if (ingredients) {
           const ingredientMap = {};
@@ -980,12 +982,13 @@ async function renderRecipe() {
         if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
         const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-        const { data: ingredients, error: stockError } = await window.supabaseClient
+        let _q3 = window.supabaseClient
           .from('ingredients')
           .select('id, quantity, min_stock, reorder_pending')
-          .eq('profile_id', user.id)
-          .eq('store_id', storeId)
-          .in('id', ingredientIds);
+          .eq('profile_id', user.id);
+        if (storeId) _q3 = _q3.eq('store_id', storeId);
+        _q3 = _q3.in('id', ingredientIds);
+        const { data: ingredients, error: stockError } = await _q3;
 
         if (stockError) {
           console.error('Supabase error fetching stock:', stockError);
@@ -1359,12 +1362,13 @@ async function loadIngredientsForBuilder() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await window.supabaseClient
+    let _q4 = window.supabaseClient
       .from('ingredients')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q4 = _q4.eq('store_id', storeId);
+    _q4 = _q4.order('created_at', { ascending: false });
+    const { data, error } = await _q4;
 
     if (error) throw error;
 
@@ -1973,12 +1977,13 @@ async function loadReorderIngredients(sourceUrl) {
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
     const baseDomain = extractBaseDomain(sourceUrl);
-    const { data, error } = await window.supabaseClient
+    let _q5 = window.supabaseClient
       .from('ingredients')
       .select('id, name, quantity, unit, min_stock, custom_attributes')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .ilike('source_url', `%${baseDomain}%`);
+      .eq('profile_id', user.id);
+    if (storeId) _q5 = _q5.eq('store_id', storeId);
+    _q5 = _q5.ilike('source_url', `%${baseDomain}%`);
+    const { data, error } = await _q5;
 
     if (error) throw error;
 
@@ -2166,11 +2171,12 @@ async function openAddIngredientModal() {
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      const { data, error } = await window.supabaseClient
+      let _q6 = window.supabaseClient
         .from('ingredients')
         .select('*')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId);
+        .eq('profile_id', user.id);
+      if (storeId) _q6 = _q6.eq('store_id', storeId);
+      const { data, error } = await _q6;
 
       if (error) throw error;
       availableIngredients = data || [];

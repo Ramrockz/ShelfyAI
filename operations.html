@@ -1883,11 +1883,12 @@ function resolveConfirm(result) {
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      const { data: ingredients, error } = await supabaseClient
+      let _q1 = supabaseClient
         .from('ingredients')
         .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId);
+        .eq('profile_id', user.id);
+      if (storeId) _q1 = _q1.eq('store_id', storeId);
+      const { data: ingredients, error } = await _q1;
 
       if (error) throw error;
 
@@ -1974,13 +1975,14 @@ function resolveConfirm(result) {
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       // Query ingredients marked as reorder pending
-      const { data: pendingOrders, error } = await supabaseClient
+      let _q2 = supabaseClient
         .from('ingredients')
         .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId)
-        .eq('reorder_pending', true)
+        .eq('profile_id', user.id);
+      if (storeId) _q2 = _q2.eq('store_id', storeId);
+      _q2 = _q2.eq('reorder_pending', true)
         .order('updated_at', { ascending: false });
+      const { data: pendingOrders, error } = await _q2;
 
       const container = document.getElementById('inboundContainer');
       
@@ -2252,12 +2254,13 @@ async function openManualEntryModal() {
   if (user) {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data: ingredients } = await supabaseClient
+    let _q3 = supabaseClient
       .from('ingredients')
       .select('category, unit')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q3 = _q3.eq('store_id', storeId);
+    _q3 = _q3.order('created_at', { ascending: false });
+    const { data: ingredients } = await _q3;
     
     if (ingredients) {
       // Update categories
@@ -3820,12 +3823,13 @@ async function matchItemToRecipes(itemData) {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     // Fetch all recipes
-    const { data: recipes, error } = await supabaseClient
+    let _q4 = supabaseClient
       .from('recipes')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId);
-    
+      .eq('profile_id', user.id);
+    if (storeId) _q4 = _q4.eq('store_id', storeId);
+    const { data: recipes, error } = await _q4;
+
     if (error) throw error;
     if (!recipes || recipes.length === 0) return [];
     
@@ -4081,13 +4085,13 @@ async function searchRecipesForMapping(index, searchTerm) {
     
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data: allRecipes, error } = await supabaseClient
+    let _q5 = supabaseClient
       .from('recipes')
       .select('id, name, cost')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .ilike('name', `%${searchTerm}%`)
-      .limit(10);
+      .eq('profile_id', user.id);
+    if (storeId) _q5 = _q5.eq('store_id', storeId);
+    _q5 = _q5.ilike('name', `%${searchTerm}%`).limit(10);
+    const { data: allRecipes, error } = await _q5;
     
     if (error) throw error;
     
@@ -4421,12 +4425,13 @@ async function loadRecipeIngredients() {
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data, error } = await supabaseClient
+    let _q6 = supabaseClient
       .from('ingredients')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q6 = _q6.eq('store_id', storeId);
+    _q6 = _q6.order('created_at', { ascending: false });
+    const { data, error } = await _q6;
 
     if (error) throw error;
 
@@ -5134,10 +5139,12 @@ async function loadOrderRecipeData() {
   if (!user) return;
   if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
   const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-  const [{ data: recipes }, { data: ingredients }] = await Promise.all([
-    supabaseClient.from('recipes').select('*').eq('profile_id', user.id).eq('store_id', storeId).order('name'),
-    supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id).eq('store_id', storeId)
-  ]);
+  let _qr = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+  if (storeId) _qr = _qr.eq('store_id', storeId);
+  _qr = _qr.order('name');
+  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id);
+  if (storeId) _qi = _qi.eq('store_id', storeId);
+  const [{ data: recipes }, { data: ingredients }] = await Promise.all([_qr, _qi]);
   orderStockMap = {}; orderMinMap = {};
   if (ingredients) ingredients.forEach(i => {
     orderStockMap[i.id] = parseFloat(i.quantity) || 0;
@@ -5177,8 +5184,10 @@ async function _getLastUsedRecipes() {
     if (!user) return [];
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data: sales } = await supabaseClient.from('sales').select('items').eq('profile_id', user.id).eq('store_id', storeId)
-      .not('items', 'is', null).order('sale_date', { ascending: false }).limit(20);
+    let _qs = supabaseClient.from('sales').select('items').eq('profile_id', user.id);
+    if (storeId) _qs = _qs.eq('store_id', storeId);
+    _qs = _qs.not('items', 'is', null).order('sale_date', { ascending: false }).limit(20);
+    const { data: sales } = await _qs;
     if (!sales) return [];
     const seen = new Set(), names = [];
     for (const sale of sales) {
@@ -5444,14 +5453,15 @@ async function _populateCustomerSuggestions() {
     if (!user) return;
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const { data } = await supabaseClient
+    let _qc = supabaseClient
       .from('sales')
       .select('customer')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .not('customer', 'is', null)
+      .eq('profile_id', user.id);
+    if (storeId) _qc = _qc.eq('store_id', storeId);
+    _qc = _qc.not('customer', 'is', null)
       .order('sale_date', { ascending: false })
       .limit(100);
+    const { data } = await _qc;
     if (!data) return;
     const unique = [...new Set(data.map(r => r.customer).filter(Boolean))];
     const dl = document.getElementById('customerSuggestions');

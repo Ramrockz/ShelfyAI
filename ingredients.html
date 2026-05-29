@@ -1439,15 +1439,16 @@ async function loadIngredients() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    const { data, error } = await supabaseClient
+    let _q1 = supabaseClient
       .from('ingredients')
       .select('*')
-      .eq('profile_id', user.id)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
+      .eq('profile_id', user.id);
+    if (storeId) _q1 = _q1.eq('store_id', storeId);
+    _q1 = _q1.order('created_at', { ascending: false });
+    const { data, error } = await _q1;
 
     if (error) throw error;
-    
+
     ingredients = data.map(item => ({
       id: item.id,
       name: item.name,
@@ -4604,15 +4605,16 @@ async function handleSwitchSignUp(e) {
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       const baseDomain = extractBaseDomain(sourceUrl);
-      const { data, error } = await supabaseClient
+      let _q2 = supabaseClient
         .from('ingredients')
         .select('id, name, quantity, unit, min_stock, custom_attributes')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId)
-        .ilike('source_url', `%${baseDomain}%`)
+        .eq('profile_id', user.id);
+      if (storeId) _q2 = _q2.eq('store_id', storeId);
+      _q2 = _q2.ilike('source_url', `%${baseDomain}%`)
         .neq('id', currentId)
         .order('name')
         .abortSignal(_restockAbortController.signal);
+      const { data, error } = await _q2;
 
       if (error) {
         if (error.name === 'AbortError') return;

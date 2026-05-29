@@ -730,12 +730,13 @@
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      const { data, error } = await window.supabaseClient
+      let _q1 = window.supabaseClient
         .from('ingredients')
         .select('*')
-        .eq('profile_id', user.id)
-        .eq('store_id', storeId)
-        .order('name');
+        .eq('profile_id', user.id);
+      if (storeId) _q1 = _q1.eq('store_id', storeId);
+      _q1 = _q1.order('name');
+      const { data, error } = await _q1;
 
       if (error) throw error;
 
