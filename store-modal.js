@@ -148,14 +148,16 @@ async function _loadStoreList() {
             ${isActive ? '<span style="font-size:10px;font-weight:800;color:#06b6d4;text-transform:uppercase;letter-spacing:0.06em;background:rgba(6,182,212,0.12);padding:3px 8px;border-radius:6px;flex-shrink:0;">Active</span>' : ''}
           </div>
           <!-- Actions row -->
-          <div style="display:flex;border-top:1px solid var(--border);">
-            <button onclick="event.stopPropagation();startRenameStore('${s.id}','${safeName}')"
+          <div id="actionsRow_${s.id}" style="display:flex;border-top:1px solid var(--border);">
+            <button data-store-id="${s.id}" data-store-name="${s.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
+              onclick="event.stopPropagation();startRenameStore(this.dataset.storeId,this.dataset.storeName)"
               style="flex:1;padding:8px;background:none;border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text-muted);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
               onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='none'">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Rename
             </button>
-            <button onclick="event.stopPropagation();promptDeleteStore('${s.id}')"
+            <button data-store-id="${s.id}"
+              onclick="event.stopPropagation();promptDeleteStore(this.dataset.storeId)"
               style="flex:1;padding:8px;background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
               onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -164,13 +166,14 @@ async function _loadStoreList() {
           </div>
           <!-- Inline rename form (hidden) -->
           <div id="renameForm_${s.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg-inner);">
-            <input id="renameInput_${s.id}" type="text" value="${safeName}"
+            <input id="renameInput_${s.id}" type="text"
               style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-panel);color:var(--text-main);font-size:13px;box-sizing:border-box;font-family:inherit;margin-bottom:8px;"
-              onkeydown="if(event.key==='Enter')saveRenameStore('${s.id}');if(event.key==='Escape')cancelRenameStore('${s.id}');" />
+              data-store-id="${s.id}"
+              onkeydown="if(event.key==='Enter')saveRenameStore(this.dataset.storeId);if(event.key==='Escape')cancelRenameStore(this.dataset.storeId);" />
             <div style="display:flex;gap:6px;">
-              <button onclick="saveRenameStore('${s.id}')"
+              <button data-store-id="${s.id}" onclick="saveRenameStore(this.dataset.storeId)"
                 style="flex:1;padding:7px;background:#06b6d4;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>
-              <button onclick="cancelRenameStore('${s.id}')"
+              <button data-store-id="${s.id}" onclick="cancelRenameStore(this.dataset.storeId)"
                 style="flex:1;padding:7px;background:var(--bg-panel);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
             </div>
           </div>
@@ -233,13 +236,17 @@ async function createStore() {
 function startRenameStore(storeId, currentName) {
   const form = document.getElementById(`renameForm_${storeId}`);
   const input = document.getElementById(`renameInput_${storeId}`);
-  if (form) { form.style.display = 'block'; }
+  const actions = document.getElementById(`actionsRow_${storeId}`);
+  if (actions) actions.style.display = 'none';
+  if (form) form.style.display = 'block';
   if (input) { input.value = currentName; setTimeout(() => { input.focus(); input.select(); }, 50); }
 }
 
 function cancelRenameStore(storeId) {
   const form = document.getElementById(`renameForm_${storeId}`);
+  const actions = document.getElementById(`actionsRow_${storeId}`);
   if (form) form.style.display = 'none';
+  if (actions) actions.style.display = 'flex';
 }
 
 async function saveRenameStore(storeId) {
@@ -247,7 +254,10 @@ async function saveRenameStore(storeId) {
   const name = input?.value?.trim();
   if (!name) { if (input) input.style.borderColor = '#ef4444'; return; }
   try {
-    const { error } = await window.supabaseClient.from('stores').update({ name }).eq('id', storeId);
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    const { error } = await window.supabaseClient
+      .from('stores').update({ name }).eq('id', storeId).eq('owner_id', user.id);
     if (error) throw error;
     if (storeId === _getStoreId()) {
       localStorage.setItem('shelfy_store_name', name);
@@ -259,6 +269,7 @@ async function saveRenameStore(storeId) {
   } catch (err) {
     console.error('Rename error:', err);
     if (input) input.style.borderColor = '#ef4444';
+    cancelRenameStore(storeId);
   }
 }
 
