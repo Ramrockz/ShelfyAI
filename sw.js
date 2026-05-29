@@ -1,4 +1,5 @@
-const CACHE_NAME = 'shelfy-v66';
+const CACHE_NAME = 'shelfy-v70';
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -15,6 +16,7 @@ const STATIC_ASSETS = [
   '/operations.html',
   '/shopping-list.html',
   '/settings.html',
+  '/analytics.html',
   '/pricing.html',
   '/styles.css',
   '/chat-styles.css',
@@ -22,13 +24,18 @@ const STATIC_ASSETS = [
   '/auth.js',
   '/theme.js',
   '/mobile-menu.js',
+  '/bottom-nav.js',
   '/notifications.js',
   '/chat-bot.js',
+  '/store-modal.js',
+  '/switch-account-modal.js',
+  '/pwa-install.js',
   '/cookie-consent.js',
   '/favicon.png',
   '/icon-192.png',
   '/icon-512.png',
-  '/manifest.json'
+  '/manifest.json',
+  '/loading_screen.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,16 +48,14 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
     )
   );
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET and cross-origin requests (e.g. Supabase API)
+  // Skip non-GET and cross-origin requests (Supabase API, CDNs, etc.)
   if (
     event.request.method !== 'GET' ||
     !event.request.url.startsWith(self.location.origin)
@@ -58,50 +63,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Protected pages that require authentication
-  const protectedPages = [
-    'ingredients.html',
-    'ingredient-detail.html',
-    'recipes.html',
-    'recipe-detail.html',
-    'sales.html',
-    'expenses.html',
-    'expense-detail.html',
-    'operations.html',
-    'shopping-list.html',
-    'orders.html',
-    'order-detail.html',
-    'settings.html'
-  ];
-
-  const url = new URL(event.request.url);
-  const isProtectedPage = protectedPages.some(page => url.pathname.includes(page));
+  const isDocument = event.request.destination === 'document';
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
+      // Always fetch from network to keep cache fresh
+      const networkFetch = fetch(event.request).then((response) => {
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        }
+        return response;
+      });
 
-      // Always use network-first for HTML pages (especially protected ones)
-      // This ensures authentication is always checked
-      if (event.request.destination === 'document' || isProtectedPage) {
-        return networkFetch.catch(() => {
-          // Only serve cached version if network fails (offline)
-          return cached || new Response('Offline - Please check your connection', {
+      if (isDocument) {
+        if (cached) {
+          // Stale-while-revalidate: serve the cached page instantly (eliminates
+          // the white flash between pages), update the cache in the background.
+          networkFetch.catch(() => {});
+          return cached;
+        }
+        // First visit — no cache yet, wait for network
+        return networkFetch.catch(() =>
+          new Response('Offline – Please check your connection', {
             status: 503,
-            statusText: 'Service Unavailable'
-          });
-        });
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain' }
+          })
+        );
       }
-      
-      // Cache-first for static assets (CSS, JS, images)
+
+      // Static assets (CSS, JS, images): cache-first
       return cached || networkFetch;
     })
   );

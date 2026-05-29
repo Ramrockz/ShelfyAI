@@ -179,25 +179,32 @@ async function isAuthenticated() {
   return !!session;
 }
 
-// Safely apply an avatar URL: shows the initial letter immediately, then replaces
-// it with the image only after the image confirms it loaded. Falls back to the
-// letter (and busts the cache) if the URL is broken.
+function _setDefaultAvatar(avatarEl) {
+  avatarEl.textContent = '';
+  avatarEl.style.backgroundImage = 'url(/default_avatar.png)';
+  avatarEl.style.backgroundSize = 'cover';
+  avatarEl.style.backgroundPosition = 'center';
+  avatarEl.style.backgroundColor = '';
+}
+
+// Safely apply an avatar URL. Falls back to the default cat avatar if no URL or load fails.
 function applyAvatarUrl(avatarEl, url, fallbackLetter) {
   if (!avatarEl) return;
-  // Always show the letter first so there's never an empty circle
-  avatarEl.style.backgroundImage = '';
-  avatarEl.style.backgroundSize = '';
-  avatarEl.style.backgroundPosition = '';
-  avatarEl.textContent = fallbackLetter;
-  if (!url || url === 'null') return;
+  if (!url || url === 'null') {
+    _setDefaultAvatar(avatarEl);
+    return;
+  }
+  // Keep whatever is showing while the real image loads
   const img = new Image();
   img.onload = () => {
     avatarEl.style.backgroundImage = `url(${url})`;
     avatarEl.style.backgroundSize = 'cover';
     avatarEl.style.backgroundPosition = 'center';
+    avatarEl.style.backgroundColor = '#ffffff';
     avatarEl.textContent = '';
   };
   img.onerror = () => {
+    _setDefaultAvatar(avatarEl);
     try { sessionStorage.setItem('shelfy_user_avatar', 'null'); } catch (e) {}
   };
   img.src = url;
@@ -263,10 +270,11 @@ async function initUserMenu() {
     if (userEmailElement) {
       userEmailElement.textContent = user.email;
     }
-    // Show initial letter right away as a safe fallback
-    if (userAvatar) {
-      userAvatar.textContent = user.email.charAt(0).toUpperCase();
-      userAvatar.style.backgroundImage = '';
+    // Only reset to the initial letter if there's no cached avatar already showing —
+    // avoids the flash where the image disappears while the DB fetch runs.
+    const _cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    if (userAvatar && (!_cachedAvatar || _cachedAvatar === 'null')) {
+      _setDefaultAvatar(userAvatar);
     }
 
     // Guarantee a profiles row exists so FK constraints on other tables don't fail
@@ -390,6 +398,13 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   }
 });
 
+// Resolves once the DOM is fully parsed — safe to call before or after DOMContentLoaded.
+const domReady = new Promise(resolve =>
+  document.readyState !== 'loading'
+    ? resolve()
+    : document.addEventListener('DOMContentLoaded', resolve, { once: true })
+);
+
 // If on a protected page, hide content until auth is verified
 if (protectedPages.includes(currentPage)) {
   // Safety fallback: always show page after 3 seconds to prevent permanent blank screen
@@ -401,19 +416,24 @@ if (protectedPages.includes(currentPage)) {
   }, 3000);
   // Check if this is an OAuth callback (hash contains access_token)
   const isOAuthCallback = window.location.hash.includes('access_token=');
-  
+
   if (isOAuthCallback) {
     // OAuth callback - wait for session to be established from hash parameters
     console.log('OAuth callback detected, waiting for session establishment...');
-    
+
     // Give Supabase time to process the hash and establish the session
     setTimeout(async () => {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session && session.user) {
         console.log('OAuth session established for user:', session.user.email);
         await ensureProfileExists(session.user);
+        await domReady;
         await initUserMenu();
         document.documentElement.style.visibility = 'visible';
+        // Check if onboarding should be shown
+        if (typeof checkAndShowOnboarding === 'function') {
+          setTimeout(() => checkAndShowOnboarding(), 500);
+        }
         // Clear the hash from URL for cleaner appearance
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
       } else {
@@ -426,7 +446,7 @@ if (protectedPages.includes(currentPage)) {
     // Not an OAuth callback - do normal auth check
     // Supabase v2 stores session in localStorage with key format: sb-{project-ref}-auth-token
     const hasSessionData = localStorage.getItem('sb-qakldmfmdlwvehseaksy-auth-token');
-    
+
     if (!hasSessionData) {
       // No session data at all, immediately redirect (prevents flash)
       window.location.replace(`/login?return=${currentPage}`);
@@ -438,10 +458,18 @@ if (protectedPages.includes(currentPage)) {
           // Not authenticated, redirect to login (use replace to prevent back button)
           window.location.replace(`/login?return=${currentPage}`);
         } else {
+          // Wait for DOM to be fully parsed so every component (bottom-nav,
+          // user-menu elements) exists before we populate them and reveal the page.
+          await domReady;
           // Authenticated, initialize user menu first
           await initUserMenu();
           // Then show content
           document.documentElement.style.visibility = 'visible';
+          
+          // Check if onboarding should be shown
+          if (typeof checkAndShowOnboarding === 'function') {
+            setTimeout(() => checkAndShowOnboarding(), 500);
+          }
           
           // Periodically validate session (every 30 seconds)
           // This helps catch session expiry and cross-device logouts

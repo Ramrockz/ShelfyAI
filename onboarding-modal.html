@@ -1,0 +1,190 @@
+<!-- Onboarding Modal -->
+<div id="onboardingModal" class="onboarding-overlay" style="display: none;">
+  <div class="onboarding-modal">
+    
+    <!-- Progress Bar -->
+    <div class="onboarding-progress" id="onboardingProgress">
+      <div class="progress-dots">
+        <div class="progress-dot active" data-step="1"></div>
+        <div class="progress-dot" data-step="2"></div>
+        <div class="progress-dot" data-step="3"></div>
+      </div>
+      <button class="onboarding-skip" onclick="completeOnboarding()" title="Skip onboarding">
+        Skip →
+      </button>
+    </div>
+    
+    <!-- Greeting Screen -->
+    <div id="onboarding-greeting" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-icon">👋</div>
+        <div class="greeting-text">
+          <div class="greeting-line" data-delay="0">Hello there,</div>
+          <div class="greeting-line" data-delay="400"></div>
+          <div class="greeting-line" data-delay="800">let's stay lazy together.</div>
+          <div class="greeting-line" data-delay="1200">I just need to know a few things</div>
+          <div class="greeting-line" data-delay="1600">to find the sweet spot for the two of us</div>
+        </div>
+        <button class="onboarding-btn onboarding-primary" onclick="nextOnboardingStep()" style="opacity: 0;" id="greetingContinue">
+          Let's go →
+        </button>
+      </div>
+    </div>
+
+    <!-- Question 1: Store Count -->
+    <div id="onboarding-q1" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-icon">🏪</div>
+        <div class="onboarding-question">
+          <div class="question-number">Question 1 of 3</div>
+          <div class="question-text">How many stores do you want to manage with shelfyAI?</div>
+        </div>
+        <div class="onboarding-options">
+          <button class="onboarding-option" onclick="selectStoreCount('1')">
+            <span class="option-emoji">1️⃣</span>
+            <span class="option-text">Just one</span>
+          </button>
+          <button class="onboarding-option" onclick="selectStoreCount('2-5')">
+            <span class="option-emoji">🔢</span>
+            <span class="option-text">2 - 5 stores</span>
+          </button>
+          <button class="onboarding-option" onclick="selectStoreCount('more-than-5')">
+            <span class="option-emoji">🚀</span>
+            <span class="option-text">More than 5</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition 1: Store Count Response -->
+    <div id="onboarding-t1" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-emoji" id="storeCountEmoji">😎</div>
+        <div class="transition-text" id="storeCountResponse"></div>
+      </div>
+    </div>
+
+    <!-- Question 2: Product Categories -->
+    <div id="onboarding-q2" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-icon">📦</div>
+        <div class="onboarding-question">
+          <div class="question-number">Question 2 of 3</div>
+          <div class="question-text">What kind of products do you sell in your store(s)?</div>
+          <div class="question-hint">Select all that apply</div>
+        </div>
+        <div class="onboarding-categories">
+          <button class="category-pill" data-category="Handmade Crafts & Art" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎨</span> Handmade Crafts & Art
+          </button>
+          <button class="category-pill" data-category="Jewelry & Accessories" onclick="toggleCategory(this)">
+            <span class="cat-emoji">💎</span> Jewelry & Accessories
+          </button>
+          <button class="category-pill" data-category="Home Decor" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🏠</span> Home Decor
+          </button>
+          <button class="category-pill" data-category="Apparel & Fashion" onclick="toggleCategory(this)">
+            <span class="cat-emoji">👕</span> Apparel & Fashion
+          </button>
+          <button class="category-pill" data-category="Beauty & Skincare" onclick="toggleCategory(this)">
+            <span class="cat-emoji">💄</span> Beauty & Skincare
+          </button>
+          <button class="category-pill" data-category="Food & Beverage" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🍰</span> Food & Beverage
+          </button>
+          <button class="category-pill" data-category="Stationery & Paper Goods" onclick="toggleCategory(this)">
+            <span class="cat-emoji">📝</span> Stationery & Paper Goods
+          </button>
+          <button class="category-pill" data-category="Toys & Games" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎮</span> Toys & Games
+          </button>
+          <button class="category-pill" data-category="Party Supplies & Gifts" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎁</span> Party Supplies & Gifts
+          </button>
+          <button class="category-pill" data-category="Electronics & Gadgets" onclick="toggleCategory(this)">
+            <span class="cat-emoji">⚡</span> Electronics & Gadgets
+          </button>
+          <button class="category-pill" data-category="Tools & Supplies" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🔧</span> Tools & Supplies
+          </button>
+          <button class="category-pill" data-category="Whatever" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🤷</span> Whatever
+          </button>
+        </div>
+        <button class="onboarding-btn onboarding-primary" onclick="submitCategories()">
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <!-- Transition 2: Category Response -->
+    <div id="onboarding-t2" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-emoji" id="categoryEmoji">✨</div>
+        <div class="transition-text" id="categoryResponse"></div>
+      </div>
+    </div>
+
+    <!-- Question 3: Order Volume -->
+    <div id="onboarding-q3" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-icon">📈</div>
+        <div class="onboarding-question">
+          <div class="question-number">Question 3 of 3</div>
+          <div class="question-text">How many orders do you have per month?</div>
+        </div>
+        <div class="onboarding-options">
+          <button class="onboarding-option" onclick="selectOrderVolume('1-10')">
+            <span class="option-emoji">🌱</span>
+            <span class="option-text">1 - 10</span>
+          </button>
+          <button class="onboarding-option" onclick="selectOrderVolume('11-50')">
+            <span class="option-emoji">📊</span>
+            <span class="option-text">11 - 50</span>
+          </button>
+          <button class="onboarding-option" onclick="selectOrderVolume('more-than-50')">
+            <span class="option-emoji">🔥</span>
+            <span class="option-text">More than 50</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition 3: Order Volume Response -->
+    <div id="onboarding-t3" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-emoji" id="orderVolumeEmoji">💪</div>
+        <div class="transition-text" id="orderVolumeResponse"></div>
+      </div>
+    </div>
+
+    <!-- Final: Plan Recommendation -->
+    <div id="onboarding-final" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="celebration-emoji">🎉</div>
+        <div class="recommendation-content">
+          <div class="recommendation-title">Perfect! Here's what we recommend</div>
+          <div class="recommendation-plan">
+            <div class="plan-badge" id="recommendedPlanBadge">STARTER</div>
+            <div class="plan-name" id="recommendedPlanName">Starter Plan</div>
+            <div class="plan-price" id="recommendedPlanPrice">€9.99/month</div>
+            <div class="plan-features" id="recommendedPlanFeatures">
+              <div class="plan-feature">✓ Up to 5 stores</div>
+              <div class="plan-feature">✓ 100 AI scans per month</div>
+              <div class="plan-feature">✓ Analytics dashboard</div>
+            </div>
+          </div>
+          <div class="recommendation-actions">
+            <button class="onboarding-btn onboarding-primary" onclick="upgradeToPlan()">
+              <span id="upgradeButtonText">Upgrade to Starter</span> →
+            </button>
+            <button class="onboarding-btn onboarding-secondary" onclick="completeOnboarding()">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

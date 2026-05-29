@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="onboarding-modal.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -39,6 +40,8 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
+<script src="category-filter.js"></script>
+<script src="onboarding-modal.js"></script>
 
 <style>
   .settings-container {
@@ -125,7 +128,8 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--premium));
+    background-color: #ffffff;
+    background-image: linear-gradient(135deg, var(--accent), var(--premium));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -135,6 +139,9 @@
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
+  }
+  .current-avatar:has(img) {
+    background-image: none;
   }
 
   .current-avatar img {
@@ -794,9 +801,13 @@
           avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
           avatarEl.style.backgroundSize = 'cover';
           avatarEl.style.backgroundPosition = 'center';
+          avatarEl.style.backgroundColor = '#ffffff';
           avatarEl.textContent = '';
         } else {
-          avatarEl.textContent = cachedEmail.charAt(0).toUpperCase();
+          avatarEl.style.backgroundImage = 'url(/default_avatar.png)';
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.textContent = '';
         }
       }
     }
@@ -937,6 +948,37 @@
           Dark
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Preferences Section -->
+  <div class="settings-section">
+    <h2>
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+      </svg>
+      Preferences
+    </h2>
+    
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Personalized Categories</h3>
+        <p>Show only product categories relevant to your business</p>
+      </div>
+      <div class="toggle-switch" id="personalizedCategoriesToggle" onclick="togglePersonalizedCategoriesSetting()"></div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Retake Onboarding</h3>
+        <p>Go through the welcome flow again to update your preferences</p>
+      </div>
+      <button class="btn btn-secondary" onclick="retakeOnboarding()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Restart Onboarding
+      </button>
     </div>
   </div>
 
@@ -1173,8 +1215,14 @@ async function loadSettings() {
     
     if (settings.avatar_url) {
       avatarPreview.innerHTML = `<img src="${settings.avatar_url}" alt="Avatar">`;
-    } else if (user.email) {
-      avatarInitial.textContent = user.email.charAt(0).toUpperCase();
+      avatarPreview.style.backgroundColor = '#ffffff';
+      avatarPreview.style.backgroundImage = 'none';
+    } else {
+      avatarPreview.innerHTML = '';
+      avatarPreview.style.backgroundImage = 'url(/default_avatar.png)';
+      avatarPreview.style.backgroundSize = 'cover';
+      avatarPreview.style.backgroundPosition = 'center';
+      avatarPreview.style.backgroundColor = '';
     }
 
     // Load theme preference
@@ -1211,13 +1259,23 @@ async function loadSettings() {
     // Update sub-options state
     updateNotificationSubOptions(notificationsEnabled);
     
+    // Load personalized categories setting
+    const personalizedCategoriesToggle = document.getElementById('personalizedCategoriesToggle');
+    if (personalizedCategoriesToggle) {
+      personalizedCategoriesToggle.classList.remove('active');
+      if (settings.personalized_categories_enabled !== false) {
+        personalizedCategoriesToggle.classList.add('active');
+      }
+    }
+    
     // Store original settings for discard functionality
     originalSettings = {
       theme: settings.theme || 'light',
       notifications_enabled: settings.notifications_enabled || false,
       low_stock_notifications: settings.low_stock_notifications || false,
       out_of_stock_notifications: settings.out_of_stock_notifications || false,
-      ai_limit_notifications: settings.ai_limit_notifications || false
+      ai_limit_notifications: settings.ai_limit_notifications || false,
+      personalized_categories_enabled: settings.personalized_categories_enabled !== false
     };
 
     // Load tier information
@@ -1409,7 +1467,11 @@ async function removeAvatar() {
   sessionStorage.setItem('shelfy_user_avatar', 'null');
   
   const avatarPreview = document.getElementById('avatarPreview');
-  avatarPreview.innerHTML = `<span id="avatarInitial">${user.email.charAt(0).toUpperCase()}</span>`;
+  avatarPreview.innerHTML = '';
+  avatarPreview.style.backgroundImage = 'url(/default_avatar.png)';
+  avatarPreview.style.backgroundSize = 'cover';
+  avatarPreview.style.backgroundPosition = 'center';
+  avatarPreview.style.backgroundColor = '';
 }
 
 // Password functions
@@ -1577,6 +1639,12 @@ function toggleAILimitAlerts() {
   markSettingsChanged();
 }
 
+function togglePersonalizedCategoriesSetting() {
+  const toggle = document.getElementById('personalizedCategoriesToggle');
+  toggle.classList.toggle('active');
+  markSettingsChanged();
+}
+
 async function saveAllSettings() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
@@ -1586,7 +1654,8 @@ async function saveAllSettings() {
     notifications_enabled: document.getElementById('notificationsToggle').classList.contains('active'),
     low_stock_notifications: document.getElementById('lowStockToggle').classList.contains('active'),
     out_of_stock_notifications: document.getElementById('outOfStockToggle').classList.contains('active'),
-    ai_limit_notifications: document.getElementById('aiLimitToggle').classList.contains('active')
+    ai_limit_notifications: document.getElementById('aiLimitToggle').classList.contains('active'),
+    personalized_categories_enabled: document.getElementById('personalizedCategoriesToggle').classList.contains('active')
   };
 
   // Save to database
@@ -1608,6 +1677,11 @@ async function saveAllSettings() {
     // Update original settings
     originalSettings = {...settings};
     hideSettingsChanged();
+    
+    // Apply personalized categories changes immediately
+    if (typeof togglePersonalizedCategories === 'function') {
+      togglePersonalizedCategories(settings.personalized_categories_enabled);
+    }
     
     // Show success message
     const saveBar = document.getElementById('saveButtonBar');
@@ -1663,6 +1737,14 @@ function discardChanges() {
     aiLimitToggle.classList.add('active');
   } else {
     aiLimitToggle.classList.remove('active');
+  }
+  
+  // Restore personalized categories setting
+  const personalizedCategoriesToggle = document.getElementById('personalizedCategoriesToggle');
+  if (originalSettings.personalized_categories_enabled) {
+    personalizedCategoriesToggle.classList.add('active');
+  } else {
+    personalizedCategoriesToggle.classList.remove('active');
   }
   
   updateNotificationSubOptions(originalSettings.notifications_enabled);
@@ -1980,229 +2062,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Switch Account Modal -->
-<div class="modal-overlay" id="switchAccountModal" onclick="if(event.target === this) closeSwitchAccountModal()">
-  <div class="modal-content-custom" style="max-width: 450px;">
-    <h3 style="margin: 0 0 8px 0; color: var(--text-main); font-size: 24px;">Switch Account</h3>
-    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 14px;">Sign in to a different account</p>
 
-    <!-- Tabs -->
-    <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
-      <button class="switch-account-tab active" onclick="switchAccountTab('login')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Login</button>
-      <button class="switch-account-tab" onclick="switchAccountTab('signup')" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: all 0.2s; margin-bottom: -2px;">Sign Up</button>
-    </div>
-
-    <!-- Login Form -->
-    <div id="switch-login-content" class="switch-account-content" style="display: block;">
-      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
-          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
-
-      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
-        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-        <span>or</span>
-        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-      </div>
-
-      <form onsubmit="handleSwitchLogin(event)">
-        <div style="margin-bottom: 16px; text-align: left;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
-          <input type="email" id="switch-login-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
-        </div>
-
-        <div style="margin-bottom: 16px; text-align: left;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
-          <input type="password" id="switch-login-password" placeholder="••••••••" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
-        </div>
-
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
-          Sign In
-        </button>
-      </form>
-
-      <div style="margin-top: 16px; text-align: center;">
-        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Sign Up Form -->
-    <div id="switch-signup-content" class="switch-account-content" style="display: none;">
-      <button onclick="handleSwitchGoogleLogin()" style="width: 100%; padding: 14px; background: var(--bg-inner); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--text-main); margin-bottom: 16px;">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
-          <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
-
-      <div style="display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--text-muted); font-size: 13px;">
-        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-        <span>or</span>
-        <div style="flex: 1; height: 1px; background: var(--border);"></div>
-      </div>
-
-      <form onsubmit="handleSwitchSignUp(event)">
-        <div style="margin-bottom: 16px; text-align: left;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Email</label>
-          <input type="email" id="switch-signup-email" placeholder="you@example.com" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
-        </div>
-
-        <div style="margin-bottom: 16px; text-align: left;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Password</label>
-          <input type="password" id="switch-signup-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
-        </div>
-
-        <div style="margin-bottom: 16px; text-align: left;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Confirm Password</label>
-          <input type="password" id="switch-signup-confirm-password" placeholder="••••••••" minlength="6" required style="width: 100%; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 14px;" />
-        </div>
-
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
-          Create Account
-        </button>
-      </form>
-
-      <div style="margin-top: 16px; text-align: center;">
-        <button onclick="closeSwitchAccountModal()" style="background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; text-decoration: underline;">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<style>
-.switch-account-tab.active {
-  color: var(--accent) !important;
-  border-bottom-color: var(--accent) !important;
-}
-.switch-account-tab:hover {
-  color: var(--text-main);
-}
-</style>
-
-<script>
-function switchAccountTab(tab) {
-  // Update tab buttons
-  document.querySelectorAll('.switch-account-tab').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-
-  // Update tab content
-  document.querySelectorAll('.switch-account-content').forEach(content => content.style.display = 'none');
-  document.getElementById('switch-' + tab + '-content').style.display = 'block';
-}
-
-function closeSwitchAccountModal() {
-  document.getElementById('switchAccountModal').classList.remove('active');
-  // Reset forms
-  document.getElementById('switch-login-email').value = '';
-  document.getElementById('switch-login-password').value = '';
-  document.getElementById('switch-signup-email').value = '';
-  document.getElementById('switch-signup-password').value = '';
-  document.getElementById('switch-signup-confirm-password').value = '';
-}
-
-async function handleSwitchGoogleLogin() {
-  try {
-    // Sign out current user first
-    await supabaseClient.auth.signOut();
-    
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.href
-      }
-    });
-
-    if (error) throw error;
-  } catch (error) {
-    alert('Google sign-in failed: ' + error.message);
-  }
-}
-
-async function handleSwitchLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById('switch-login-email').value;
-  const password = document.getElementById('switch-login-password').value;
-
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Switching...';
-
-  try {
-    // Sign out current user first
-    await supabaseClient.auth.signOut();
-    
-    // Clear cache
-    sessionStorage.removeItem('shelfy_user_email');
-    sessionStorage.removeItem('shelfy_user_avatar');
-    
-    // Sign in with new credentials
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
-
-    if (error) throw error;
-
-    // Reload page to refresh UI with new user
-    window.location.reload();
-  } catch (error) {
-    alert('Login failed: ' + error.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Sign In';
-  }
-}
-
-async function handleSwitchSignUp(e) {
-  e.preventDefault();
-  const email = document.getElementById('switch-signup-email').value;
-  const password = document.getElementById('switch-signup-password').value;
-  const confirmPassword = document.getElementById('switch-signup-confirm-password').value;
-
-  if (password !== confirmPassword) {
-    alert('Passwords do not match!');
-    return;
-  }
-
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Creating account...';
-
-  try {
-    // Sign out current user first
-    await supabaseClient.auth.signOut();
-    
-    // Clear cache
-    sessionStorage.removeItem('shelfy_user_email');
-    sessionStorage.removeItem('shelfy_user_avatar');
-    
-    // Sign up with new credentials
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: email,
-      password: password,
-    });
-
-    if (error) throw error;
-
-    alert('Account created successfully! Please check your email to confirm your account.');
-    
-    // Switch to login tab and set email
-    switchAccountTab('login');
-    document.getElementById('switch-login-email').value = email;
-  } catch (error) {
-    alert('Sign up failed: ' + error.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Create Account';
-  }
-}
-</script>
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
@@ -2618,5 +2478,133 @@ window.handleSubscribe = async function() {
 </script>
 
 <script src="store-modal.js"></script>
+<script src="switch-account-modal.js"></script>
+
+<!-- Onboarding Modal -->
+<div id="onboardingModal" class="onboarding-overlay" style="display: none;">
+  <div class="onboarding-modal">
+    
+    <!-- Greeting Screen -->
+    <div id="onboarding-greeting" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="greeting-text">
+          <div class="greeting-line" data-delay="0">Hello there,</div>
+          <div class="greeting-line" data-delay="400"></div>
+          <div class="greeting-line" data-delay="800">let's stay lazy together.</div>
+          <div class="greeting-line" data-delay="1200">I just need to know a few things</div>
+          <div class="greeting-line" data-delay="1600">to find the sweet spot for the two of us</div>
+        </div>
+        <button class="onboarding-btn onboarding-primary" onclick="nextOnboardingStep()" style="opacity: 0;" id="greetingContinue">
+          Let's go
+        </button>
+      </div>
+    </div>
+
+    <!-- Question 1: Store Count -->
+    <div id="onboarding-q1" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-question">
+          <div class="question-text">How many stores do you want to manage with shelfyAI?</div>
+        </div>
+        <div class="onboarding-options">
+          <button class="onboarding-option" onclick="selectStoreCount('1')">1</button>
+          <button class="onboarding-option" onclick="selectStoreCount('2-5')">2 - 5</button>
+          <button class="onboarding-option" onclick="selectStoreCount('more-than-5')">more than 5</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition 1: Store Count Response -->
+    <div id="onboarding-t1" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-text" id="storeCountResponse"></div>
+      </div>
+    </div>
+
+    <!-- Question 2: Product Categories -->
+    <div id="onboarding-q2" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-question">
+          <div class="question-text">What kind of products do you sell in your store(s)?</div>
+          <div class="question-hint">Select all that apply</div>
+        </div>
+        <div class="onboarding-categories">
+          <button class="category-pill" data-category="Handmade Crafts & Art" onclick="toggleCategory(this)">Handmade Crafts & Art</button>
+          <button class="category-pill" data-category="Jewelry & Accessories" onclick="toggleCategory(this)">Jewelry & Accessories</button>
+          <button class="category-pill" data-category="Home Decor" onclick="toggleCategory(this)">Home Decor</button>
+          <button class="category-pill" data-category="Apparel & Fashion" onclick="toggleCategory(this)">Apparel & Fashion</button>
+          <button class="category-pill" data-category="Beauty & Skincare" onclick="toggleCategory(this)">Beauty & Skincare</button>
+          <button class="category-pill" data-category="Food & Beverage" onclick="toggleCategory(this)">Food & Beverage</button>
+          <button class="category-pill" data-category="Stationery & Paper Goods" onclick="toggleCategory(this)">Stationery & Paper Goods</button>
+          <button class="category-pill" data-category="Toys & Games" onclick="toggleCategory(this)">Toys & Games</button>
+          <button class="category-pill" data-category="Party Supplies & Gifts" onclick="toggleCategory(this)">Party Supplies & Gifts</button>
+          <button class="category-pill" data-category="Electronics & Gadgets" onclick="toggleCategory(this)">Electronics & Gadgets</button>
+          <button class="category-pill" data-category="Tools & Supplies" onclick="toggleCategory(this)">Tools & Supplies</button>
+          <button class="category-pill" data-category="Whatever" onclick="toggleCategory(this)">Whatever</button>
+        </div>
+        <button class="onboarding-btn onboarding-primary" onclick="submitCategories()">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Transition 2: Category Response -->
+    <div id="onboarding-t2" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-text" id="categoryResponse"></div>
+      </div>
+    </div>
+
+    <!-- Question 3: Order Volume -->
+    <div id="onboarding-q3" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="onboarding-question">
+          <div class="question-text">How many orders do you have per month?</div>
+        </div>
+        <div class="onboarding-options">
+          <button class="onboarding-option" onclick="selectOrderVolume('1-10')">1 - 10</button>
+          <button class="onboarding-option" onclick="selectOrderVolume('11-50')">11 - 50</button>
+          <button class="onboarding-option" onclick="selectOrderVolume('more-than-50')">more than 50</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition 3: Order Volume Response -->
+    <div id="onboarding-t3" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="transition-text" id="orderVolumeResponse"></div>
+      </div>
+    </div>
+
+    <!-- Final: Plan Recommendation -->
+    <div id="onboarding-final" class="onboarding-screen" style="display: none;">
+      <div class="onboarding-content">
+        <div class="recommendation-content">
+          <div class="recommendation-title">Perfect! Here's what we recommend</div>
+          <div class="recommendation-plan">
+            <div class="plan-badge" id="recommendedPlanBadge">STARTER</div>
+            <div class="plan-name" id="recommendedPlanName">Starter Plan</div>
+            <div class="plan-price" id="recommendedPlanPrice">€9.99/month</div>
+            <div class="plan-features" id="recommendedPlanFeatures">
+              <div class="plan-feature">✓ Up to 5 stores</div>
+              <div class="plan-feature">✓ 100 AI scans per month</div>
+              <div class="plan-feature">✓ Analytics dashboard</div>
+            </div>
+          </div>
+          <div class="recommendation-actions">
+            <button class="onboarding-btn onboarding-primary" onclick="upgradeToPlan()">
+              <span id="upgradeButtonText">Upgrade to Starter</span>
+            </button>
+            <button class="onboarding-btn onboarding-secondary" onclick="completeOnboarding()">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>

@@ -1,0 +1,595 @@
+/* ═══════════════════════════════════════════════════════════════
+   Onboarding Modal Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Overlay */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Modal Container */
+.onboarding-modal {
+  background: var(--bg-panel);
+  border-radius: 20px;
+  padding: 48px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+/* Progress Indicator */
+.onboarding-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.progress-dots {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.onboarding-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.onboarding-skip:hover {
+  color: var(--text-main);
+  background: var(--bg-inner);
+}
+
+.progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.progress-dot.active {
+  background: var(--accent);
+  transform: scale(1.4);
+}
+
+.progress-dot.completed {
+  background: var(--success);
+}
+
+/* Screen Container */
+.onboarding-screen {
+  animation: slideUp 0.3s ease;
+}
+
+/* Content Wrapper */
+.onboarding-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  text-align: center;
+}
+
+/* Icons and Emojis */
+.onboarding-icon {
+  font-size: 64px;
+  line-height: 1;
+  animation: bounceIn 0.6s ease;
+}
+
+.transition-emoji {
+  font-size: 80px;
+  line-height: 1;
+  animation: popIn 0.5s ease;
+}
+
+.celebration-emoji {
+  font-size: 96px;
+  line-height: 1;
+  animation: celebrate 0.8s ease;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes celebrate {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-10deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(10deg);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Greeting Screen
+   ───────────────────────────────────────────────────────────── */
+
+.greeting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.4;
+  min-height: 200px;
+}
+
+.greeting-line {
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: slideInFromTop 0.5s ease forwards;
+}
+
+.greeting-line[data-delay="0"] { animation-delay: 0s; }
+.greeting-line[data-delay="400"] { animation-delay: 0.4s; }
+.greeting-line[data-delay="800"] { animation-delay: 0.8s; }
+.greeting-line[data-delay="1200"] { animation-delay: 1.2s; }
+.greeting-line[data-delay="1600"] { animation-delay: 1.6s; }
+
+/* ─────────────────────────────────────────────────────────────
+   Question Screens
+   ───────────────────────────────────────────────────────────── */
+
+.onboarding-question {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.question-number {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.question-text {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.question-hint {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Option Buttons (for Q1 and Q3) */
+.onboarding-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.onboarding-option {
+  padding: 20px 24px;
+  background: var(--bg-inner);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.option-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.option-text {
+  flex: 1;
+  text-align: left;
+}
+
+.onboarding-option:hover {
+  border-color: var(--accent);
+  background: var(--bg-panel);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
+}
+
+.onboarding-option:active {
+  transform: translateY(0);
+}
+
+/* Category Pills (for Q2) */
+.onboarding-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.category-pill {
+  padding: 12px 20px;
+  background: var(--bg-inner);
+  border: 2px solid var(--border);
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.category-pill:hover {
+  border-color: var(--accent);
+  background: var(--bg-panel);
+  transform: translateY(-1px);
+}
+
+.category-pill.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.category-pill.selected:hover {
+  background: #0891b2;
+  border-color: #0891b2;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Transition Screens
+   ───────────────────────────────────────────────────────────── */
+
+.transition-text {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.4;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.5s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Recommendation Screen
+   ───────────────────────────────────────────────────────────── */
+
+.recommendation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+}
+
+.recommendation-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.recommendation-plan {
+  background: var(--bg-inner);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pulse 0.5s ease;
+}
+
+.plan-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: center;
+}
+
+.plan-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.plan-price {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.plan-feature {
+  font-size: 16px;
+  color: var(--text-main);
+  text-align: left;
+  font-weight: 500;
+}
+
+.recommendation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Buttons
+   ───────────────────────────────────────────────────────────── */
+
+.onboarding-btn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  width: 100%;
+}
+
+.onboarding-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.onboarding-primary:hover {
+  background: #0891b2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.onboarding-secondary {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.onboarding-secondary:hover {
+  background: var(--bg-inner);
+  color: var(--text-main);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .onboarding-modal {
+    padding: 32px 24px;
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .onboarding-icon {
+    font-size: 56px;
+  }
+
+  .transition-emoji {
+    font-size: 64px;
+  }
+
+  .celebration-emoji {
+    font-size: 80px;
+  }
+
+  .greeting-text {
+    font-size: 22px;
+    min-height: 180px;
+  }
+
+  .question-text {
+    font-size: 20px;
+  }
+
+  .question-number {
+    font-size: 12px;
+  }
+
+  .transition-text {
+    font-size: 22px;
+    min-height: 100px;
+  }
+
+  .recommendation-title {
+    font-size: 20px;
+  }
+
+  .plan-name {
+    font-size: 24px;
+  }
+
+  .plan-price {
+    font-size: 18px;
+  }
+
+  .category-pill {
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+
+  .cat-emoji {
+    font-size: 14px;
+  }
+
+  .onboarding-option {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+
+  .option-emoji {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .onboarding-modal {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .onboarding-icon {
+    font-size: 48px;
+  }
+
+  .transition-emoji {
+    font-size: 56px;
+  }
+
+  .celebration-emoji {
+    font-size: 64px;
+  }
+
+  .greeting-text {
+    font-size: 18px;
+    min-height: 160px;
+  }
+
+  .question-text {
+    font-size: 18px;
+  }
+
+  .transition-text {
+    font-size: 20px;
+  }
+
+  .category-pill {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+
+  .cat-emoji {
+    font-size: 13px;
+  }
+
+  .option-emoji {
+    font-size: 20px;
+  }
+}
