@@ -305,8 +305,8 @@
       </div>
     </div>
 
-    <!-- Analytics content (hidden for free users) -->
-    <div id="analyticsContent">
+    <!-- Analytics content (hidden until data is ready) -->
+    <div id="analyticsContent" style="display:none;">
 
       <!-- Date range pills -->
       <div class="range-pills">
@@ -473,6 +473,7 @@ async function loadAnalytics() {
       allIngHistory = histData || [];
     }
 
+    document.getElementById('analyticsContent').style.display = '';
     renderAnalytics();
     renderReorderPredictions();
     renderDeadStock();
