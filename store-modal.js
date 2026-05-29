@@ -113,7 +113,8 @@ async function _loadStoreList() {
       listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">No stores yet</p>';
     } else {
       listEl.innerHTML = storeList.map(s => `
-        <div onclick="switchStore('${s.id}',${JSON.stringify(s.name).replace(/</g,'&lt;')})"
+        <div data-store-id="${s.id}" data-store-name="${s.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
+          onclick="switchStore(this.dataset.storeId, this.dataset.storeName)"
           style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;
                  border:2px solid ${s.id === activeId ? '#06b6d4' : 'var(--border)'};
                  background:${s.id === activeId ? 'rgba(6,182,212,0.07)' : 'var(--bg-inner)'};

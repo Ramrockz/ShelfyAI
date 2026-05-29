@@ -879,6 +879,18 @@
         </div>
       </div>
     </div>
+
+    <div class="tier-features" style="margin-top:16px;">
+      <h4>Stores <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">on your plan</span></h4>
+      <div class="tier-feature-list">
+        <div class="usage-item">
+          <div class="usage-header">
+            <span class="usage-label" id="storeUsageLabel">Loading...</span>
+            <span class="usage-count" style="font-size:11px; color:var(--accent); font-weight:600; cursor:pointer;" onclick="openStoreModal && openStoreModal()">Manage</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Security Section -->
@@ -1249,6 +1261,19 @@ async function loadTierInformation(settings) {
   // Define scan limits (unified pool: ingredients + orders + expenses)
   const scanLimits = { free: 20, starter: 100, pro: 300 };
   const scanLimit = scanLimits[tier] ?? 20;
+
+  // Store limit info
+  const storeLimits = { free: 1, starter: 5, pro: Infinity };
+  const storeLimit = storeLimits[tier] ?? 1;
+  const storeLimitLabel = document.getElementById('storeUsageLabel');
+  if (storeLimitLabel) {
+    try {
+      const { data: stores } = await supabaseClient.from('stores').select('id', { count: 'exact' }).eq('owner_id', user.id);
+      const count = stores ? stores.length : 0;
+      const limitText = storeLimit === Infinity ? 'Unlimited' : storeLimit;
+      storeLimitLabel.textContent = `${count} / ${limitText} store${storeLimit !== 1 ? 's' : ''} used`;
+    } catch { storeLimitLabel.textContent = storeLimit === Infinity ? 'Unlimited stores' : `Up to ${storeLimit} store${storeLimit !== 1 ? 's' : ''}`; }
+  }
 
   // Update tier badge
   const tierBadge = document.getElementById('tierBadge');

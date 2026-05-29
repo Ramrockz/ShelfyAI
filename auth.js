@@ -314,6 +314,12 @@ async function initUserMenu() {
         const span = item.querySelector('span');
         if (span && (span.textContent.trim() === 'Switch Account' || span.textContent.trim() === 'Switch Store')) {
           span.textContent = 'Switch Store';
+          // Replace the Switch Store SVG with a building/store icon
+          const existingSvg = item.querySelector('svg');
+          if (existingSvg) {
+            existingSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="9 22 9 12 15 12 15 22"/>';
+            existingSvg.setAttribute('viewBox', '0 0 24 24');
+          }
           // Insert "Switch Accounts" sibling if not already present
           if (!item.nextElementSibling || !item.nextElementSibling.dataset.switchAccounts) {
             const sibling = document.createElement('div');
