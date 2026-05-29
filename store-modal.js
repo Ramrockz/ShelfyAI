@@ -99,11 +99,12 @@ let _pendingDeleteStoreId = null;
 
 // ── store modal ──────────────────────────────────────────────
 
-async function openStoreModal() {
+// manage=true shows rename/delete; manage=false (default) = switch-only
+async function openStoreModal(manage) {
   const modal = document.getElementById('storeModal');
   if (!modal) return;
   modal.classList.add('active');
-  await _loadStoreList();
+  await _loadStoreList(!!manage);
 }
 
 function closeStoreModal() {
@@ -115,7 +116,7 @@ function closeStoreModal() {
   if (input) input.value = '';
 }
 
-async function _loadStoreList() {
+async function _loadStoreList(manage) {
   const listEl = document.getElementById('storeList');
   if (!listEl) return;
   listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Loading...</p>';
@@ -151,8 +152,8 @@ async function _loadStoreList() {
             <div style="flex:1;font-size:14px;font-weight:600;color:var(--text-main);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
             ${isActive ? '<span style="font-size:10px;font-weight:800;color:#06b6d4;text-transform:uppercase;letter-spacing:0.06em;background:rgba(6,182,212,0.12);padding:3px 8px;border-radius:6px;flex-shrink:0;">Active</span>' : ''}
           </div>
-          <!-- Actions row -->
-          <div id="actionsRow_${s.id}" style="display:flex;border-top:1px solid var(--border);">
+          <!-- Actions row (manage mode only) -->
+          <div id="actionsRow_${s.id}" style="display:${manage ? 'flex' : 'none'};border-top:1px solid var(--border);">
             <button data-store-id="${s.id}" data-store-name="${s.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
               onclick="event.stopPropagation();startRenameStore(this.dataset.storeId,this.dataset.storeName)"
               style="flex:1;padding:8px;background:none;border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text-muted);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
@@ -169,8 +170,8 @@ async function _loadStoreList() {
               Delete
             </button>
           </div>
-          <!-- Inline rename form (hidden) -->
-          <div id="renameForm_${s.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg-inner);">
+          <!-- Inline rename form (manage mode only) -->
+          <div id="renameForm_${s.id}" style="display:none;${manage ? '' : 'visibility:hidden;'}padding:10px 14px;border-top:1px solid var(--border);background:var(--bg-inner);">
             <input id="renameInput_${s.id}" type="text"
               style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-panel);color:var(--text-main);font-size:13px;box-sizing:border-box;font-family:inherit;margin-bottom:8px;"
               data-store-id="${s.id}"
