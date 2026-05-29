@@ -2,7 +2,6 @@
 // Store Modal — inject HTML + define all store functions
 // ============================================================
 
-// Inject modal HTML as soon as DOM is ready
 (function injectStoreModal() {
   const html = `
 <div class="modal-overlay modal-sheet" id="storeModal" onclick="if(event.target===this)closeStoreModal()">
@@ -46,6 +45,26 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- Delete Store confirmation -->
+<div class="modal-overlay modal-sheet" id="storeDeleteModal" onclick="if(event.target===this)closeStoreDeleteModal()">
+  <div class="modal-content" style="max-width:400px;background:var(--bg-panel,#fff);">
+    <h3 style="margin:0 0 12px;font-size:17px;font-weight:700;">Delete Store?</h3>
+    <p style="color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 24px;">
+      When deleting this store all its data will be lost.
+    </p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeStoreDeleteModal()"
+        style="flex:1;padding:12px;background:var(--bg-inner);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+        Cancel
+      </button>
+      <button id="confirmDeleteStoreBtn" onclick="_doDeleteStore()"
+        style="flex:1;padding:12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
+        Delete Store
+      </button>
+    </div>
+  </div>
 </div>`;
 
   if (document.readyState === 'loading') {
@@ -60,7 +79,7 @@
 function _storeLimitForTier(tier) {
   if (tier === 'pro') return Infinity;
   if (tier === 'starter') return 5;
-  return 1; // free
+  return 1;
 }
 
 function _getStoreId() {
@@ -72,7 +91,9 @@ function _openSwitchAccountModal() {
   if (m) m.classList.add('active');
 }
 
-// ── public API ───────────────────────────────────────────────
+let _pendingDeleteStoreId = null;
+
+// ── store modal ──────────────────────────────────────────────
 
 async function openStoreModal() {
   const modal = document.getElementById('storeModal');
@@ -97,7 +118,7 @@ async function _loadStoreList() {
 
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) { listEl.innerHTML = '<p style="color:var(--danger);font-size:13px;">Not authenticated</p>'; return; }
+    if (!user) { listEl.innerHTML = '<p style="color:#ef4444;font-size:13px;">Not authenticated</p>'; return; }
 
     const [{ data: stores }, { data: settings }] = await Promise.all([
       window.supabaseClient.from('stores').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
@@ -112,40 +133,64 @@ async function _loadStoreList() {
     if (storeList.length === 0) {
       listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">No stores yet</p>';
     } else {
-      listEl.innerHTML = storeList.map(s => `
-        <div data-store-id="${s.id}" data-store-name="${s.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"
-          onclick="switchStore(this.dataset.storeId, this.dataset.storeName)"
-          style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;
-                 border:2px solid ${s.id === activeId ? '#06b6d4' : 'var(--border)'};
-                 background:${s.id === activeId ? 'rgba(6,182,212,0.07)' : 'var(--bg-inner)'};
-                 margin-bottom:8px;transition:all 0.15s;"
-          onmouseover="if('${s.id}'!=='${activeId}')this.style.borderColor='#06b6d4'"
-          onmouseout="if('${s.id}'!=='${activeId}')this.style.borderColor='var(--border)'">
-          <div style="flex:1;font-size:14px;font-weight:600;color:var(--text-main);">${s.name}</div>
-          ${s.id === activeId
-            ? '<span style="font-size:10px;font-weight:800;color:#06b6d4;text-transform:uppercase;letter-spacing:0.06em;background:rgba(6,182,212,0.12);padding:3px 8px;border-radius:6px;">Active</span>'
-            : '<svg fill="none" stroke="var(--text-muted)" stroke-width="2" width="18" height="18" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>'}
-        </div>`).join('');
+      listEl.innerHTML = storeList.map(s => {
+        const isActive = s.id === activeId;
+        const safeName = s.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        return `
+        <div style="border:2px solid ${isActive ? '#06b6d4' : 'var(--border)'};border-radius:10px;margin-bottom:8px;overflow:hidden;">
+          <!-- Store row -->
+          <div data-store-id="${s.id}" data-store-name="${safeName}"
+            onclick="switchStore(this.dataset.storeId, this.dataset.storeName)"
+            style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;background:${isActive ? 'rgba(6,182,212,0.07)' : 'var(--bg-inner)'};transition:background 0.15s;"
+            onmouseover="if(!${isActive})this.style.background='var(--bg-panel)'"
+            onmouseout="if(!${isActive})this.style.background='var(--bg-inner)'">
+            <div style="flex:1;font-size:14px;font-weight:600;color:var(--text-main);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
+            ${isActive ? '<span style="font-size:10px;font-weight:800;color:#06b6d4;text-transform:uppercase;letter-spacing:0.06em;background:rgba(6,182,212,0.12);padding:3px 8px;border-radius:6px;flex-shrink:0;">Active</span>' : ''}
+          </div>
+          <!-- Actions row -->
+          <div style="display:flex;border-top:1px solid var(--border);">
+            <button onclick="event.stopPropagation();startRenameStore('${s.id}','${safeName}')"
+              style="flex:1;padding:8px;background:none;border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text-muted);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
+              onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='none'">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Rename
+            </button>
+            <button onclick="event.stopPropagation();promptDeleteStore('${s.id}')"
+              style="flex:1;padding:8px;background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
+              onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Delete
+            </button>
+          </div>
+          <!-- Inline rename form (hidden) -->
+          <div id="renameForm_${s.id}" style="display:none;padding:10px 14px;border-top:1px solid var(--border);background:var(--bg-inner);">
+            <input id="renameInput_${s.id}" type="text" value="${safeName}"
+              style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-panel);color:var(--text-main);font-size:13px;box-sizing:border-box;font-family:inherit;margin-bottom:8px;"
+              onkeydown="if(event.key==='Enter')saveRenameStore('${s.id}');if(event.key==='Escape')cancelRenameStore('${s.id}');" />
+            <div style="display:flex;gap:6px;">
+              <button onclick="saveRenameStore('${s.id}')"
+                style="flex:1;padding:7px;background:#06b6d4;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>
+              <button onclick="cancelRenameStore('${s.id}')"
+                style="flex:1;padding:7px;background:var(--bg-panel);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
     }
 
-    // Add store button state
     const addBtn = document.getElementById('addStoreBtn');
     if (addBtn) {
       const atLimit = storeList.length >= limit;
       addBtn.disabled = atLimit;
       addBtn.style.opacity = atLimit ? '0.45' : '1';
       addBtn.style.cursor = atLimit ? 'not-allowed' : 'pointer';
-      if (atLimit) {
-        const labelMap = { 1: 'Free plan includes 1 store.', 5: 'Starter plan includes up to 5 stores.' };
-        addBtn.title = (labelMap[limit] || '') + ' Upgrade to add more.';
-      } else {
-        addBtn.title = '';
-      }
+      addBtn.title = atLimit
+        ? ({ 1: 'Free plan: 1 store.', 5: 'Starter plan: up to 5 stores.' }[limit] || '') + ' Upgrade to add more.'
+        : '';
     }
-
   } catch (err) {
     console.error('Store list error:', err);
-    listEl.innerHTML = '<p style="color:var(--danger);font-size:13px;text-align:center;">Failed to load stores</p>';
+    listEl.innerHTML = '<p style="color:#ef4444;font-size:13px;text-align:center;">Failed to load stores</p>';
   }
 }
 
@@ -166,23 +211,92 @@ function showNewStoreForm() {
 async function createStore() {
   const input = document.getElementById('newStoreName');
   const name = input?.value?.trim();
-  if (!name) { if (input) { input.style.borderColor = 'var(--danger)'; input.focus(); } return; }
-
+  if (!name) { if (input) { input.style.borderColor = '#ef4444'; input.focus(); } return; }
   const btn = document.getElementById('createStoreBtn');
   if (btn) { btn.textContent = 'Creating…'; btn.disabled = true; }
-
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-
     const { data: store, error } = await window.supabaseClient
       .from('stores').insert({ owner_id: user.id, name }).select().single();
     if (error) throw error;
-
     switchStore(store.id, store.name);
   } catch (err) {
     console.error('Create store error:', err);
     if (btn) { btn.textContent = 'Create Store'; btn.disabled = false; }
-    if (input) { input.style.borderColor = 'var(--danger)'; input.focus(); }
+    if (input) { input.style.borderColor = '#ef4444'; input.focus(); }
+  }
+}
+
+// ── rename ───────────────────────────────────────────────────
+
+function startRenameStore(storeId, currentName) {
+  const form = document.getElementById(`renameForm_${storeId}`);
+  const input = document.getElementById(`renameInput_${storeId}`);
+  if (form) { form.style.display = 'block'; }
+  if (input) { input.value = currentName; setTimeout(() => { input.focus(); input.select(); }, 50); }
+}
+
+function cancelRenameStore(storeId) {
+  const form = document.getElementById(`renameForm_${storeId}`);
+  if (form) form.style.display = 'none';
+}
+
+async function saveRenameStore(storeId) {
+  const input = document.getElementById(`renameInput_${storeId}`);
+  const name = input?.value?.trim();
+  if (!name) { if (input) input.style.borderColor = '#ef4444'; return; }
+  try {
+    const { error } = await window.supabaseClient.from('stores').update({ name }).eq('id', storeId);
+    if (error) throw error;
+    if (storeId === _getStoreId()) {
+      localStorage.setItem('shelfy_store_name', name);
+      window.currentStoreName = name;
+      const storeEl = document.getElementById('userMenuStore');
+      if (storeEl) storeEl.textContent = name;
+    }
+    await _loadStoreList();
+  } catch (err) {
+    console.error('Rename error:', err);
+    if (input) input.style.borderColor = '#ef4444';
+  }
+}
+
+// ── delete ───────────────────────────────────────────────────
+
+function promptDeleteStore(storeId) {
+  _pendingDeleteStoreId = storeId;
+  const modal = document.getElementById('storeDeleteModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeStoreDeleteModal() {
+  _pendingDeleteStoreId = null;
+  const modal = document.getElementById('storeDeleteModal');
+  if (modal) modal.classList.remove('active');
+}
+
+async function _doDeleteStore() {
+  const storeId = _pendingDeleteStoreId;
+  if (!storeId) return;
+  const btn = document.getElementById('confirmDeleteStoreBtn');
+  if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+  try {
+    const { error } = await window.supabaseClient.from('stores').delete().eq('id', storeId);
+    if (error) throw error;
+    closeStoreDeleteModal();
+    // If deleted store was active, clear and reload to pick a new one
+    if (storeId === _getStoreId()) {
+      localStorage.removeItem('shelfy_store_id');
+      localStorage.removeItem('shelfy_store_name');
+      window.currentStoreId = null;
+      window.currentStoreName = null;
+      window.location.reload();
+    } else {
+      await _loadStoreList();
+    }
+  } catch (err) {
+    console.error('Delete store error:', err);
+    if (btn) { btn.textContent = 'Delete Store'; btn.disabled = false; }
   }
 }

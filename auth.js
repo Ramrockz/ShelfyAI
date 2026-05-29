@@ -317,14 +317,13 @@ async function initUserMenu() {
             existingSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="9 22 9 12 15 12 15 22"/>';
             existingSvg.setAttribute('viewBox', '0 0 24 24');
           }
-          // Insert "Switch Accounts" sibling if not already present
+          // Insert "Switch Accounts" sibling with the original arrows icon
           if (!item.nextElementSibling || !item.nextElementSibling.dataset.switchAccounts) {
             const sibling = document.createElement('div');
             sibling.className = 'user-menu-item';
             sibling.dataset.switchAccounts = '1';
             sibling.setAttribute('onclick', "toggleUserMenu();const m=document.getElementById('switchAccountModal');if(m)m.classList.add('active');");
-            sibling.innerHTML = item.innerHTML.replace('Switch Store', 'Switch Accounts');
-            sibling.querySelector('span').textContent = 'Switch Accounts';
+            sibling.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg><span>Switch Accounts</span>`;
             item.parentNode.insertBefore(sibling, item.nextSibling);
           }
         }
