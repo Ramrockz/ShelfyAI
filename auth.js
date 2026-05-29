@@ -308,11 +308,23 @@ async function initUserMenu() {
       if (navStore) { navStore.textContent = window.currentStoreName; navStore.style.display = ''; }
     }
 
-    // Relabel "Switch Account" → "Switch Store" in user menu
+    // Relabel "Switch Account" → "Switch Store" and inject "Switch Accounts" below it
     document.querySelectorAll('.user-menu-item').forEach(item => {
       if (item.getAttribute('onclick')?.includes('switchAccount')) {
         const span = item.querySelector('span');
-        if (span && span.textContent.trim() === 'Switch Account') span.textContent = 'Switch Store';
+        if (span && (span.textContent.trim() === 'Switch Account' || span.textContent.trim() === 'Switch Store')) {
+          span.textContent = 'Switch Store';
+          // Insert "Switch Accounts" sibling if not already present
+          if (!item.nextElementSibling || !item.nextElementSibling.dataset.switchAccounts) {
+            const sibling = document.createElement('div');
+            sibling.className = 'user-menu-item';
+            sibling.dataset.switchAccounts = '1';
+            sibling.setAttribute('onclick', "toggleUserMenu();const m=document.getElementById('switchAccountModal');if(m)m.classList.add('active');");
+            sibling.innerHTML = item.innerHTML.replace('Switch Store', 'Switch Accounts');
+            sibling.querySelector('span').textContent = 'Switch Accounts';
+            item.parentNode.insertBefore(sibling, item.nextSibling);
+          }
+        }
       }
     });
 

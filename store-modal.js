@@ -6,7 +6,7 @@
 (function injectStoreModal() {
   const html = `
 <div class="modal-overlay modal-sheet" id="storeModal" onclick="if(event.target===this)closeStoreModal()">
-  <div class="modal-content" style="max-width:440px;">
+  <div class="modal-content" style="max-width:440px;background:var(--bg-panel,#fff);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <h3 style="margin:0;font-size:17px;font-weight:700;">Your Stores</h3>
       <button onclick="closeStoreModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:24px;line-height:1;padding:0;">×</button>
