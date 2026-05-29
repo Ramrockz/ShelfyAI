@@ -1150,8 +1150,6 @@ function renderMobileOverlay() {
   const overlay = document.getElementById('mobileViewOverlay');
   if (!overlay) return;
   overlay.style.display = 'flex';
-  const bottomNav = document.getElementById('bottom-nav');
-  if (bottomNav) bottomNav.style.display = 'none';
 
   // .navbar has z-index:1000 which creates a stacking context below the overlay (z-index:10002).
   // Moving the dropdowns to <body> puts them in the root stacking context so their own
@@ -2485,7 +2483,7 @@ document.addEventListener('keydown', (e) => {
   </div>
   <div class="rdm-body" id="rdmQtyList"></div>
   <div id="rdmCostDisplay" style="display:none;">$0.00</div>
-  <div style="display:flex; gap:12px; padding:12px 20px; padding-bottom:calc(12px + env(safe-area-inset-bottom,0px)); border-top:1px solid #e5e7eb; flex-shrink:0;">
+  <div style="display:flex; gap:12px; padding:12px 20px; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); border-top:1px solid #e5e7eb; flex-shrink:0; background:#ffffff;">
     <button onclick="duplicateRecipe()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#06b6d4; color:#ffffff; border:2px solid #06b6d4; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
       <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
       Duplicate
