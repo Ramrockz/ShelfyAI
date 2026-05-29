@@ -51,16 +51,20 @@
 <div class="modal-overlay modal-sheet" id="storeDeleteModal" onclick="if(event.target===this)closeStoreDeleteModal()">
   <div class="modal-content" style="max-width:400px;background:var(--bg-panel,#fff);">
     <h3 style="margin:0 0 12px;font-size:17px;font-weight:700;">Delete Store?</h3>
-    <p style="color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 24px;">
+    <p style="color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 16px;">
       When deleting this store all its data will be lost.
     </p>
+    <p style="font-size:13px;color:var(--text-muted);margin:0 0 8px;">Type <strong style="color:var(--text-main);letter-spacing:0.03em;">DELETE STORE</strong> to confirm</p>
+    <input id="deleteStoreConfirmInput" type="text" placeholder="DELETE STORE" autocomplete="off"
+      oninput="_onDeleteStoreInput()"
+      style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-inner);color:var(--text-main);font-size:14px;box-sizing:border-box;font-family:inherit;margin-bottom:16px;" />
     <div style="display:flex;gap:10px;">
       <button onclick="closeStoreDeleteModal()"
         style="flex:1;padding:12px;background:var(--bg-inner);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
         Cancel
       </button>
-      <button id="confirmDeleteStoreBtn" onclick="_doDeleteStore()"
-        style="flex:1;padding:12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
+      <button id="confirmDeleteStoreBtn" onclick="_doDeleteStore()" disabled
+        style="flex:1;padding:12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:not-allowed;opacity:0.4;">
         Delete Store
       </button>
     </div>
@@ -157,9 +161,10 @@ async function _loadStoreList() {
               Rename
             </button>
             <button data-store-id="${s.id}"
-              onclick="event.stopPropagation();promptDeleteStore(this.dataset.storeId)"
-              style="flex:1;padding:8px;background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
-              onmouseover="this.style.background='rgba(239,68,68,0.05)'" onmouseout="this.style.background='none'">
+              onclick="event.stopPropagation();${isActive ? '' : 'promptDeleteStore(this.dataset.storeId)'}"
+              ${isActive ? 'disabled title="Cannot delete the active store"' : ''}
+              style="flex:1;padding:8px;background:none;border:none;${isActive ? 'cursor:not-allowed;opacity:0.35;' : 'cursor:pointer;'}color:#ef4444;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s;"
+              ${isActive ? '' : 'onmouseover="this.style.background=\'rgba(239,68,68,0.05)\'" onmouseout="this.style.background=\'none\'"'}>
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
               Delete
             </button>
@@ -285,6 +290,20 @@ function closeStoreDeleteModal() {
   _pendingDeleteStoreId = null;
   const modal = document.getElementById('storeDeleteModal');
   if (modal) modal.classList.remove('active');
+  const input = document.getElementById('deleteStoreConfirmInput');
+  if (input) input.value = '';
+  const btn = document.getElementById('confirmDeleteStoreBtn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+}
+
+function _onDeleteStoreInput() {
+  const input = document.getElementById('deleteStoreConfirmInput');
+  const btn = document.getElementById('confirmDeleteStoreBtn');
+  if (!input || !btn) return;
+  const match = input.value.trim() === 'DELETE STORE';
+  btn.disabled = !match;
+  btn.style.opacity = match ? '1' : '0.4';
+  btn.style.cursor = match ? 'pointer' : 'not-allowed';
 }
 
 async function _doDeleteStore() {
