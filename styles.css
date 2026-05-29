@@ -656,6 +656,37 @@ input[type="number"] {
   pointer-events: auto;
 }
 
+/* Base modal content — used when pages don't define their own override */
+.modal-content {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-content-custom {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal-content-custom {
+  transform: scale(1);
+}
+
 .modal {
   background: var(--bg-panel);
   border: 1px solid var(--border);
