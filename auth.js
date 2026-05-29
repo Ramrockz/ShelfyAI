@@ -61,6 +61,10 @@ async function logout() {
     sessionStorage.clear();
     localStorage.removeItem('shelfy_user_email');
     localStorage.removeItem('shelfy_user_avatar');
+    localStorage.removeItem('shelfy_store_id');
+    localStorage.removeItem('shelfy_store_name');
+    window.currentStoreId   = null;
+    window.currentStoreName = null;
     
     // Sign out from Supabase (this clears the session from localStorage)
     await supabaseClient.auth.signOut();
@@ -109,10 +113,14 @@ async function ensureProfileExists(user) {
   }
 }
 
+// Track which user we last validated stores for so we don't re-fetch on every call
+let _storeValidatedForUser = null;
+
 // Ensures the user has at least one store; sets window.currentStoreId / window.currentStoreName
 async function ensureStoreExists(user) {
   if (!user) return;
-  if (window.currentStoreId) return; // already set this session
+  // Skip only if we already validated for THIS specific user
+  if (_storeValidatedForUser === user.id && window.currentStoreId) return;
   try {
     const { data: stores } = await supabaseClient
       .from('stores')
@@ -133,9 +141,16 @@ async function ensureStoreExists(user) {
       if (created) list = [created];
     }
 
-    // Validate saved store id
+    // Validate saved store — if it belongs to a different account, clear it
     const savedId = localStorage.getItem('shelfy_store_id');
-    const valid = list.find(s => s.id === savedId);
+    const valid = savedId ? list.find(s => s.id === savedId) : null;
+    if (savedId && !valid) {
+      // Stale store from a different account — discard it
+      localStorage.removeItem('shelfy_store_id');
+      localStorage.removeItem('shelfy_store_name');
+      window.currentStoreId   = null;
+      window.currentStoreName = null;
+    }
     const active = valid || list[0];
 
     if (active) {
@@ -144,6 +159,7 @@ async function ensureStoreExists(user) {
       window.currentStoreId   = active.id;
       window.currentStoreName = active.name;
     }
+    _storeValidatedForUser = user.id;
   } catch (err) {
     console.error('ensureStoreExists error:', err);
     // Fallback: use whatever is in localStorage
