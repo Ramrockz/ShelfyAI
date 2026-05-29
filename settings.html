@@ -1699,11 +1699,11 @@ async function downloadIngredients(e) {
     btn.disabled = true;
     btn.innerHTML = 'Downloading...';
 
-    const { data, error } = await supabaseClient
-      .from('ingredients')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('name', { ascending: true });
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let _qi = supabaseClient.from('ingredients').select('*').eq('profile_id', user.id);
+    if (storeId) _qi = _qi.eq('store_id', storeId);
+    const { data, error } = await _qi.order('name', { ascending: true });
 
     if (error) throw error;
 
