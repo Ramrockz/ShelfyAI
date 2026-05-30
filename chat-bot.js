@@ -84,7 +84,7 @@ const publicFAQ = [
   { q: "How do I sign up?", keywords: ["sign up","register","create account","join","start","get started"],
     a: "Click Sign Up on the <a href='/login'>login page</a> and enter your email. You can also continue with Google." },
   { q: "What features does ShelfyAI include?", keywords: ["features","capabilities","what can","includes","offers","functions","does"],
-    a: "ShelfyAI includes: ingredient tracking with custom attributes, recipe builder with auto cost calculation, order management with Kanban view, expense tracking with AI receipt scanning, shopping list with PDF export, low stock alerts, and CSV data export." },
+    a: "ShelfyAI includes: ingredient tracking with custom attributes, recipe builder with auto cost calculation, order management, expense tracking with AI receipt scanning, low stock alerts, and CSV data export." },
   { q: "Is my data secure?", keywords: ["secure","security","safe","privacy","data","encryption","gdpr"],
     a: "Yes. Your data is stored in Supabase with industry-standard encryption. We never share your data with third parties." },
   { q: "Can I cancel my subscription?", keywords: ["cancel","subscription","stop","quit","leave","unsubscribe"],
@@ -92,7 +92,7 @@ const publicFAQ = [
   { q: "What types of businesses use ShelfyAI?", keywords: ["business","industry","restaurant","bakery","cafe","food","maker","craft","etsy","seller"],
     a: "ShelfyAI is used by bakeries, cafes, restaurants, food producers, Etsy sellers, crafters, and small manufacturers — anyone who needs to track materials and production costs." },
   { q: "Can I export my data?", keywords: ["export","download","csv","backup","data","save"],
-    a: "Yes! Once logged in, go to Settings → Data Export to download your ingredients, orders, and expenses as CSV files. Your shopping list can also be exported as PDF." },
+    a: "Yes! Once logged in, go to Settings → Data Export to download your ingredients, orders, and expenses as CSV files." },
   { q: "Does ShelfyAI have a mobile app?", keywords: ["mobile","app","phone","android","iphone","ios","pwa"],
     a: "ShelfyAI works as a Progressive Web App — open it in your mobile browser and add it to your home screen for a full app experience." },
 ];
@@ -192,17 +192,6 @@ const authenticatedFAQ = [
     keywords: ["category","type","expense","classify","label"],
     a: "Materials, Supplies, Shipping, Packaging, Tools, Marketing, Utilities, Software, Other." },
 
-  // Shopping List
-  { q: "How does the shopping list work?", page: "shopping-list",
-    keywords: ["shopping","list","how","work","use"],
-    a: "Go to <a href='/shopping-list'>Shopping List</a>. Drag ingredients from the right panel (sorted by stock level — out of stock first) onto your list. Adjust quantities and see the total cost update live." },
-  { q: "How do I export my shopping list?", page: "shopping-list",
-    keywords: ["export","download","pdf","print","shopping","list"],
-    a: "Shopping List page → <strong>Download PDF</strong> button. The PDF groups items by supplier and includes quantities and prices. You can also click <strong>Print</strong> for the browser print dialog." },
-  { q: "Why does an item show a truck icon on the shopping list?",
-    keywords: ["truck","icon","pending","reorder","shopping","list"],
-    a: "The truck means the ingredient has a reorder pending — you previously clicked Restock and it's marked as on the way. Go to the dashboard to confirm delivery once it arrives." },
-
   // Dashboard
   { q: "What does the dashboard show?", page: "operations",
     keywords: ["dashboard","operations","overview","show","what","hub"],
@@ -231,7 +220,7 @@ const authenticatedFAQ = [
   // Export & data
   { q: "How do I export my data?", page: "settings",
     keywords: ["export","download","csv","data","backup","ingredients","orders","expenses"],
-    a: "Go to <a href='/settings'>Settings</a> → <strong>Data Export</strong>. Download your ingredients, orders, or expenses as CSV files. Your shopping list can also be exported as PDF from the Shopping List page." },
+    a: "Go to <a href='/settings'>Settings</a> → <strong>Data Export</strong>. Download your ingredients, orders, or expenses as CSV files." },
 
   // Settings
   { q: "How do I change my password?", page: "settings",

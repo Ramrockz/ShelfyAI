@@ -3939,30 +3939,44 @@ async function showRecipeMappingModal(orderData) {
   
   // Pre-fill form fields
   document.getElementById('mapped_customer').value = orderData.customer || '';
-  document.getElementById('mapped_reference').value = orderData.order_reference || orderData.item?.SKU || '';
+  document.getElementById('mapped_reference').value = orderData.order_reference || '';
   document.getElementById('mapped_status').value = 'processed';
   
   document.getElementById('recipeMappingModal').classList.add('active');
   
-  // Match the item to recipes
-  const itemData = {
-    name: orderData.item?.name || orderData.description || 'Unknown Item',
-    quantity: orderData.item?.quantity || 1,
-    price: orderData.item?.price || 0,
-    attributes: orderData.attributes || {}
-  };
+  // Parse items - handle both single item object and array of items
+  let detectedItems = [];
+  if (orderData.items && Array.isArray(orderData.items)) {
+    detectedItems = orderData.items;
+  } else if (orderData.item) {
+    // Handle both single item object and array of items
+    detectedItems = Array.isArray(orderData.item) ? orderData.item : [orderData.item];
+  } else if (orderData.description) {
+    // Fallback to description as single item
+    detectedItems = [{
+      name: orderData.description,
+      quantity: 1,
+      price: 0
+    }];
+  }
   
-  const matches = await matchItemToRecipes(itemData);
-  
-  // Select best match by default, or no match
-  const bestMatch = matches.length > 0 ? matches[0].recipe : null;
-  
-  mappedRecipes = [{
-    itemData: itemData,
-    selectedRecipe: bestMatch,
-    matches: matches,
-    quantity: itemData.quantity || 1
-  }];
+  // Match each detected item to recipes
+  for (const item of detectedItems) {
+    const itemData = {
+      name: item.name || 'Unknown Item',
+      quantity: item.quantity || 1,
+      price: item.price || 0,
+      attributes: item.attributes || orderData.attributes || {}
+    };
+    const matches = await matchItemToRecipes(itemData);
+    const bestMatch = matches.length > 0 ? matches[0].recipe : null;
+    mappedRecipes.push({
+      itemData: itemData,
+      selectedRecipe: bestMatch,
+      matches: matches,
+      quantity: itemData.quantity || 1
+    });
+  }
   
   renderMappedItems();
   updateMappedTotal();
@@ -4593,7 +4607,7 @@ function renderRecipeIngredientList() {
           </button>
         </div>`;
     } else {
-      ingredientList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">No ingredients found</div>';
+      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
     }
     return;
   }

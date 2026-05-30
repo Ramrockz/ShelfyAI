@@ -1358,6 +1358,11 @@ function render() {
 
     if (currentView === 'recent') {
         const container = document.getElementById('recentView');
+        
+        // Remove empty state from list view if it exists
+        const emptyState = document.getElementById('emptyStateList');
+        if (emptyState) emptyState.remove();
+        
         if (data.length === 0) {
             const isFirstTime = !allData || allData.length === 0;
             const fab = document.querySelector('.fab');
@@ -1452,7 +1457,7 @@ function render() {
             if (!document.getElementById('emptyStateList')) {
                 const emptyDiv = document.createElement('div');
                 emptyDiv.id = 'emptyStateList';
-                emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+                emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px;';
                 emptyDiv.innerHTML = isFirstTime ? `
                     <img src="/cat_no_orders.png" alt="No recipes" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
                     <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No recipes yet</h3>
@@ -1582,7 +1587,7 @@ function renderIngredientList() {
           </button>
         </div>`;
     } else {
-      ingredientList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">No ingredients found</div>';
+      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
     }
     return;
   }

@@ -711,25 +711,21 @@
     <h3 style="margin-top:0; margin-bottom: 24px;">Add Expense</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
     
-    <div class="method-grid" style="display: flex; flex-direction: column; gap: 12px;">
-      <div class="method-card" onclick="selectMethod('manual')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40">
-        <div style="flex: 1; text-align: left;">
-          <h4 style="margin: 0 0 4px 0; font-size: 16px;">Manual Entry</h4>
-          <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
-        </div>
+    <div class="method-grid" style="display: grid; gap: 16px;">
+      <div class="method-card" onclick="selectMethod('manual')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: center;" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateY(0)'">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
       </div>
 
-      <div class="method-card" onclick="selectMethod('upload')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40">
-        <div style="flex: 1; text-align: left;">
-          <h4 style="margin: 0 0 4px 0; font-size: 16px;">PDF / Image Upload</h4>
-          <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
-        </div>
+      <div class="method-card" onclick="selectMethod('upload')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: center;" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateY(0)'">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
       </div>
     </div>
 
-    <button type="button" class="btn" style="width: 100%; margin-top: 20px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeMethodSelectionModal()">Cancel</button>
+    <button type="button" class="btn" style="width: 100%; margin-top: 24px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeMethodSelectionModal()">Cancel</button>
   </div>
 </div>
 
@@ -745,12 +741,12 @@
       <div class="form-group">
         <label>Ingredients</label>
         
-        <div style="display: flex; gap: 20px; min-height: 300px;">
+        <div style="display: flex; gap: 20px;">
           <!-- Left: Category Filters -->
-          <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 12px;">
             <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">CATEGORIES</div>
-            <div id="expenseCategoryChips" style="display: flex; flex-direction: column; gap: 6px;"></div>
-            <div id="expenseAttrSubfilter" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+            <div id="expenseCategoryChips" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;"></div>
+            <div id="expenseAttrSubfilter" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
           </div>
           
           <!-- Right: Search and Results -->
@@ -1038,6 +1034,10 @@ function render() {
 function renderRecent(filtered) {
   const container = document.getElementById('recentView');
   
+  // Remove empty state from list view if it exists
+  const emptyState = document.getElementById('emptyStateList');
+  if (emptyState) emptyState.remove();
+  
   if (filtered.length === 0) {
     const isFirstTime = !expenses || expenses.length === 0;
     const fab = document.querySelector('.fab');
@@ -1112,7 +1112,7 @@ function renderList(filtered) {
     if (!document.getElementById('emptyStateList')) {
       const emptyDiv = document.createElement('div');
       emptyDiv.id = 'emptyStateList';
-      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px;';
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No expenses" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No expenses yet</h3>
@@ -1363,10 +1363,9 @@ function renderExpenseCategoryChips() {
   
   container.innerHTML = categories.map(cat => `
     <div class="expense-cat-chip" data-category="${cat.name}" 
-      onclick="selectExpenseCategory('${cat.name}')"
-      style="padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; gap: 8px;">
-      <i data-lucide="${cat.icon}" style="width: 16px; height: 16px;"></i>
-      <span>${cat.name}</span>
+      onclick="selectExpenseCategory('${cat.name}')" title="${cat.name}"
+      style="padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center;">
+      <i data-lucide="${cat.icon}" style="width: 18px; height: 18px;"></i>
     </div>
   `).join('');
   
@@ -1398,6 +1397,11 @@ function selectExpenseCategory(category) {
     }
   });
   
+  // Re-initialize icons after style changes
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+  
   renderExpenseAttrSubfilter();
   searchIngredientsExpense();
 }
@@ -1408,6 +1412,7 @@ function renderExpenseAttrSubfilter() {
   
   if (!expenseSelectedCategory) {
     container.style.display = 'none';
+    container.innerHTML = '';
     return;
   }
   
@@ -1418,8 +1423,18 @@ function renderExpenseAttrSubfilter() {
   const allAttrs = {};
   
   categoryIngredients.forEach(ing => {
-    if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
-      Object.entries(ing.custom_attributes).forEach(([key, value]) => {
+    let attrs = ing.custom_attributes;
+    // Parse if string
+    if (typeof attrs === 'string') {
+      try {
+        attrs = JSON.parse(attrs);
+      } catch (e) {
+        attrs = null;
+      }
+    }
+    
+    if (attrs && typeof attrs === 'object') {
+      Object.entries(attrs).forEach(([key, value]) => {
         if (value) {
           if (!allAttrs[key]) allAttrs[key] = new Set();
           allAttrs[key].add(value);
@@ -1430,6 +1445,7 @@ function renderExpenseAttrSubfilter() {
   
   if (Object.keys(allAttrs).length === 0) {
     container.style.display = 'none';
+    container.innerHTML = '';
     return;
   }
   
@@ -1498,9 +1514,19 @@ function searchIngredientsExpense() {
     // Category filter
     if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
     
+    // Parse custom_attributes if needed
+    let ingAttrs = ing.custom_attributes;
+    if (typeof ingAttrs === 'string') {
+      try {
+        ingAttrs = JSON.parse(ingAttrs);
+      } catch (e) {
+        ingAttrs = {};
+      }
+    }
+    
     // Attribute filters
     if (Object.keys(expenseSelectedAttributes).length > 0) {
-      const ingAttrs = ing.custom_attributes || {};
+      ingAttrs = ingAttrs || {};
       for (const [key, value] of Object.entries(expenseSelectedAttributes)) {
         if (ingAttrs[key] !== value) return false;
       }
@@ -1511,8 +1537,8 @@ function searchIngredientsExpense() {
       const nameMatch = ing.name.toLowerCase().includes(searchTerm);
       let attrMatch = false;
       
-      if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
-        attrMatch = Object.values(ing.custom_attributes).some(val => 
+      if (ingAttrs && typeof ingAttrs === 'object') {
+        attrMatch = Object.values(ingAttrs).some(val => 
           val && typeof val === 'string' && val.toLowerCase().includes(searchTerm)
         );
       }
@@ -1532,17 +1558,27 @@ function searchIngredientsExpense() {
   }
   
   if (filtered.length === 0) {
-    resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px;">No ingredients found</div>';
+    resultsDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:8px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:13px;margin:0;">No ingredients found</p></div>';
     resultsDiv.style.display = 'block';
     return;
   }
   
-  resultsDiv.innerHTML = filtered.slice(0, 8).map(ing => `
+  resultsDiv.innerHTML = filtered.slice(0, 8).map(ing => {
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') {
+      try {
+        attrs = JSON.parse(attrs);
+      } catch (e) {
+        attrs = null;
+      }
+    }
+    return `
     <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
       <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
-      <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(ing.custom_attributes)}</div>
+      <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(attrs)}</div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   resultsDiv.style.display = 'block';
 }
 
@@ -2071,7 +2107,8 @@ async function showIngredientMappingModal(expenseData) {
   if (expenseData.items && Array.isArray(expenseData.items)) {
     detectedItems = expenseData.items;
   } else if (expenseData.item) {
-    detectedItems = [expenseData.item];
+    // Handle both single item object and array of items
+    detectedItems = Array.isArray(expenseData.item) ? expenseData.item : [expenseData.item];
   }
 
   // Create mapped items with best matches
@@ -2248,7 +2285,7 @@ function renderDropdownForItem(index, ingredients) {
   if (!dropdown) return;
 
   if (ingredients.length === 0) {
-    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px;">No ingredients found</div>';
+    dropdown.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:8px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:13px;margin:0;">No ingredients found</p></div>';
   } else {
     dropdown.innerHTML = ingredients.map(ing => `
       <div onclick="selectIngredientForItem(${index}, '${ing.id}')"
@@ -2384,6 +2421,7 @@ async function processImageUpload() {
   const orDivider = dropZone.nextElementSibling;
   const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
   const statusDiv = document.getElementById('uploadStatus');
+  const modalContent = document.getElementById('imageUploadModal').querySelector('.modal-content');
   
   if (uploadModalTitle) uploadModalTitle.style.display = 'none';
   if (uploadDescription) uploadDescription.style.display = 'none';
@@ -2393,6 +2431,9 @@ async function processImageUpload() {
   if (orDivider) orDivider.style.display = 'none';
   cancelBtn.style.display = 'none';
   processBtn.style.display = 'none';
+  
+  // Remove modal background for loading animation
+  if (modalContent) modalContent.style.background = 'transparent';
   
   // Show loading animation
   if (statusDiv) {
@@ -2439,11 +2480,8 @@ async function processImageUpload() {
     
     if (result.success && result.data) {
       console.log('Extracted expense data:', result.data);
-      showUploadStatus('Data extracted successfully!', 'success');
-      setTimeout(() => {
-        closeImageUploadModal();
-        showIngredientMappingModal(result.data);
-      }, 800);
+      closeImageUploadModal();
+      showIngredientMappingModal(result.data);
     }
   } catch (error) {
     console.error('Error processing upload:', error);
@@ -2458,6 +2496,7 @@ async function processImageUpload() {
     const processBtn = document.getElementById('processImageBtn');
     const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
     const statusDiv = document.getElementById('uploadStatus');
+    const modalContent = document.getElementById('imageUploadModal').querySelector('.modal-content');
     
     if (uploadModalTitle) uploadModalTitle.style.display = '';
     if (uploadDescription) uploadDescription.style.display = 'block';
@@ -2469,6 +2508,9 @@ async function processImageUpload() {
     processBtn.style.display = 'block';
     processBtn.textContent = 'Process';
     processBtn.disabled = false;
+    
+    // Restore modal background
+    if (modalContent) modalContent.style.background = '';
     
     if (statusDiv) {
       statusDiv.style.display = 'block';

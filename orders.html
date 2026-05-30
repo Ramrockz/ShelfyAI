@@ -1292,6 +1292,10 @@ function render() {
 function renderRecent(filtered) {
   const container = document.getElementById('recentView');
   
+  // Remove empty state from list view if it exists
+  const emptyState = document.getElementById('emptyStateList');
+  if (emptyState) emptyState.remove();
+  
   if (filtered.length === 0) {
     const isFirstTime = !orders || orders.length === 0;
     const fab = document.querySelector('.fab');
@@ -1372,7 +1376,7 @@ function renderList(filtered) {
     if (!document.getElementById('emptyStateList')) {
       const emptyDiv = document.createElement('div');
       emptyDiv.id = 'emptyStateList';
-      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px;';
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No orders" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No orders yet</h3>
@@ -2943,17 +2947,43 @@ async function showRecipeMappingModal(orderData) {
   const itemsList = document.getElementById('mappedItemsList');
   itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching recipes...</div>';
   document.getElementById('mapped_customer').value = orderData.customer || '';
-  document.getElementById('mapped_reference').value = orderData.order_reference || orderData.item?.SKU || '';
+  document.getElementById('mapped_reference').value = orderData.order_reference || '';
   document.getElementById('recipeMappingModal').classList.add('active');
-  const itemData = {
-    name: orderData.item?.name || orderData.description || 'Unknown Item',
-    quantity: orderData.item?.quantity || 1,
-    price: orderData.item?.price || 0,
-    attributes: orderData.attributes || {}
-  };
-  const matches = await matchItemToRecipes(itemData);
-  const bestMatch = matches.length > 0 ? matches[0].recipe : null;
-  mappedRecipes = [{ itemData, selectedRecipe: bestMatch, matches, quantity: itemData.quantity || 1 }];
+  
+  // Parse items - handle both single item object and array of items
+  let detectedItems = [];
+  if (orderData.items && Array.isArray(orderData.items)) {
+    detectedItems = orderData.items;
+  } else if (orderData.item) {
+    // Handle both single item object and array of items
+    detectedItems = Array.isArray(orderData.item) ? orderData.item : [orderData.item];
+  } else if (orderData.description) {
+    // Fallback to description as single item
+    detectedItems = [{
+      name: orderData.description,
+      quantity: 1,
+      price: 0
+    }];
+  }
+  
+  // Match each detected item to recipes
+  for (const item of detectedItems) {
+    const itemData = {
+      name: item.name || 'Unknown Item',
+      quantity: item.quantity || 1,
+      price: item.price || 0,
+      attributes: item.attributes || orderData.attributes || {}
+    };
+    const matches = await matchItemToRecipes(itemData);
+    const bestMatch = matches.length > 0 ? matches[0].recipe : null;
+    mappedRecipes.push({ 
+      itemData, 
+      selectedRecipe: bestMatch, 
+      matches, 
+      quantity: itemData.quantity || 1 
+    });
+  }
+  
   renderMappedItems();
   updateMappedTotal();
   hideGlobalLoader();

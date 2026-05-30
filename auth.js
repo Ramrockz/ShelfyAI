@@ -40,7 +40,6 @@ const protectedPages = [
   'expenses',
   'expense-detail',
   'operations',
-  'shopping-list',
   'orders',
   'order-detail',
   'analytics',

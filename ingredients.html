@@ -1819,7 +1819,11 @@ function showUploadStatus(message, type) {
   
   // Show loader animation if extracting
   if (message.toLowerCase().includes('extracting')) {
-    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="chameleon-loader.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
+    // Remove modal background
+    const modalContent = document.getElementById('imageUploadModal')?.querySelector('.modal-content');
+    if (modalContent) modalContent.style.background = 'transparent';
+    
+    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="/loading_screen.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
     statusDiv.style.background = 'transparent';
     statusDiv.style.border = 'none';
     statusDiv.style.borderRadius = '0';
@@ -1827,6 +1831,10 @@ function showUploadStatus(message, type) {
     statusDiv.style.textAlign = 'center';
     statusDiv.style.padding = '0';
   } else {
+    // Restore modal background
+    const modalContent = document.getElementById('imageUploadModal')?.querySelector('.modal-content');
+    if (modalContent) modalContent.style.background = '';
+    
     statusDiv.textContent = message;
     statusDiv.style.textAlign = 'left';
     statusDiv.style.padding = '12px';
