@@ -636,6 +636,73 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* ---------- SEARCH WRAPPERS ---------- */
+.search-wrapper {
+  position: relative;
+  display: block;
+}
+
+.search-wrapper input,
+.search-wrapper input[type="text"],
+.search-wrapper input[type="search"],
+.search-wrapper .recipe-search-input {
+  width: 100%;
+  padding: 10px 38px 10px 38px !important;
+  box-sizing: border-box !important;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.search-clear:hover {
+  background: var(--bg-inner);
+  color: var(--text-main);
+}
+
+.search-clear.visible {
+  display: flex;
+}
+
+/* Mobile search bars need more vertical padding */
+@media (max-width: 768px) {
+  .search-wrapper input,
+  .search-wrapper input[type="text"],
+  .search-wrapper input[type="search"] {
+    padding: 12px 38px 12px 38px !important;
+  }
+}
+
 /* ---------- MODALS ---------- */
 .modal-overlay {
   position: fixed;
@@ -1274,24 +1341,74 @@ tr:hover td {
 /* Nav inline search — hidden on desktop, shown between avatar and bell on mobile */
 .nav-search-input { display: none; }
 
+/* Hide the search wrapper in navbar on desktop */
+.nav-actions .search-wrapper {
+  display: none;
+}
+
 @media (max-width: 640px) {
-  .nav-search-input {
+  /* Show search wrapper on mobile and make it take available flex space */
+  .nav-actions .search-wrapper {
     display: block;
     flex: 1 1 0;
     min-width: 0;
-    width: auto;
-    margin: 0;
     order: 1;
+    position: relative;
+  }
+  
+  .nav-search-input {
+    display: block;
+    width: 100%;
+    margin: 0;
     background: var(--bg-inner);
     border: none;
     border-radius: 8px;
-    padding: 7px 14px;
+    padding: 7px 32px 7px 32px !important;
     font-size: 14px;
     color: var(--text-main);
     font-family: inherit;
     outline: none;
     box-sizing: border-box;
   }
+  
+  /* Position icons inside the navbar search */
+  .nav-actions .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 10;
+  }
+  
+  .nav-actions .search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    z-index: 10;
+  }
+  
+  .nav-actions .search-clear.visible {
+    display: flex;
+  }
+  
   /* Hide theme toggle to make room for the search */
   .navbar:has(.nav-search-input) .theme-toggle-wrapper {
     display: none;

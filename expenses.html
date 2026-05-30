@@ -180,6 +180,22 @@
     overflow-y: auto;
   }
   
+  /* Custom scrollbar for modal on desktop */
+  .modal-content::-webkit-scrollbar {
+    width: 8px;
+  }
+  .modal-content::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 20px 0;
+  }
+  .modal-content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  .modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+  
   .form-group {
     margin-bottom: 20px;
   }
@@ -223,6 +239,14 @@
     align-items: center;
     justify-content: center;
     padding: 40px 0;
+    background: transparent !important;
+  }
+  
+  .loader-container lottie-player,
+  .loader-container lottie-player *,
+  .loader-container lottie-player svg {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
   /* Notification Bell Styles */
@@ -371,6 +395,44 @@
     left: 50%;
     transform: translate(-50%, -50%);
   }
+  
+  /* Method selection cards */
+  .method-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .method-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+  .method-card img {
+    filter: brightness(0) saturate(100%);
+  }
+  [data-theme="dark"] .method-card img {
+    filter: brightness(0) invert(1);
+  }
+  .method-card img {
+    margin-bottom: 16px;
+  }
+  .method-card h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+  }
+  .method-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .method-grid {
+    display: grid;
+    gap: 16px;
+  }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -437,12 +499,8 @@
       text-overflow: ellipsis;
     }
 
-    /* Mobile search input — replaced by nav search */
-    #mobileSearchInput {
-      display: none !important;
-    }
-    
-    #searchInput {
+    /* Hide desktop search on mobile — navbar search is used instead */
+    .top-bar .search-wrapper {
       display: none !important;
     }
 
@@ -471,8 +529,8 @@
       max-width: 500px !important;
       border-radius: 20px !important;
       margin: 16px !important;
-      max-height: 85vh !important;
-      padding: 24px 20px !important;
+      max-height: calc(100vh - 100px) !important;
+      padding: 24px 20px calc(24px + env(safe-area-inset-bottom)) 20px !important;
       overflow-y: auto;
       transform: none !important;
     }
@@ -494,6 +552,11 @@
       margin: 0 auto 20px;
     }
     
+    /* Stack form fields vertically on mobile */
+    .form-row {
+      grid-template-columns: 1fr !important;
+    }
+    
     /* Table container - horizontal scroll */
     .table-container {
       overflow-x: auto;
@@ -502,6 +565,18 @@
     
     table {
       min-width: 600px;
+    }
+    
+    /* Hide all scrollbars on mobile */
+    * {
+      scrollbar-width: none !important; /* Firefox */
+      -ms-overflow-style: none !important; /* IE and Edge */
+    }
+    *::-webkit-scrollbar {
+      display: none !important; /* Chrome, Safari, Opera */
+    }
+    .modal-content::-webkit-scrollbar {
+      display: none !important;
     }
   }
   
@@ -539,7 +614,11 @@
         </svg>
       </span>
     </div>
-    <input class="nav-search-input" id="navSearchInput" placeholder="Search expenses…" oninput="render()">
+    <div class="search-wrapper" style="flex: 1;">
+      <i data-lucide="search" class="search-icon"></i>
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search expenses…" oninput="render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+    </div>
 
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
@@ -665,9 +744,6 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
-    <!-- Mobile Search Bar (visible only on mobile) -->
-    <input type="text" id="mobileSearchInput" placeholder="Search expenses..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="render()" />
-    
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px;">
         <div class="view-switcher">
@@ -675,7 +751,11 @@
           <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
         </div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search expenses..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="render()" />
+      <div class="search-wrapper" style="width: 480px;">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Search expenses..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="render(); toggleSearchClear('searchInput')" />
+        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      </div>
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -711,17 +791,17 @@
     <h3 style="margin-top:0; margin-bottom: 24px;">Add Expense</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
     
-    <div class="method-grid" style="display: grid; gap: 16px;">
-      <div class="method-card" onclick="selectMethod('manual')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: center;" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateY(0)'">
-        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
-        <p style="font-size: 14px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
+    <div class="method-grid">
+      <div class="method-card" onclick="selectMethod('manual')">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="48" height="48">
+        <h4>Manual Entry</h4>
+        <p>Fill out the form yourself</p>
       </div>
 
-      <div class="method-card" onclick="selectMethod('upload')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 24px; cursor: pointer; transition: all 0.2s; text-align: center;" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateY(0)'">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
-        <p style="font-size: 14px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
+      <div class="method-card" onclick="selectMethod('upload')">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48">
+        <h4>PDF / Image Upload</h4>
+        <p>Scan receipts or invoices</p>
       </div>
     </div>
 
@@ -731,7 +811,7 @@
 
 <!-- Add/Edit Expense Modal -->
 <div class="modal-overlay" id="expenseModal">
-  <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+  <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Expense</h3>
     
     <form id="expenseForm" onsubmit="saveExpense(event)">
@@ -741,33 +821,41 @@
       <div class="form-group">
         <label>Ingredients</label>
         
-        <div style="display: flex; gap: 20px;">
-          <!-- Left: Category Filters -->
-          <div style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 12px;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">CATEGORIES</div>
-            <div id="expenseCategoryChips" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;"></div>
-            <div id="expenseAttrSubfilter" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+        <!-- Search at top -->
+        <div style="position: relative; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">SEARCH</div>
+          <div class="search-wrapper" style="width: 100%;">
+            <i data-lucide="search" class="search-icon"></i>
+            <input 
+              type="text" 
+              id="ingredient_search" 
+              placeholder="Search ingredients..." 
+              onfocus="showIngredientDropdownExpense()" 
+              oninput="searchIngredientsExpense(); toggleSearchClear('ingredient_search')" 
+              autocomplete="off"
+              style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
+            <button type="button" class="search-clear" id="ingredient_search_clear" onclick="document.getElementById('ingredient_search').value = ''; searchIngredientsExpense(); this.classList.remove('visible');" title="Clear search">\u00d7</button>
           </div>
-          
-          <!-- Right: Search and Results -->
-          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
-            <!-- Ingredient Search -->
-            <div style="position: relative;">
-              <input 
-                type="text" 
-                id="ingredient_search" 
-                placeholder="Search ingredients..." 
-                onfocus="showIngredientDropdownExpense()" 
-                oninput="searchIngredientsExpense()" 
-                autocomplete="off"
-                style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
-              <div id="ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
-            </div>
-            
-            <!-- Selected Ingredients List -->
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted);">SELECTED</div>
-            <div id="selected_ingredients_list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-          </div>
+          <div id="ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+        </div>
+        
+        <!-- Categories underneath -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">CATEGORIES</div>
+          <div id="expenseCategoryChips" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          <div id="expenseAttrSubfilter" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+        </div>
+        
+        <!-- Recommended Ingredients -->
+        <div id="recommended_ingredients_section" style="display: none; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">RECOMMENDED</div>
+          <div id="recommended_ingredients_list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+        
+        <!-- Selected Ingredients -->
+        <div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">SELECTED</div>
+          <div id="selected_ingredients_list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
       </div>
 
@@ -896,6 +984,95 @@
   </div>
 </div>
 
+<!-- Quick Create Ingredient Modal -->
+<div class="modal-overlay" id="quickCreateIngredientModal">
+  <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Create New Ingredient</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Fill in the details to create this ingredient.</p>
+    
+    <form id="quickIngredientForm" onsubmit="saveQuickIngredient(event)" novalidate>
+      <div class="form-group">
+        <label for="quick_ing_name">Ingredient Name *</label>
+        <input type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quick_ing_quantity">Quantity *</label>
+          <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
+        </div>
+
+        <div class="form-group">
+          <label for="quick_ing_unit">Unit *</label>
+          <select id="quick_ing_unit" required>
+            <option value="">Select unit</option>
+            <option value="kg">Kilograms (kg)</option>
+            <option value="g">Grams (g)</option>
+            <option value="l">Liters (l)</option>
+            <option value="ml">Milliliters (ml)</option>
+            <option value="cm">Centimeters (cm)</option>
+            <option value="pcs" selected>Pieces (pcs)</option>
+            <option value="lb">Pounds (lb)</option>
+            <option value="oz">Ounces (oz)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quick_ing_cost">Cost per Unit *</label>
+          <input type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+          <label for="quick_ing_sku">SKU</label>
+          <input type="text" id="quick_ing_sku" placeholder="Stock Keeping Unit">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="quick_ing_min_stock">Minimum Stock Alert *</label>
+        <input type="number" id="quick_ing_min_stock" step="0.01" placeholder="e.g., 10" required value="5">
+      </div>
+
+      <div class="form-group">
+        <label>Category *</label>
+        <input type="hidden" id="quick_ing_category">
+        <div class="ing-cat-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px;">
+          <button type="button" class="quick-ing-cat-chip" data-value="Apparel" onclick="selectQuickIngCategory('Apparel')" title="Apparel" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="shirt" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Wood" onclick="selectQuickIngCategory('Wood')" title="Wood" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="tree-pine" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Boxes" onclick="selectQuickIngCategory('Boxes')" title="Boxes" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="archive" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Cards" onclick="selectQuickIngCategory('Cards')" title="Cards" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="tickets" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Plants" onclick="selectQuickIngCategory('Plants')" title="Plants" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="sprout" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Candy" onclick="selectQuickIngCategory('Candy')" title="Candy" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="lollipop" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Beverage" onclick="selectQuickIngCategory('Beverage')" title="Beverage" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="amphora" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Jewelry" onclick="selectQuickIngCategory('Jewelry')" title="Jewelry" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gem" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Party Supplies" onclick="selectQuickIngCategory('Party Supplies')" title="Party Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="party-popper" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Gaming" onclick="selectQuickIngCategory('Gaming')" title="Gaming" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gamepad-2" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Toys" onclick="selectQuickIngCategory('Toys')" title="Toys" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="drum" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Office Supplies" onclick="selectQuickIngCategory('Office Supplies')" title="Office Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="paperclip" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Colors" onclick="selectQuickIngCategory('Colors')" title="Colors" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="palette" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Rope" onclick="selectQuickIngCategory('Rope')" title="Rope" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="lasso" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Paper" onclick="selectQuickIngCategory('Paper')" title="Paper" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="origami" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Spool" onclick="selectQuickIngCategory('Spool')" title="Spool" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="spool" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Letter" onclick="selectQuickIngCategory('Letter')" title="Letter" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="mail" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Giveaway" onclick="selectQuickIngCategory('Giveaway')" title="Giveaway" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gift" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Electronics" onclick="selectQuickIngCategory('Electronics')" title="Electronics" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="plug" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Printing Supplies" onclick="selectQuickIngCategory('Printing Supplies')" title="Printing Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="printer" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Tools" onclick="selectQuickIngCategory('Tools')" title="Tools" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="wrench" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Packaging" onclick="selectQuickIngCategory('Packaging')" title="Packaging" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="package" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Food" onclick="selectQuickIngCategory('Food')" title="Food" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="wheat" style="width: 20px; height: 20px;"></i></button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeQuickCreateIngredientModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Create & Map</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Toggle Switch Styles -->
 <style>
 .toggle-switch {
@@ -950,8 +1127,26 @@ let listCurrentPage = 1;
 let expenseToDelete = null;
 let editingExpenseId = null;
 
+// Toggle search clear button visibility
+function toggleSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(inputId + '_clear');
+  if (input && clearBtn) {
+    if (input.value.trim()) {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+  
   await loadExpenses();
   await loadIngredientsForExpense();
   
@@ -1046,7 +1241,7 @@ function renderRecent(filtered) {
       <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
         <img src="/cat_no_orders.png" alt="No expenses" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No expenses yet</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Track what you spend to keep your costs in check</p>
+        <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Keep your costs in check and your inventory up to date.</p>
         <button onclick="openMethodSelectionModal()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Add Expense</button>
       </div>
     ` : `
@@ -1116,7 +1311,7 @@ function renderList(filtered) {
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No expenses" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No expenses yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track your business costs and spending</p>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Keep your costs in check and your inventory up to date.</p>
         <button onclick="openMethodSelectionModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Expense</button>
       ` : `
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
@@ -1335,7 +1530,10 @@ function renderExpenseCategoryChips() {
   const container = document.getElementById('expenseCategoryChips');
   if (!container) return;
   
-  const categories = [
+  // Get unique categories from existing ingredients
+  const existingCategories = new Set(allIngredients.map(ing => ing.category).filter(Boolean));
+  
+  const allCategories = [
     { name: 'Apparel', icon: 'shirt' },
     { name: 'Wood', icon: 'tree-pine' },
     { name: 'Boxes', icon: 'archive' },
@@ -1360,6 +1558,9 @@ function renderExpenseCategoryChips() {
     { name: 'Packaging', icon: 'package' },
     { name: 'Food', icon: 'wheat' }
   ];
+  
+  // Filter to only show categories from existing ingredients
+  const categories = allCategories.filter(cat => existingCategories.has(cat.name));
   
   container.innerHTML = categories.map(cat => `
     <div class="expense-cat-chip" data-category="${cat.name}" 
@@ -1403,7 +1604,87 @@ function selectExpenseCategory(category) {
   }
   
   renderExpenseAttrSubfilter();
+  renderRecommendedIngredients();
   searchIngredientsExpense();
+}
+
+function renderRecommendedIngredients() {
+  const section = document.getElementById('recommended_ingredients_section');
+  const listDiv = document.getElementById('recommended_ingredients_list');
+  
+  if (!section || !listDiv) return;
+  
+  // Only show if category or attributes are selected
+  const hasFilters = expenseSelectedCategory || Object.keys(expenseSelectedAttributes).length > 0;
+  
+  if (!hasFilters) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  // Filter ingredients based on selected category and attributes
+  let filtered = allIngredients.filter(ing => {
+    // Don't show already selected ingredients
+    if (selectedExpenseIngredients.some(sel => sel.id === ing.id)) return false;
+    
+    // Category filter
+    if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
+    
+    // Parse custom_attributes if needed
+    let ingAttrs = ing.custom_attributes;
+    if (typeof ingAttrs === 'string') {
+      try {
+        ingAttrs = JSON.parse(ingAttrs);
+      } catch (e) {
+        ingAttrs = {};
+      }
+    }
+    
+    // Attribute filters
+    if (Object.keys(expenseSelectedAttributes).length > 0) {
+      ingAttrs = ingAttrs || {};
+      for (const [key, value] of Object.entries(expenseSelectedAttributes)) {
+        if (ingAttrs[key] !== value) return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  if (filtered.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  
+  // Show up to 5 recommended ingredients
+  listDiv.innerHTML = filtered.slice(0, 5).map(ing => {
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') {
+      try {
+        attrs = JSON.parse(attrs);
+      } catch (e) {
+        attrs = {};
+      }
+    }
+    
+    const attrText = attrs && typeof attrs === 'object' 
+      ? Object.values(attrs).filter(v => v).join(' • ')
+      : '';
+    
+    return `
+      <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+        <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${ing.name}</div>
+            ${attrText ? `<div style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${attrText}</div>` : ''}
+          </div>
+          <div style="flex-shrink: 0; padding: 4px 8px; background: var(--accent); color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">Add</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderExpenseAttrSubfilter() {
@@ -1478,6 +1759,7 @@ function toggleExpenseAttribute(key, value) {
   }
   
   renderExpenseAttrSubfilter();
+  renderRecommendedIngredients();
   searchIngredientsExpense();
 }
 
@@ -1606,6 +1888,7 @@ function addIngredientToExpense(ingredientId) {
   });
   
   renderSelectedIngredients();
+  renderRecommendedIngredients();
   
   // Clear search
   document.getElementById('ingredient_search').value = '';
@@ -1615,6 +1898,7 @@ function addIngredientToExpense(ingredientId) {
 function removeIngredientFromExpense(ingredientId) {
   selectedExpenseIngredients = selectedExpenseIngredients.filter(ing => ing.id !== ingredientId);
   renderSelectedIngredients();
+  renderRecommendedIngredients();
 }
 
 function updateIngredientQuantity(ingredientId, quantity) {
@@ -2055,38 +2339,86 @@ function calculateExpenseSimilarity(str1, str2) {
 }
 
 function matchIngredientWithAttributes(detectedItem, ingredient) {
-  // Base name similarity
+  let score = 0;
+  let matches = 0;
+  let totalChecks = 0;
+  
+  // 1. Name similarity (weighted 40%)
   const itemName = detectedItem.name || '';
-  let score = calculateExpenseSimilarity(itemName, ingredient.name);
-
-  // Boost score if custom attributes match
-  if (ingredient.custom_attributes && typeof ingredient.custom_attributes === 'object') {
-    const itemNameLower = itemName.toLowerCase();
-    const attrs = ingredient.custom_attributes;
+  const nameSimilarity = calculateExpenseSimilarity(itemName, ingredient.name);
+  score += nameSimilarity * 0.4;
+  totalChecks++;
+  
+  // 2. SKU match (weighted 30%) - only if both have SKUs
+  const detectedSKU = detectedItem.SKU || detectedItem.sku;
+  const ingredientSKU = ingredient.sku;
+  
+  if (detectedSKU && ingredientSKU) {
+    totalChecks++;
+    if (detectedSKU.toLowerCase() === ingredientSKU.toLowerCase()) {
+      score += 0.3; // Perfect SKU match
+      matches++;
+    }
+  }
+  
+  // 3. Attribute matches (weighted 30%) - compare detected attributes with ingredient attributes
+  let ingredientAttrs = ingredient.attributes || ingredient.custom_attributes;
+  
+  // Parse if it's a JSON string
+  if (typeof ingredientAttrs === 'string') {
+    try {
+      ingredientAttrs = JSON.parse(ingredientAttrs);
+    } catch (e) {
+      ingredientAttrs = null;
+    }
+  }
+  
+  // Check if detected item has attributes
+  const detectedAttrs = detectedItem.attributes;
+  
+  if (ingredientAttrs && typeof ingredientAttrs === 'object' && detectedAttrs && typeof detectedAttrs === 'object') {
+    const detectedValues = new Set(
+      Object.values(detectedAttrs)
+        .map(v => String(v).toLowerCase().trim())
+    );
     
-    // Check each attribute value against detected item name
-    let attributeMatches = 0;
-    const totalAttrs = Object.keys(attrs).length;
+    const ingredientValues = Object.values(ingredientAttrs)
+      .map(v => String(v).toLowerCase().trim());
     
-    for (const [key, value] of Object.entries(attrs)) {
-      if (value && typeof value === 'string') {
-        const valueLower = value.toLowerCase();
-        if (itemNameLower.includes(valueLower) || valueLower.includes(itemNameLower)) {
+    if (ingredientValues.length > 0 && detectedValues.size > 0) {
+      totalChecks++;
+      
+      // Count how many ingredient attribute values match detected attribute values
+      let attributeMatches = 0;
+      for (const ingValue of ingredientValues) {
+        if (detectedValues.has(ingValue)) {
           attributeMatches++;
         }
       }
-    }
-    
-    // Increase score by up to 0.15 based on attribute matches
-    if (totalAttrs > 0) {
-      score += (attributeMatches / totalAttrs) * 0.15;
+      
+      // Calculate attribute match score
+      const attrMatchRatio = attributeMatches / ingredientValues.length;
+      score += attrMatchRatio * 0.3;
+      
+      if (attrMatchRatio >= 0.5) matches++; // At least half the attributes match
     }
   }
-
-  return Math.min(score, 1.0); // Cap at 1.0
+  
+  // Normalize score - require at least 2 out of 3 checks to pass for a good match
+  if (totalChecks >= 2 && matches >= 1 && score >= 0.5) {
+    return score;
+  } else if (totalChecks === 1 && score >= 0.7) {
+    // If only name check available, require high name similarity
+    return score;
+  }
+  
+  return Math.min(score, 0.95); // Never return perfect 1.0 to encourage user review
 }
 
 async function showIngredientMappingModal(expenseData) {
+  console.log('=== showIngredientMappingModal called ===');
+  console.log('expenseData:', JSON.stringify(expenseData, null, 2));
+  
   pendingExpenseData = expenseData;
   mappedItems = [];
   updateInventory = true;
@@ -2100,7 +2432,43 @@ async function showIngredientMappingModal(expenseData) {
   let _q2 = supabaseClient.from('ingredients').select('*').eq('profile_id', user.id);
   if (storeId) _q2 = _q2.eq('store_id', storeId);
   const { data: ingredients } = await _q2;
-  allIngredientsCache = ingredients || [];
+  
+  // Parse JSON string attributes into objects
+  allIngredientsCache = (ingredients || []).map(ing => {
+    const parsed = { ...ing };
+    
+    // Parse attributes field if it's a string
+    if (parsed.attributes && typeof parsed.attributes === 'string') {
+      try {
+        parsed.attributes = JSON.parse(parsed.attributes);
+      } catch (e) {
+        console.warn('Failed to parse attributes for ingredient:', parsed.name, e);
+        parsed.attributes = null;
+      }
+    }
+    
+    // Parse custom_attributes field if it's a string
+    if (parsed.custom_attributes && typeof parsed.custom_attributes === 'string') {
+      try {
+        parsed.custom_attributes = JSON.parse(parsed.custom_attributes);
+      } catch (e) {
+        console.warn('Failed to parse custom_attributes for ingredient:', parsed.name, e);
+        parsed.custom_attributes = null;
+      }
+    }
+    
+    return parsed;
+  });
+  console.log('=== Loaded Ingredients Sample ===');
+  console.log('Total ingredients:', allIngredientsCache.length);
+  if (allIngredientsCache.length > 0) {
+    console.log('First ingredient:', {
+      name: allIngredientsCache[0].name,
+      sku: allIngredientsCache[0].sku,
+      attributes: allIngredientsCache[0].attributes,
+      custom_attributes: allIngredientsCache[0].custom_attributes
+    });
+  }
 
   // Parse detected items (could be array or single item)
   let detectedItems = [];
@@ -2110,12 +2478,20 @@ async function showIngredientMappingModal(expenseData) {
     // Handle both single item object and array of items
     detectedItems = Array.isArray(expenseData.item) ? expenseData.item : [expenseData.item];
   }
+  
+  console.log('=== Detected Items ===');
+  console.log(JSON.stringify(detectedItems, null, 2));
 
   // Create mapped items with best matches
-  detectedItems.forEach(item => {
+  detectedItems.forEach((item, idx) => {
     const itemName = item.name || '';
     const itemPrice = item.price ? parseFloat(String(item.price).replace(/[^0-9.]/g, '')) : null;
     const itemQty = item.quantity ? parseFloat(item.quantity) : 1;
+
+    console.log(`\n--- Matching Item ${idx + 1}: "${itemName}" ---`);
+    console.log('Detected item attributes:', item.attributes);
+    console.log('Detected item SKU:', item.SKU);
+    console.log('Available ingredients to match:', allIngredientsCache.length);
 
     let bestMatch = null;
     if (itemName && allIngredientsCache.length > 0) {
@@ -2124,21 +2500,93 @@ async function showIngredientMappingModal(expenseData) {
         .filter(x => x.score > 0)
         .sort((a, b) => b.score - a.score);
 
-      if (scored.length > 0 && scored[0].score >= 0.5) {
-        bestMatch = scored[0].ing;
+      console.log('Top 3 matches:', scored.slice(0, 3).map(s => {
+        let attrs = s.ing.attributes || s.ing.custom_attributes;
+        // Parse if it's a JSON string
+        if (typeof attrs === 'string') {
+          try {
+            attrs = JSON.parse(attrs);
+          } catch (e) {
+            attrs = null;
+          }
+        }
+        return {
+          name: s.ing.name,
+          sku: s.ing.sku,
+          score: s.score.toFixed(2),
+          attributes: attrs,
+          cost_per_unit: s.ing.cost_per_unit,
+          attributeField: s.ing.attributes ? 'attributes' : 'custom_attributes'
+        };
+      }));
+
+      if (scored.length > 0) {
+        // Group by SKU and sum scores
+        const skuGroups = new Map();
+        scored.forEach(s => {
+          const sku = s.ing.sku || '';
+          if (!skuGroups.has(sku)) {
+            skuGroups.set(sku, { items: [], totalScore: 0 });
+          }
+          const group = skuGroups.get(sku);
+          group.items.push(s);
+          group.totalScore += s.score;
+        });
+
+        console.log('SKU groups:', Array.from(skuGroups.entries()).map(([sku, group]) => ({
+          sku,
+          count: group.items.length,
+          totalScore: group.totalScore.toFixed(2),
+          topItem: group.items[0].ing.name
+        })));
+
+        // Find best SKU group by total score
+        let bestGroup = null;
+        let bestGroupSKU = null;
+        for (const [sku, group] of skuGroups.entries()) {
+          if (!bestGroup || group.totalScore > bestGroup.totalScore) {
+            bestGroup = group;
+            bestGroupSKU = sku;
+          }
+        }
+
+        // Use threshold on summed score
+        if (bestGroup && bestGroup.totalScore >= 0.6) {
+          // Use the highest individual match from this SKU group
+          bestMatch = bestGroup.items[0].ing;
+          console.log(`✓ Match found via SKU grouping: "${bestMatch.name}" (SKU: ${bestGroupSKU})`);
+          console.log(`  Individual score: ${bestGroup.items[0].score.toFixed(2)}, Summed SKU score: ${bestGroup.totalScore.toFixed(2)}`);
+        } else if (scored[0].score >= 0.6) {
+          // Fallback to individual score if no SKU group meets threshold
+          bestMatch = scored[0].ing;
+          console.log('✓ Match found (individual):', bestMatch.name, 'with score', scored[0].score.toFixed(2));
+        } else if (bestGroup) {
+          console.log(`✗ No match - best SKU group (${bestGroupSKU}) scored ${bestGroup.totalScore.toFixed(2)} (threshold: 0.6)`);
+        } else {
+          console.log('✗ No match - best individual score was', scored[0].score.toFixed(2), '(threshold: 0.6)');
+        }
+      } else {
+        console.log('✗ No matches found at all');
       }
+    } else {
+      console.log('✗ Skipping match - no item name or no ingredients in cache');
     }
 
     mappedItems.push({
       detectedName: itemName,
       detectedPrice: itemPrice,
       detectedQty: itemQty,
+      detectedItem: item,
       ingredientId: bestMatch?.id || null,
       ingredientName: bestMatch?.name || '',
+      matchedIngredient: bestMatch || null,
       quantity: itemQty || 1,
-      price: itemPrice
+      price: bestMatch ? ((bestMatch.cost_per_unit || bestMatch.price || 0) * itemQty) : itemPrice
     });
   });
+
+  console.log('=== Final mappedItems ===');
+  console.log(JSON.stringify(mappedItems, null, 2));
 
   renderDetectedItems();
   document.getElementById('ingredientMappingModal').classList.add('active');
@@ -2152,34 +2600,47 @@ function renderDetectedItems() {
     return;
   }
 
-  container.innerHTML = mappedItems.map((item, index) => `
+  container.innerHTML = mappedItems.map((item, index) => {
+    // Get attributes from detected item
+    let attributesText = '';
+    if (item.detectedItem?.attributes && Object.keys(item.detectedItem.attributes).length > 0) {
+      const attrs = Object.entries(item.detectedItem.attributes)
+        .map(([key, value]) => `${value}`)
+        .join(' · ');
+      attributesText = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attrs}</div>`;
+    }
+    
+    return `
     <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
           <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;">Detected Item</div>
           <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">${item.detectedName || 'Unnamed Item'}</div>
-          ${item.detectedPrice ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">$${item.detectedPrice.toFixed(2)}</div>` : ''}
+          ${attributesText}
         </div>
         <button onclick="removeDetectedItem(${index})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 0 8px;">×</button>
       </div>
 
       <div style="position: relative; margin-bottom: 12px;">
-        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Ingredient:</label>
-        <input type="text" 
-          id="ingredient_search_${index}" 
-          value="${item.ingredientName}"
-          placeholder="Search ingredients..."
-          autocomplete="off"
-          oninput="searchIngredientForItem(${index}, this.value)"
-          onfocus="showDropdownForItem(${index})"
-          onkeydown="if(event.key==='Escape') hideDropdown()"
-          style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Ingredient: <span style="color: var(--danger);">*</span></label>
+        <div style="position: relative;">
+          <input type="text" 
+            id="ingredient_search_${index}" 
+            value="${item.ingredientName}"
+            placeholder="Search ingredients..."
+            autocomplete="off"
+            oninput="searchIngredientForItem(${index}, this.value)"
+            onfocus="showDropdownForItem(${index})"
+            onkeydown="if(event.key==='Escape') hideDropdown()"
+            style="width: 100%; padding: 10px ${item.ingredientId ? '38px' : '10px'} 10px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+          ${item.ingredientId ? `<button onclick="clearIngredientMatch(${index})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)';this.style.color='var(--text-main)'" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)'">×</button>` : ''}
+        </div>
         <div id="dropdown_${index}" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 150px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div>
-          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Quantity:</label>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Quantity: <span style="color: var(--danger);">*</span></label>
           <input type="number" 
             value="${item.quantity}" 
             min="0" 
@@ -2188,18 +2649,20 @@ function renderDetectedItems() {
             style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Price:</label>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Price: <span style="color: var(--danger);">*</span></label>
           <input type="number" 
-            value="${item.price || ''}" 
+            id="price_${index}"
+            value="${item.price !== null && item.price !== undefined ? item.price.toFixed(2) : ''}" 
             min="0" 
             step="0.01"
-            placeholder="Optional"
+            ${item.matchedIngredient ? 'readonly' : ''}
             onchange="updateItemPrice(${index}, this.value)"
-            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: ${item.matchedIngredient ? 'var(--bg-panel)' : 'var(--bg-inner)'}; color: var(--text-main); font-size: 13px; box-sizing: border-box; ${item.matchedIngredient ? 'cursor: not-allowed;' : ''}" />
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function addManualIngredientRow() {
@@ -2207,8 +2670,10 @@ function addManualIngredientRow() {
     detectedName: '',
     detectedPrice: null,
     detectedQty: 1,
+    detectedItem: null,
     ingredientId: null,
     ingredientName: '',
+    matchedIngredient: null,
     quantity: 1,
     price: null
   });
@@ -2221,7 +2686,19 @@ function removeDetectedItem(index) {
 }
 
 function updateItemQuantity(index, value) {
-  mappedItems[index].quantity = parseFloat(value) || 0;
+  const newQty = parseFloat(value) || 0;
+  mappedItems[index].quantity = newQty;
+  
+  // Recalculate price if ingredient is matched
+  if (mappedItems[index].matchedIngredient) {
+    const unitPrice = parseFloat(mappedItems[index].matchedIngredient.cost_per_unit || mappedItems[index].matchedIngredient.price) || 0;
+    mappedItems[index].price = unitPrice * newQty;
+    // Update just the price field without re-rendering entire list
+    const priceInput = document.getElementById(`price_${index}`);
+    if (priceInput) {
+      priceInput.value = mappedItems[index].price.toFixed(2);
+    }
+  }
 }
 
 function updateItemPrice(index, value) {
@@ -2232,7 +2709,19 @@ function showDropdownForItem(index) {
   dropdownActiveFor = index;
   const dropdown = document.getElementById(`dropdown_${index}`);
   if (dropdown) {
-    renderDropdownForItem(index, allIngredientsCache.slice(0, 8));
+    const searchVal = document.getElementById(`ingredient_search_${index}`)?.value || '';
+    if (!searchVal.trim()) {
+      // If no ingredient matched and input is empty, suggest creating one
+      const hasMatch = mappedItems[index]?.ingredientId;
+      if (!hasMatch && mappedItems[index]?.detectedName) {
+        renderDropdownForItem(index, []);
+      } else {
+        renderDropdownForItem(index, allIngredientsCache.slice(0, 8));
+      }
+    } else {
+      searchIngredientForItem(index, searchVal);
+      return;
+    }
     dropdown.style.display = 'block';
   }
 }
@@ -2258,15 +2747,26 @@ function searchIngredientForItem(index, term) {
 
   const lower = term.toLowerCase();
   
-  // Search in name and custom attributes
+  // Search in name and attributes
   const filtered = allIngredientsCache
     .filter(ing => {
       // Check name
       if (ing.name.toLowerCase().includes(lower)) return true;
       
-      // Check custom attributes
-      if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
-        for (const value of Object.values(ing.custom_attributes)) {
+      // Check attributes (could be in 'attributes' or 'custom_attributes' field)
+      let attrs = ing.attributes || ing.custom_attributes;
+      
+      // Parse if it's a JSON string
+      if (typeof attrs === 'string') {
+        try {
+          attrs = JSON.parse(attrs);
+        } catch (e) {
+          attrs = null;
+        }
+      }
+      
+      if (attrs && typeof attrs === 'object') {
+        for (const value of Object.values(attrs)) {
           if (value && typeof value === 'string' && value.toLowerCase().includes(lower)) {
             return true;
           }
@@ -2285,7 +2785,18 @@ function renderDropdownForItem(index, ingredients) {
   if (!dropdown) return;
 
   if (ingredients.length === 0) {
-    dropdown.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:8px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:13px;margin:0;">No ingredients found</p></div>';
+    const searchTerm = document.getElementById(`ingredient_search_${index}`)?.value || '';
+    const detectedName = mappedItems[index]?.detectedName || searchTerm;
+    dropdown.innerHTML = `
+      <div style="text-align: center; padding: 30px 20px;">
+        <img src="/cat_no_results.png" alt="No results" style="width:100px;height:auto;margin-bottom:12px;opacity:0.9;" />
+        <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px 0;">No ingredients found</p>
+        <button onclick="openQuickCreateIngredient(${index}, '${detectedName.replace(/'/g, "\\'")}')"
+          style="padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+          onmouseover="this.style.opacity='0.9'"
+          onmouseout="this.style.opacity='1'">+ Create New Ingredient</button>
+      </div>
+    `;
   } else {
     dropdown.innerHTML = ingredients.map(ing => `
       <div onclick="selectIngredientForItem(${index}, '${ing.id}')"
@@ -2303,9 +2814,164 @@ function selectIngredientForItem(index, ingredientId) {
   if (ing) {
     mappedItems[index].ingredientId = ing.id;
     mappedItems[index].ingredientName = ing.name;
+    mappedItems[index].matchedIngredient = ing;
+    // Auto-calculate price: unit price * quantity
+    const unitPrice = parseFloat(ing.cost_per_unit || ing.price) || 0;
+    const quantity = parseFloat(mappedItems[index].quantity) || 1;
+    mappedItems[index].price = unitPrice * quantity;
     document.getElementById(`ingredient_search_${index}`).value = ing.name;
+    renderDetectedItems();
   }
   hideDropdown();
+}
+
+function clearIngredientMatch(index) {
+  mappedItems[index].ingredientId = null;
+  mappedItems[index].ingredientName = '';
+  mappedItems[index].matchedIngredient = null;
+  document.getElementById(`ingredient_search_${index}`).value = '';
+  renderDetectedItems();
+}
+
+// Quick Create Ingredient functionality
+let quickCreateTargetIndex = null;
+
+function openQuickCreateIngredient(index, detectedName) {
+  quickCreateTargetIndex = index;
+  
+  // Pre-fill form with detected data
+  document.getElementById('quick_ing_name').value = detectedName || '';
+  
+  // Pre-fill cost if we have a detected price
+  const detectedPrice = mappedItems[index]?.detectedPrice;
+  const detectedQty = mappedItems[index]?.detectedQty || 1;
+  if (detectedPrice && detectedQty) {
+    const costPerUnit = (detectedPrice / detectedQty).toFixed(2);
+    document.getElementById('quick_ing_cost').value = costPerUnit;
+  } else {
+    document.getElementById('quick_ing_cost').value = '';
+  }
+  
+  // Reset other fields
+  document.getElementById('quick_ing_quantity').value = '1';
+  document.getElementById('quick_ing_unit').value = 'pcs';
+  document.getElementById('quick_ing_sku').value = '';
+  document.getElementById('quick_ing_min_stock').value = '5';
+  document.getElementById('quick_ing_category').value = '';
+  
+  // Reset category chips
+  document.querySelectorAll('.quick-ing-cat-chip').forEach(chip => {
+    chip.style.background = 'var(--bg-panel)';
+    chip.style.borderColor = 'var(--border)';
+    chip.style.color = 'var(--text-main)';
+  });
+  
+  // Show modal
+  document.getElementById('quickCreateIngredientModal').classList.add('active');
+  
+  // Initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+  
+  // Hide the ingredient dropdown
+  hideDropdown();
+}
+
+function selectQuickIngCategory(category) {
+  document.getElementById('quick_ing_category').value = category;
+  
+  // Update chip styling
+  document.querySelectorAll('.quick-ing-cat-chip').forEach(chip => {
+    if (chip.dataset.value === category) {
+      chip.style.background = 'var(--accent)';
+      chip.style.borderColor = 'var(--accent)';
+      chip.style.color = '#fff';
+    } else {
+      chip.style.background = 'var(--bg-panel)';
+      chip.style.borderColor = 'var(--border)';
+      chip.style.color = 'var(--text-main)';
+    }
+  });
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function closeQuickCreateIngredientModal() {
+  document.getElementById('quickCreateIngredientModal').classList.remove('active');
+  quickCreateTargetIndex = null;
+}
+
+async function saveQuickIngredient(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('quick_ing_name').value.trim();
+  const quantity = parseFloat(document.getElementById('quick_ing_quantity').value) || 0;
+  const unit = document.getElementById('quick_ing_unit').value;
+  const cost = parseFloat(document.getElementById('quick_ing_cost').value) || 0;
+  const sku = document.getElementById('quick_ing_sku').value.trim();
+  const minStock = parseFloat(document.getElementById('quick_ing_min_stock').value) || 0;
+  const category = document.getElementById('quick_ing_category').value;
+  
+  if (!name || !unit || !category) {
+    alert('Please fill in all required fields (Name, Unit, Category)');
+    return;
+  }
+  
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in to create ingredients');
+      return;
+    }
+    
+    // Create ingredient in database
+    const { data: newIngredient, error } = await supabaseClient
+      .from('ingredients')
+      .insert([{
+        user_id: user.id,
+        name: name,
+        quantity: quantity,
+        unit: unit,
+        cost_per_unit: cost,
+        sku: sku,
+        min_stock: minStock,
+        category: category,
+        custom_attributes: {}
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating ingredient:', error);
+      alert('Failed to create ingredient. Please try again.');
+      return;
+    }
+    
+    // Add to cache
+    allIngredientsCache.push(newIngredient);
+    allIngredients.push(newIngredient);
+    
+    // Auto-map to the receipt item
+    if (quickCreateTargetIndex !== null && mappedItems[quickCreateTargetIndex]) {
+      mappedItems[quickCreateTargetIndex].ingredientId = newIngredient.id;
+      mappedItems[quickCreateTargetIndex].ingredientName = newIngredient.name;
+      document.getElementById(`ingredient_search_${quickCreateTargetIndex}`).value = newIngredient.name;
+    }
+    
+    // Close modal
+    closeQuickCreateIngredientModal();
+    
+    // Show success message
+    alert('Ingredient created and mapped successfully!');
+    
+  } catch (err) {
+    console.error('Error saving ingredient:', err);
+    alert('An error occurred. Please try again.');
+  }
 }
 
 function closeIngredientMappingModal() {
@@ -2407,56 +3073,27 @@ async function processImageUpload() {
     return;
   }
   
+  // Save file to local variable before modal closes (which clears uploadedFile)
+  const fileToUpload = uploadedFile;
+  
   const processBtn = document.getElementById('processImageBtn');
   const originalText = processBtn.textContent;
   processBtn.textContent = 'Processing...';
   processBtn.disabled = true;
   
-  // Hide all upload UI elements during processing
-  const uploadModalTitle = document.getElementById('uploadModalTitle');
-  const uploadDescription = document.getElementById('uploadDescription');
-  const dropZone = document.getElementById('dropZone');
-  const uploadPreview = document.getElementById('uploadPreview');
-  const screenshotSection = document.getElementById('screenshotSection');
-  const orDivider = dropZone.nextElementSibling;
-  const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
-  const statusDiv = document.getElementById('uploadStatus');
-  const modalContent = document.getElementById('imageUploadModal').querySelector('.modal-content');
-  
-  if (uploadModalTitle) uploadModalTitle.style.display = 'none';
-  if (uploadDescription) uploadDescription.style.display = 'none';
-  dropZone.style.display = 'none';
-  uploadPreview.style.display = 'none';
-  if (screenshotSection) screenshotSection.style.display = 'none';
-  if (orDivider) orDivider.style.display = 'none';
-  cancelBtn.style.display = 'none';
-  processBtn.style.display = 'none';
-  
-  // Remove modal background for loading animation
-  if (modalContent) modalContent.style.background = 'transparent';
-  
-  // Show loading animation
-  if (statusDiv) {
-    statusDiv.style.display = 'block';
-    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="/loading_screen.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
-  }
+  // Close modal and show global loader
+  closeImageUploadModal();
+  showGlobalLoader();
   
   try {
-    console.log('=== Expense Upload Debug Info ===');
-    console.log('File name:', uploadedFile.name);
-    console.log('File type:', uploadedFile.type);
-    console.log('File size:', uploadedFile.size, 'bytes');
-    
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
       throw new Error('You must be logged in to use this feature');
     }
     
     const formData = new FormData();
-    formData.append('file', uploadedFile);
+    formData.append('file', fileToUpload);
     formData.append('context', 'expense');
-    
-    console.log('Sending as multipart/form-data with context: expense');
     
     const response = await fetch('/api/extract-receipt', {
       method: 'POST',
@@ -2466,52 +3103,42 @@ async function processImageUpload() {
       body: formData
     });
     
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Failed to process' }));
-      console.log('Error data:', errorData);
       throw new Error(errorData.error || 'Failed to extract data from image');
     }
     
     const result = await response.json();
-    console.log('Success response:', result);
+    console.log('=== Expense Upload Result ===');
+    console.log('Success:', result.success);
+    console.log('Full response:', JSON.stringify(result, null, 2));
+    if (result.data) {
+      console.log('Vendor:', result.data.vendor);
+      console.log('Amount:', result.data.amount);
+      console.log('Date:', result.data.date);
+      console.log('Items:', result.data.item);
+      console.log('Number of items:', result.data.item?.length);
+    }
     
     if (result.success && result.data) {
-      console.log('Extracted expense data:', result.data);
-      closeImageUploadModal();
+      hideGlobalLoader();
       showIngredientMappingModal(result.data);
+    } else {
+      throw new Error('Invalid response from API');
     }
   } catch (error) {
     console.error('Error processing upload:', error);
     
-    // Restore UI on error
-    const uploadModalTitle = document.getElementById('uploadModalTitle');
-    const uploadDescription = document.getElementById('uploadDescription');
-    const dropZone = document.getElementById('dropZone');
-    const uploadPreview = document.getElementById('uploadPreview');
-    const screenshotSection = document.getElementById('screenshotSection');
-    const orDivider = dropZone.nextElementSibling;
-    const processBtn = document.getElementById('processImageBtn');
-    const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
+    hideGlobalLoader();
+    
+    // Reopen modal and show error
+    openImageUploadModal();
+    if (processBtn) {
+      processBtn.textContent = 'Process';
+      processBtn.disabled = false;
+    }
+    
     const statusDiv = document.getElementById('uploadStatus');
-    const modalContent = document.getElementById('imageUploadModal').querySelector('.modal-content');
-    
-    if (uploadModalTitle) uploadModalTitle.style.display = '';
-    if (uploadDescription) uploadDescription.style.display = 'block';
-    dropZone.style.display = 'block';
-    uploadPreview.style.display = 'block';
-    if (screenshotSection) screenshotSection.style.display = 'block';
-    if (orDivider) orDivider.style.display = 'block';
-    cancelBtn.style.display = 'block';
-    processBtn.style.display = 'block';
-    processBtn.textContent = 'Process';
-    processBtn.disabled = false;
-    
-    // Restore modal background
-    if (modalContent) modalContent.style.background = '';
-    
     if (statusDiv) {
       statusDiv.style.display = 'block';
       showUploadStatus(error.message || 'Failed to process document. Please try again.', 'error');
@@ -2779,6 +3406,23 @@ async function checkIngredientStock(ingredientId, quantity, ingredientName, user
 if (typeof window !== 'undefined') {
   window.addEventListener('load', initializeNotifications);
 }
+</script>
+
+<div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
+  <lottie-player renderer="svg" background="transparent" speed="1" style="width:320px;height:320px;background:transparent !important;" loop autoplay></lottie-player>
+</div>
+<style>
+#globalLoader lottie-player,
+#globalLoader lottie-player *,
+#globalLoader lottie-player svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+</style>
+
+<script>
+function showGlobalLoader(){const el=document.getElementById('globalLoader');el.style.display='flex';const p=el.querySelector('lottie-player');if(p)p.load('loading_screen.json');}
+function hideGlobalLoader(){document.getElementById('globalLoader').style.display='none';}
 </script>
 
 

@@ -146,10 +146,7 @@ module.exports = async (req, res) => {
   item []{
     name 
     quantity (quantity ordered)
-  }
-  attributes {
-    color (material color)
-    size (material size)
+    attributes(key like color, size and value)[]
   }
 }
 `.trim();
@@ -162,33 +159,14 @@ module.exports = async (req, res) => {
   item []{
     name (ingredient or material name)
     price (unit cost)
-    shipping_time (estimated delivery in days)
     SKU (Stock Keeping Unit or product code)
-    product_category (e.g., Fabric, Thread, Packaging, Raw Material)
     quantity (quantity ordered)
-    unit (pieces, Stückzahl, Kilograms, Liters)
-    type (Production, Packaging, Shipping)
-  }
-  attributes {
-    color (material color)
-    size (material size)
+    attributes(key like color, size and value)[]
   }
 }
 `.trim();
 
     const extractionPrompt = context === 'order' ? orderPrompt : ingredientPrompt;
-    console.log('Using prompt for context:', context);
-
-    console.log('File path:', file.filepath);
-    console.log('File type:', file.mimetype);
-    console.log('File size:', file.size);
-
-    console.log('Sending file MIME type:', file.mimetype);
-    console.log('Expected: application/pdf');
-    console.log('Calling AgentQL API with form-data package...');
-    
-    console.log('Body being sent:', extractionPrompt);
-    console.log('Body length:', extractionPrompt.length);
     
     // Use form-data package for proper multipart encoding
     const formData = new FormData();
@@ -201,9 +179,6 @@ module.exports = async (req, res) => {
         query: extractionPrompt
       })
     );
-    
-    console.log('FormData prepared with fields: file, body');
-    console.log('Endpoint: https://api.agentql.com/v1/query-document');
     
     const response = await fetch(
       'https://api.agentql.com/v1/query-document',
@@ -218,7 +193,6 @@ module.exports = async (req, res) => {
     );
 
     console.log('AgentQL response status:', response.status);
-    console.log('AgentQL response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -230,25 +204,48 @@ module.exports = async (req, res) => {
     }
 
     const data = await response.json();
-    console.log('=== AgentQL Full Response ===');
+    console.log('=== AgentQL Response ===');
     console.log(JSON.stringify(data, null, 2));
-    console.log('=== End Response ===');
     
     // AgentQL wraps the response in a 'data' object
     const extractedData = data.data || data;
-    console.log('Extracted data:', JSON.stringify(extractedData, null, 2));
+    console.log('=== Extracted Data ===');
+    console.log(JSON.stringify(extractedData, null, 2));
     
     // Parse and return the extracted data based on context
     let result;
     
     if (context === 'order') {
-      console.log('=== ORDER CONTEXT - Mapping Response ===');
-      console.log('Customer:', extractedData.customer);
-      console.log('Order Reference:', extractedData.order_reference);
-      console.log('Revenue:', extractedData.revenue);
-      console.log('Date:', extractedData.date);
-      console.log('Item:', JSON.stringify(extractedData.item, null, 2));
-      console.log('Attributes:', JSON.stringify(extractedData.attributes, null, 2));
+      // Parse attributes from array format ["Key: Value"] to object {key: "value"}
+      const parseAttributes = (attrArray) => {
+        if (!Array.isArray(attrArray)) return {};
+        const result = {};
+        attrArray.forEach(attr => {
+          if (typeof attr === 'string' && attr.includes(':')) {
+            const [key, ...valueParts] = attr.split(':');
+            const value = valueParts.join(':').trim();
+            result[key.trim()] = value;
+          }
+        });
+        return result;
+      };
+      
+      // Handle item as array (from prompt: item []{})
+      let items = [];
+      if (Array.isArray(extractedData.item)) {
+        items = extractedData.item.map(item => ({
+          name: item.name || null,
+          quantity: item.quantity || 1,
+          attributes: parseAttributes(item.attributes)
+        }));
+      } else if (extractedData.item) {
+        // Fallback for single item
+        items = [{
+          name: extractedData.item.name || null,
+          quantity: extractedData.item.quantity || 1,
+          attributes: parseAttributes(extractedData.item.attributes)
+        }];
+      }
       
       result = {
         success: true,
@@ -258,39 +255,56 @@ module.exports = async (req, res) => {
           order_reference: extractedData.order_reference || null,
           revenue: extractedData.revenue || null,
           date: extractedData.date || null,
-          item: {
-            ...extractedData.item,
-            SKU: extractedData.order_reference // Map order_reference to SKU for frontend
-          },
-          attributes: extractedData.attributes || {},
-          description: extractedData.item?.name || null
+          item: items // Return array of items
         }
       };
     } else {
-      console.log('=== INGREDIENT CONTEXT - Mapping Response ===');
-      console.log('Vendor:', extractedData.vendor);
-      console.log('Amount:', extractedData.amount);
-      console.log('Date:', extractedData.date);
-      console.log('Item:', JSON.stringify(extractedData.item, null, 2));
-      console.log('Attributes:', JSON.stringify(extractedData.attributes, null, 2));
+      // Parse attributes from array format ["Key: Value"] to object {key: "value"}
+      const parseAttributes = (attrArray) => {
+        if (!Array.isArray(attrArray)) return {};
+        const result = {};
+        attrArray.forEach(attr => {
+          if (typeof attr === 'string' && attr.includes(':')) {
+            const [key, ...valueParts] = attr.split(':');
+            const value = valueParts.join(':').trim();
+            result[key.trim()] = value;
+          }
+        });
+        return result;
+      };
       
-      const ingItem = extractedData.item || {};
-      if (!ingItem.SKU && ingItem.name) ingItem.SKU = ingItem.name;
+      // Handle item as array (from prompt: item []{})
+      let items = [];
+      if (Array.isArray(extractedData.item) && extractedData.item.length > 0) {
+        items = extractedData.item.map(item => ({
+          name: item.name || null,
+          price: item.price || null,
+          SKU: item.SKU || item.name || null,
+          quantity: item.quantity || 1,
+          attributes: parseAttributes(item.attributes)
+        }));
+      } else if (extractedData.item && typeof extractedData.item === 'object') {
+        // Fallback for single item
+        const singleItem = extractedData.item;
+        items = [{
+          name: singleItem.name || null,
+          price: singleItem.price || null,
+          SKU: singleItem.SKU || singleItem.name || null,
+          quantity: singleItem.quantity || 1,
+          attributes: parseAttributes(singleItem.attributes)
+        }];
+      }
+      
       result = {
         success: true,
         data: {
           vendor: extractedData.vendor || null,
-          item: ingItem,
-          attributes: extractedData.attributes || {},
+          item: items, // Return array of items
           amount: extractedData.amount || null,
-          date: extractedData.date || null,
-          description: ingItem.name || null
+          date: extractedData.date || null
         }
       };
     }
-    
-    console.log('=== Final Result ===');
-    console.log(JSON.stringify(result, null, 2));
 
     // Increment usage counter
     const incrementFunction = usageType === 'order' 
@@ -302,8 +316,6 @@ module.exports = async (req, res) => {
     const { data: rpcData, error: rpcError } = await supabase.rpc(incrementFunction, { p_user_id: user.id });
     if (rpcError) {
       console.error(`Error incrementing ${usageType} usage:`, rpcError);
-    } else {
-      console.log(`Successfully incremented ${usageType} usage for user ${user.id}`, rpcData);
     }
 
     // Consume a bonus scan if this scan went past the plan limit

@@ -211,7 +211,7 @@
   .recipe-cost-summary { background: var(--bg-inner); border: 2px solid var(--border); padding: 20px; border-radius: 14px; text-align: center; }
   .recipe-cost-summary label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; display: block; margin-bottom: 8px; }
   .recipe-cost-summary .amount { font-size: 36px; font-weight: 800; color: var(--text-main); }
-  .recipe-search-input { width: 100%; padding: 12px 20px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); border-radius: 24px; font-size: 14px; box-sizing: border-box; }
+  .recipe-search-input { width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); border-radius: 24px; font-size: 14px; box-sizing: border-box; }
   .recipe-ingredient-scroll { overflow-y: auto; flex-grow: 1; min-height: 0; padding-right: 8px; max-height: calc(85vh - 200px); }
   .recipe-ingredient { padding: 16px; border-radius: 12px; margin-bottom: 8px; cursor: grab; background: var(--bg-panel); border: 1px solid var(--border); transition: all 0.2s; }
   .recipe-ingredient:hover { background: rgba(255,255,255,0.06); border-color: var(--accent); transform: translateX(2px); }
@@ -654,6 +654,15 @@
     
     table {
       min-width: 500px;
+    }
+    
+    /* Hide all scrollbars on mobile */
+    * {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    *::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
     }
   }
   
@@ -1371,6 +1380,11 @@ async function editRecipe() {
   document.getElementById('recipeBuilderOverlay').classList.add('active');
   document.getElementById('recipeNameInput').value = recipe.name || '';
   
+  // Initialize Lucide icons in modal
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
+  
   // Setup dropzone first
   setupDropzone();
   
@@ -1440,6 +1454,18 @@ function closeRecipeBuilder() {
   recipeActiveCategoryFilter = null;
   recipeActiveAttrValueFilters = new Set();
   hideRecipeAttrSubfilters();
+}
+
+function toggleSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(inputId + '_clear');
+  if (input && clearBtn) {
+    if (input.value.trim() !== '') {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
 }
 
 async function loadIngredientsForBuilder() {
@@ -1567,7 +1593,9 @@ function createIngredientElement(item) {
 
   el.innerHTML = `
     <div style="display: flex; align-items: flex-start; gap: 8px; width: 100%;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+      <svg class="favorite-star" data-ingredient-id="${item.id}" width="16" height="16" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" 
+           style="flex-shrink: 0; margin-top: 2px; cursor: pointer; opacity: 0.6; transition: all 0.2s;"
+           onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
       </svg>
       <div style="flex: 1;">
@@ -1579,6 +1607,13 @@ function createIngredientElement(item) {
       </div>
     </div>
   `;
+  
+  // Add click handler for star
+  const star = el.querySelector('.favorite-star');
+  star.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleIngredientFavorite(item.id);
+  });
   
   if (!isDisabled) {
     el.draggable = true;
@@ -1597,7 +1632,39 @@ function createIngredientElement(item) {
   return el;
 }
 
-// Function to add ingredient to recipe via click (for mobile)
+// Toggle ingredient favorite in recipe builder
+async function toggleIngredientFavorite(id) {
+  const isFavorite = favoriteIngredients.has(id);
+  
+  try {
+    // Update database
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .update({ is_favorite: !isFavorite })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Update local state
+    if (isFavorite) {
+      favoriteIngredients.delete(id);
+    } else {
+      favoriteIngredients.add(id);
+    }
+    
+    // Update ingredientData
+    const ing = ingredientData.find(i => i.id === id);
+    if (ing) {
+      ing.is_favorite = !isFavorite;
+    }
+    
+    // Re-render list to show updated favorites
+    renderIngredientList();
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+  }
+}
+
 function addIngredientToRecipeViaClick(item) {
   const dz = document.getElementById('recipeDropzone');
   if (!dz) return;
@@ -2705,13 +2772,15 @@ document.addEventListener('keydown', (e) => {
         <h3 style="margin: 0;">Ingredient Library</h3>
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
-      <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="renderIngredientList()" />
+      <div class="search-wrapper" style="width: 100%;">
+        <i data-lucide="search" class="search-icon"></i>
+        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="renderIngredientList(); toggleSearchClear('recipeSearchIng')" />
+        <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; renderIngredientList(); this.classList.remove('visible');" title="Clear search">×</button>
+      </div>
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
       <div id="recipeAttrSubfilter" class="recipe-attr-subfilter"></div>
 
-      <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0;">
-        All Ingredients
-      </h4>
+      <!-- Headers are dynamically generated by renderIngredientList() to show Favorites first, then All Ingredients -->
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
     </div>
   </div>

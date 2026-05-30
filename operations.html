@@ -1287,6 +1287,15 @@
     .recipe-builder {
       padding: 20px 16px;
     }
+    
+    /* Hide all scrollbars on mobile */
+    * {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    *::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
   }
 
   /* ---------- RECIPE PICKER MODAL ---------- */
@@ -4600,8 +4609,9 @@ function renderRecipeIngredientList() {
   if (filtered.length === 0) {
     if (recipeIngredientData.length === 0) {
       ingredientList.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-          <p style="margin: 0 0 16px 0; font-size: 14px;">No ingredients yet</p>
+        <div style="text-align: center; padding: 60px 20px;">
+          <img src="/cat_no_orders.png" alt="No ingredients" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No ingredients yet</p>
           <button class="btn" style="background: var(--accent); color: white; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px;" onclick="openMethodModalFromRecipe()">
             + Add Ingredient
           </button>

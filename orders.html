@@ -541,7 +541,7 @@
   }
   .recipe-picker-search input {
     width: 100%;
-    padding: 12px 42px 12px 16px;
+    padding: 12px 38px 12px 38px !important;
     border: 2px solid var(--border);
     border-radius: 12px;
     background: var(--bg-main);
@@ -552,27 +552,43 @@
     box-sizing: border-box;
   }
   .recipe-picker-search input:focus { border-color: var(--accent); }
+  .recipe-picker-search .search-icon {
+    position: absolute;
+    left: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 10;
+  }
   .recipe-picker-search .search-clear {
     position: absolute;
     right: 44px;
     top: 50%;
     transform: translateY(-50%);
-    width: 20px; height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: none;
-    background: var(--text-muted);
-    color: var(--bg-main);
-    font-size: 13px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 18px;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
     line-height: 1;
     padding: 0;
-    opacity: 0.55;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
+    z-index: 10;
   }
-  .recipe-picker-search .search-clear:hover { opacity: 1; }
+  .recipe-picker-search .search-clear:hover {
+    background: var(--bg-inner);
+    color: var(--text-main);
+  }
+  .recipe-picker-search .search-clear.visible { display: flex; }
   .recipe-picker-body {
     flex: 1;
     min-height: 0;
@@ -812,12 +828,8 @@
       text-overflow: ellipsis;
     }
 
-    /* Mobile search input — replaced by nav search */
-    #mobileSearchInput {
-      display: none !important;
-    }
-    
-    #searchInput {
+    /* Hide desktop search on mobile — navbar search is used instead */
+    .top-bar .search-wrapper {
       display: none !important;
     }
 
@@ -878,6 +890,15 @@
     table {
       min-width: 600px;
     }
+    
+    /* Hide all scrollbars on mobile */
+    * {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    *::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
   }
   
   @media (max-width: 480px) {
@@ -914,7 +935,11 @@
         </svg>
       </span>
     </div>
-    <input class="nav-search-input" id="navSearchInput" placeholder="Search orders…" oninput="render()">
+    <div class="search-wrapper" style="flex: 1;">
+      <i data-lucide="search" class="search-icon"></i>
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search orders…" oninput="render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+    </div>
 
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
@@ -1040,9 +1065,6 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
-    <!-- Mobile Search Bar (visible only on mobile) -->
-    <input type="text" id="mobileSearchInput" placeholder="Search orders..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="render()" />
-    
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px;">
         <div class="view-switcher">
@@ -1050,7 +1072,11 @@
           <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
         </div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search orders..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="render()" />
+      <div class="search-wrapper" style="width: 480px;">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Search orders..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="render(); toggleSearchClear('searchInput')" />
+        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      </div>
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1206,8 +1232,26 @@ let listCurrentPage = 1;
 let orderToDelete = null;
 let editingOrderId = null;
 
+// Toggle search clear button visibility
+function toggleSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(inputId + '_clear');
+  if (input && clearBtn) {
+    if (input.value.trim()) {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+  
   await loadOrders();
   
   // On mobile, force Cards view
@@ -1380,7 +1424,9 @@ function renderList(filtered) {
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No orders" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No orders yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track your customer orders and fulfillment</p>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track customer orders and auto-update your inventory
+
+</p>
         <button onclick="openAddOrderModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ New Order</button>
       ` : `
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
@@ -1973,11 +2019,12 @@ document.addEventListener('keydown', (e) => {
     </div>
 
     <div class="recipe-picker-search">
+      <i data-lucide="search" class="search-icon"></i>
       <input id="orderRecipeSearchInput" type="text" placeholder="Search recipes by name or ingredient..."
              autocomplete="off"
-             oninput="filterOrderRecipes(this.value)"
-             onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('')}">
-      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');" title="Clear search">×</button>
+             oninput="filterOrderRecipes(this.value); toggleOrderSearchClear()"
+             onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('');document.getElementById('orderSearchClear').classList.remove('visible')}">
+      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');this.classList.remove('visible');" title="Clear search">×</button>
     </div>
 
     <div class="recipe-picker-body" id="orderRecipePickerBody">
@@ -2347,6 +2394,18 @@ async function renderOrderRecipeSections(filtered) {
   body.innerHTML = html;
 }
 
+function toggleOrderSearchClear() {
+  const input = document.getElementById('orderRecipeSearchInput');
+  const clearBtn = document.getElementById('orderSearchClear');
+  if (input && clearBtn) {
+    if (input.value.trim() !== '') {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
+}
+
 function filterOrderRecipes(query) {
   const clearBtn = document.getElementById('orderSearchClear');
   if (clearBtn) clearBtn.style.display = (query && query.trim()) ? 'flex' : 'none';
@@ -2488,6 +2547,12 @@ function openManualOrderModal() {
   document.getElementById('orderRecipeSearchInput').value = '';
   updatePickerFooter();
   document.getElementById('manualOrderModal').classList.add('active');
+  
+  // Initialize Lucide icons in modal
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
+  
   if (!window._orderDatePicker) {
     window._orderDatePicker = flatpickr('#new_order_date', { dateFormat: 'Y-m-d', defaultDate: new Date(), allowInput: false, disableMobile: true });
   }
@@ -2862,6 +2927,9 @@ async function processOrderImageUpload() {
       throw new Error(errorData.error || 'Failed to extract data from image');
     }
     const result = await response.json();
+    console.log('=== Order Upload Result ===');
+    console.log(JSON.stringify(result, null, 2));
+    
     if (result.success && result.data) {
       showOrderUploadStatus('Matching recipes...', 'info');
       try {
@@ -2899,18 +2967,32 @@ async function matchItemToRecipes(itemData) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
-    const { data: recipes, error } = await supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let query = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { data: recipes, error } = await query;
     if (error) throw error;
-    if (!recipes || recipes.length === 0) return [];
+    if (!recipes || recipes.length === 0) {
+      console.log('No recipes found for user');
+      return [];
+    }
     const itemAttributes = itemData.attributes || {};
-    if (Object.keys(itemAttributes).length === 0) return [];
+    console.log('Item attributes:', JSON.stringify(itemAttributes, null, 2));
+    console.log('Attribute count:', Object.keys(itemAttributes).length);
+    if (Object.keys(itemAttributes).length === 0) {
+      console.log('No attributes on item - returning empty matches');
+      return [];
+    }
     const allIngredientIds = new Set();
     recipes.forEach(recipe => {
       if (recipe.components && Array.isArray(recipe.components)) {
         recipe.components.forEach(comp => { if (comp.ingredient_id) allIngredientIds.add(comp.ingredient_id); });
       }
     });
-    const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, custom_attributes').in('id', Array.from(allIngredientIds));
+    let ingQuery = supabaseClient.from('ingredients').select('id, name, custom_attributes').in('id', Array.from(allIngredientIds));
+    if (storeId) ingQuery = ingQuery.eq('store_id', storeId);
+    const { data: ingredients } = await ingQuery;
     const ingredientMap = {};
     if (ingredients) ingredients.forEach(ing => { ingredientMap[ing.id] = ing; });
     const scoredRecipes = recipes.map(recipe => {
@@ -2942,6 +3024,9 @@ async function matchItemToRecipes(itemData) {
 }
 
 async function showRecipeMappingModal(orderData) {
+  console.log('=== showRecipeMappingModal called ===');
+  console.log('orderData:', JSON.stringify(orderData, null, 2));
+  
   mappedOrderData = orderData;
   mappedRecipes = [];
   const itemsList = document.getElementById('mappedItemsList');
@@ -2966,6 +3051,9 @@ async function showRecipeMappingModal(orderData) {
     }];
   }
   
+  console.log('=== Detected Items ===');
+  console.log(JSON.stringify(detectedItems, null, 2));
+  
   // Match each detected item to recipes
   for (const item of detectedItems) {
     const itemData = {
@@ -2974,7 +3062,11 @@ async function showRecipeMappingModal(orderData) {
       price: item.price || 0,
       attributes: item.attributes || orderData.attributes || {}
     };
+    console.log('=== Matching item ===');
+    console.log('Item data:', JSON.stringify(itemData, null, 2));
     const matches = await matchItemToRecipes(itemData);
+    console.log('Matches found:', matches.length);
+    console.log('Matches:', JSON.stringify(matches, null, 2));
     const bestMatch = matches.length > 0 ? matches[0].recipe : null;
     mappedRecipes.push({ 
       itemData, 
@@ -2983,6 +3075,9 @@ async function showRecipeMappingModal(orderData) {
       quantity: itemData.quantity || 1 
     });
   }
+  
+  console.log('=== Final mappedRecipes ===');
+  console.log(JSON.stringify(mappedRecipes, null, 2));
   
   renderMappedItems();
   updateMappedTotal();
@@ -3009,7 +3104,10 @@ function renderMappedItems() {
           <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
         </div>
         <div style="margin-bottom:12px;position:relative;">
-          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-muted);">Matched Recipe:</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Recipe:</label>
+            ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger);this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
+          </div>
           <input type="text" id="recipeSearchInput_${index}" placeholder="🔍 Search to change recipe or leave empty for custom item..."
             value="${selected ? selected.name : ''}" autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
@@ -3068,7 +3166,11 @@ async function searchRecipesForMapping(index, searchTerm) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
-    const { data: allRecipes } = await supabaseClient.from('recipes').select('id, name, cost').eq('profile_id', user.id).ilike('name', `%${searchTerm}%`).limit(10);
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let query = supabaseClient.from('recipes').select('id, name, cost').eq('profile_id', user.id).ilike('name', `%${searchTerm}%`).limit(10);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { data: allRecipes } = await query;
     if (!allRecipes || allRecipes.length === 0) {
       dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recipes found</div>';
       dropdown.style.display = 'block';
@@ -3105,6 +3207,15 @@ async function selectRecipeForMappingById(index, recipeId) {
   } catch (error) { console.error('Error selecting recipe:', error); }
 }
 
+function clearRecipeMapping(index) {
+  mappedRecipes[index].selectedRecipe = null;
+  const searchInput = document.getElementById(`recipeSearchInput_${index}`);
+  if (searchInput) searchInput.value = '';
+  hideMappingRecipeDropdown(index);
+  renderMappedItems();
+  updateMappedTotal();
+}
+
 function adjustMappedQuantity(index, delta) {
   mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
   renderMappedItems();
@@ -3112,6 +3223,9 @@ function adjustMappedQuantity(index, delta) {
 }
 
 function updateMappedTotal() {
+  const totalElement = document.getElementById('mappedTotalRevenue');
+  if (!totalElement) return; // Element removed from modal
+  
   const total = mappedRecipes.reduce((sum, mapping) => {
     if (mapping.selectedRecipe) {
       const recipeCost = parseFloat(mapping.selectedRecipe.cost) || 0;
@@ -3120,7 +3234,7 @@ function updateMappedTotal() {
     }
     return sum + ((mapping.itemData.price || 0) * mapping.quantity);
   }, 0);
-  document.getElementById('mappedTotalRevenue').textContent = `$${total.toFixed(2)}`;
+  totalElement.textContent = `$${total.toFixed(2)}`;
 }
 
 function closeRecipeMappingModal() {

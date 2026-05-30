@@ -694,12 +694,8 @@
       flex-shrink: 0;
     }
     
-    /* Mobile search input — replaced by nav search */
-    #mobileSearchInput {
-      display: none !important;
-    }
-    
-    #searchInput {
+    /* Hide desktop search on mobile — navbar search is used instead */
+    .top-bar .search-wrapper {
       display: none !important;
     }
 
@@ -761,6 +757,15 @@
     
     table {
       min-width: 600px;
+    }
+    
+    /* Hide all scrollbars on mobile */
+    * {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    *::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
     }
     
     /* Compact view grid */
@@ -906,7 +911,11 @@
         </svg>
       </span>
     </div>
-    <input class="nav-search-input" id="navSearchInput" placeholder="Search ingredients…" oninput="cardsToShow = 15; render()">
+    <div class="search-wrapper" style="flex: 1;">
+      <i data-lucide="search" class="search-icon"></i>
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search ingredients…" oninput="cardsToShow = 15; render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
+    </div>
 
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
@@ -1037,9 +1046,6 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
-    <!-- Mobile Search Bar (visible only on mobile) -->
-    <input type="text" id="mobileSearchInput" placeholder="Search ingredients..." style="display: none; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 15px; width: 100%; margin-bottom: 12px;" oninput="cardsToShow = 15; render()" />
-    
     <!-- Mobile Category Filters -->
     <div class="mobile-type-filters">
       <div class="mobile-type-filter" data-cat="Apparel"          onclick="filterByCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></div>
@@ -1076,7 +1082,11 @@
         </div>
         <div id="filterBadges" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;"></div>
       </div>
-      <input type="text" id="searchInput" placeholder="Search ingredients..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="cardsToShow = 15; render()" />
+      <div class="search-wrapper" style="width: 480px; flex-shrink: 0;">
+        <i data-lucide="search" class="search-icon"></i>
+        <input type="text" id="searchInput" placeholder="Search ingredients..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 15; render(); toggleSearchClear('searchInput')" />
+        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      </div>
     </div>
 
     <div id="recentView" class="recent-grid"></div>
@@ -1086,11 +1096,12 @@
         <thead>
           <tr>
             <th style="width: 50px;">#</th>
-            <th class="sortable" onclick="sortTable('name')" style="width: 35%;">Name</th>
+            <th class="sortable" onclick="sortTable('name')" style="width: 25%;">Name</th>
+            <th style="width: 12%;">SKU</th>
             <th class="sortable" onclick="sortTable('category')" style="width: 8%;">Category</th>
-            <th style="width: 22%;">Attributes</th>
+            <th style="width: 18%;">Attributes</th>
             <th class="sortable" onclick="sortTable('qty')" style="width: 10%;">Quantity</th>
-            <th style="width: 15%;">Action</th>
+            <th style="width: 12%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1419,6 +1430,19 @@ let cardsToShow = 15;
 let confirmResolver = null;
 let uploadedFile = null;
 
+// Toggle search clear button visibility
+function toggleSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(inputId + '_clear');
+  if (input && clearBtn) {
+    if (input.value.trim()) {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
+}
+
 function showAlert(message, title = 'Alert') {
   document.getElementById('alertTitle').textContent = title;
   document.getElementById('alertMessage').textContent = message;
@@ -1484,7 +1508,7 @@ async function loadIngredients() {
     ingredients = data.map(item => ({
       id: item.id,
       name: item.name,
-      sku: item.barcode || `SKU-${item.id}`,
+      sku: item.sku || '',
       qty: item.quantity || 0,
       unit: item.unit || 'units',
       cost: item.cost_per_unit || 0,
@@ -1613,6 +1637,15 @@ async function checkAIUsage() {
       limitReached: used >= limit
     };
 
+    console.log('[AI Usage Check]', {
+      tier,
+      used,
+      limit,
+      limitReached: used >= limit,
+      comparison: `${used} >= ${limit}`,
+      result: used >= limit
+    });
+
     return aiUsageStatus;
   } catch (error) {
     console.error('Error checking AI usage:', error);
@@ -1628,28 +1661,9 @@ async function openModal() {
 }
 
 function updateMethodCardsUI() {
-  const cards = document.querySelectorAll('.method-card');
-  cards.forEach(card => {
-    const img = card.querySelector('img');
-    if (!img) return;
-    
-    const isAIMethod = img.alt === 'Upload' || img.alt === 'URL';
-    
-    if (isAIMethod && aiUsageStatus && aiUsageStatus.limitReached) {
-      card.style.position = 'relative';
-      card.style.opacity = '0.6';
-      card.style.cursor = 'not-allowed';
-      card.style.pointerEvents = 'none';
-      
-      if (!card.querySelector('.limit-badge')) {
-        const badge = document.createElement('div');
-        badge.className = 'limit-badge';
-        badge.style.cssText = 'position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;';
-        badge.textContent = 'LIMIT REACHED';
-        card.appendChild(badge);
-      }
-    }
-  });
+  // Don't disable AI methods in the UI - let the API handle limits
+  // This makes ingredients consistent with orders and expenses behavior
+  console.log('[Method Cards UI] Skipping frontend blocking - API will handle limits');
 }
 
 function closeMethodModal() {
@@ -1657,11 +1671,8 @@ function closeMethodModal() {
 }
 
 function selectMethod(method) {
-  // Check if AI method and limit reached
-  if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
-    alert(`Monthly limit reached: You've used all ${aiUsageStatus.limit} AI extractions for this month. Limit resets on the 1st of next month. Upgrade your plan for more extractions.`);
-    return;
-  }
+  // Don't block AI methods here - let the API handle limits (consistent with orders/expenses)
+  console.log('[Select Method]', method, aiUsageStatus);
   
   closeMethodModal();
   if (method === 'manual') {
@@ -2454,16 +2465,29 @@ function filterByCategory(cat) {
 }
 
 function _renderAttrSubfilters(cat) {
-  // Build a lowercase-key → display-label map so "White" and "white" become one chip
-  const displayMap = new Map();
+  // Build a map grouped by attribute key: { "color": ["Red", "Blue"], "size": ["S", "M", "L"] }
+  const groupedByKey = new Map();
+  
   ingredients
     .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.custom_attributes)
     .forEach(i => {
       try {
         const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-        Object.values(attrs).forEach(v => {
-          const t = String(v).trim();
-          if (t) { const k = t.toLowerCase(); if (!displayMap.has(k)) displayMap.set(k, t); }
+        Object.entries(attrs).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          
+          if (!groupedByKey.has(normalizedKey)) {
+            groupedByKey.set(normalizedKey, new Map());
+          }
+          
+          const valuesMap = groupedByKey.get(normalizedKey);
+          if (!valuesMap.has(valueKey)) {
+            valuesMap.set(valueKey, trimmedValue);
+          }
         });
       } catch (e) {}
     });
@@ -2471,11 +2495,36 @@ function _renderAttrSubfilters(cat) {
   ['mobileAttrSubfilter', 'desktopAttrSubfilter'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (displayMap.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
-    const sorted = [...displayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    el.innerHTML = sorted.map(([key, label]) =>
-      `<button class="attr-chip${activeAttrValueFilters.has(key) ? ' active' : ''}" data-val="${escapeHtml(key)}" onclick="toggleAttrValueFilter('${escapeHtml(key)}')">${escapeHtml(label)}</button>`
-    ).join('');
+    if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+    
+    // Sort keys alphabetically
+    const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+    
+    // Intelligent value sort: numbers first (numerically), then text (alphabetically)
+    const sortValues = (a, b) => {
+      const aNum = parseFloat(a);
+      const bNum = parseFloat(b);
+      const aIsNum = !isNaN(aNum);
+      const bIsNum = !isNaN(bNum);
+      
+      if (aIsNum && bIsNum) return aNum - bNum;
+      if (aIsNum) return -1;
+      if (bIsNum) return 1;
+      return a.localeCompare(b, undefined, { sensitivity: 'base' });
+    };
+    
+    // Build chips grouped by key
+    const allChips = [];
+    sortedKeys.forEach(key => {
+      const valuesMap = groupedByKey.get(key);
+      const sortedValues = Array.from(valuesMap.entries()).sort((a, b) => sortValues(a[1], b[1]));
+      
+      sortedValues.forEach(([valueKey, displayValue]) => {
+        allChips.push(`<button class="attr-chip${activeAttrValueFilters.has(valueKey) ? ' active' : ''}" data-val="${escapeHtml(valueKey)}" onclick="toggleAttrValueFilter('${escapeHtml(valueKey)}')">${escapeHtml(displayValue)}</button>`);
+      });
+    });
+    
+    el.innerHTML = allChips.join('');
     el.classList.add('visible');
   });
 }
@@ -3019,10 +3068,16 @@ function render() {
   // Update type filter cards
   renderTypeFilterCards();
   
-  // Update category filters to show only existing categories
+  // Update category filters to show only existing categories (only if ingredients exist)
   const existingCategories = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
   if (typeof showExistingCategories === 'function') {
-    showExistingCategories(existingCategories);
+    if (ingredients.length > 0) {
+      showExistingCategories(existingCategories);
+    } else {
+      // Show all category filters when no ingredients (so they're ready for first ingredient)
+      const allFilters = document.querySelectorAll('.mobile-type-filter');
+      allFilters.forEach(filter => filter.style.display = '');
+    }
   }
 
   if (currentView === 'recent') renderRecent(filtered);
@@ -3167,22 +3222,74 @@ function renderFilterBadges() {
   
   let badges = [];
   
-  // Add attribute filter badges from desktop navigation (key-value pairs)
-  badges.push(...Object.entries(activeAttributeFilters).map(([key, value]) => `
+  // Helper function to sort values intelligently (numbers first, then text)
+  const sortValues = (a, b) => {
+    const aNum = parseFloat(a);
+    const bNum = parseFloat(b);
+    const aIsNum = !isNaN(aNum);
+    const bIsNum = !isNaN(bNum);
+    
+    if (aIsNum && bIsNum) return aNum - bNum;
+    if (aIsNum) return -1;
+    if (bIsNum) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+  
+  // Add attribute filter badges from desktop navigation (key-value pairs) - sorted by key
+  const sortedActiveFilters = Object.entries(activeAttributeFilters)
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB, undefined, { sensitivity: 'base' }));
+  
+  badges.push(...sortedActiveFilters.map(([key, value]) => `
     <div class="filter-badge" style="background: #8b5cf6;">
       ${escapeHtml(key)}: ${escapeHtml(value)}
       <span class="filter-badge-remove" onclick="removeAttributeFilter('${escapeHtml(key).replace(/'/g, "&#39;")}')">×</span>
     </div>
   `));
   
-  // Add attribute value filter badges from mobile multi-select (just values)
+  // Add attribute value filter badges from mobile multi-select (grouped by key, sorted)
   if (activeAttrValueFilters && activeAttrValueFilters.size > 0) {
-    badges.push(...Array.from(activeAttrValueFilters).map(value => `
-      <div class="filter-badge" style="background: #8b5cf6;">
-        ${escapeHtml(value)}
-        <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">×</span>
-      </div>
-    `));
+    // Map values to their keys by scanning ingredients
+    const valueToKeys = new Map();
+    activeAttrValueFilters.forEach(value => {
+      const keys = new Set();
+      ingredients.forEach(ing => {
+        if (ing.custom_attributes) {
+          try {
+            const attrs = typeof ing.custom_attributes === 'string' 
+              ? JSON.parse(ing.custom_attributes) 
+              : ing.custom_attributes;
+            Object.entries(attrs).forEach(([k, v]) => {
+              if (v && v.toLowerCase() === value.toLowerCase()) {
+                keys.add(k);
+              }
+            });
+          } catch (e) {}
+        }
+      });
+      valueToKeys.set(value, Array.from(keys)[0] || 'Other');
+    });
+    
+    // Group values by key
+    const groupedByKey = new Map();
+    valueToKeys.forEach((key, value) => {
+      if (!groupedByKey.has(key)) groupedByKey.set(key, []);
+      groupedByKey.get(key).push(value);
+    });
+    
+    // Sort keys and values within each group
+    const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => 
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+    
+    sortedKeys.forEach(key => {
+      const values = groupedByKey.get(key).sort(sortValues);
+      badges.push(...values.map(value => `
+        <div class="filter-badge" style="background: #8b5cf6;">
+          ${escapeHtml(value)}
+          <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">×</span>
+        </div>
+      `));
+    });
   }
   
   // Add category filter badge
@@ -3276,30 +3383,30 @@ function renderRecent(data) {
     const fab = document.querySelector('.fab');
     if (fab) fab.style.display = isFirstTime ? 'none' : '';
     
-    // Hide filters when no ingredients
+    // Always show sidebar, but hide category filters when no ingredients
     const sidebar = document.querySelector('.sidebar');
     const mobileFilters = document.querySelector('.mobile-type-filters');
     const pageContainer = document.querySelector('.page');
     
+    // Always show sidebar
+    if (sidebar) {
+      sidebar.style.display = '';
+      sidebar.style.visibility = 'visible';
+    }
+    
     if (isFirstTime) {
-      if (sidebar) sidebar.style.display = 'none';
+      // Hide only category filters, not the sidebar
       if (mobileFilters) mobileFilters.style.display = 'none';
-      // Adjust grid layout to single column when sidebar is hidden
-      if (pageContainer) pageContainer.style.gridTemplateColumns = '1fr';
     } else {
-      if (sidebar) sidebar.style.display = '';
+      // Show filters for search results with no matches
       if (mobileFilters) mobileFilters.style.display = '';
-      // Restore grid layout when showing filters
-      if (pageContainer && window.innerWidth > 968) {
-        pageContainer.style.gridTemplateColumns = '';
-      }
     }
     
     container.innerHTML = isFirstTime ? `
       <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
         <img src="/cat_no_orders.png" alt="No ingredients" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 24px; max-width: 260px; margin-left: auto; margin-right: auto;">Add your first ingredient to start tracking inventory</p>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 24px; max-width: 260px; margin-left: auto; margin-right: auto;">Ingredients are the backbone of your inventory and needed for recipes.</p>
         <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
       </div>
     ` : `
@@ -3316,7 +3423,10 @@ function renderRecent(data) {
   const mobileFilters = document.querySelector('.mobile-type-filters');
   const pageContainer = document.querySelector('.page');
   
-  if (sidebar) sidebar.style.display = '';
+  if (sidebar) {
+    sidebar.style.display = '';
+    sidebar.style.visibility = 'visible';
+  }
   if (mobileFilters) mobileFilters.style.display = '';
   // Restore grid layout when showing sidebar
   if (pageContainer && window.innerWidth > 968) {
@@ -3352,7 +3462,21 @@ function renderRecent(data) {
         const allEntries = [];
         for (const entries of groupedAttrs.values()) allEntries.push(...entries);
         const badges = allEntries
-          .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
+          .sort((a, b) => {
+            const keyCompare = a.key.toLowerCase().localeCompare(b.key.toLowerCase());
+            if (keyCompare !== 0) return keyCompare;
+            
+            // Same key, sort values intelligently
+            const aNum = parseFloat(a.value);
+            const bNum = parseFloat(b.value);
+            const aIsNum = !isNaN(aNum);
+            const bIsNum = !isNaN(bNum);
+            
+            if (aIsNum && bIsNum) return aNum - bNum;
+            if (aIsNum) return -1;
+            if (bIsNum) return 1;
+            return a.value.localeCompare(b.value, undefined, { sensitivity: 'base' });
+          })
           .filter(({ value }) => value && value.trim())
           .map(({ value }) => `<span class="attr-badge" data-value="${escapeHtml(value)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(value)}</span>`);
         if (badges.length > 0) attributesText = badges.join(' • ');
@@ -3473,26 +3597,23 @@ function renderList(data) {
     tableContainer.style.display = 'none';
     paginationContainer.style.display = 'none';
     
-    // Hide/show filters based on first-time state
+    // Always show sidebar, only hide category filters when first time
     const sidebar = document.querySelector('.sidebar');
     const mobileFilters = document.querySelector('.mobile-type-filters');
-    const pageContainer = document.querySelector('.page');
     const fab = document.querySelector('.fab');
     
+    // Always show sidebar
+    if (sidebar) {
+      sidebar.style.display = '';
+      sidebar.style.visibility = 'visible';
+    }
+    
     if (isFirstTime) {
-      if (sidebar) sidebar.style.display = 'none';
       if (mobileFilters) mobileFilters.style.display = 'none';
       if (fab) fab.style.display = 'none';
-      // Adjust grid layout to single column when sidebar is hidden
-      if (pageContainer) pageContainer.style.gridTemplateColumns = '1fr';
     } else {
-      if (sidebar) sidebar.style.display = '';
       if (mobileFilters) mobileFilters.style.display = '';
       if (fab) fab.style.display = '';
-      // Restore grid layout when showing filters
-      if (pageContainer && window.innerWidth > 968) {
-        pageContainer.style.gridTemplateColumns = '';
-      }
     }
     
     // Show empty state
@@ -3503,7 +3624,7 @@ function renderList(data) {
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No ingredients" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Add your first ingredient to start tracking inventory</p>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Ingredients are the backbone of your inventory and needed for recipes.</p>
         <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
       ` : `
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
@@ -3572,13 +3693,29 @@ function renderList(data) {
           }
         }
         
-        // Flatten and sort all entries alphabetically by key
+        // Flatten and sort all entries - first by key, then by value (intelligently)
         const allEntries = [];
         for (const entries of groupedAttrs.values()) {
           allEntries.push(...entries);
         }
+        
+        // Intelligent sort: first by key alphabetically, then by value (numbers first, then text)
         const sortedValues = allEntries
-          .sort((a, b) => a.key.toLowerCase().localeCompare(b.key.toLowerCase()))
+          .sort((a, b) => {
+            const keyCompare = a.key.toLowerCase().localeCompare(b.key.toLowerCase());
+            if (keyCompare !== 0) return keyCompare;
+            
+            // Same key, sort values intelligently
+            const aNum = parseFloat(a.value);
+            const bNum = parseFloat(b.value);
+            const aIsNum = !isNaN(aNum);
+            const bIsNum = !isNaN(bNum);
+            
+            if (aIsNum && bIsNum) return aNum - bNum;
+            if (aIsNum) return -1;
+            if (bIsNum) return 1;
+            return a.value.localeCompare(b.value, undefined, { sensitivity: 'base' });
+          })
           .map(item => item.value);
         
         if (sortedValues.length > 0) {
@@ -3600,6 +3737,14 @@ function renderList(data) {
             <strong style="cursor: pointer;" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</strong>
             ${s.key !== 'in' ? `<span class="stock-pill ${s.key}">${s.label}</span>` : ''}
           </div>
+        </td>
+        <td>
+          <input type="text" 
+            value="${escapeHtml(i.sku || '')}" 
+            placeholder="SKU"
+            onchange="updateIngredientSKU('${i.id}', this.value)"
+            style="width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-inner); color: var(--text-main); font-size: 12px; box-sizing: border-box;"
+            onclick="event.stopPropagation()" />
         </td>
         <td title="${escapeHtml(i.category || '')}" style="cursor:pointer;" onclick="addCategoryFilter('${escapeHtml(i.category || '')}')"><i data-lucide="${_categoryIconMap[i.category] || 'tag'}" style="width:18px;height:18px;color:${activeCategoryFilter === i.category ? 'var(--accent)' : 'var(--text-muted)'};display:block;transition:color 0.15s;"></i></td>
         <td>${attributesHtml}</td>
@@ -3698,6 +3843,60 @@ async function updateQty(id, delta) {
     render();
   } catch (error) {
     showAlert('Failed to update: ' + error.message, 'Error');
+  }
+}
+
+async function updateIngredientSKU(id, newSKU) {
+  const item = ingredients.find(i => i.id == id);
+  if (!item) return;
+  
+  const trimmedSKU = newSKU ? newSKU.trim() : '';
+  
+  // Don't update if unchanged
+  if ((item.sku || '') === trimmedSKU) return;
+  
+  try {
+    // Update SKU in database
+    const { error } = await supabaseClient
+      .from('ingredients')
+      .update({ sku: trimmedSKU || null })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Update local state
+    item.sku = trimmedSKU;
+
+    // Optional: Create history entry
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        await supabaseClient
+          .from('ingredient_history')
+          .insert([{
+            ingredient_id: id,
+            profile_id: user.id,
+            field_name: 'sku',
+            old_value: item.sku || '',
+            new_value: trimmedSKU,
+            reason: 'manual',
+            reference_id: null,
+            reference_text: 'SKU updated'
+          }]);
+      }
+    } catch (historyError) {
+      console.error('Error creating history entry:', historyError);
+    }
+
+    // Update cache if exists
+    if (window.allIngredientsCache) {
+      const cached = window.allIngredientsCache.find(i => i.id == id);
+      if (cached) cached.sku = trimmedSKU;
+    }
+
+  } catch (error) {
+    console.error('Failed to update SKU:', error);
+    showAlert('Failed to update SKU: ' + error.message, 'Error');
   }
 }
 

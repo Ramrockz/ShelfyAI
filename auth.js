@@ -51,8 +51,6 @@ let currentPage = window.location.pathname.split('/').pop() || window.location.h
 // Remove .html extension if present
 currentPage = currentPage.replace('.html', '');
 
-console.log('Current page:', currentPage, 'Is protected:', protectedPages.includes(currentPage));
-
 // Logout function
 async function logout() {
   try {
@@ -336,8 +334,6 @@ async function initUserMenu() {
         }
       }
     });
-
-    console.log('initUserMenu: Completed successfully');
   } catch (error) {
     console.error('Error initializing user menu:', error);
   }
@@ -386,7 +382,7 @@ authChannel.onmessage = (event) => {
   }
 };
 
-// Listen for Supabase auth state changes (handles cross-tab logout)
+// Listen for Supabase auth state changes (handles cross-tab logout and token refresh)
 supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
     // User signed out, redirect to home if on protected page
@@ -418,13 +414,10 @@ if (protectedPages.includes(currentPage)) {
 
   if (isOAuthCallback) {
     // OAuth callback - wait for session to be established from hash parameters
-    console.log('OAuth callback detected, waiting for session establishment...');
-
     // Give Supabase time to process the hash and establish the session
     setTimeout(async () => {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session && session.user) {
-        console.log('OAuth session established for user:', session.user.email);
         await ensureProfileExists(session.user);
         await domReady;
         await initUserMenu();
@@ -443,54 +436,39 @@ if (protectedPages.includes(currentPage)) {
     }, 1500); // Wait 1.5 seconds for session to be processed from hash
   } else {
     // Not an OAuth callback - do normal auth check
-    // Supabase v2 stores session in localStorage with key format: sb-{project-ref}-auth-token
-    const hasSessionData = localStorage.getItem('sb-qakldmfmdlwvehseaksy-auth-token');
-
-    if (!hasSessionData) {
-      // No session data at all, immediately redirect (prevents flash)
-      window.location.replace(`/login?return=${currentPage}`);
-    } else {
-      // Session data exists, verify it's valid
-      supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
-        console.log('Session check result:', session ? 'Authenticated' : 'Not authenticated');
-        if (!session) {
-          // Not authenticated, redirect to login (use replace to prevent back button)
-          window.location.replace(`/login?return=${currentPage}`);
-        } else {
-          // Wait for DOM to be fully parsed so every component (bottom-nav,
-          // user-menu elements) exists before we populate them and reveal the page.
-          await domReady;
-          // Authenticated, initialize user menu first
-          await initUserMenu();
-          // Then show content
-          document.documentElement.style.visibility = 'visible';
-          
-          // Check if onboarding should be shown
-          if (typeof checkAndShowOnboarding === 'function') {
-            setTimeout(() => checkAndShowOnboarding(), 500);
-          }
-          
-          // Periodically validate session (every 30 seconds)
-          // This helps catch session expiry and cross-device logouts
-          setInterval(async () => {
-            const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
-            if (!currentSession) {
-              // Session expired or user logged out elsewhere
-              sessionStorage.clear();
-              window.location.replace('/login?return=' + currentPage);
-            }
-          }, 30000); // Check every 30 seconds
-        }
-      }).catch((error) => {
-        console.error('Auth check failed:', error);
-        // Error checking auth, redirect to login (use replace to prevent back button)
+    // Simply check if a valid session exists via Supabase
+    supabaseClient.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
         window.location.replace(`/login?return=${currentPage}`);
-      });
-    }
+        return;
+      }
+      
+      if (!session) {
+        // Not authenticated, redirect to login (use replace to prevent back button)
+        window.location.replace(`/login?return=${currentPage}`);
+      } else {
+        // Wait for DOM to be fully parsed so every component (bottom-nav,
+        // user-menu elements) exists before we populate them and reveal the page.
+        await domReady;
+        // Authenticated, initialize user menu first
+        await initUserMenu();
+        // Then show content
+        document.documentElement.style.visibility = 'visible';
+        
+        // Check if onboarding should be shown
+        if (typeof checkAndShowOnboarding === 'function') {
+          setTimeout(() => checkAndShowOnboarding(), 500);
+        }
+      }
+    }).catch((error) => {
+      console.error('Auth check failed:', error);
+      // Error checking auth, redirect to login (use replace to prevent back button)
+      window.location.replace(`/login?return=${currentPage}`);
+    });
   }
 } else {
   // Not a protected page, show it
-  console.log('Not a protected page, showing content');
   document.documentElement.style.visibility = 'visible';
 }
 
