@@ -393,6 +393,9 @@ async function checkAndShowOnboarding() {
     
     if (!userId) return;
     
+    // Skip onboarding on desktop
+    if (window.innerWidth > 768) return;
+    
     // For testing: always show onboarding
     // In production, check onboarding_completed flag
     showOnboardingModal();

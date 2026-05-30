@@ -38,6 +38,8 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -213,6 +215,14 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+  }
+
+  /* Loader Animation */
+  .loader-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
   }
 
   /* Notification Bell Styles */
@@ -650,7 +660,7 @@
         Track Expense
       </h2>
       <p>Log business expenses, supplier invoices, and track spending by category.</p>
-      <button class="btn btn-primary" onclick="openImageUploadModal()">+ New Expense</button>
+      <button class="btn btn-primary" onclick="openMethodSelectionModal()">+ New Expense</button>
     </div>
   </aside>
 
@@ -692,22 +702,80 @@
   </main>
 
   <!-- Floating Action Button (visible only on mobile) -->
-  <button class="fab" onclick="openImageUploadModal()" aria-label="Create expense"></button>
+  <button class="fab" onclick="openMethodSelectionModal()" aria-label="Create expense"></button>
+</div>
+
+<!-- Method Selection Modal -->
+<div class="modal-overlay" id="methodSelectionModal">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Expense</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
+    
+    <div class="method-grid" style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="method-card" onclick="selectMethod('manual')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40">
+        <div style="flex: 1; text-align: left;">
+          <h4 style="margin: 0 0 4px 0; font-size: 16px;">Manual Entry</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
+        </div>
+      </div>
+
+      <div class="method-card" onclick="selectMethod('upload')" style="background: var(--bg-panel); border: 2px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40">
+        <div style="flex: 1; text-align: left;">
+          <h4 style="margin: 0 0 4px 0; font-size: 16px;">PDF / Image Upload</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn" style="width: 100%; margin-top: 20px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeMethodSelectionModal()">Cancel</button>
+  </div>
 </div>
 
 <!-- Add/Edit Expense Modal -->
-<div class="modal-overlay" id="expenseModal" onclick="if(event.target === this) closeExpenseModal()">
-  <div class="modal-content" style="max-width: 600px;">
+<div class="modal-overlay" id="expenseModal">
+  <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Expense</h3>
     
     <form id="expenseForm" onsubmit="saveExpense(event)">
       <input type="hidden" id="expense_id">
       
+      <!-- Ingredients Section -->
       <div class="form-group">
-        <label for="expense_description">Description *</label>
-        <input type="text" id="expense_description" required placeholder="What was purchased?">
+        <label>Ingredients</label>
+        
+        <div style="display: flex; gap: 20px; min-height: 300px;">
+          <!-- Left: Category Filters -->
+          <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">CATEGORIES</div>
+            <div id="expenseCategoryChips" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div id="expenseAttrSubfilter" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+          </div>
+          
+          <!-- Right: Search and Results -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+            <!-- Ingredient Search -->
+            <div style="position: relative;">
+              <input 
+                type="text" 
+                id="ingredient_search" 
+                placeholder="Search ingredients..." 
+                onfocus="showIngredientDropdownExpense()" 
+                oninput="searchIngredientsExpense()" 
+                autocomplete="off"
+                style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
+              <div id="ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+            </div>
+            
+            <!-- Selected Ingredients List -->
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted);">SELECTED</div>
+            <div id="selected_ingredients_list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+        </div>
       </div>
 
+      <!-- Amount and Date -->
       <div class="form-row">
         <div class="form-group">
           <label for="expense_amount">Amount *</label>
@@ -720,51 +788,31 @@
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="expense_vendor">Vendor</label>
-          <input type="text" id="expense_vendor" placeholder="Supplier name">
-        </div>
-
-        <div class="form-group">
-          <label for="expense_category">Category</label>
-          <select id="expense_category">
-            <option value="">Select category</option>
-            <option value="Materials">Materials</option>
-            <option value="Supplies">Supplies</option>
-            <option value="Shipping">Shipping</option>
-            <option value="Packaging">Packaging</option>
-            <option value="Tools">Tools</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Utilities">Utilities</option>
-            <option value="Software">Software</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
+      <!-- Vendor -->
       <div class="form-group">
-        <label for="expense_receipt_url">Receipt URL</label>
-        <input type="url" id="expense_receipt_url" placeholder="https://...">
+        <label for="expense_vendor">Vendor</label>
+        <input type="text" id="expense_vendor" placeholder="Supplier name (optional)">
       </div>
 
-      <div style="display: flex; gap: 12px; margin-top: 24px;">
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Expense</button>
-        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeExpenseModal()">Cancel</button>
+      <!-- Form Actions -->
+      <div class="form-group">
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeExpenseModal()">Cancel</button>
+          <button type="submit" class="btn" style="flex: 1; background: var(--accent); color: white; border: none;">Save</button>
+        </div>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
+<div class="modal-overlay" id="deleteExpenseModal">
   <div class="modal-content" style="max-width: 400px;">
-    <h3 style="margin-top:0;">Delete Expense</h3>
-    <p style="color: var(--text-muted); margin-bottom: 24px;">Are you sure you want to delete this expense? This action cannot be undone.</p>
-    
+    <h3 style="margin-top: 0;">Delete Expense?</h3>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">This action cannot be undone.</p>
     <div style="display: flex; gap: 12px;">
-      <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
       <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
 </div>
@@ -772,7 +820,7 @@
 <!-- Image/PDF Upload Modal -->
 <div class="modal-overlay" id="imageUploadModal">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
+    <h3 id="uploadModalTitle" style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
     <p id="uploadDescription" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt or invoice for automatic data extraction</p>
     
     <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
@@ -802,8 +850,8 @@
     <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <img id="previewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
-        <div style="flex: 1;">
-          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
+        <div style="flex: 1; min-width: 0;">
+          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main); word-break: break-all; overflow-wrap: break-word;"></p>
           <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
         </div>
         <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
@@ -821,35 +869,79 @@
 
 <!-- Ingredient Mapping Modal -->
 <div class="modal-overlay" id="ingredientMappingModal">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Match to Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">AI detected the item below. Confirm the best matching ingredient to update its cost per unit.</p>
+  <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Match Detected Items</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Match detected items to your ingredients and set quantities.</p>
 
-    <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px;">Detected Item</div>
-      <div style="font-weight:600;font-size:15px;" id="mappingItemName">—</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="mappingItemDetails">—</div>
+    <!-- Update Inventory Toggle -->
+    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Update Inventory</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Add quantities to matched ingredients</div>
+      </div>
+      <label class="toggle-switch" style="margin: 0;">
+        <input type="checkbox" id="updateInventoryToggle" checked onchange="toggleUpdateInventory()">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
 
-    <div style="margin-bottom:16px;position:relative;">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-muted);">Matched Ingredient:</label>
-      <input type="text" id="ingredientSearchInput" placeholder="Search ingredients or leave empty to skip..."
-        autocomplete="off"
-        oninput="searchIngredientsForMapping(this.value)"
-        onfocus="showIngredientDropdown()"
-        onkeydown="if(event.key==='Escape') hideIngredientDropdown()"
-        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;box-sizing:border-box;" />
-      <div id="ingredientSearchDropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
-    </div>
+    <!-- Detected Items List -->
+    <div id="detectedItemsList" style="margin-bottom: 20px;"></div>
 
-    <div id="mappingMatchInfo" style="font-size:12px;color:var(--text-muted);margin-bottom:20px;"></div>
+    <!-- Add Manual Ingredient Button -->
+    <button type="button" onclick="addManualIngredientRow()" style="width: 100%; padding: 12px; background: var(--bg-panel); border: 2px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 20px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'">
+      + Add Manual Ingredient
+    </button>
 
     <div style="display:flex;gap:12px;">
-      <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="skipIngredientMapping()">Skip &amp; Edit Manually</button>
-      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Confirm &amp; Save</button>
+      <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeIngredientMappingModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Save</button>
     </div>
   </div>
 </div>
+
+<!-- Toggle Switch Styles -->
+<style>
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border);
+  transition: 0.3s;
+  border-radius: 34px;
+}
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--accent);
+}
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+</style>
 
 <script>
 let expenses = [];
@@ -865,6 +957,7 @@ let editingExpenseId = null;
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadExpenses();
+  await loadIngredientsForExpense();
   
   // On mobile, force Cards view
   if (window.innerWidth <= 768) {
@@ -954,7 +1047,7 @@ function renderRecent(filtered) {
         <img src="/cat_no_orders.png" alt="No expenses" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No expenses yet</h3>
         <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Track what you spend to keep your costs in check</p>
-        <button onclick="openImageUploadModal()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Add Expense</button>
+        <button onclick="openMethodSelectionModal()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Add Expense</button>
       </div>
     ` : `
       <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
@@ -1011,11 +1104,32 @@ function renderList(filtered) {
   const paginationContainer = document.getElementById('paginationContainer');
   
   if (filtered.length === 0) {
+    const isFirstTime = !expenses || expenses.length === 0;
     tableContainer.style.display = 'none';
     if (paginationContainer) paginationContainer.style.display = 'none';
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:48px 20px;"><img src="/cat_no_orders.png" alt="No expenses" style="width:160px;height:auto;margin-bottom:14px;opacity:0.9;" /><p style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--text-main);">No expenses yet</p><p style="margin:0 0 20px;color:var(--text-muted);">Track your business costs and spending</p><button onclick="openAddExpenseModal()" style="padding:14px 28px;font-size:14px;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:10px;cursor:pointer;">+ Add Expense</button></td></tr>';
+    
+    // Show empty state outside table
+    if (!document.getElementById('emptyStateList')) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.id = 'emptyStateList';
+      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.innerHTML = isFirstTime ? `
+        <img src="/cat_no_orders.png" alt="No expenses" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+        <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No expenses yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track your business costs and spending</p>
+        <button onclick="openMethodSelectionModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Expense</button>
+      ` : `
+        <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No expenses match your search</p>
+      `;
+      tableContainer.parentElement.appendChild(emptyDiv);
+    }
     return;
   }
+  
+  // Remove empty state if it exists
+  const emptyState = document.getElementById('emptyStateList');
+  if (emptyState) emptyState.remove();
   
   tableContainer.style.display = 'block';
   if (paginationContainer) paginationContainer.style.display = 'flex';
@@ -1130,8 +1244,39 @@ function sortTable(column) {
   render();
 }
 
-function openAddExpenseModal() {
+// Method selection modal functions
+function openMethodSelectionModal() {
+  document.getElementById('methodSelectionModal').classList.add('active');
+}
+
+function closeMethodSelectionModal() {
+  document.getElementById('methodSelectionModal').classList.remove('active');
+}
+
+async function selectMethod(method) {
+  closeMethodSelectionModal();
+  if (method === 'manual') {
+    await openAddExpenseModal();
+  } else if (method === 'upload') {
+    openImageUploadModal();
+  }
+}
+
+// Selected ingredients storage
+let selectedExpenseIngredients = [];
+let expenseSelectedCategory = null;
+let expenseSelectedAttributes = {};
+let recentIngredients = []; // Store last 3 accessed ingredients
+
+async function openAddExpenseModal() {
+  // Load ingredients first
+  await loadIngredientsForExpense();
+  
   editingExpenseId = null;
+  selectedExpenseIngredients = [];
+  expenseSelectedCategory = null;
+  expenseSelectedAttributes = {};
+  
   document.getElementById('modalTitle').textContent = 'Add New Expense';
   document.getElementById('expenseForm').reset();
   document.getElementById('expense_id').value = '';
@@ -1139,32 +1284,418 @@ function openAddExpenseModal() {
   // Set today's date
   document.getElementById('expense_date').valueAsDate = new Date();
   
+  // Clear ingredient search and selection
+  document.getElementById('ingredient_search').value = '';
+  document.getElementById('ingredient_results').style.display = 'none';
+  document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+  
+  // Render category chips and attribute filters
+  renderExpenseCategoryChips();
+  renderExpenseAttrSubfilter();
+  
   document.getElementById('expenseModal').classList.add('active');
 }
 
 function closeExpenseModal() {
   document.getElementById('expenseModal').classList.remove('active');
+  selectedExpenseIngredients = [];
+  expenseSelectedCategory = null;
+  expenseSelectedAttributes = {};
 }
 
-function editExpense(expenseId) {
+// Ingredient search and selection functions
+let allIngredients = [];
+
+async function loadIngredientsForExpense() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    
+    let query = supabaseClient
+      .from('ingredients')
+      .select('*')
+      .eq('profile_id', user.id);
+    
+    if (storeId) query = query.eq('store_id', storeId);
+    
+    const { data, error } = await query.order('name');
+    
+    if (error) throw error;
+    allIngredients = data || [];
+  } catch (error) {
+    console.error('Error loading ingredients:', error);
+  }
+}
+
+// Category filtering
+function renderExpenseCategoryChips() {
+  const container = document.getElementById('expenseCategoryChips');
+  if (!container) return;
+  
+  const categories = [
+    { name: 'Apparel', icon: 'shirt' },
+    { name: 'Wood', icon: 'tree-pine' },
+    { name: 'Boxes', icon: 'archive' },
+    { name: 'Cards', icon: 'tickets' },
+    { name: 'Plants', icon: 'sprout' },
+    { name: 'Candy', icon: 'lollipop' },
+    { name: 'Beverage', icon: 'amphora' },
+    { name: 'Jewelry', icon: 'gem' },
+    { name: 'Party Supplies', icon: 'party-popper' },
+    { name: 'Gaming', icon: 'gamepad-2' },
+    { name: 'Toys', icon: 'drum' },
+    { name: 'Office Supplies', icon: 'paperclip' },
+    { name: 'Colors', icon: 'palette' },
+    { name: 'Rope', icon: 'lasso' },
+    { name: 'Paper', icon: 'origami' },
+    { name: 'Spool', icon: 'spool' },
+    { name: 'Letter', icon: 'mail' },
+    { name: 'Giveaway', icon: 'gift' },
+    { name: 'Electronics', icon: 'plug' },
+    { name: 'Printing Supplies', icon: 'printer' },
+    { name: 'Tools', icon: 'wrench' },
+    { name: 'Packaging', icon: 'package' },
+    { name: 'Food', icon: 'wheat' }
+  ];
+  
+  container.innerHTML = categories.map(cat => `
+    <div class="expense-cat-chip" data-category="${cat.name}" 
+      onclick="selectExpenseCategory('${cat.name}')"
+      style="padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+      <i data-lucide="${cat.icon}" style="width: 16px; height: 16px;"></i>
+      <span>${cat.name}</span>
+    </div>
+  `).join('');
+  
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function selectExpenseCategory(category) {
+  if (expenseSelectedCategory === category) {
+    expenseSelectedCategory = null;
+    expenseSelectedAttributes = {};
+  } else {
+    expenseSelectedCategory = category;
+    expenseSelectedAttributes = {};
+  }
+  
+  // Update chip styling
+  document.querySelectorAll('.expense-cat-chip').forEach(chip => {
+    if (chip.dataset.category === expenseSelectedCategory) {
+      chip.style.background = 'var(--accent)';
+      chip.style.color = '#fff';
+      chip.style.borderColor = 'var(--accent)';
+    } else {
+      chip.style.background = 'var(--bg-panel)';
+      chip.style.color = 'var(--text-main)';
+      chip.style.borderColor = 'var(--border)';
+    }
+  });
+  
+  renderExpenseAttrSubfilter();
+  searchIngredientsExpense();
+}
+
+function renderExpenseAttrSubfilter() {
+  const container = document.getElementById('expenseAttrSubfilter');
+  if (!container) return;
+  
+  if (!expenseSelectedCategory) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'flex';
+  
+  // Get unique attributes for selected category
+  const categoryIngredients = allIngredients.filter(ing => ing.category === expenseSelectedCategory);
+  const allAttrs = {};
+  
+  categoryIngredients.forEach(ing => {
+    if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
+      Object.entries(ing.custom_attributes).forEach(([key, value]) => {
+        if (value) {
+          if (!allAttrs[key]) allAttrs[key] = new Set();
+          allAttrs[key].add(value);
+        }
+      });
+    }
+  });
+  
+  if (Object.keys(allAttrs).length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  const chips = [];
+  Object.entries(allAttrs).forEach(([key, values]) => {
+    values.forEach(value => {
+      const isSelected = expenseSelectedAttributes[key] === value;
+      chips.push(`
+        <div class="expense-attr-chip" data-attr-key="${key}" data-attr-value="${value}" 
+          onclick="toggleExpenseAttribute('${key}', '${value}')"
+          style="padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; ${
+            isSelected 
+              ? 'background: #8b5cf6; color: #fff; border: 1px solid #8b5cf6;' 
+              : 'background: var(--bg-inner); color: var(--text-muted); border: 1px solid var(--border);'
+          }">
+          ${value}
+        </div>
+      `);
+    });
+  });
+  
+  container.innerHTML = chips.join('');
+}
+
+function toggleExpenseAttribute(key, value) {
+  if (expenseSelectedAttributes[key] === value) {
+    delete expenseSelectedAttributes[key];
+  } else {
+    expenseSelectedAttributes[key] = value;
+  }
+  
+  renderExpenseAttrSubfilter();
+  searchIngredientsExpense();
+}
+
+function showIngredientDropdownExpense() {
+  const resultsDiv = document.getElementById('ingredient_results');
+  const searchTerm = document.getElementById('ingredient_search').value.trim();
+  
+  if (!searchTerm) {
+    // Show last 3 recent ingredients
+    if (recentIngredients.length > 0) {
+      resultsDiv.innerHTML = recentIngredients.slice(0, 3).map(ing => `
+        <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
+          <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(ing.custom_attributes)}</div>
+        </div>
+      `).join('');
+      resultsDiv.style.display = 'block';
+    }
+    return;
+  }
+  
+  searchIngredientsExpense();
+}
+
+function searchIngredientsExpense() {
+  const searchTerm = document.getElementById('ingredient_search').value.toLowerCase().trim();
+  const resultsDiv = document.getElementById('ingredient_results');
+  
+  // Apply filters
+  let filtered = allIngredients.filter(ing => {
+    // Check if already selected
+    if (selectedExpenseIngredients.some(sel => sel.id === ing.id)) return false;
+    
+    // Category filter
+    if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
+    
+    // Attribute filters
+    if (Object.keys(expenseSelectedAttributes).length > 0) {
+      const ingAttrs = ing.custom_attributes || {};
+      for (const [key, value] of Object.entries(expenseSelectedAttributes)) {
+        if (ingAttrs[key] !== value) return false;
+      }
+    }
+    
+    // Search term
+    if (searchTerm) {
+      const nameMatch = ing.name.toLowerCase().includes(searchTerm);
+      let attrMatch = false;
+      
+      if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
+        attrMatch = Object.values(ing.custom_attributes).some(val => 
+          val && typeof val === 'string' && val.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      return nameMatch || attrMatch;
+    }
+    
+    return true;
+  });
+  
+  // Show results if there are filters active OR search term
+  const hasFilters = expenseSelectedCategory || Object.keys(expenseSelectedAttributes).length > 0 || searchTerm;
+  
+  if (!hasFilters) {
+    resultsDiv.style.display = 'none';
+    return;
+  }
+  
+  if (filtered.length === 0) {
+    resultsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px;">No ingredients found</div>';
+    resultsDiv.style.display = 'block';
+    return;
+  }
+  
+  resultsDiv.innerHTML = filtered.slice(0, 8).map(ing => `
+    <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
+      <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
+      <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(ing.custom_attributes)}</div>
+    </div>
+  `).join('');
+  resultsDiv.style.display = 'block';
+}
+
+function formatAttributes(attrs) {
+  if (!attrs || typeof attrs !== 'object') return '';
+  return Object.entries(attrs)
+    .filter(([k, v]) => v)
+    .map(([k, v]) => v)
+    .join(' · ') || 'No attributes';
+}
+
+function addIngredientToExpense(ingredientId) {
+  const ingredient = allIngredients.find(ing => ing.id === ingredientId);
+  if (!ingredient) return;
+  
+  // Add to recent ingredients (keep only last 3 unique)
+  recentIngredients = recentIngredients.filter(ing => ing.id !== ingredient.id);
+  recentIngredients.unshift(ingredient);
+  if (recentIngredients.length > 3) recentIngredients = recentIngredients.slice(0, 3);
+  
+  selectedExpenseIngredients.push({
+    id: ingredient.id,
+    name: ingredient.name,
+    quantity: 1
+  });
+  
+  renderSelectedIngredients();
+  
+  // Clear search
+  document.getElementById('ingredient_search').value = '';
+  document.getElementById('ingredient_results').style.display = 'none';
+}
+
+function removeIngredientFromExpense(ingredientId) {
+  selectedExpenseIngredients = selectedExpenseIngredients.filter(ing => ing.id !== ingredientId);
+  renderSelectedIngredients();
+}
+
+function updateIngredientQuantity(ingredientId, quantity) {
+  const ingredient = selectedExpenseIngredients.find(ing => ing.id === ingredientId);
+  if (ingredient) {
+    ingredient.quantity = Math.max(0, parseFloat(quantity) || 0);
+    renderSelectedIngredients();
+  }
+}
+
+function changeIngredientQuantity(ingredientId, delta) {
+  const ingredient = selectedExpenseIngredients.find(ing => ing.id === ingredientId);
+  if (ingredient) {
+    const newQuantity = (ingredient.quantity || 0) + delta;
+    // If trying to go below 1, remove the ingredient
+    if (newQuantity < 1) {
+      removeIngredientFromExpense(ingredientId);
+    } else {
+      ingredient.quantity = newQuantity;
+      renderSelectedIngredients();
+    }
+  }
+}
+
+function renderSelectedIngredients() {
+  const container = document.getElementById('selected_ingredients_list');
+  
+  if (selectedExpenseIngredients.length === 0) {
+    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+    return;
+  }
+  
+  container.innerHTML = selectedExpenseIngredients.map(ing => `
+    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" onclick="changeIngredientQuantity('${ing.id}', -1)" 
+          style="width: 28px; height: 28px; padding: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: center;">
+          −
+        </button>
+        <input type="number" value="${ing.quantity}" min="0" step="0.01" 
+          onchange="updateIngredientQuantity('${ing.id}', this.value)"
+          style="width: 70px; padding: 6px 8px; text-align: center; font-size: 13px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main);">
+        <button type="button" onclick="changeIngredientQuantity('${ing.id}', 1)" 
+          style="width: 28px; height: 28px; padding: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: center;">
+          +
+        </button>
+      </div>
+      <button type="button" onclick="removeIngredientFromExpense('${ing.id}')" 
+        style="width: 32px; height: 32px; padding: 0; background: var(--danger); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+  `).join('');
+  
+  // Initialize Lucide icons for trash icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('ingredient_results');
+  const input = document.getElementById('ingredient_search');
+  if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+async function editExpense(expenseId) {
+  // Load ingredients first
+  await loadIngredientsForExpense();
+  
   const expense = expenses.find(e => e.id === expenseId);
   if (!expense) return;
   
   editingExpenseId = expenseId;
+  selectedExpenseIngredients = [];
+  expenseSelectedCategory = null;
+  expenseSelectedAttributes = {};
+  
   document.getElementById('modalTitle').textContent = 'Edit Expense';
   document.getElementById('expense_id').value = expense.id;
-  document.getElementById('expense_description').value = expense.description || '';
   document.getElementById('expense_amount').value = expense.amount || 0;
   document.getElementById('expense_date').value = expense.expense_date || '';
   document.getElementById('expense_vendor').value = expense.vendor || '';
-  document.getElementById('expense_category').value = expense.category || '';
-  document.getElementById('expense_receipt_url').value = expense.receipt_url || '';
+  
+  // Load linked ingredients if any
+  if (expense.ingredients && Array.isArray(expense.ingredients)) {
+    selectedExpenseIngredients = expense.ingredients.map(ing => ({
+      id: ing.ingredient_id || ing.id,
+      name: ing.name || 'Unknown',
+      quantity: ing.quantity || 1
+    }));
+    renderSelectedIngredients();
+  } else {
+    document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+  }
+  
+  // Render category chips and attribute filters
+  renderExpenseCategoryChips();
+  renderExpenseAttrSubfilter();
   
   document.getElementById('expenseModal').classList.add('active');
 }
 
 async function saveExpense(event) {
   event.preventDefault();
+
+  // Validate ingredients are linked
+  if (selectedExpenseIngredients.length === 0) {
+    alert('Please link at least one ingredient to this expense');
+    return;
+  }
 
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -1173,15 +1704,19 @@ async function saveExpense(event) {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
+    // Generate description from ingredient names
+    const description = selectedExpenseIngredients.map(ing => ing.name).join(', ');
+
     const expenseData = {
       profile_id: user.id,
       store_id: storeId,
-      description: document.getElementById('expense_description').value,
+      description: description,
       amount: parseFloat(document.getElementById('expense_amount').value) || 0,
       expense_date: document.getElementById('expense_date').value,
       vendor: document.getElementById('expense_vendor').value || null,
-      category: document.getElementById('expense_category').value || null,
-      receipt_url: document.getElementById('expense_receipt_url').value || null
+      category: null,
+      receipt_url: null,
+      ingredients: selectedExpenseIngredients
     };
     
     let result;
@@ -1206,10 +1741,10 @@ async function saveExpense(event) {
     render();
     closeExpenseModal();
     
-    alert(editingExpenseId ? 'Expense updated successfully!' : 'Expense created successfully!');
+    showNotification(editingExpenseId ? 'Expense updated successfully!' : 'Expense created successfully!', 'success');
   } catch (error) {
     console.error('Error saving expense:', error);
-    alert('Failed to save expense: ' + error.message);
+    showNotification('Failed to save expense', 'error');
   }
 }
 
@@ -1255,6 +1790,34 @@ function openImageUploadModal() {
 function closeImageUploadModal() {
   document.getElementById('imageUploadModal').classList.remove('active');
   clearUpload();
+  
+  // Reset all UI elements
+  const uploadModalTitle = document.getElementById('uploadModalTitle');
+  const uploadDescription = document.getElementById('uploadDescription');
+  const dropZone = document.getElementById('dropZone');
+  const uploadPreview = document.getElementById('uploadPreview');
+  const screenshotSection = document.getElementById('screenshotSection');
+  const orDivider = dropZone.nextElementSibling;
+  const processBtn = document.getElementById('processImageBtn');
+  const cancelBtn = processBtn?.parentElement?.querySelector('.btn-secondary');
+  const statusDiv = document.getElementById('uploadStatus');
+  
+  if (uploadModalTitle) uploadModalTitle.style.display = '';
+  if (uploadDescription) uploadDescription.style.display = '';
+  if (dropZone) dropZone.style.display = '';
+  if (uploadPreview) uploadPreview.style.display = 'none';
+  if (screenshotSection) screenshotSection.style.display = '';
+  if (orDivider) orDivider.style.display = '';
+  if (cancelBtn) cancelBtn.style.display = '';
+  if (processBtn) {
+    processBtn.style.display = '';
+    processBtn.textContent = 'Process';
+    processBtn.disabled = true;
+  }
+  if (statusDiv) {
+    statusDiv.style.display = 'none';
+    statusDiv.innerHTML = '';
+  }
 }
 
 function setupDropZone() {
@@ -1435,8 +1998,14 @@ async function captureScreenshot() {
 // === Ingredient Mapping for Expense Receipts ===
 
 let pendingExpenseData = null;
-let selectedMappingIngredient = null;
+let mappedItems = []; // Array of { detectedName, detectedPrice, detectedQty, ingredientId, ingredientName, quantity, price }
 let allIngredientsCache = [];
+let updateInventory = true;
+let dropdownActiveFor = null;
+
+function toggleUpdateInventory() {
+  updateInventory = document.getElementById('updateInventoryToggle').checked;
+}
 
 function calculateExpenseSimilarity(str1, str2) {
   const s1 = str1.toLowerCase().trim();
@@ -1449,105 +2018,264 @@ function calculateExpenseSimilarity(str1, str2) {
   return 0;
 }
 
+function matchIngredientWithAttributes(detectedItem, ingredient) {
+  // Base name similarity
+  const itemName = detectedItem.name || '';
+  let score = calculateExpenseSimilarity(itemName, ingredient.name);
+
+  // Boost score if custom attributes match
+  if (ingredient.custom_attributes && typeof ingredient.custom_attributes === 'object') {
+    const itemNameLower = itemName.toLowerCase();
+    const attrs = ingredient.custom_attributes;
+    
+    // Check each attribute value against detected item name
+    let attributeMatches = 0;
+    const totalAttrs = Object.keys(attrs).length;
+    
+    for (const [key, value] of Object.entries(attrs)) {
+      if (value && typeof value === 'string') {
+        const valueLower = value.toLowerCase();
+        if (itemNameLower.includes(valueLower) || valueLower.includes(itemNameLower)) {
+          attributeMatches++;
+        }
+      }
+    }
+    
+    // Increase score by up to 0.15 based on attribute matches
+    if (totalAttrs > 0) {
+      score += (attributeMatches / totalAttrs) * 0.15;
+    }
+  }
+
+  return Math.min(score, 1.0); // Cap at 1.0
+}
+
 async function showIngredientMappingModal(expenseData) {
   pendingExpenseData = expenseData;
-  selectedMappingIngredient = null;
+  mappedItems = [];
+  updateInventory = true;
+  document.getElementById('updateInventoryToggle').checked = true;
 
-  const itemName = expenseData.item?.name || expenseData.description || '';
-  const itemPrice = expenseData.item?.price || null;
-  const itemQty = expenseData.item?.quantity || null;
-  const itemUnit = expenseData.item?.unit || null;
-
-  document.getElementById('mappingItemName').textContent = itemName || '(no name detected)';
-  const details = [
-    itemPrice ? `Price: ${itemPrice}` : null,
-    itemQty ? `Qty: ${itemQty}` : null,
-    itemUnit ? `Unit: ${itemUnit}` : null,
-    expenseData.vendor ? `Vendor: ${expenseData.vendor}` : null,
-  ].filter(Boolean).join(' · ');
-  document.getElementById('mappingItemDetails').textContent = details || '—';
-  document.getElementById('ingredientSearchInput').value = '';
-  document.getElementById('mappingMatchInfo').textContent = '';
-  document.getElementById('ingredientMappingModal').classList.add('active');
-
+  // Load all ingredients
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
   if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
   const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-  let _q2 = supabaseClient.from('ingredients').select('id, name, unit, cost_per_unit').eq('profile_id', user.id);
+  let _q2 = supabaseClient.from('ingredients').select('*').eq('profile_id', user.id);
   if (storeId) _q2 = _q2.eq('store_id', storeId);
   const { data: ingredients } = await _q2;
   allIngredientsCache = ingredients || [];
 
-  if (itemName && allIngredientsCache.length > 0) {
-    const scored = allIngredientsCache
-      .map(ing => ({ ing, score: calculateExpenseSimilarity(itemName, ing.name) }))
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score);
+  // Parse detected items (could be array or single item)
+  let detectedItems = [];
+  if (expenseData.items && Array.isArray(expenseData.items)) {
+    detectedItems = expenseData.items;
+  } else if (expenseData.item) {
+    detectedItems = [expenseData.item];
+  }
 
-    if (scored.length > 0) {
-      const best = scored[0];
-      selectedMappingIngredient = best.ing;
-      document.getElementById('ingredientSearchInput').value = best.ing.name;
-      document.getElementById('mappingMatchInfo').textContent = `Best match: ${(best.score * 100).toFixed(0)}% confidence`;
-      renderIngredientDropdown(scored.slice(0, 8));
+  // Create mapped items with best matches
+  detectedItems.forEach(item => {
+    const itemName = item.name || '';
+    const itemPrice = item.price ? parseFloat(String(item.price).replace(/[^0-9.]/g, '')) : null;
+    const itemQty = item.quantity ? parseFloat(item.quantity) : 1;
+
+    let bestMatch = null;
+    if (itemName && allIngredientsCache.length > 0) {
+      const scored = allIngredientsCache
+        .map(ing => ({ ing, score: matchIngredientWithAttributes(item, ing) }))
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      if (scored.length > 0 && scored[0].score >= 0.5) {
+        bestMatch = scored[0].ing;
+      }
     }
+
+    mappedItems.push({
+      detectedName: itemName,
+      detectedPrice: itemPrice,
+      detectedQty: itemQty,
+      ingredientId: bestMatch?.id || null,
+      ingredientName: bestMatch?.name || '',
+      quantity: itemQty || 1,
+      price: itemPrice
+    });
+  });
+
+  renderDetectedItems();
+  document.getElementById('ingredientMappingModal').classList.add('active');
+}
+
+function renderDetectedItems() {
+  const container = document.getElementById('detectedItemsList');
+  
+  if (mappedItems.length === 0) {
+    container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No items detected. Add manually below.</div>';
+    return;
+  }
+
+  container.innerHTML = mappedItems.map((item, index) => `
+    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;">Detected Item</div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">${item.detectedName || 'Unnamed Item'}</div>
+          ${item.detectedPrice ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">$${item.detectedPrice.toFixed(2)}</div>` : ''}
+        </div>
+        <button onclick="removeDetectedItem(${index})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 0 8px;">×</button>
+      </div>
+
+      <div style="position: relative; margin-bottom: 12px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Ingredient:</label>
+        <input type="text" 
+          id="ingredient_search_${index}" 
+          value="${item.ingredientName}"
+          placeholder="Search ingredients..."
+          autocomplete="off"
+          oninput="searchIngredientForItem(${index}, this.value)"
+          onfocus="showDropdownForItem(${index})"
+          onkeydown="if(event.key==='Escape') hideDropdown()"
+          style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+        <div id="dropdown_${index}" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 150px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Quantity:</label>
+          <input type="number" 
+            value="${item.quantity}" 
+            min="0" 
+            step="0.01"
+            onchange="updateItemQuantity(${index}, this.value)"
+            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Price:</label>
+          <input type="number" 
+            value="${item.price || ''}" 
+            min="0" 
+            step="0.01"
+            placeholder="Optional"
+            onchange="updateItemPrice(${index}, this.value)"
+            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addManualIngredientRow() {
+  mappedItems.push({
+    detectedName: '',
+    detectedPrice: null,
+    detectedQty: 1,
+    ingredientId: null,
+    ingredientName: '',
+    quantity: 1,
+    price: null
+  });
+  renderDetectedItems();
+}
+
+function removeDetectedItem(index) {
+  mappedItems.splice(index, 1);
+  renderDetectedItems();
+}
+
+function updateItemQuantity(index, value) {
+  mappedItems[index].quantity = parseFloat(value) || 0;
+}
+
+function updateItemPrice(index, value) {
+  mappedItems[index].price = parseFloat(value) || null;
+}
+
+function showDropdownForItem(index) {
+  dropdownActiveFor = index;
+  const dropdown = document.getElementById(`dropdown_${index}`);
+  if (dropdown) {
+    renderDropdownForItem(index, allIngredientsCache.slice(0, 8));
+    dropdown.style.display = 'block';
   }
 }
 
-function renderIngredientDropdown(scored) {
-  const dropdown = document.getElementById('ingredientSearchDropdown');
-  if (!scored || scored.length === 0) {
-    dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching ingredients found</div>';
+function hideDropdown() {
+  if (dropdownActiveFor !== null) {
+    const dropdown = document.getElementById(`dropdown_${dropdownActiveFor}`);
+    if (dropdown) dropdown.style.display = 'none';
+  }
+  dropdownActiveFor = null;
+}
+
+function searchIngredientForItem(index, term) {
+  dropdownActiveFor = index;
+  const dropdown = document.getElementById(`dropdown_${index}`);
+  if (!dropdown) return;
+
+  if (!term.trim()) {
+    renderDropdownForItem(index, allIngredientsCache.slice(0, 8));
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  const lower = term.toLowerCase();
+  
+  // Search in name and custom attributes
+  const filtered = allIngredientsCache
+    .filter(ing => {
+      // Check name
+      if (ing.name.toLowerCase().includes(lower)) return true;
+      
+      // Check custom attributes
+      if (ing.custom_attributes && typeof ing.custom_attributes === 'object') {
+        for (const value of Object.values(ing.custom_attributes)) {
+          if (value && typeof value === 'string' && value.toLowerCase().includes(lower)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    })
+    .slice(0, 8);
+
+  renderDropdownForItem(index, filtered);
+  dropdown.style.display = 'block';
+}
+
+function renderDropdownForItem(index, ingredients) {
+  const dropdown = document.getElementById(`dropdown_${index}`);
+  if (!dropdown) return;
+
+  if (ingredients.length === 0) {
+    dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 12px;">No ingredients found</div>';
   } else {
-    dropdown.innerHTML = scored.map(({ ing, score }) => `
-      <div onclick="selectMappingIngredient('${ing.id}')"
-        style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);"
-        onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:600;font-size:13px;">${ing.name}</div>
-        <div style="font-size:12px;color:var(--text-muted);">${score !== undefined ? (score * 100).toFixed(0) + '% match · ' : ''}${ing.unit || ''}</div>
+    dropdown.innerHTML = ingredients.map(ing => `
+      <div onclick="selectIngredientForItem(${index}, '${ing.id}')"
+        style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border);"
+        onmouseover="this.style.background='var(--bg-inner)'" 
+        onmouseout="this.style.background='transparent'">
+        <div style="font-weight: 600; font-size: 13px;">${ing.name}</div>
+        <div style="font-size: 11px; color: var(--text-muted);">${ing.category || 'General'} ${ing.unit ? '· ' + ing.unit : ''}</div>
       </div>`).join('');
   }
 }
 
-function showIngredientDropdown() {
-  const dropdown = document.getElementById('ingredientSearchDropdown');
-  if (dropdown.innerHTML) dropdown.style.display = 'block';
-}
-
-function hideIngredientDropdown() {
-  document.getElementById('ingredientSearchDropdown').style.display = 'none';
-}
-
-function selectMappingIngredient(ingredientId) {
+function selectIngredientForItem(index, ingredientId) {
   const ing = allIngredientsCache.find(i => i.id === ingredientId);
   if (ing) {
-    selectedMappingIngredient = ing;
-    document.getElementById('ingredientSearchInput').value = ing.name;
-    document.getElementById('mappingMatchInfo').textContent = `Selected: ${ing.name}${ing.unit ? ' (' + ing.unit + ')' : ''}`;
+    mappedItems[index].ingredientId = ing.id;
+    mappedItems[index].ingredientName = ing.name;
+    document.getElementById(`ingredient_search_${index}`).value = ing.name;
   }
-  hideIngredientDropdown();
-}
-
-function searchIngredientsForMapping(term) {
-  showIngredientDropdown();
-  if (!term.trim()) {
-    renderIngredientDropdown(allIngredientsCache.slice(0, 8).map(ing => ({ ing, score: undefined })));
-    return;
-  }
-  const lower = term.toLowerCase();
-  const scored = allIngredientsCache
-    .map(ing => ({ ing, score: calculateExpenseSimilarity(term, ing.name) }))
-    .filter(x => x.score > 0 || x.ing.name.toLowerCase().includes(lower))
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 8);
-  renderIngredientDropdown(scored);
+  hideDropdown();
 }
 
 function closeIngredientMappingModal() {
   document.getElementById('ingredientMappingModal').classList.remove('active');
   pendingExpenseData = null;
-  selectedMappingIngredient = null;
+  mappedItems = [];
+  dropdownActiveFor = null;
 }
 
 async function confirmIngredientMapping() {
@@ -1557,22 +2285,67 @@ async function confirmIngredientMapping() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    if (selectedMappingIngredient) {
-      const newCost = pendingExpenseData.item?.price
-        ? parseFloat(String(pendingExpenseData.item.price).replace(/[^0-9.]/g, ''))
-        : null;
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      if (newCost && !isNaN(newCost) && newCost > 0) {
-        await supabaseClient
-          .from('ingredients')
-          .update({ cost_per_unit: newCost })
-          .eq('id', selectedMappingIngredient.id);
+    // Update inventory if toggle is on
+    if (updateInventory) {
+      for (const item of mappedItems) {
+        if (item.ingredientId && item.quantity > 0) {
+          const ing = allIngredientsCache.find(i => i.id === item.ingredientId);
+          if (ing) {
+            await supabaseClient
+              .from('ingredients')
+              .update({ 
+                quantity: (ing.quantity || 0) + item.quantity,
+                cost_per_unit: item.price || ing.cost_per_unit
+              })
+              .eq('id', item.ingredientId);
+          }
+        }
       }
     }
 
-    await saveExpenseFromMapping(user.id);
+    // Save expense
+    const d = pendingExpenseData;
+    const totalAmount = mappedItems.reduce((sum, item) => {
+      const price = item.price || 0;
+      const qty = item.quantity || 0;
+      return sum + (price * qty);
+    }, 0) || (d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null);
+
+    const vendor = d.vendor || '';
+    const rawDate = d.date || '';
+    let expenseDate = null;
+    if (rawDate) {
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed)) expenseDate = parsed.toISOString().split('T')[0];
+    }
+
+    // Build ingredients array for expense
+    const expenseIngredients = mappedItems
+      .filter(item => item.ingredientId)
+      .map(item => ({
+        ingredient_id: item.ingredientId,
+        name: item.ingredientName,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+    const { error } = await supabaseClient.from('expenses').insert([{
+      profile_id: user.id,
+      store_id: storeId,
+      description: d.description || mappedItems[0]?.detectedName || 'Expense',
+      amount: totalAmount,
+      expense_date: expenseDate || new Date().toISOString().split('T')[0],
+      vendor,
+      category: d.category || null,
+      ingredients: expenseIngredients.length > 0 ? expenseIngredients : null
+    }]);
+
+    if (error) throw error;
+
     closeIngredientMappingModal();
-    showNotification('Expense saved' + (selectedMappingIngredient ? ' and ingredient cost updated' : ''), 'success');
+    showNotification('Expense saved' + (updateInventory && expenseIngredients.length > 0 ? ' and inventory updated' : ''), 'success');
     await loadExpenses();
   } catch (err) {
     console.error('Error confirming ingredient mapping:', err);
@@ -1580,54 +2353,14 @@ async function confirmIngredientMapping() {
   }
 }
 
-async function saveExpenseFromMapping(userId) {
-  const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-  const d = pendingExpenseData;
-  const description = d.description || d.item?.name || '';
-  const amount = d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null;
-  const vendor = d.vendor || '';
-  const rawDate = d.date || '';
-  let expenseDate = null;
-  if (rawDate) {
-    const parsed = new Date(rawDate);
-    if (!isNaN(parsed)) expenseDate = parsed.toISOString().split('T')[0];
-  }
-
-  const { error } = await supabaseClient.from('expenses').insert([{
-    profile_id: userId,
-    store_id: storeId,
-    description,
-    amount: amount || null,
-    expense_date: expenseDate,
-    vendor,
-    category: d.item?.product_category || d.category || null,
-  }]);
-
-  if (error) throw error;
-}
-
-function skipIngredientMapping() {
-  if (!pendingExpenseData) { closeIngredientMappingModal(); return; }
-  const d = pendingExpenseData;
-  closeIngredientMappingModal();
-
-  if (d.description) document.getElementById('expense_description').value = d.description;
-  if (d.amount) {
-    const m = String(d.amount).match(/[\d.]+/);
-    if (m) document.getElementById('expense_amount').value = m[0];
-  }
-  if (d.vendor) document.getElementById('expense_vendor').value = d.vendor;
-  if (d.date) document.getElementById('expense_date').value = d.date;
-  if (d.category) document.getElementById('expense_category').value = d.category;
-
-  openAddExpenseModal();
-}
-
+// Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('ingredientSearchDropdown');
-  const input = document.getElementById('ingredientSearchInput');
-  if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
-    hideIngredientDropdown();
+  if (dropdownActiveFor !== null) {
+    const dropdown = document.getElementById(`dropdown_${dropdownActiveFor}`);
+    const input = document.getElementById(`ingredient_search_${dropdownActiveFor}`);
+    if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
+      hideDropdown();
+    }
   }
 });
 
@@ -1643,21 +2376,35 @@ async function processImageUpload() {
   processBtn.disabled = true;
   
   // Hide all upload UI elements during processing
+  const uploadModalTitle = document.getElementById('uploadModalTitle');
   const uploadDescription = document.getElementById('uploadDescription');
   const dropZone = document.getElementById('dropZone');
   const uploadPreview = document.getElementById('uploadPreview');
+  const screenshotSection = document.getElementById('screenshotSection');
   const orDivider = dropZone.nextElementSibling;
   const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
+  const statusDiv = document.getElementById('uploadStatus');
   
+  if (uploadModalTitle) uploadModalTitle.style.display = 'none';
   if (uploadDescription) uploadDescription.style.display = 'none';
   dropZone.style.display = 'none';
   uploadPreview.style.display = 'none';
+  if (screenshotSection) screenshotSection.style.display = 'none';
   if (orDivider) orDivider.style.display = 'none';
   cancelBtn.style.display = 'none';
   processBtn.style.display = 'none';
   
+  // Show loading animation
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="/loading_screen.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
+  }
+  
   try {
-    showUploadStatus('Extracting data from document...', 'info');
+    console.log('=== Expense Upload Debug Info ===');
+    console.log('File name:', uploadedFile.name);
+    console.log('File type:', uploadedFile.type);
+    console.log('File size:', uploadedFile.size, 'bytes');
     
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
@@ -1668,6 +2415,8 @@ async function processImageUpload() {
     formData.append('file', uploadedFile);
     formData.append('context', 'expense');
     
+    console.log('Sending as multipart/form-data with context: expense');
+    
     const response = await fetch('/api/extract-receipt', {
       method: 'POST',
       headers: {
@@ -1676,14 +2425,20 @@ async function processImageUpload() {
       body: formData
     });
     
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Failed to process' }));
+      console.log('Error data:', errorData);
       throw new Error(errorData.error || 'Failed to extract data from image');
     }
     
     const result = await response.json();
+    console.log('Success response:', result);
     
     if (result.success && result.data) {
+      console.log('Extracted expense data:', result.data);
       showUploadStatus('Data extracted successfully!', 'success');
       setTimeout(() => {
         closeImageUploadModal();
@@ -1692,17 +2447,33 @@ async function processImageUpload() {
     }
   } catch (error) {
     console.error('Error processing upload:', error);
-    showUploadStatus(error.message, 'error');
     
-    // Reset UI on error
+    // Restore UI on error
+    const uploadModalTitle = document.getElementById('uploadModalTitle');
+    const uploadDescription = document.getElementById('uploadDescription');
+    const dropZone = document.getElementById('dropZone');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const screenshotSection = document.getElementById('screenshotSection');
+    const orDivider = dropZone.nextElementSibling;
+    const processBtn = document.getElementById('processImageBtn');
+    const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    if (uploadModalTitle) uploadModalTitle.style.display = '';
     if (uploadDescription) uploadDescription.style.display = 'block';
     dropZone.style.display = 'block';
     uploadPreview.style.display = 'block';
+    if (screenshotSection) screenshotSection.style.display = 'block';
     if (orDivider) orDivider.style.display = 'block';
     cancelBtn.style.display = 'block';
     processBtn.style.display = 'block';
-    processBtn.textContent = originalText;
+    processBtn.textContent = 'Process';
     processBtn.disabled = false;
+    
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      showUploadStatus(error.message || 'Failed to process document. Please try again.', 'error');
+    }
   }
 }
 

@@ -1442,13 +1442,34 @@ function render() {
         }
     } else if (currentView === 'list') {
         const tbody = document.getElementById('tableBody');
+        const tableContainer = document.getElementById('listView');
+        
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <p style="font-size: 18px; margin-bottom: 8px;">No recipes yet</p>
-                <p style="margin-bottom: 20px;">Combine ingredients into a finished product</p>
-                <button onclick="openBuilder()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ Create Recipe</button>
-            </td></tr>`;
+            const isFirstTime = !recipes || recipes.length === 0;
+            tableContainer.style.display = 'none';
+            
+            // Show empty state outside table
+            if (!document.getElementById('emptyStateList')) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.id = 'emptyStateList';
+                emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+                emptyDiv.innerHTML = isFirstTime ? `
+                    <img src="/cat_no_orders.png" alt="No recipes" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+                    <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No recipes yet</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Combine ingredients into a finished product</p>
+                    <button onclick="openBuilder()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Create Recipe</button>
+                ` : `
+                    <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+                    <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No recipes match your search</p>
+                `;
+                tableContainer.parentElement.appendChild(emptyDiv);
+            }
         } else {
+            // Remove empty state if it exists
+            const emptyState = document.getElementById('emptyStateList');
+            if (emptyState) emptyState.remove();
+            
+            tableContainer.style.display = 'block';
             const favRows = allData.filter(r => r.is_favorite);
             const otherRows = allData.filter(r => !r.is_favorite);
             const allRows = [...favRows, ...otherRows];
@@ -1698,6 +1719,13 @@ async function toggleFavorite(id) {
   renderIngredientList();
 }
 
+// Canonical category order (matches ALL_SYSTEM_CATEGORIES in category-filter.js)
+const _recipeCategories = [
+  'Apparel', 'Wood', 'Boxes', 'Cards', 'Plants', 'Candy', 'Beverage', 'Jewelry',
+  'Party Supplies', 'Gaming', 'Toys', 'Office Supplies', 'Colors', 'Rope', 'Paper',
+  'Spool', 'Letter', 'Giveaway', 'Electronics', 'Printing Supplies', 'Tools', 'Packaging', 'Food'
+];
+
 const _recipeCategIconMap = {
   'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
   'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
@@ -1757,7 +1785,9 @@ function toggleRecipeAttrFilter(value) {
 }
 
 function renderRecipeCatChips() {
-  const presentCats = [...new Set(ingredientData.map(i => i.category).filter(Boolean))];
+  const presentCatsSet = new Set(ingredientData.map(i => i.category).filter(Boolean));
+  // Use canonical order, but only show categories that exist in ingredient data
+  const presentCats = _recipeCategories.filter(cat => presentCatsSet.has(cat));
   const chips = presentCats.map(cat => {
     const icon = _recipeCategIconMap[cat] || 'tag';
     const selected = recipeActiveCategoryFilter === cat;
@@ -3389,8 +3419,16 @@ function showUploadStatus(message, type) {
 </footer>
 
 <div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
-  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;background:transparent;" loop autoplay></lottie-player>
+  <lottie-player renderer="svg" background="transparent" speed="1" style="width:320px;height:320px;background:transparent !important;" loop autoplay></lottie-player>
 </div>
+<style>
+#globalLoader lottie-player,
+#globalLoader lottie-player *,
+#globalLoader lottie-player svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+</style>
 </div>
 
 <script>

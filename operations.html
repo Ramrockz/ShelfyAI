@@ -1388,8 +1388,9 @@
   .recipe-pick-card:hover { border-color: var(--accent); }
   .recipe-pick-card.selected { border-color: #06b6d4; background: rgba(6,182,212,0.07); }
   .recipe-pick-card .card-name { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; margin: 0; padding-right: 0; }
-  .recipe-pick-card .card-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
-  .recipe-pick-card .card-status { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block; flex-shrink: 0; }
+  .recipe-pick-card .card-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
+  .recipe-pick-card .card-status { display: none; /* Hidden per user request */ font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+  .recipe-pick-card .stock-pill { display: none; /* Hidden per user request */ }
   .picker-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .picker-dot.green  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
   .picker-dot.orange { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
@@ -1404,12 +1405,13 @@
   .inv-toggle input:checked + .inv-slider { background:var(--accent); }
   .inv-toggle input:checked + .inv-slider:before { transform:translateX(20px); }
   .recipe-pick-card .fav-btn {
+    display: none; /* Hidden per user request */
     font-size: 16px; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
     color: var(--text-muted); opacity: 0.5; transition: opacity 0.2s, color 0.2s, transform 0.2s;
   }
   .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
   .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
-  .recipe-pick-card.cant-build { opacity: 0.6; cursor: pointer; }
+  .recipe-pick-card.cant-build { cursor: pointer; /* No grey-out per user request */ }
   .recipe-oos-toast {
     position: fixed; z-index: 99999;
     background: #1e293b; color: #f87171;
@@ -1441,7 +1443,7 @@
     margin-bottom: 6px;
   }
   .added-recipe-row .ar-name { flex: 1; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .added-recipe-row .ar-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .added-recipe-row .ar-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
   .added-recipe-row .ar-qty-btn {
     width: 32px; height: 32px; border-radius: 50%;
     border: 1px solid rgba(6,182,212,0.4); background: var(--bg-main);
@@ -3002,30 +3004,15 @@ function showImportStatus(message, type) {
         <label for="mapped_customer">Customer Name *</label>
         <input type="text" id="mapped_customer" required placeholder="e.g., John Smith, ABC Company">
       </div>
-      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div class="form-row">
         <div class="form-group" style="margin-bottom: 0;">
           <label for="mapped_reference">Order Reference</label>
           <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="mapped_status">Status</label>
-          <select id="mapped_status">
-            <option value="processed" selected>Processed</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="shipped">Shipped</option>
-          </select>
-        </div>
       </div>
     </div>
 
-    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600;">Total Revenue:</span>
-        <span id="mappedTotalRevenue" style="font-size: 20px; font-weight: 700; color: var(--accent);">$0.00</span>
-      </div>
-    </div>
-
-    <div style="display: flex; gap: 12px;">
+    <div style="display: flex; gap: 12px; margin-top: 16px;">
       <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
       <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
     </div>
@@ -3988,18 +3975,22 @@ function renderMappedItems() {
     const item = mapping.itemData;
     const selected = mapping.selectedRecipe;
     const matches = mapping.matches || [];
+    // Clean item name by removing quantity prefixes like "x1", "1x", "2x", etc.
+    const cleanName = item.name.replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+    // Use selected recipe's retail price if available, otherwise use item price
+    const displayPrice = selected ? (selected.retail_price || selected.cost * 1.6 || 0) : (item.price || 0);
     
     return `
       <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
           <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${item.name}</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${cleanName}</div>
             <div style="font-size: 13px; color: var(--text-muted);">
               ${Object.entries(item.attributes || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || 'No attributes'}
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 14px; font-weight: 600; color: var(--accent);">$${(item.price || 0).toFixed(2)}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--accent);">$${displayPrice.toFixed(2)}</div>
           </div>
         </div>
         
@@ -4008,7 +3999,7 @@ function renderMappedItems() {
           <input 
             type="text" 
             id="recipeSearchInput_${index}"
-            placeholder="Search recipes or leave empty for custom item..."
+            placeholder="🔍 Search to change recipe or leave empty for custom item..."
             value="${selected ? selected.name : ''}"
             autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
@@ -4162,6 +4153,7 @@ function selectRecipeForMapping(index, recipeId) {
     document.getElementById(`recipeSearchInput_${index}`).value = match.recipe.name;
   }
   hideRecipeDropdown(index);
+  renderMappedItems(); // Re-render to update price
   updateMappedTotal();
 }
 
@@ -4182,6 +4174,7 @@ async function selectRecipeForMappingById(index, recipeId) {
     }
     
     hideRecipeDropdown(index);
+    renderMappedItems(); // Re-render to update price
     updateMappedTotal();
   } catch (error) {
     console.error('Error selecting recipe:', error);
@@ -4288,7 +4281,7 @@ async function confirmMappedOrder() {
       total_quantity: totalQuantity,
       revenue: totalRevenue,
       order_reference: orderReference,
-      status: document.getElementById('mapped_status').value,
+      status: 'processed',
       custom_attributes: mappedOrderData.attributes || {}
     };
     
@@ -5271,13 +5264,7 @@ function _renderRecipeCard(recipe) {
   const cantBuild = status === 'out';
   return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
       onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price});${cantBuild ? 'showOosToast(event)' : ''}">
-    <button class="fav-btn${isFav ? ' is-fav' : ''}"
-      onclick="event.stopPropagation();toggleOrderFavorite('${recipe.id}')"
-      style="pointer-events:auto"
-      title="Favorite">${isFav ? '★' : '☆'}</button>
     <div class="card-name">${recipe.name}</div>
-    <div class="card-price">$${price.toFixed(2)}</div>
-    ${badge}
   </div>`;
 }
 
@@ -5288,7 +5275,6 @@ function _renderAddedSection() {
     ${orderRecipes.map(r => `
       <div class="added-recipe-row" id="arr-${r.id}">
         <span class="ar-name">${r.name}</span>
-        <span class="ar-price" id="arp-${r.id}">$${(r.price * r.quantity).toFixed(2)}</span>
         <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">−</button>
         <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
         <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
@@ -5309,7 +5295,7 @@ async function renderOrderRecipeSections(filtered) {
       html += `<div class="recipe-section-title">Search Results</div>
         <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
     } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">No recipes match your search</div>';
+      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No recipes match your search</p></div>';
     }
     body.innerHTML = html;
     return;
@@ -6163,8 +6149,16 @@ document.addEventListener('keydown', (e) => {
 
 
 <div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
-  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;background:transparent;" loop autoplay></lottie-player>
+  <lottie-player renderer="svg" background="transparent" speed="1" style="width:320px;height:320px;background:transparent !important;" loop autoplay></lottie-player>
 </div>
+<style>
+#globalLoader lottie-player,
+#globalLoader lottie-player *,
+#globalLoader lottie-player svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+</style>
 </div>
 
 <script>

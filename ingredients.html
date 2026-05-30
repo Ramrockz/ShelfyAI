@@ -604,21 +604,6 @@
 
 
   /* ---------- MOBILE RESPONSIVE ---------- */
-  @media (max-width: 968px) {
-    /* Sidebar + main layout → stack on tablet/mobile */
-    .page {
-      grid-template-columns: 1fr;
-    }
-    
-    .sidebar {
-      border-right: none;
-      border-bottom: 1px solid var(--border);
-      padding: 20px 16px;
-    }
-    
-    .main { padding: 24px 16px; }
-  }
-  
   @media (max-width: 768px) {
     .show-more-btn { display: none !important; }
 
@@ -626,6 +611,13 @@
     .sidebar {
       display: none;
     }
+    
+    /* Single column layout */
+    .page {
+      grid-template-columns: 1fr;
+    }
+    
+    .main { padding: 24px 16px; }
 
     /* Hide chat and feedback widgets on mobile */
     #chat-widget,
@@ -3018,6 +3010,12 @@ function render() {
   
   // Update type filter cards
   renderTypeFilterCards();
+  
+  // Update category filters to show only existing categories
+  const existingCategories = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
+  if (typeof showExistingCategories === 'function') {
+    showExistingCategories(existingCategories);
+  }
 
   if (currentView === 'recent') renderRecent(filtered);
   if (currentView === 'list') renderList(filtered);
@@ -3058,6 +3056,17 @@ function addAttributeFilter(value, key = null) {
 
 function removeAttributeFilter(key) {
   delete activeAttributeFilters[key];
+  listCurrentPage = 1;
+  cardsToShow = 15;
+  render();
+}
+
+function removeAttrValueFilter(value) {
+  activeAttrValueFilters.delete(value);
+  // Update active state of chips
+  document.querySelectorAll('.attr-chip').forEach(chip => {
+    chip.classList.toggle('active', activeAttrValueFilters.has(chip.dataset.val));
+  });
   listCurrentPage = 1;
   cardsToShow = 15;
   render();
@@ -3150,18 +3159,28 @@ function renderFilterBadges() {
   
   let badges = [];
   
-  // Add attribute filter badges
+  // Add attribute filter badges from desktop navigation (key-value pairs)
   badges.push(...Object.entries(activeAttributeFilters).map(([key, value]) => `
-    <div class="filter-badge">
+    <div class="filter-badge" style="background: #8b5cf6;">
       ${escapeHtml(key)}: ${escapeHtml(value)}
       <span class="filter-badge-remove" onclick="removeAttributeFilter('${escapeHtml(key).replace(/'/g, "&#39;")}')">×</span>
     </div>
   `));
   
+  // Add attribute value filter badges from mobile multi-select (just values)
+  if (activeAttrValueFilters && activeAttrValueFilters.size > 0) {
+    badges.push(...Array.from(activeAttrValueFilters).map(value => `
+      <div class="filter-badge" style="background: #8b5cf6;">
+        ${escapeHtml(value)}
+        <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">×</span>
+      </div>
+    `));
+  }
+  
   // Add category filter badge
   if (activeCategoryFilter) {
     badges.push(`
-      <div class="filter-badge" style="background: var(--accent);">
+      <div class="filter-badge">
         ${escapeHtml(activeCategoryFilter)}
         <span class="filter-badge-remove" onclick="removeCategoryFilter()">×</span>
       </div>
@@ -3172,7 +3191,7 @@ function renderFilterBadges() {
   if (activeStatusFilter) {
     const statusLabels = { 'in': 'In Stock', 'low': 'Low Stock', 'out': 'Out of Stock' };
     badges.push(`
-      <div class="filter-badge" style="background: var(--accent);">
+      <div class="filter-badge">
         ${statusLabels[activeStatusFilter]}
         <span class="filter-badge-remove" onclick="removeStatusFilter()">×</span>
       </div>
@@ -3182,7 +3201,7 @@ function renderFilterBadges() {
   // Add delivery filter badge
   if (activeDeliveryFilter) {
     badges.push(`
-      <div class="filter-badge" style="background: var(--accent);">
+      <div class="filter-badge">
         ${escapeHtml(activeDeliveryFilter)}
         <span class="filter-badge-remove" onclick="removeDeliveryFilter()">×</span>
       </div>
@@ -3192,7 +3211,7 @@ function renderFilterBadges() {
   // Add type filter badge
   if (activeTypeFilter) {
     badges.push(`
-      <div class="filter-badge" style="background: var(--accent);">
+      <div class="filter-badge">
         ${escapeHtml(activeTypeFilter)}
         <span class="filter-badge-remove" onclick="removeTypeFilter()">×</span>
       </div>
@@ -3252,12 +3271,20 @@ function renderRecent(data) {
     // Hide filters when no ingredients
     const sidebar = document.querySelector('.sidebar');
     const mobileFilters = document.querySelector('.mobile-type-filters');
+    const pageContainer = document.querySelector('.page');
+    
     if (isFirstTime) {
       if (sidebar) sidebar.style.display = 'none';
       if (mobileFilters) mobileFilters.style.display = 'none';
+      // Adjust grid layout to single column when sidebar is hidden
+      if (pageContainer) pageContainer.style.gridTemplateColumns = '1fr';
     } else {
       if (sidebar) sidebar.style.display = '';
       if (mobileFilters) mobileFilters.style.display = '';
+      // Restore grid layout when showing filters
+      if (pageContainer && window.innerWidth > 968) {
+        pageContainer.style.gridTemplateColumns = '';
+      }
     }
     
     container.innerHTML = isFirstTime ? `
@@ -3279,8 +3306,14 @@ function renderRecent(data) {
   // Show filters when ingredients exist
   const sidebar = document.querySelector('.sidebar');
   const mobileFilters = document.querySelector('.mobile-type-filters');
+  const pageContainer = document.querySelector('.page');
+  
   if (sidebar) sidebar.style.display = '';
   if (mobileFilters) mobileFilters.style.display = '';
+  // Restore grid layout when showing sidebar
+  if (pageContainer && window.innerWidth > 968) {
+    pageContainer.style.gridTemplateColumns = '';
+  }
   
   // Restore FAB when data is present
   const fab = document.querySelector('.fab');
@@ -3428,17 +3461,45 @@ function renderList(data) {
   }
   
   if (data.length === 0) {
+    const isFirstTime = !ingredients || ingredients.length === 0;
     tableContainer.style.display = 'none';
     paginationContainer.style.display = 'none';
+    
+    // Hide/show filters based on first-time state
+    const sidebar = document.querySelector('.sidebar');
+    const mobileFilters = document.querySelector('.mobile-type-filters');
+    const pageContainer = document.querySelector('.page');
+    const fab = document.querySelector('.fab');
+    
+    if (isFirstTime) {
+      if (sidebar) sidebar.style.display = 'none';
+      if (mobileFilters) mobileFilters.style.display = 'none';
+      if (fab) fab.style.display = 'none';
+      // Adjust grid layout to single column when sidebar is hidden
+      if (pageContainer) pageContainer.style.gridTemplateColumns = '1fr';
+    } else {
+      if (sidebar) sidebar.style.display = '';
+      if (mobileFilters) mobileFilters.style.display = '';
+      if (fab) fab.style.display = '';
+      // Restore grid layout when showing filters
+      if (pageContainer && window.innerWidth > 968) {
+        pageContainer.style.gridTemplateColumns = '';
+      }
+    }
+    
     // Show empty state
     if (!document.getElementById('emptyStateList')) {
       const emptyDiv = document.createElement('div');
       emptyDiv.id = 'emptyStateList';
       emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
-      emptyDiv.innerHTML = `
-        <h3 style="margin-top:0; margin-bottom: 16px; font-size: 18px; color: var(--text-main);">Add Ingredient</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
-        <button onclick="openModal()" style="padding: 16px 32px; font-size: 14px; font-weight: 600; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">+ New Ingredient</button>
+      emptyDiv.innerHTML = isFirstTime ? `
+        <img src="/cat_no_orders.png" alt="No ingredients" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+        <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Add your first ingredient to start tracking inventory</p>
+        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
+      ` : `
+        <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No ingredients match your search</p>
       `;
       tableContainer.parentElement.appendChild(emptyDiv);
     }
@@ -3448,6 +3509,20 @@ function renderList(data) {
   // Remove empty state if it exists
   const emptyState = document.getElementById('emptyStateList');
   if (emptyState) emptyState.remove();
+  
+  // Show filters when ingredients exist
+  const sidebar = document.querySelector('.sidebar');
+  const mobileFilters = document.querySelector('.mobile-type-filters');
+  const pageContainer = document.querySelector('.page');
+  const fab = document.querySelector('.fab');
+  
+  if (sidebar) sidebar.style.display = '';
+  if (mobileFilters) mobileFilters.style.display = '';
+  if (fab) fab.style.display = '';
+  // Restore grid layout when showing sidebar
+  if (pageContainer && window.innerWidth > 968) {
+    pageContainer.style.gridTemplateColumns = '';
+  }
   
   tableContainer.style.display = 'block';
   paginationContainer.style.display = 'flex';
@@ -4619,8 +4694,16 @@ document.addEventListener('keydown', (e) => {
 
 
 <div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
-  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;background:transparent;" loop autoplay></lottie-player>
+  <lottie-player renderer="svg" background="transparent" speed="1" style="width:320px;height:320px;background:transparent !important;" loop autoplay></lottie-player>
 </div>
+<style>
+#globalLoader lottie-player,
+#globalLoader lottie-player *,
+#globalLoader lottie-player svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+</style>
 </div>
 
 <script>

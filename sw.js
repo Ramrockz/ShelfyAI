@@ -70,7 +70,8 @@ self.addEventListener('fetch', (event) => {
       // Always fetch from network to keep cache fresh
       const networkFetch = fetch(event.request).then((response) => {
         if (response && response.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+          const clonedResponse = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clonedResponse));
         }
         return response;
       });

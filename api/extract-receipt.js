@@ -143,7 +143,7 @@ module.exports = async (req, res) => {
   order_reference (ID or reference number for the purchase)
   date (purchase date or invoice date)
   revenue (total purchase amount)
-  item {
+  item []{
     name 
     quantity (quantity ordered)
   }
@@ -159,7 +159,7 @@ module.exports = async (req, res) => {
   vendor (supplier name or vendor name)
   date (purchase date or invoice date)
   amount (total cost)
-  item {
+  item []{
     name (ingredient or material name)
     price (unit cost)
     shipping_time (estimated delivery in days)

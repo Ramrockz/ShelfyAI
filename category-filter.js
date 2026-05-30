@@ -88,13 +88,14 @@ async function applyPersonalizedCategories() {
 }
 
 // Filter category chips to only show allowed categories
+// Only applies to modal chips (.ing-cat-chip, .cat-chip, .ops-cat-chip)
+// Main page filters (.mobile-type-filter) should show only existing categories
 function filterCategoryChips(allowedCategories) {
-  // Find all category chips across different page types
+  // Find only modal category chips, NOT main page filters
   const chipSelectors = [
-    '.ing-cat-chip',      // ingredients.html
+    '.ing-cat-chip',      // ingredients.html modal
     '.cat-chip',          // ingredient-detail.html
-    '.ops-cat-chip',      // operations.html
-    '.mobile-type-filter' // mobile filters
+    '.ops-cat-chip'       // operations.html modal
   ];
   
   chipSelectors.forEach(selector => {
@@ -114,12 +115,12 @@ function filterCategoryChips(allowedCategories) {
 }
 
 // Show all categories (when personalized filtering is disabled)
+// Only applies to modal chips, NOT main page filters
 function showAllCategories() {
   const chipSelectors = [
     '.ing-cat-chip',
     '.cat-chip',
-    '.ops-cat-chip',
-    '.mobile-type-filter'
+    '.ops-cat-chip'
   ];
   
   chipSelectors.forEach(selector => {
@@ -127,6 +128,20 @@ function showAllCategories() {
     chips.forEach(chip => {
       chip.style.display = '';
     });
+  });
+}
+
+// Show only categories that exist in current ingredients
+// This is for main page filters (.mobile-type-filter)
+function showExistingCategories(existingCategories) {
+  const filters = document.querySelectorAll('.mobile-type-filter');
+  filters.forEach(filter => {
+    const categoryValue = filter.getAttribute('data-cat');
+    if (existingCategories.includes(categoryValue)) {
+      filter.style.display = '';
+    } else {
+      filter.style.display = 'none';
+    }
   });
 }
 

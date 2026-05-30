@@ -112,6 +112,12 @@
   .status-shipped { background: rgba(16, 185, 129, 0.1); color: #10b981; }
   .status-refunded { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
+  .card-small .divider { height: 1px; background: var(--border); margin: 0 0 16px 0; }
+  .card-actions { display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
+  .card-actions span { cursor: pointer; text-transform: uppercase; }
+  .card-actions .edit-link { color: var(--accent); }
+  .card-actions .delete-link { color: var(--danger); }
+
   /* ---------- LIST VIEW (TABLE) ---------- */
   .table-container {
     background: var(--bg-panel);
@@ -608,8 +614,9 @@
   .recipe-pick-card:hover { border-color: var(--accent); }
   .recipe-pick-card.selected { border-color: #06b6d4; background: rgba(6,182,212,0.07); }
   .recipe-pick-card .card-name { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; margin: 0; padding-right: 0; }
-  .recipe-pick-card .card-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
-  .recipe-pick-card .card-status { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block; flex-shrink: 0; }
+  .recipe-pick-card .card-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
+  .recipe-pick-card .card-status { display: none; /* Hidden per user request */ font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+  .recipe-pick-card .stock-pill { display: none; /* Hidden per user request */ }
   .picker-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .picker-dot.green  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
   .picker-dot.orange { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
@@ -624,12 +631,13 @@
   .inv-toggle input:checked + .inv-slider { background:var(--accent); }
   .inv-toggle input:checked + .inv-slider:before { transform:translateX(20px); }
   .recipe-pick-card .fav-btn {
+    display: none; /* Hidden per user request */
     font-size: 16px; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
     color: var(--text-muted); opacity: 0.5; transition: opacity 0.2s, color 0.2s, transform 0.2s;
   }
   .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
   .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
-  .recipe-pick-card.cant-build { opacity: 0.6; cursor: pointer; }
+  .recipe-pick-card.cant-build { cursor: pointer; /* No grey-out per user request */ }
   .added-recipes-section { margin-bottom: 8px; min-width: 0; overflow: hidden; }
   .added-recipe-row {
     display: flex; align-items: center; gap: 10px;
@@ -643,7 +651,7 @@
     overflow: hidden;
   }
   .added-recipe-row .ar-name { flex: 1; font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; word-break: normal !important; overflow-wrap: normal !important; }
-  .added-recipe-row .ar-price { font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .added-recipe-row .ar-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
   .added-recipe-row .ar-qty-btn {
     width: 26px; height: 26px; border-radius: 50%;
     border: 1px solid rgba(6,182,212,0.4); background: var(--bg-main);
@@ -1040,7 +1048,6 @@
         <div class="view-switcher">
           <button class="view-btn active" id="recentBtn" onclick="switchView('recent')">Cards</button>
           <button class="view-btn" id="listBtn" onclick="switchView('list')">List</button>
-          <button class="view-btn" id="kanbanBtn" onclick="switchView('kanban')">Kanban</button>
         </div>
       </div>
       <input type="text" id="searchInput" placeholder="Search orders..." style="padding: 10px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; width: 480px;" oninput="render()" />
@@ -1182,8 +1189,8 @@
     <p style="color: var(--text-muted); margin-bottom: 24px;">Are you sure you want to delete this order? This action cannot be undone.</p>
     
     <div style="display: flex; gap: 12px;">
-      <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
       <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
     </div>
   </div>
 </div>
@@ -1258,11 +1265,9 @@ function switchView(view) {
   
   document.getElementById('recentBtn').classList.toggle('active', view === 'recent');
   document.getElementById('listBtn').classList.toggle('active', view === 'list');
-  document.getElementById('kanbanBtn').classList.toggle('active', view === 'kanban');
   
   document.getElementById('recentView').style.display = view === 'recent' ? 'grid' : 'none';
   document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-  document.getElementById('kanbanView').style.display = view === 'kanban' ? 'grid' : 'none';
   
   render();
 }
@@ -1282,7 +1287,6 @@ function render() {
 
   if (currentView === 'recent') renderRecent(filtered);
   else if (currentView === 'list') renderList(filtered);
-  else if (currentView === 'kanban') renderKanban(filtered);
 }
 
 function renderRecent(filtered) {
@@ -1315,32 +1319,26 @@ function renderRecent(filtered) {
   const hasMore = filtered.length > cardsToShow;
 
   container.innerHTML = displayData.map(order => {
-    const date = new Date(order.sale_date).toLocaleDateString();
-    const status = order.status || 'processed';
-    const trackingHTML = order.tracking_number ? 
-      `<div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; pointer-events: none;">📦 ${order.tracking_number}</div>` : '';
+    const date = new Date(order.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const orderRef = order.order_reference || `#${order.id.substring(0, 8)}`;
+    const source = order.source || 'N/A';
     
     return `
-      <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">
-        <h4>${order.customer || 'Unknown Customer'}</h4>
-        <div class="order-info">
-          <span>Source: ${order.source || 'N/A'}</span>
-          <span class="status-badge status-${status}">${status}</span>
+      <div class="card-small">
+        <h4>
+          <span class="name" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">${order.customer || 'Unknown Customer'}</span>
+        </h4>
+        <div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${date} • ${orderRef} • ${source}</div>
+        <div style="display: flex; justify-content: center; margin: 12px 0;">
+          <div style="text-align: center; cursor: pointer;" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
+            <div style="font-size: 32px; font-weight: 800; color: var(--text-main);">$${parseFloat(order.revenue || 0).toFixed(2)}</div>
+          </div>
         </div>
-        <div class="order-info">
-          <span><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></span>
-          <span>${order.order_reference || ''}</span>
-        </div>
-        ${trackingHTML}
-        <div class="order-date">${date}</div>
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
-          ${status === 'processed' ? `
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')" style="color: #22c55e; flex: 1;" title="Mark as Fulfilled"><i data-lucide="check"></i></button>
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; flex: 1;" title="Mark as Shipped"><i data-lucide="package"></i></button>
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')" style="color: #ef4444; flex: 1;" title="Mark as Refunded"><i data-lucide="undo-2"></i></button>
-          ` : status === 'fulfilled' ? `
-            <button class="btn-action" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')" style="color: #a855f7; width: 100%;" title="Mark as Shipped"><i data-lucide="package"></i></button>
-          ` : ''}
+        <div class="divider"></div>
+        <div class="card-actions">
+          <span class="edit-link" onclick="event.stopPropagation(); window.location.href='/order-detail?id=${order.id}'">Edit</span>
+          <span class="edit-link" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')">Shipped</span>
+          <span class="delete-link" onclick="event.stopPropagation(); deleteOrder('${order.id}')">Delete</span>
         </div>
       </div>
     `;
@@ -1353,7 +1351,6 @@ function renderRecent(filtered) {
       </div>
     `;
   }
-  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function showMoreOrders() {
@@ -1367,11 +1364,32 @@ function renderList(filtered) {
   const paginationContainer = document.getElementById('paginationContainer');
   
   if (filtered.length === 0) {
+    const isFirstTime = !orders || orders.length === 0;
     tableContainer.style.display = 'none';
     if (paginationContainer) paginationContainer.style.display = 'none';
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:48px 20px;"><img src="/cat_no_orders.png" alt="No orders" style="width:160px;height:auto;margin-bottom:14px;opacity:0.9;" /><p style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--text-main);">No orders yet</p><p style="margin:0 0 20px;color:var(--text-muted);">Track your customer orders and fulfillment</p><button onclick="openAddOrderModal()" style="padding:14px 28px;font-size:14px;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:10px;cursor:pointer;">+ New Order</button></td></tr>';
+    
+    // Show empty state outside table
+    if (!document.getElementById('emptyStateList')) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.id = 'emptyStateList';
+      emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
+      emptyDiv.innerHTML = isFirstTime ? `
+        <img src="/cat_no_orders.png" alt="No orders" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+        <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No orders yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track your customer orders and fulfillment</p>
+        <button onclick="openAddOrderModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ New Order</button>
+      ` : `
+        <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No orders match your search</p>
+      `;
+      tableContainer.parentElement.appendChild(emptyDiv);
+    }
     return;
   }
+  
+  // Remove empty state if it exists
+  const emptyState = document.getElementById('emptyStateList');
+  if (emptyState) emptyState.remove();
   
   tableContainer.style.display = 'block';
   if (paginationContainer) paginationContainer.style.display = 'flex';
@@ -1492,106 +1510,6 @@ function renderPaginationOrders(totalPages, totalItems) {
   }
   
   container.innerHTML = html;
-}
-
-function renderKanban(filtered) {
-  const processed = document.getElementById('processed');
-  const fulfilled = document.getElementById('fulfilled');
-  const shipped = document.getElementById('shipped');
-  const refunded = document.getElementById('refunded');
-  
-  processed.innerHTML = '';
-  fulfilled.innerHTML = '';
-  shipped.innerHTML = '';
-  refunded.innerHTML = '';
-  
-  filtered.forEach(order => {
-    const status = order.status || 'processed';
-    const date = new Date(order.sale_date).toLocaleDateString();
-    const trackingInfo = order.tracking_number ? `<p style="font-size: 10px; color: var(--accent); margin-top: 4px;">📦 ${order.tracking_number}</p>` : '';
-    const card = `
-      <div class="kanban-card" draggable="true" data-order-id="${order.id}" 
-           ondragstart="handleDragStart(event)" 
-           ondragend="event.currentTarget.style.opacity = '1'"
-           onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
-        <h5>${order.customer || 'Unknown'}</h5>
-        <p><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></p>
-        <p>Source: ${order.source || 'N/A'}</p>
-        <p>Qty: ${order.total_quantity || 0}</p>
-        <p style="font-size: 11px; margin-top: 8px;">${date}</p>
-        ${trackingInfo}
-      </div>
-    `;
-    
-    if (status === 'processed') processed.innerHTML += card;
-    else if (status === 'fulfilled') fulfilled.innerHTML += card;
-    else if (status === 'shipped') shipped.innerHTML += card;
-    else if (status === 'refunded') refunded.innerHTML += card;
-  });
-  
-  // Setup drop zones
-  setupDropZones();
-}
-
-function getOrderStatus(order) {
-  // Return the status from the database, default to 'processed'
-  return order.status || 'processed';
-}
-
-// Drag and drop functionality for kanban
-let draggedOrderId = null;
-
-function handleDragStart(event) {
-  draggedOrderId = event.currentTarget.getAttribute('data-order-id');
-  event.currentTarget.style.opacity = '0.5';
-}
-
-function setupDropZones() {
-  const zones = ['processed', 'fulfilled', 'shipped', 'refunded'];
-  
-  zones.forEach(zoneId => {
-    const zone = document.getElementById(zoneId);
-    if (!zone) return;
-    
-    zone.ondragover = (e) => {
-      e.preventDefault();
-      zone.style.background = 'rgba(6, 182, 212, 0.1)';
-    };
-    
-    zone.ondragleave = (e) => {
-      zone.style.background = '';
-    };
-    
-    zone.ondrop = async (e) => {
-      e.preventDefault();
-      zone.style.background = '';
-      
-      if (!draggedOrderId) return;
-      
-      const newStatus = zoneId;
-      
-      try {
-        const { error } = await supabase
-          .from('sales')
-          .update({ status: newStatus })
-          .eq('id', draggedOrderId);
-        
-        if (error) throw error;
-        
-        // Update local data
-        const order = orders.find(o => o.id === draggedOrderId);
-        if (order) order.status = newStatus;
-        
-        // Re-render
-        render();
-        
-      } catch (err) {
-        console.error('Error updating order status:', err);
-      }
-      
-      draggedOrderId = null;
-    };
-  });
 }
 
 function sortTable(column) {
@@ -2158,28 +2076,14 @@ document.addEventListener('keydown', (e) => {
         <label for="mapped_customer">Customer Name</label>
         <input type="text" id="mapped_customer" placeholder="e.g., John Smith, ABC Company">
       </div>
-      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div class="form-row">
         <div class="form-group" style="margin-bottom: 0;">
           <label for="mapped_reference">Order Reference</label>
           <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="mapped_status">Status</label>
-          <select id="mapped_status">
-            <option value="processed" selected>Processed</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="shipped">Shipped</option>
-          </select>
-        </div>
       </div>
     </div>
-    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600;">Total Revenue:</span>
-        <span id="mappedTotalRevenue" style="font-size: 20px; font-weight: 700; color: var(--accent);">$0.00</span>
-      </div>
-    </div>
-    <div style="display: flex; gap: 12px;">
+    <div style="display: flex; gap: 12px; margin-top: 16px;">
       <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
       <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
     </div>
@@ -2389,7 +2293,6 @@ function _renderAddedSection() {
     ${orderRecipes.map(r => `
       <div class="added-recipe-row" id="arr-${r.id}">
         <span class="ar-name">${r.name}</span>
-        <span class="ar-price" id="arp-${r.id}">$${(r.price * r.quantity).toFixed(2)}</span>
         <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">−</button>
         <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
         <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
@@ -2411,7 +2314,7 @@ async function renderOrderRecipeSections(filtered) {
       html += `<div class="recipe-section-title">Search Results</div>
         <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
     } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">No recipes match your search</div>';
+      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No recipes match your search</p></div>';
     }
     body.innerHTML = html;
     return;
@@ -3041,7 +2944,6 @@ async function showRecipeMappingModal(orderData) {
   itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching recipes...</div>';
   document.getElementById('mapped_customer').value = orderData.customer || '';
   document.getElementById('mapped_reference').value = orderData.order_reference || orderData.item?.SKU || '';
-  document.getElementById('mapped_status').value = 'processed';
   document.getElementById('recipeMappingModal').classList.add('active');
   const itemData = {
     name: orderData.item?.name || orderData.description || 'Unknown Item',
@@ -3063,18 +2965,22 @@ function renderMappedItems() {
     const item = mapping.itemData;
     const selected = mapping.selectedRecipe;
     const matches = mapping.matches || [];
+    // Clean item name by removing quantity prefixes like "x1", "1x", "2x", etc.
+    const cleanName = item.name.replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+    // Use selected recipe's retail price if available, otherwise use item price
+    const displayPrice = selected ? (selected.retail_price || selected.cost * 1.6 || 0) : (item.price || 0);
     return `
       <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
           <div style="flex:1;">
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${item.name}</div>
+            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${cleanName}</div>
             <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')||'No attributes'}</div>
           </div>
-          <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${(item.price||0).toFixed(2)}</div></div>
+          <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
         </div>
         <div style="margin-bottom:12px;position:relative;">
           <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-muted);">Matched Recipe:</label>
-          <input type="text" id="recipeSearchInput_${index}" placeholder="Search recipes or leave empty for custom item..."
+          <input type="text" id="recipeSearchInput_${index}" placeholder="🔍 Search to change recipe or leave empty for custom item..."
             value="${selected ? selected.name : ''}" autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
             onfocus="showMappingRecipeDropdown(${index})"
@@ -3152,6 +3058,7 @@ function selectRecipeForMapping(index, recipeId) {
     document.getElementById(`recipeSearchInput_${index}`).value = match.recipe.name;
   }
   hideMappingRecipeDropdown(index);
+  renderMappedItems(); // Re-render to update price
   updateMappedTotal();
 }
 
@@ -3163,6 +3070,7 @@ async function selectRecipeForMappingById(index, recipeId) {
       document.getElementById(`recipeSearchInput_${index}`).value = recipe.name;
     }
     hideMappingRecipeDropdown(index);
+    renderMappedItems(); // Re-render to update price
     updateMappedTotal();
   } catch (error) { console.error('Error selecting recipe:', error); }
 }
@@ -3223,7 +3131,7 @@ async function confirmMappedOrder() {
       total_quantity: totalQuantity,
       revenue: totalRevenue,
       order_reference: orderReference,
-      status: document.getElementById('mapped_status').value,
+      status: 'processed',
       custom_attributes: mappedOrderData?.attributes || {}
     };
     const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
@@ -3350,8 +3258,16 @@ async function submitFeedback() {
 </script>
 
 <div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
-  <lottie-player background="transparent" speed="1" style="width:320px;height:320px;background:transparent;" loop autoplay></lottie-player>
+  <lottie-player renderer="svg" background="transparent" speed="1" style="width:320px;height:320px;background:transparent !important;" loop autoplay></lottie-player>
 </div>
+<style>
+#globalLoader lottie-player,
+#globalLoader lottie-player *,
+#globalLoader lottie-player svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+</style>
 </div>
 
 <script>
