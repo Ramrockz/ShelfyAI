@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -34,9 +34,11 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
+<script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -81,11 +83,11 @@
     transition: all 0.3s ease; 
     animation: slideIn 0.3s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
   }
   .card-small:hover { 
-    border-color: var(--accent); 
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: var(--border);
   }
   
   @keyframes slideIn {
@@ -93,7 +95,8 @@
     to { opacity: 1; transform: translateY(0); }
   }
   
-  .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); transition: color 0.2s; }
+  .card-small:hover h4 { color: var(--accent); }
   .card-small .expense-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
   .card-small .expense-date { font-size: 12px; color: var(--text-muted); }
   
@@ -594,8 +597,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -699,9 +702,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -817,9 +820,9 @@
     <form id="expenseForm" onsubmit="saveExpense(event)">
       <input type="hidden" id="expense_id">
       
-      <!-- Ingredients Section -->
+      <!-- Items Section -->
       <div class="form-group">
-        <label>Ingredients</label>
+        <label>Items</label>
         
         <!-- Search at top -->
         <div style="position: relative; margin-bottom: 16px;">
@@ -829,12 +832,12 @@
             <input 
               type="text" 
               id="ingredient_search" 
-              placeholder="Search ingredients..." 
+              placeholder="Search items..."
               onfocus="showIngredientDropdownExpense()" 
               oninput="searchIngredientsExpense(); toggleSearchClear('ingredient_search')" 
               autocomplete="off"
               style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
-            <button type="button" class="search-clear" id="ingredient_search_clear" onclick="document.getElementById('ingredient_search').value = ''; searchIngredientsExpense(); this.classList.remove('visible');" title="Clear search">\u00d7</button>
+            <button type="button" class="search-clear" id="ingredient_search_clear" onclick="document.getElementById('ingredient_search').value = ''; searchIngredientsExpense(); this.classList.remove('visible');" title="Clear search">&times;</button>
           </div>
           <div id="ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
         </div>
@@ -955,13 +958,13 @@
 <div class="modal-overlay" id="ingredientMappingModal">
   <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 8px;">Match Detected Items</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Match detected items to your ingredients and set quantities.</p>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Match detected items to your inventory and set quantities.</p>
 
     <!-- Update Inventory Toggle -->
     <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
       <div>
         <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Update Inventory</div>
-        <div style="font-size: 12px; color: var(--text-muted);">Add quantities to matched ingredients</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Add quantities to matched items</div>
       </div>
       <label class="toggle-switch" style="margin: 0;">
         <input type="checkbox" id="updateInventoryToggle" checked onchange="toggleUpdateInventory()">
@@ -974,7 +977,7 @@
 
     <!-- Add Manual Ingredient Button -->
     <button type="button" onclick="addManualIngredientRow()" style="width: 100%; padding: 12px; background: var(--bg-panel); border: 2px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 20px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'">
-      + Add Manual Ingredient
+      + Add Manual Item
     </button>
 
     <div style="display:flex;gap:12px;">
@@ -984,15 +987,15 @@
   </div>
 </div>
 
-<!-- Quick Create Ingredient Modal -->
+<!-- Quick Create Item Modal -->
 <div class="modal-overlay" id="quickCreateIngredientModal">
   <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Create New Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Fill in the details to create this ingredient.</p>
-    
+    <h3 style="margin-top:0; margin-bottom: 8px;">Create New Item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Fill in the details to create this item.</p>
+
     <form id="quickIngredientForm" onsubmit="saveQuickIngredient(event)" novalidate>
       <div class="form-group">
-        <label for="quick_ing_name">Ingredient Name *</label>
+        <label for="quick_ing_name">Item Name *</label>
         <input type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
 
@@ -1157,15 +1160,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     render();
   }
   
-  // Show the page
+  // Show the page (also done early in loadExpenses when cache exists)
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
   document.documentElement.style.visibility = 'visible';
 });
 
+window.addEventListener('shelfy:synced', (e) => {
+  if (e.detail.tables.includes('expenses')) loadExpenses().catch(() => {});
+});
+
 async function loadExpenses() {
+  const _lsCached = localStorage.getItem('shelfy_cache_expenses');
+  if (_lsCached) {
+    try {
+      expenses = JSON.parse(_lsCached);
+      try { render(); } catch (e) {}
+      document.documentElement.style.visibility = 'visible';
+      const _s = document.querySelector('.sidebar');
+      const _m = document.querySelector('.main');
+      if (_s) _s.style.visibility = 'visible';
+      if (_m) _m.style.visibility = 'visible';
+    } catch (e) {}
+  }
+  if (!navigator.onLine) return;
+
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -1182,8 +1204,10 @@ async function loadExpenses() {
     if (error) throw error;
 
     expenses = data || [];
-    console.log('Loaded expenses:', expenses);
+    localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+    try { render(); } catch (e) {}
   } catch (error) {
+    if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading expenses:', error);
     alert('Failed to load expenses: ' + error.message);
   }
@@ -1263,18 +1287,28 @@ function renderRecent(filtered) {
     const date = new Date(expense.expense_date).toLocaleDateString();
     const hasReceipt = expense.receipt_url ? '📎' : '';
     
+    // Determine display name
+    let displayName = expense.description || 'Expense Purchase';
+    
+    // Date and vendor formatting
+    const dateVendorText = expense.vendor ? `${date} • ${expense.vendor}` : date;
+    
     return `
-      <div class="card-small" onclick="window.location.href='/expense-detail?id=${expense.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/expense-detail?id=${expense.id}','_blank')}" style="cursor: pointer;">
-        <h4>${expense.description || 'Untitled Expense'}</h4>
-        <div class="expense-info">
-          <span>Vendor: ${expense.vendor || 'N/A'}</span>
-          <span class="category-badge">${expense.category || 'Uncategorized'}</span>
+      <div class="card-small" style="cursor: default;">
+        <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: color 0.2s;" onclick="window.location.href='/expense-detail?id=${expense.id}'" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">${displayName}</h4>
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          ${dateVendorText}
         </div>
-        <div class="expense-info">
-          <span><strong>$${parseFloat(expense.amount || 0).toFixed(2)}</strong></span>
-          <span>${hasReceipt}</span>
+        <div style="display: flex; justify-content: center; margin: 12px 0;">
+          <div style="text-align: center;">
+            <div style="font-size: 32px; font-weight: 800; color: var(--text-main);">$${parseFloat(expense.amount || 0).toFixed(2)}</div>
+          </div>
         </div>
-        <div class="expense-date">${date}</div>
+        <div style="height: 1px; background: var(--border); margin: auto 0 16px 0;"></div>
+        <div style="display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em;">
+          <span onclick="window.location.href='/expense-detail?id=${expense.id}'" style="color: var(--accent); cursor: pointer; text-transform: uppercase;">Edit</span>
+          <span onclick="event.stopPropagation(); deleteExpense('${expense.id}')" style="color: var(--danger); cursor: pointer; text-transform: uppercase;">Delete</span>
+        </div>
       </div>
     `;
   }).join('');
@@ -1286,6 +1320,9 @@ function renderRecent(filtered) {
       </div>
     `;
   }
+  
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function showMoreExpenses() {
@@ -1372,7 +1409,7 @@ function renderList(filtered) {
       <tr onclick="window.location.href='/expense-detail?id=${expense.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/expense-detail?id=${expense.id}','_blank')}" style="cursor: pointer;">
         <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
         <td>${date}</td>
-        <td>${expense.description || 'Untitled'}</td>
+        <td>${expense.description || 'Expense Purchase'}</td>
         <td>${expense.vendor || '-'}</td>
         <td><span class="category-badge">${expense.category || 'N/A'}</span></td>
         <td><strong>$${parseFloat(expense.amount || 0).toFixed(2)}</strong></td>
@@ -1482,7 +1519,7 @@ async function openAddExpenseModal() {
   // Clear ingredient search and selection
   document.getElementById('ingredient_search').value = '';
   document.getElementById('ingredient_results').style.display = 'none';
-  document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+  document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
   
   // Render category chips and attribute filters
   renderExpenseCategoryChips();
@@ -1831,16 +1868,13 @@ function searchIngredientsExpense() {
     return true;
   });
   
-  // Show results if there are filters active OR search term
+  // Show results if there are filters active OR search term OR just show all
   const hasFilters = expenseSelectedCategory || Object.keys(expenseSelectedAttributes).length > 0 || searchTerm;
   
-  if (!hasFilters) {
-    resultsDiv.style.display = 'none';
-    return;
-  }
+  resultsDiv.style.display = 'block';
   
   if (filtered.length === 0) {
-    resultsDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:8px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:13px;margin:0;">No ingredients found</p></div>';
+    resultsDiv.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     resultsDiv.style.display = 'block';
     return;
   }
@@ -1889,6 +1923,7 @@ function addIngredientToExpense(ingredientId) {
   
   renderSelectedIngredients();
   renderRecommendedIngredients();
+  calculateExpenseTotal();
   
   // Clear search
   document.getElementById('ingredient_search').value = '';
@@ -1899,6 +1934,7 @@ function removeIngredientFromExpense(ingredientId) {
   selectedExpenseIngredients = selectedExpenseIngredients.filter(ing => ing.id !== ingredientId);
   renderSelectedIngredients();
   renderRecommendedIngredients();
+  calculateExpenseTotal();
 }
 
 function updateIngredientQuantity(ingredientId, quantity) {
@@ -1906,6 +1942,7 @@ function updateIngredientQuantity(ingredientId, quantity) {
   if (ingredient) {
     ingredient.quantity = Math.max(0, parseFloat(quantity) || 0);
     renderSelectedIngredients();
+    calculateExpenseTotal();
   }
 }
 
@@ -1919,7 +1956,28 @@ function changeIngredientQuantity(ingredientId, delta) {
     } else {
       ingredient.quantity = newQuantity;
       renderSelectedIngredients();
+      calculateExpenseTotal();
     }
+  }
+}
+
+// Calculate total expense amount based on ingredients and quantities
+function calculateExpenseTotal() {
+  let total = 0;
+  
+  selectedExpenseIngredients.forEach(selectedIng => {
+    const ingredient = allIngredients.find(ing => ing.id === selectedIng.id);
+    if (ingredient) {
+      const unitPrice = parseFloat(ingredient.cost_per_unit || ingredient.price) || 0;
+      const quantity = parseFloat(selectedIng.quantity) || 0;
+      total += unitPrice * quantity;
+    }
+  });
+  
+  // Update the amount field
+  const amountField = document.getElementById('expense_amount');
+  if (amountField) {
+    amountField.value = total.toFixed(2);
   }
 }
 
@@ -1927,7 +1985,7 @@ function renderSelectedIngredients() {
   const container = document.getElementById('selected_ingredients_list');
   
   if (selectedExpenseIngredients.length === 0) {
-    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
     return;
   }
   
@@ -1998,7 +2056,7 @@ async function editExpense(expenseId) {
     }));
     renderSelectedIngredients();
   } else {
-    document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No ingredients linked yet - required</div>';
+    document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
   }
   
   // Render category chips and attribute filters
@@ -2013,19 +2071,21 @@ async function saveExpense(event) {
 
   // Validate ingredients are linked
   if (selectedExpenseIngredients.length === 0) {
-    alert('Please link at least one ingredient to this expense');
+    alert('Please link at least one item to this expense');
     return;
   }
 
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session: _se } } = await supabaseClient.auth.getSession();
+    const user = _se?.user;
     if (!user) throw new Error('Not authenticated');
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    // Generate description from ingredient names
-    const description = selectedExpenseIngredients.map(ing => ing.name).join(', ');
+    // Generate description from vendor name or default
+    const vendor = document.getElementById('expense_vendor').value?.trim();
+    const description = vendor ? `${vendor} Purchase` : 'Expense Purchase';
 
     const expenseData = {
       profile_id: user.id,
@@ -2039,26 +2099,25 @@ async function saveExpense(event) {
       ingredients: selectedExpenseIngredients
     };
     
-    let result;
+    let savedData, savedError;
     if (editingExpenseId) {
-      // Update existing expense
-      result = await supabaseClient
-        .from('expenses')
-        .update(expenseData)
-        .eq('id', editingExpenseId)
-        .select();
+      const { data, error } = await offlineWrite('expenses', 'update', expenseData, 'id', editingExpenseId);
+      savedData = data; savedError = error;
     } else {
-      // Insert new expense
-      result = await supabaseClient
-        .from('expenses')
-        .insert([expenseData])
-        .select();
+      const { data, error } = await offlineWrite('expenses', 'insert', expenseData);
+      savedData = data; savedError = error;
     }
-    
-    if (result.error) throw result.error;
-    
-    await loadExpenses();
-    render();
+
+    if (savedError) throw savedError;
+
+    if (editingExpenseId) {
+      const e = expenses.find(e => e.id === editingExpenseId);
+      if (e) Object.assign(e, expenseData);
+    } else if (savedData && savedData[0]) {
+      expenses.unshift({ ...expenseData, id: savedData[0].id });
+    }
+    localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+    try { render(); } catch (e2) {}
     closeExpenseModal();
     
     showNotification(editingExpenseId ? 'Expense updated successfully!' : 'Expense created successfully!', 'success');
@@ -2070,27 +2129,24 @@ async function saveExpense(event) {
 
 function deleteExpense(expenseId) {
   expenseToDelete = expenseId;
-  document.getElementById('deleteModal').classList.add('active');
+  document.getElementById('deleteExpenseModal').classList.add('active');
 }
 
 function closeDeleteModal() {
   expenseToDelete = null;
-  document.getElementById('deleteModal').classList.remove('active');
+  document.getElementById('deleteExpenseModal').classList.remove('active');
 }
 
 async function confirmDelete() {
   if (!expenseToDelete) return;
   
   try {
-    const { error } = await supabaseClient
-      .from('expenses')
-      .delete()
-      .eq('id', expenseToDelete);
-    
+    const { error } = await offlineWrite('expenses', 'delete', null, 'id', expenseToDelete);
     if (error) throw error;
-    
-    await loadExpenses();
-    render();
+
+    expenses = expenses.filter(e => e.id !== expenseToDelete);
+    localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+    try { render(); } catch (e) {}
     closeDeleteModal();
     
   } catch (error) {
@@ -2622,12 +2678,12 @@ function renderDetectedItems() {
       </div>
 
       <div style="position: relative; margin-bottom: 12px;">
-        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Ingredient: <span style="color: var(--danger);">*</span></label>
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Item: <span style="color: var(--danger);">*</span></label>
         <div style="position: relative;">
           <input type="text" 
             id="ingredient_search_${index}" 
             value="${item.ingredientName}"
-            placeholder="Search ingredients..."
+            placeholder="Search items..."
             autocomplete="off"
             oninput="searchIngredientForItem(${index}, this.value)"
             onfocus="showDropdownForItem(${index})"
@@ -2790,7 +2846,7 @@ function renderDropdownForItem(index, ingredients) {
     dropdown.innerHTML = `
       <div style="text-align: center; padding: 30px 20px;">
         <img src="/cat_no_results.png" alt="No results" style="width:100px;height:auto;margin-bottom:12px;opacity:0.9;" />
-        <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px 0;">No ingredients found</p>
+        <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px 0;">No items found</p>
         <button onclick="openQuickCreateIngredient(${index}, '${detectedName.replace(/'/g, "\\'")}')"
           style="padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
           onmouseover="this.style.opacity='0.9'"
@@ -2924,7 +2980,7 @@ async function saveQuickIngredient(e) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      alert('Please log in to create ingredients');
+      alert('Please log in to create items');
       return;
     }
     
@@ -2947,7 +3003,7 @@ async function saveQuickIngredient(e) {
     
     if (error) {
       console.error('Error creating ingredient:', error);
-      alert('Failed to create ingredient. Please try again.');
+      alert('Failed to create item. Please try again.');
       return;
     }
     
@@ -2966,7 +3022,7 @@ async function saveQuickIngredient(e) {
     closeQuickCreateIngredientModal();
     
     // Show success message
-    alert('Ingredient created and mapped successfully!');
+    alert('Item created and mapped successfully!');
     
   } catch (err) {
     console.error('Error saving ingredient:', err);
@@ -3178,234 +3234,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 // === Notification System ===
-let notificationsCache = [];
-let notificationCheckInterval = null;
-
-async function initializeNotifications() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session) {
-    document.getElementById('notificationBell').style.display = 'flex';
-    await loadNotifications();
-    notificationCheckInterval = setInterval(loadNotifications, 30000);
-  }
-}
-
-async function loadNotifications() {
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    const { data: notifications, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('profile_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    
-    if (error) throw error;
-    
-    notificationsCache = notifications || [];
-    renderNotifications();
-    updateNotificationBadge();
-  } catch (error) {
-    console.error('Error loading notifications:', error);
-  }
-}
-
-function renderNotifications() {
-  const listContainer = document.getElementById('notificationList');
-  
-  if (notificationsCache.length === 0) {
-    listContainer.innerHTML = `
-      <div class="notification-empty">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-        </svg>
-        <p>No notifications</p>
-      </div>
-    `;
-    return;
-  }
-  
-  listContainer.innerHTML = notificationsCache.map(notification => `
-    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
-         data-notification-id="${notification.id}"
-         onmouseenter="markAsRead('${notification.id}')">
-      <div class="notification-message">${notification.message}</div>
-      <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
-      <div class="notification-actions">
-        ${notification.ingredient_id ? `
-          <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            <span class="truck-anim-icon truck-anim-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
-          </button>
-          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
-        ` : ''}
-        <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function updateNotificationBadge() {
-  const unreadCount = notificationsCache.filter(n => !n.is_read).length;
-  const badge = document.getElementById('notificationBadge');
-  
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    badge.style.display = 'block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-function formatNotificationTime(timestamp) {
-  const now = new Date();
-  const time = new Date(timestamp);
-  const diff = Math.floor((now - time) / 1000);
-  
-  if (diff < 60) return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
-  return time.toLocaleDateString();
-}
-
-function toggleNotifications() {
-  const dropdown = document.getElementById('notificationDropdown');
-  dropdown.classList.toggle('active');
-}
-
-document.addEventListener('click', (e) => {
-  const bell = document.getElementById('notificationBell');
-  const dropdown = document.getElementById('notificationDropdown');
-  
-  if (bell && dropdown && !bell.contains(e.target)) {
-    dropdown.classList.remove('active');
-  }
-});
-
-async function markAsRead(notificationId) {
-  const notification = notificationsCache.find(n => n.id === notificationId);
-  if (!notification || notification.is_read) return;
-  
-  try {
-    const { error } = await supabaseClient
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', notificationId);
-    
-    if (error) throw error;
-    
-    notification.is_read = true;
-    updateNotificationBadge();
-    
-    const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
-    if (item) {
-      item.classList.remove('unread');
-    }
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-  }
-}
-
-async function markAllAsRead() {
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
-    if (unreadIds.length === 0) return;
-    
-    const { error } = await supabaseClient
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .in('id', unreadIds);
-    
-    if (error) throw error;
-    
-    notificationsCache.forEach(n => {
-      if (!n.is_read) n.is_read = true;
-    });
-    
-    renderNotifications();
-    updateNotificationBadge();
-    
-    if (typeof showNotification === 'function') {
-      showNotification('All notifications marked as read', 'success');
-    }
-  } catch (error) {
-    console.error('Error marking all as read:', error);
-  }
-}
-
-async function deleteNotification(notificationId) {
-  try {
-    const { error } = await supabaseClient
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-    
-    if (error) throw error;
-    
-    notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
-    
-    renderNotifications();
-    updateNotificationBadge();
-  } catch (error) {
-    console.error('Error deleting notification:', error);
-  }
-}
-
-function openIngredient(ingredientId) {
-  window.location.href = `/ingredient-detail?id=${ingredientId}`;
-}
-
-async function restockIngredient(ingredientId, notificationId) {
-  // Navigate to ingredient detail page with openReorder parameter
-  window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
-}
-
-async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
-  try {
-    const { data: existing, error: checkError } = await supabaseClient
-      .from('notifications')
-      .select('id')
-      .eq('profile_id', userId)
-      .eq('ingredient_id', ingredientId)
-      .eq('type', 'ingredient_out_of_stock')
-      .eq('is_read', false);
-    
-    if (checkError) throw checkError;
-    
-    if (existing && existing.length > 0) return;
-    
-    const { error: insertError } = await supabaseClient
-      .from('notifications')
-      .insert([{
-        profile_id: userId,
-        type: 'ingredient_out_of_stock',
-        ingredient_id: ingredientId,
-        message: `Ingredient ${ingredientName} has run out of stock`,
-        is_read: false
-      }]);
-    
-    if (insertError) throw insertError;
-    
-    await loadNotifications();
-  } catch (error) {
-    console.error('Error creating notification:', error);
-  }
-}
-
-async function checkIngredientStock(ingredientId, quantity, ingredientName, userId) {
-  if (quantity <= 0) {
-    await createOutOfStockNotification(ingredientId, ingredientName, userId);
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('load', initializeNotifications);
-}
+// All notification functions are handled by notifications.js
+// No duplicate functions needed here
 </script>
 
 <div id="globalLoader" style="display:none; position:fixed; inset:0; background:transparent; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); z-index:99999; align-items:center; justify-content:center;">
@@ -3442,8 +3272,8 @@ function hideGlobalLoader(){document.getElementById('globalLoader').style.displa
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>

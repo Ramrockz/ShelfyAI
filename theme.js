@@ -10,8 +10,12 @@
   // Try to load user-specific theme preference from database
   async function loadTheme() {
     try {
+      // Theme is already applied from localStorage above; the DB sync only
+      // matters cross-device and needs the network. Skip it entirely offline.
+      if (!navigator.onLine) return;
       if (typeof supabaseClient !== 'undefined') {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const user = session?.user;
         if (user) {
           // Try to load from database
           const { data: settings } = await supabaseClient

@@ -5,11 +5,11 @@
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`
     },
     {
-      href: '/ingredients', page: 'ingredients', label: 'Ingredients',
+      href: '/ingredients', page: 'ingredients', label: 'Inventory',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
     },
     {
-      href: '/recipes', page: 'recipes', label: 'Recipes',
+      href: '/recipes', page: 'recipes', label: 'Products',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`
     },
     {
@@ -40,10 +40,10 @@
 
   const pageTitleMap = {
     'operations': 'Dashboard',
-    'ingredients': 'Ingredients',
-    'ingredient-detail': 'Ingredient',
-    'recipes': 'Recipes',
-    'recipe-detail': 'Recipe',
+    'ingredients': 'Inventory',
+    'ingredient-detail': 'Inventory',
+    'recipes': 'Products',
+    'recipe-detail': 'Product',
     'orders': 'Orders',
     'order-detail': 'Order',
     'expenses': 'Expenses',

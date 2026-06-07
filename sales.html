@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -33,6 +33,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
@@ -225,8 +226,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/sales" class="nav-link" data-page="sales">Sales</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -301,9 +302,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -400,11 +401,22 @@ let currentEditSaleId = null;
 let currentDeleteSaleId = null;
 
 async function loadSales() {
+  const _lsCached = localStorage.getItem('shelfy_cache_sales');
+  if (_lsCached) {
+    try {
+      allSales = JSON.parse(_lsCached);
+      try { renderSales(); } catch (e) {}
+      try { updateStats(); } catch (e) {}
+      document.documentElement.style.visibility = 'visible';
+    } catch (e) {}
+  }
+  if (!navigator.onLine) return;
+
   try {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
-    // Load real data from Supabase
     const { data, error } = await window.supabaseClient
       .from('sales')
       .select('*')
@@ -414,19 +426,21 @@ async function loadSales() {
     if (error) throw error;
 
     allSales = data || [];
-    
-    renderSales();
-    updateStats();
+    localStorage.setItem('shelfy_cache_sales', JSON.stringify(allSales));
+    try { renderSales(); } catch (e) {}
+    try { updateStats(); } catch (e) {}
   } catch (error) {
+    if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading sales:', error);
     allSales = [];
-    renderSales();
-    updateStats();
+    try { renderSales(); } catch (e) {}
+    try { updateStats(); } catch (e) {}
   }
 }
 
 function renderSales() {
   const tbody = document.querySelector('#salesTable tbody');
+  if (!tbody) return;
   
   if (allSales.length === 0) {
     tbody.innerHTML = `
@@ -587,22 +601,21 @@ async function saveEditSale() {
       }
     });
     
-    const { error } = await window.supabaseClient
-      .from('sales')
-      .update({
-        customer: customer,
-        revenue: revenue,
-        status: status,
-        order_reference: orderReference || null,
-        custom_attributes: Object.keys(customAttrs).length > 0 ? customAttrs : null
-      })
-      .eq('id', currentEditSaleId);
-    
+    const updatePayload = {
+      customer, revenue, status,
+      order_reference: orderReference || null,
+      custom_attributes: Object.keys(customAttrs).length > 0 ? customAttrs : null
+    };
+    const { error } = await offlineWrite('sales', 'update', updatePayload, 'id', currentEditSaleId);
     if (error) throw error;
-    
+
+    const s = allSales.find(s => s.id === currentEditSaleId);
+    if (s) Object.assign(s, updatePayload);
+    localStorage.setItem('shelfy_cache_sales', JSON.stringify(allSales));
     alert('Sale updated successfully');
     closeEditSaleModal();
-    await loadSales();
+    try { renderSales(); } catch (e) {}
+    try { updateStats(); } catch (e) {}
   } catch (error) {
     console.error('Error updating sale:', error);
     alert('Failed to update sale: ' + error.message);
@@ -624,15 +637,14 @@ async function confirmDeleteSale() {
   if (!currentDeleteSaleId) return;
   
   try {
-    const { error } = await window.supabaseClient
-      .from('sales')
-      .delete()
-      .eq('id', currentDeleteSaleId);
-    
+    const { error } = await offlineWrite('sales', 'delete', null, 'id', currentDeleteSaleId);
     if (error) throw error;
-    
+
+    allSales = allSales.filter(s => s.id !== currentDeleteSaleId);
+    localStorage.setItem('shelfy_cache_sales', JSON.stringify(allSales));
     closeDeleteSaleModal();
-    await loadSales();
+    try { renderSales(); } catch (e) {}
+    try { updateStats(); } catch (e) {}
   } catch (error) {
     console.error('Error deleting sale:', error);
     alert('Failed to delete sale: ' + error.message);
@@ -668,11 +680,13 @@ if (searchInput) {
 // Load sales when Supabase is ready
 if (typeof window.supabaseClient !== 'undefined') {
   window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      loadSales();
-    }
+    if (session) loadSales();
   });
 }
+
+window.addEventListener('shelfy:synced', (e) => {
+  if (e.detail.tables.includes('sales')) loadSales().catch(() => {});
+});
 
 // Auto-highlight active page in navigation
 (function() {
@@ -908,8 +922,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>

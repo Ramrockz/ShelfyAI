@@ -39,6 +39,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="cookie-consent.js"></script>
 <script src="mobile-menu.js"></script>
@@ -1600,8 +1601,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -1766,20 +1767,20 @@
   <section class="core-actions">
     <div class="action-card">
       <div class="action-card-header">
-        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/128/17577/17577151.png" alt="Create Ingredient" width="32" height="32"></span>
-        <h3>Create Ingredient</h3>
+        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/128/17577/17577151.png" alt="Create Item" width="32" height="32"></span>
+        <h3>Create Item</h3>
       </div>
-      <p>Ingredients are the backbone of your inventory. They will be used to build a recipe.</p>
-      <button class="btn-action btn-action-cyan" onclick="openMethodModal()">+ New Ingredient</button>
+      <p>Items are the backbone of your inventory. They will be used to build a product.</p>
+      <button class="btn-action btn-action-cyan" onclick="openMethodModal()">+ New Item</button>
     </div>
 
     <div class="action-card">
       <div class="action-card-header">
-        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/941/941085.png" alt="Build Recipe" width="32" height="32"></span>
-        <h3>Build Recipe</h3>
+        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/941/941085.png" alt="Build Product" width="32" height="32"></span>
+        <h3>Build Product</h3>
       </div>
-      <p>Add all ingredients needed for your final product and select recipes when processing orders.</p>
-      <button class="btn-action btn-action-cyan" onclick="openRecipeBuilder()">+ New Recipe</button>
+      <p>Add all items needed for your final product and select products when processing orders.</p>
+      <button class="btn-action btn-action-cyan" onclick="openRecipeBuilder()">+ New Product</button>
     </div>
 
     <div class="action-card">
@@ -1787,7 +1788,7 @@
         <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/9422/9422482.png" alt="Process Order" width="32" height="32"></span>
         <h3>Process Order</h3>
       </div>
-      <p>Enter an order and update your inventory based on the recipe involved</p>
+      <p>Enter an order and update your inventory based on the product involved</p>
       <button class="btn-action btn-action-cyan" onclick="openOrderMethodModal()">+ New Order</button>
     </div>
 
@@ -1796,8 +1797,8 @@
         <span class="icon"><img src="https://cdn-icons-png.flaticon.com/128/9252/9252074.png" alt="Track Expenses" width="32" height="32"></span>
         <h3>Track Expenses</h3>
       </div>
-      <p>Increase your inventory buy tracking what ingredients you bought</p>
-      <button class="btn-action btn-action-cyan" onclick="openImageUploadModal('ingredient')">+ New Expense</button>
+      <p>Increase your inventory buy tracking what items you bought</p>
+      <button class="btn-action btn-action-cyan" onclick="openImageUploadModal('item')">+ New Expense</button>
     </div>
   </section>
 
@@ -1890,69 +1891,82 @@ function resolveConfirm(result) {
   }
 
   // Load and display inventory status counts
-  async function loadInventoryStatus() {
-    const skeletonPill = '<span class="skeleton-line" style="width:32px; height:32px; display:inline-block; border-radius:6px; vertical-align:middle;"></span>';
+  function _renderInventoryStatus(ingredients) {
+    const outItems = ingredients.filter(i => (parseFloat(i.quantity) || 0) === 0);
+    const lowItems = ingredients.filter(i => {
+      const qty = parseFloat(i.quantity) || 0;
+      const min = parseFloat(i.min_stock) || 0;
+      return qty > 0 && min > 0 && qty < min;
+    });
     const outEl = document.getElementById('outOfStockCount');
     const lowEl = document.getElementById('lowStockCount');
-    if (outEl) outEl.innerHTML = skeletonPill;
-    if (lowEl) lowEl.innerHTML = skeletonPill;
+    if (outEl) outEl.textContent = outItems.length;
+    if (lowEl) lowEl.textContent = lowItems.length;
+    const alertsEl = document.getElementById('mobileStockAlerts');
+    if (alertsEl) {
+      if (outItems.length === 0 && lowItems.length === 0) {
+        alertsEl.innerHTML = '';
+      } else {
+        const row = (ing, isOut) => `
+          <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
+            <span class="stock-pill ${isOut ? 'out' : 'low'}" style="margin-left:0;">${isOut ? 'Out' : 'Low'}</span>
+            <span class="stock-alert-name">${ing.name}</span>
+            ${ing.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : ''}
+            <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
+            <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>`;
+        const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])];
+        const isMobile = window.innerWidth <= 768;
+        const PAGE = 10;
+        const visible = isMobile ? allItems : allItems.slice(0, PAGE);
+        const remaining = isMobile ? 0 : allItems.length - PAGE;
+        let html = `<p class="stock-alert-section-title">Needs Restocking</p>`;
+        html += `<div id="stockAlertRows">${visible.map(([i, isOut]) => row(i, isOut)).join('')}</div>`;
+        if (remaining > 0) {
+          html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">Show ${remaining} more</button>`;
+          window._stockAlertAll = allItems;
+        }
+        alertsEl.innerHTML = html;
+      }
+    }
+  }
+
+  async function loadInventoryStatus() {
+    // Serve from cache immediately so the dashboard shows data while fetching
+    const _cached = localStorage.getItem('shelfy_cache_ops_inventory');
+    if (_cached) {
+      try { _renderInventoryStatus(JSON.parse(_cached)); } catch (e) {}
+    } else {
+      const skeletonPill = '<span class="skeleton-line" style="width:32px; height:32px; display:inline-block; border-radius:6px; vertical-align:middle;"></span>';
+      const outEl = document.getElementById('outOfStockCount');
+      const lowEl = document.getElementById('lowStockCount');
+      if (outEl) outEl.innerHTML = skeletonPill;
+      if (lowEl) lowEl.innerHTML = skeletonPill;
+    }
+    if (!navigator.onLine) return;
+
     try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const user = session?.user;
       if (!user) return;
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       let _q1 = supabaseClient
         .from('ingredients')
-        .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at')
+        .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at, unit')
         .eq('profile_id', user.id);
       if (storeId) _q1 = _q1.eq('store_id', storeId);
       const { data: ingredients, error } = await _q1;
 
       if (error) throw error;
 
-      console.log('Total ingredients:', ingredients?.length || 0);
       window._dashIngredients = ingredients || [];
-
-      const outItems = ingredients.filter(i => (parseFloat(i.quantity) || 0) === 0);
-      const lowItems = ingredients.filter(i => {
-        const qty = parseFloat(i.quantity) || 0;
-        const min = parseFloat(i.min_stock) || 0;
-        return qty > 0 && min > 0 && qty < min;
-      });
-
-      document.getElementById('outOfStockCount').textContent = outItems.length;
-      document.getElementById('lowStockCount').textContent = lowItems.length;
-
-      const alertsEl = document.getElementById('mobileStockAlerts');
-      if (alertsEl) {
-        if (outItems.length === 0 && lowItems.length === 0) {
-          alertsEl.innerHTML = '';
-        } else {
-          const row = (ing, isOut) => `
-            <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
-              <span class="stock-pill ${isOut ? 'out' : 'low'}" style="margin-left:0;">${isOut ? 'Out' : 'Low'}</span>
-              <span class="stock-alert-name">${ing.name}</span>
-              ${ing.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" style="color:var(--accent);flex-shrink:0;" title="Reorder pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : ''}
-              <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}</span>
-              <svg class="stock-alert-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>`;
-          const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])];
-          const isMobile = window.innerWidth <= 768;
-          const PAGE = 10;
-          const visible = isMobile ? allItems : allItems.slice(0, PAGE);
-          const remaining = isMobile ? 0 : allItems.length - PAGE;
-          let html = `<p class="stock-alert-section-title">Needs Restocking</p>`;
-          html += `<div id="stockAlertRows">${visible.map(([i, isOut]) => row(i, isOut)).join('')}</div>`;
-          if (remaining > 0) {
-            html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">Show ${remaining} more</button>`;
-            window._stockAlertAll = allItems;
-          }
-          alertsEl.innerHTML = html;
-        }
-      }
+      localStorage.setItem('shelfy_cache_ops_inventory', JSON.stringify(ingredients));
+      _renderInventoryStatus(ingredients);
 
     } catch (error) {
+      if (!navigator.onLine || error instanceof TypeError) return; // keep cached view
       console.error('Error loading inventory status:', error);
       document.getElementById('outOfStockCount').textContent = '0';
       document.getElementById('lowStockCount').textContent = '0';
@@ -1985,15 +1999,57 @@ function resolveConfirm(result) {
 
 
   // Load inbound status (pending deliveries)
+  function _renderInboundStatus(pendingOrders) {
+    const container = document.getElementById('inboundContainer');
+    if (!container) return;
+    if (!pendingOrders || pendingOrders.length === 0) {
+      container.innerHTML = `
+        <div class="delivery-empty">
+          <img src="/no_pending_deliveries.png" alt="No pending deliveries" />
+          <span>No pending deliveries</span>
+        </div>`;
+      return;
+    }
+    container.innerHTML = pendingOrders.map(item => {
+      const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
+      let dateLabel = '';
+      if (orderBase) {
+        const eta = new Date(orderBase + 'T00:00:00');
+        if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery));
+        dateLabel = eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      return `
+        <div class="delivery-row">
+          <div class="delivery-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
+            <div class="delivery-name">${escapeHtml(item.name)}</div>
+            ${dateLabel ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${dateLabel}</div>` : ''}
+          </div>
+          <div class="delivery-actions">
+            <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')">Cancel</button>
+            <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')">Received</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
   async function loadInboundStatus() {
+    const _cached = localStorage.getItem('shelfy_cache_ops_inbound');
+    if (_cached) {
+      try { _renderInboundStatus(JSON.parse(_cached)); } catch (e) {}
+    }
+    if (!navigator.onLine) return;
+
     try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const user = session?.user;
       if (!user) return;
 
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-      // Query ingredients marked as reorder pending
       let _q2 = supabaseClient
         .from('ingredients')
         .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at')
@@ -2003,52 +2059,15 @@ function resolveConfirm(result) {
         .order('updated_at', { ascending: false });
       const { data: pendingOrders, error } = await _q2;
 
-      const container = document.getElementById('inboundContainer');
-      
-      if (error) {
-        console.error('Error loading inbound status:', error);
-        container.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--danger); font-size: 14px;">Error loading pending deliveries</div>';
-        return;
-      }
-
-      if (!pendingOrders || pendingOrders.length === 0) {
-        container.innerHTML = `
-          <div class="delivery-empty">
-            <img src="/no_pending_deliveries.png" alt="No pending deliveries" />
-            <span>No pending deliveries</span>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = pendingOrders.map(item => {
-        const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-        let dateLabel = '';
-        if (orderBase) {
-          const eta = new Date(orderBase + 'T00:00:00');
-          if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery));
-          dateLabel = eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        return `
-          <div class="delivery-row">
-            <div class="delivery-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            </div>
-            <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
-              <div class="delivery-name">${escapeHtml(item.name)}</div>
-              ${dateLabel ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${dateLabel}</div>` : ''}
-            </div>
-            <div class="delivery-actions">
-              <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')">Cancel</button>
-              <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')">Received</button>
-            </div>
-          </div>`;
-      }).join('');
+      if (error) throw error;
+      localStorage.setItem('shelfy_cache_ops_inbound', JSON.stringify(pendingOrders || []));
+      _renderInboundStatus(pendingOrders);
 
     } catch (error) {
+      if (!navigator.onLine || error instanceof TypeError) return;
       console.error('Error loading inbound status:', error);
-      document.getElementById('inboundContainer').innerHTML = 
-        '<div style="text-align: center; padding: 40px 20px; color: var(--danger); font-size: 14px;">Error loading pending deliveries</div>';
+      const container = document.getElementById('inboundContainer');
+      if (container) container.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--danger); font-size: 14px;">Error loading pending deliveries</div>';
     }
   }
 
@@ -2107,13 +2126,22 @@ function resolveConfirm(result) {
       }
     });
   }
+
+  // After offline writes sync, rebuild the dashboard caches from Supabase
+  window.addEventListener('shelfy:synced', (e) => {
+    const t = e.detail.tables;
+    if (t.includes('ingredients')) {
+      loadInventoryStatus();
+      loadInboundStatus();
+    }
+  });
 </script>
 
 <!-- Method Selection Modal -->
 <div class="modal-overlay" id="methodModal">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your item</p>
     
     <div class="method-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <div class="method-card" onclick="selectMethod('manual')">
@@ -2168,10 +2196,11 @@ async function checkAIUsage() {
       .single();
 
     const tier = settings?.tier || 'free';
+    // Unified pool limits (ingredients + orders + expenses combined)
     const limits = {
-      free: { ingredients: 25 },
-      starter: { ingredients: 50 },
-      pro: { ingredients: 100 }
+      free: 20,
+      starter: 100,
+      pro: 300
     };
 
     // Get current month's usage
@@ -2181,13 +2210,15 @@ async function checkAIUsage() {
     
     const { data: usageRecords } = await window.supabaseClient
       .from('ai_usage_tracking')
-      .select('ingredient_count')
+      .select('ingredient_count, order_count, expense_count')
       .eq('user_id', session.user.id)
       .gte('date', `${yearMonth}-01`)
       .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
 
-    const used = usageRecords ? usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) : 0;
-    const limit = limits[tier].ingredients;
+    // Count all AI scans from unified pool (ingredients + orders + expenses)
+    const used = usageRecords ? usageRecords.reduce((sum, record) => 
+      sum + (record.ingredient_count || 0) + (record.order_count || 0) + (record.expense_count || 0), 0) : 0;
+    const limit = limits[tier];
 
     aiUsageStatus = {
       used,
@@ -2363,7 +2394,7 @@ async function saveIngredient(event) {
   const { data: { user } } = await supabaseClient.auth.getUser();
   
   if (!user) {
-    showAlert('You must be logged in to add ingredients');
+    showAlert('You must be logged in to add items');
     return;
   }
 
@@ -2458,14 +2489,14 @@ async function saveIngredient(event) {
       await loadRecipeIngredients();
       renderRecipeIngredientList();
       document.getElementById('recipeBuilderOverlay').classList.add('active');
-      showNotification('Ingredient added! You can now add it to your recipe.', 'success');
+      showNotification('Item added! You can now add it to your product.', 'success');
     } else {
       window.location.href = '/ingredients';
     }
   } catch (error) {
-    showAlert('Error saving ingredient: ' + error.message);
+    showAlert('Error saving item: ' + error.message);
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Save Ingredient';
+    submitBtn.textContent = 'Save Item';
   }
 }
 
@@ -2759,11 +2790,11 @@ function showImportStatus(message, type) {
 <!-- Manual Entry Form Modal -->
 <div class="modal-overlay" id="manualEntryModal">
   <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Ingredient</h3>
-    
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Item</h3>
+
     <form id="ingredientForm" onsubmit="saveIngredient(event)" novalidate>
       <div class="form-group">
-        <label for="ing_name">Ingredient Name *</label>
+        <label for="ing_name">Item Name *</label>
         <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
 
@@ -2858,7 +2889,7 @@ function showImportStatus(message, type) {
 
       <div style="display: flex; gap: 12px; margin-top: 24px;">
         <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeManualEntryModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Ingredient</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Item</button>
       </div>
     </form>
   </div>
@@ -2871,9 +2902,9 @@ function showImportStatus(message, type) {
     
     <div style="display: grid; gap: 16px;">
       <div class="method-card" onclick="selectOrderMethod('manual')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for recipe" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Search for recipe</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add recipes to order</p>
+        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for product" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0;">Search for product</h4>
+        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add products to order</p>
       </div>
       
       <div class="method-card" onclick="selectOrderMethod('upload')">
@@ -2894,14 +2925,14 @@ function showImportStatus(message, type) {
   <div class="modal-content" id="manualStep1">
     <div class="recipe-picker-header">
       <div>
-        <h3 style="margin:0;font-size:20px;">Add Recipes to Order</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more recipes to include in this order</p>
+        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more products to include in this order</p>
       </div>
       <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">×</button>
     </div>
 
     <div class="recipe-picker-search">
-      <input id="orderRecipeSearchInput" type="text" placeholder="Search recipes by name or ingredient..."
+      <input id="orderRecipeSearchInput" type="text" placeholder="Search products by name or item..."
              autocomplete="off"
              oninput="filterOrderRecipes(this.value)"
              onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('')}">
@@ -2909,7 +2940,7 @@ function showImportStatus(message, type) {
     </div>
 
     <div class="recipe-picker-body" id="orderRecipePickerBody">
-      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading recipes…</div>
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
     </div>
 
     <div class="recipe-picker-footer" style="padding:10px 28px;">
@@ -2925,7 +2956,7 @@ function showImportStatus(message, type) {
 
       <!-- Recipe summary -->
       <div style="margin-bottom:10px;">
-        <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Selected Recipes</p>
+        <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Selected Products</p>
         <div id="step2RecipeSummary" style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
       </div>
 
@@ -2956,7 +2987,7 @@ function showImportStatus(message, type) {
               <option value="fulfilled">Fulfilled</option>
               <option value="shipped">Shipped</option>
             </select>
-            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some ingredients are out of stock</div>
+            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some items are out of stock</div>
           </div>
         </div>
 
@@ -2964,7 +2995,7 @@ function showImportStatus(message, type) {
         <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
           <div>
             <div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct ingredient quantities based on recipe components</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct item quantities based on product components</div>
           </div>
           <label class="inv-toggle">
             <input type="checkbox" id="order_update_inventory" checked>
@@ -3002,7 +3033,7 @@ function showImportStatus(message, type) {
 <div class="modal-overlay" id="recipeMappingModal">
   <div class="modal-content" style="max-width: 700px;">
     <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched recipes. You can change the recipe selection for each item.</p>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
     
     <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
       <!-- Mapped items will appear here -->
@@ -3147,8 +3178,8 @@ function showImportStatus(message, type) {
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
       <div>
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
-        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Product Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required />
       </div>
       
       <!-- Mobile Ingredient Swiper (visible only on mobile) -->
@@ -3166,7 +3197,7 @@ function showImportStatus(message, type) {
         <div class="swipe-dots" id="swipeDots"></div>
       </div>
       
-      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div></div>
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
       <div class="mobile-recipe-actions">
         <button class="btn btn-cancel" onclick="closeRecipeBuilder()">Cancel</button>
         <button class="btn btn-primary" id="saveRecipeBtn" onclick="saveRecipe()">Create</button>
@@ -3174,10 +3205,10 @@ function showImportStatus(message, type) {
     </div>
     <div class="recipe-panel">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-        <h3 style="margin: 0;">Ingredient Library</h3>
+        <h3 style="margin: 0;">Item Library</h3>
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
-      <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients()" />
+      <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="filterRecipeIngredients()" />
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
       <div id="recipeAttrSubfilter" class="recipe-attr-subfilter"></div>
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
@@ -3949,7 +3980,8 @@ async function showRecipeMappingModal(orderData) {
   // Pre-fill form fields
   document.getElementById('mapped_customer').value = orderData.customer || '';
   document.getElementById('mapped_reference').value = orderData.order_reference || '';
-  document.getElementById('mapped_status').value = 'processed';
+  const _statusEl = document.getElementById('mapped_status');
+  if (_statusEl) _statusEl.value = 'processed';
   
   document.getElementById('recipeMappingModal').classList.add('active');
   
@@ -4022,7 +4054,7 @@ function renderMappedItems() {
           <input 
             type="text" 
             id="recipeSearchInput_${index}"
-            placeholder="🔍 Search to change recipe or leave empty for custom item..."
+            placeholder="🔍 Search to change product or leave empty for custom item..."
             value="${selected ? selected.name : ''}"
             autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
@@ -4055,7 +4087,7 @@ function renderMappedItems() {
             <span style="font-weight: 600; min-width: 40px; text-align: center;">${mapping.quantity}</span>
             <button type="button" onclick="adjustMappedQuantity(${index}, 1)" style="width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer; font-size: 16px;">+</button>
           </div>
-          ${selected ? `<span style="font-size: 13px; color: var(--text-muted); margin-left: auto;">Recipe cost: $${(parseFloat(selected.cost) || 0).toFixed(2)}</span>` : ''}
+          ${selected ? `<span style="font-size: 13px; color: var(--text-muted); margin-left: auto;">Product cost: $${(parseFloat(selected.cost) || 0).toFixed(2)}</span>` : ''}
         </div>
       </div>
     `;
@@ -4119,7 +4151,7 @@ async function searchRecipesForMapping(index, searchTerm) {
     if (error) throw error;
     
     if (!allRecipes || allRecipes.length === 0) {
-      dropdown.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No recipes found</div>';
+      dropdown.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No products found</div>';
       dropdown.style.display = 'block';
       return;
     }
@@ -4418,8 +4450,8 @@ function showNotification(message, type = 'info') {
 async function openRecipeBuilder() {
   document.getElementById('recipeBuilderOverlay').classList.add('active');
   document.getElementById('recipeNameInput').value = '';
-  document.getElementById('recipeDropzone').innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div>';
-  
+  document.getElementById('recipeDropzone').innerHTML = '<div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div>';
+
   // Only update cost display if element exists (desktop only)
   const costDisplay = document.getElementById('recipeTotalCostDisplay');
   if (costDisplay) {
@@ -4492,7 +4524,7 @@ async function loadRecipeIngredients() {
     renderRecipeIngredientList();
   } catch (error) {
     console.error('Error loading ingredients:', error);
-    showNotification('Failed to load ingredients', 'error');
+    showNotification('Failed to load items', 'error');
   }
 }
 
@@ -4610,14 +4642,14 @@ function renderRecipeIngredientList() {
     if (recipeIngredientData.length === 0) {
       ingredientList.innerHTML = `
         <div style="text-align: center; padding: 60px 20px;">
-          <img src="/cat_no_orders.png" alt="No ingredients" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-          <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No ingredients yet</p>
+          <img src="/cat_no_orders.png" alt="No items" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No items yet</p>
           <button class="btn" style="background: var(--accent); color: white; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px;" onclick="openMethodModalFromRecipe()">
-            + Add Ingredient
+            + Add Item
           </button>
         </div>`;
     } else {
-      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
+      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     }
     return;
   }
@@ -4641,7 +4673,7 @@ function renderRecipeIngredientList() {
     if (nonFavorites.length > 0) {
       const allHeader = document.createElement('h4');
       allHeader.style.cssText = 'font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0; font-weight: 700; letter-spacing: 0.05em;';
-      allHeader.textContent = 'All Ingredients';
+      allHeader.textContent = 'All Items';
       ingredientList.appendChild(allHeader);
     }
   }
@@ -4827,9 +4859,9 @@ function removeRecipeIngredient(id) {
   
   const dz = document.getElementById('recipeDropzone');
   if (Object.keys(currentRecipeComponents).length === 0) {
-    dz.innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div>';
+    dz.innerHTML = '<div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div>';
   }
-  
+
   // Re-initialize mobile swiper if on mobile to restore removed ingredient
   if (window.innerWidth <= 768) {
     initMobileSwiper();
@@ -4862,14 +4894,14 @@ async function saveRecipe() {
   }
   
   if (Object.keys(currentRecipeComponents).length === 0) {
-    showNotification('Please add at least one ingredient', 'error');
+    showNotification('Please add at least one item', 'error');
     return;
   }
   
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      showNotification('Please log in to save recipes', 'error');
+      showNotification('Please log in to save products', 'error');
       return;
     }
     
@@ -4915,7 +4947,7 @@ async function saveRecipe() {
     
   } catch (error) {
     console.error('Error saving recipe:', error);
-    showNotification('Failed to save recipe: ' + error.message, 'error');
+    showNotification('Failed to save product: ' + error.message, 'error');
   }
 }
 
@@ -4978,7 +5010,7 @@ function renderSwipeCards(animationClass = null) {
         <div style="text-align: center; color: var(--text-muted);">
           <div style="font-size: 48px; margin-bottom: 16px;">✓</div>
           <div style="font-size: 16px; font-weight: 600;">All Done!</div>
-          <div style="font-size: 14px; margin-top: 8px;">No more ingredients to browse</div>
+          <div style="font-size: 14px; margin-top: 8px;">No more items to browse</div>
         </div>
       </div>
     `;
@@ -5295,7 +5327,7 @@ function _renderRecipeCard(recipe) {
 function _renderAddedSection() {
   if (!orderRecipes.length) return '';
   return `<div class="added-recipes-section">
-    <div class="recipe-section-title">Added Recipes</div>
+    <div class="recipe-section-title">Added Products</div>
     ${orderRecipes.map(r => `
       <div class="added-recipe-row" id="arr-${r.id}">
         <span class="ar-name">${r.name}</span>
@@ -5319,7 +5351,7 @@ async function renderOrderRecipeSections(filtered) {
       html += `<div class="recipe-section-title">Search Results</div>
         <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
     } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No recipes match your search</p></div>';
+      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
     }
     body.innerHTML = html;
     return;
@@ -5337,11 +5369,11 @@ async function renderOrderRecipeSections(filtered) {
     <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
   if (recentList.length) html += `<div class="recipe-section-title">Recently Used</div>
     <div class="recipe-picker-grid">${recentList.map(_renderRecipeCard).join('')}</div>`;
-  if (allOnly.length) html += `<div class="recipe-section-title">All Recipes</div>
+  if (allOnly.length) html += `<div class="recipe-section-title">All Products</div>
     <div class="recipe-picker-grid">${allOnly.map(_renderRecipeCard).join('')}</div>`;
 
   if (!favs.length && !recentList.length && !allOnly.length && orderRecipes.length) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All recipes have been added</div>';
+    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All products have been added</div>';
   }
 
   body.innerHTML = html;
@@ -5426,7 +5458,7 @@ function adjustPickerQty(index, delta) {
 }
 
 function proceedToOrderDetails() {
-  if (!orderRecipes.length) { showNotification('Please select at least one recipe', 'warning'); return; }
+  if (!orderRecipes.length) { showNotification('Please select at least one product', 'warning'); return; }
   document.getElementById('manualStep1').style.display = 'none';
   document.getElementById('manualStep2').style.display = 'flex';
   updateOrderTotal();
@@ -5696,7 +5728,7 @@ async function saveManualOrder(event) {
     
     // Validate recipes selected
     if (orderRecipes.length === 0) {
-      showNotification('Please select at least one recipe', 'warning');
+      showNotification('Please select at least one product', 'warning');
       return;
     }
     
@@ -6148,8 +6180,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>

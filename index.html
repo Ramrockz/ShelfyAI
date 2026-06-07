@@ -554,8 +554,8 @@
 
   <div class="panel">
     <div class="tabs">
-      <div class="tab active" onclick="manualTabClick('ingredients', this)">Ingredients</div>
-      <div class="tab" onclick="manualTabClick('recipes', this)">Recipes</div>
+      <div class="tab active" onclick="manualTabClick('ingredients', this)">Items</div>
+      <div class="tab" onclick="manualTabClick('recipes', this)">Products</div>
       <div class="tab" onclick="manualTabClick('orders', this)">Orders</div>
       <div class="tab" onclick="manualTabClick('expenses', this)">Expenses</div>
     </div>
@@ -678,8 +678,8 @@ const data = {
     description: "Add materials to form your final product once and use it for inventory calculation",
     thumb: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=200",
     recent: { name: "Wooden Box", meta: "Batch Ready for Assembly" },
-    opHeader: "Recipe Production",
-    list: `<table class="insight-table"><thead><tr><th>Recipe</th><th>Profit</th><th>Stock</th></tr></thead><tbody><tr><td>Wooden Box</td><td style="color:var(--success)">+$32.60</td><td>Ready</td></tr><tr><td>Acrylic Tray</td><td style="color:var(--success)">+$14.00</td><td>Ready</td></tr></tbody></table>`,
+    opHeader: "Product Production",
+    list: `<table class="insight-table"><thead><tr><th>Product</th><th>Profit</th><th>Stock</th></tr></thead><tbody><tr><td>Wooden Box</td><td style="color:var(--success)">+$32.60</td><td>Ready</td></tr><tr><td>Acrylic Tray</td><td style="color:var(--success)">+$14.00</td><td>Ready</td></tr></tbody></table>`,
     kanban: [
         { label: "READY", color: "var(--success)", items: ["Box", "Tray"] },
         { label: "INCOMPLETE", color: "var(--warning)", items: ["Desk"] },
@@ -854,13 +854,21 @@ autoRotateInterval = setInterval(() => {
 let currentStep = 1;
 let feedbackRating = 0;
 
-// Check if user is logged in and show feedback button
+// Check if user is logged in and redirect to dashboard
 if (typeof window.supabaseClient !== 'undefined') {
-  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      document.getElementById('feedbackButton').classList.add('show');
-    }
-  });
+  // Quick check: if localStorage has user data, redirect immediately
+  const userEmail = localStorage.getItem('shelfy_user_email');
+  if (userEmail) {
+    window.location.href = '/operations';
+  } else {
+    // Otherwise check Supabase session
+    window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // User is already logged in, redirect to dashboard
+        window.location.href = '/operations';
+      }
+    });
+  }
 }
 
 function openFeedback() {
@@ -951,8 +959,8 @@ async function submitFeedback() {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>

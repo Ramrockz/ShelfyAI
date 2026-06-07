@@ -30,6 +30,18 @@ if (typeof window.supabaseClient === 'undefined') {
 
 const supabaseClient = window.supabaseClient;
 
+// When a new service worker takes control (after a deploy), reload once so the
+// page runs the freshly-cached code instead of the previous version. Without
+// this, code changes only take effect on the SECOND visit after a deploy.
+if ('serviceWorker' in navigator) {
+  let _swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swRefreshing) return;
+    _swRefreshing = true;
+    window.location.reload();
+  });
+}
+
 // List of protected pages (without .html extension to match clean URLs)
 const protectedPages = [
   'ingredients',
@@ -55,9 +67,9 @@ currentPage = currentPage.replace('.html', '');
 async function logout() {
   try {
     // Clear all cached user data
-    sessionStorage.clear();
     localStorage.removeItem('shelfy_user_email');
     localStorage.removeItem('shelfy_user_avatar');
+    localStorage.removeItem('shelfy_user_tier');
     localStorage.removeItem('shelfy_store_id');
     localStorage.removeItem('shelfy_store_name');
     window.currentStoreId   = null;
@@ -97,6 +109,7 @@ async function getCurrentUser() {
 // so this must exist before any insert.
 async function ensureProfileExists(user) {
   if (!user) return;
+  if (!navigator.onLine) return; // requires network; profile already exists offline
   try {
     const { error } = await supabaseClient
       .from('profiles')
@@ -118,6 +131,13 @@ async function ensureStoreExists(user) {
   if (!user) return;
   // Skip only if we already validated for THIS specific user
   if (_storeValidatedForUser === user.id && window.currentStoreId) return;
+  // Offline: can't query/create stores. Use whatever localStorage has and bail
+  // so callers don't hang awaiting a network round-trip.
+  if (!navigator.onLine) {
+    window.currentStoreId   = window.currentStoreId   || localStorage.getItem('shelfy_store_id')   || null;
+    window.currentStoreName = window.currentStoreName || localStorage.getItem('shelfy_store_name') || null;
+    return;
+  }
   try {
     const { data: stores } = await supabaseClient
       .from('stores')
@@ -202,7 +222,7 @@ function applyAvatarUrl(avatarEl, url, fallbackLetter) {
   };
   img.onerror = () => {
     _setDefaultAvatar(avatarEl);
-    try { sessionStorage.setItem('shelfy_user_avatar', 'null'); } catch (e) {}
+    try { localStorage.setItem('shelfy_user_avatar', 'null'); } catch (e) {}
   };
   img.src = url;
 }
@@ -213,13 +233,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const avatarEl = document.getElementById('userAvatar');
   const emailEl  = document.getElementById('userMenuEmail');
   const roleEl   = document.querySelector('.user-menu-role');
-  const cachedEmail  = sessionStorage.getItem('shelfy_user_email');
-  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-  const cachedTier   = sessionStorage.getItem('shelfy_user_tier');
+  const cachedEmail  = localStorage.getItem('shelfy_user_email');
+  const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+  const cachedTier   = localStorage.getItem('shelfy_user_tier');
   if (cachedEmail && emailEl) emailEl.textContent = cachedEmail;
   if (cachedTier && roleEl) roleEl.textContent = cachedTier;
-  if (avatarEl && cachedAvatar && cachedAvatar !== 'null' && cachedEmail) {
-    applyAvatarUrl(avatarEl, cachedAvatar, cachedEmail.charAt(0).toUpperCase());
+  if (avatarEl) {
+    // Clear any placeholder text immediately so "user" never flashes on mobile.
+    // Apply cat avatar synchronously (CSS background-image, no network round-trip),
+    // then swap to the real avatar once the image finishes loading.
+    _setDefaultAvatar(avatarEl);
+    if (cachedAvatar && cachedAvatar !== 'null' && cachedEmail) {
+      applyAvatarUrl(avatarEl, cachedAvatar, cachedEmail.charAt(0).toUpperCase());
+    }
   }
 });
 
@@ -263,38 +289,53 @@ async function initUserMenu() {
     }
 
     // Cache email unconditionally — DOM may not be ready yet if auth.js ran in <head>
-    sessionStorage.setItem('shelfy_user_email', user.email);
+    localStorage.setItem('shelfy_user_email', user.email);
     if (userEmailElement) {
       userEmailElement.textContent = user.email;
     }
     // Only reset to the initial letter if there's no cached avatar already showing —
     // avoids the flash where the image disappears while the DB fetch runs.
-    const _cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    const _cachedAvatar = localStorage.getItem('shelfy_user_avatar');
     if (userAvatar && (!_cachedAvatar || _cachedAvatar === 'null')) {
       _setDefaultAvatar(userAvatar);
     }
 
-    // Guarantee a profiles row exists so FK constraints on other tables don't fail
-    await ensureProfileExists(user);
+    // Race all DB calls against a 4-second timeout so initUserMenu never hangs.
+    // navigator.onLine is unreliable (true on WiFi-with-no-internet), so a timeout
+    // is the only robust guard. Cached email/avatar/tier are already in the DOM
+    // via the DOMContentLoaded handler above.
+    await Promise.race([
+      (async () => {
+        await ensureProfileExists(user);
+        await ensureStoreExists(user);
+      })(),
+      new Promise(resolve => setTimeout(resolve, 4000))
+    ]);
+    // If ensureStoreExists didn't complete in time, fall back to localStorage
+    if (!window.currentStoreId) {
+      window.currentStoreId   = localStorage.getItem('shelfy_store_id')   || null;
+      window.currentStoreName = localStorage.getItem('shelfy_store_name') || null;
+    }
 
-    // Ensure the user has a store and set window.currentStoreId / window.currentStoreName
-    await ensureStoreExists(user);
-
-    // Load avatar and tier from database
-    const { data: settings } = await supabaseClient
-      .from('user_settings')
-      .select('avatar_url, tier')
-      .eq('user_id', user.id)
-      .single();
+    // Load avatar and tier (also guarded by timeout)
+    const _settingsRace = await Promise.race([
+      supabaseClient
+        .from('user_settings')
+        .select('avatar_url, tier')
+        .eq('user_id', user.id)
+        .single(),
+      new Promise(resolve => setTimeout(() => resolve({ data: null, error: null }), 4000))
+    ]);
+    const settings = _settingsRace?.data ?? null;
 
     const tierLabels = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' };
     const tierLabel = tierLabels[settings?.tier] || 'Free Plan';
     const roleEl = document.querySelector('.user-menu-role');
     if (roleEl) roleEl.textContent = tierLabel;
-    sessionStorage.setItem('shelfy_user_tier', tierLabel);
+    localStorage.setItem('shelfy_user_tier', tierLabel);
 
     const avatarUrl = settings?.avatar_url || null;
-    try { sessionStorage.setItem('shelfy_user_avatar', avatarUrl || 'null'); } catch (e) {}
+    try { localStorage.setItem('shelfy_user_avatar', avatarUrl || 'null'); } catch (e) {}
     applyAvatarUrl(userAvatar, avatarUrl, user.email.charAt(0).toUpperCase());
 
     // Show active store name in menu header and nav
@@ -377,7 +418,9 @@ const authChannel = new BroadcastChannel('shelfy_auth');
 authChannel.onmessage = (event) => {
   if (event.data.type === 'logout') {
     // Another tab logged out, clean up and redirect
-    sessionStorage.clear();
+    localStorage.removeItem('shelfy_user_email');
+    localStorage.removeItem('shelfy_user_avatar');
+    localStorage.removeItem('shelfy_user_tier');
     window.location.replace('/');
   }
 };
@@ -387,7 +430,9 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
     // User signed out, redirect to home if on protected page
     if (protectedPages.includes(currentPage)) {
-      sessionStorage.clear();
+      localStorage.removeItem('shelfy_user_email');
+      localStorage.removeItem('shelfy_user_avatar');
+      localStorage.removeItem('shelfy_user_tier');
       window.location.replace('/');
     }
   }

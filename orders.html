@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Orders</title>
+<title>ShelfyAI &ndash; Orders</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
@@ -36,6 +36,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
@@ -83,11 +84,11 @@
     transition: all 0.3s ease; 
     animation: slideIn 0.3s ease;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
   }
   .card-small:hover { 
-    border-color: var(--accent); 
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: var(--border);
   }
   
   @keyframes slideIn {
@@ -95,7 +96,8 @@
     to { opacity: 1; transform: translateY(0); }
   }
   
-  .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); transition: color 0.2s; }
+  .card-small:hover h4 { color: var(--accent); }
   .card-small .order-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
   .card-small .order-date { font-size: 12px; color: var(--text-muted); }
   
@@ -112,7 +114,7 @@
   .status-shipped { background: rgba(16, 185, 129, 0.1); color: #10b981; }
   .status-refunded { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
-  .card-small .divider { height: 1px; background: var(--border); margin: 0 0 16px 0; }
+  .card-small .divider { height: 1px; background: var(--border); margin: auto 0 16px 0; }
   .card-actions { display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
   .card-actions span { cursor: pointer; text-transform: uppercase; }
   .card-actions .edit-link { color: var(--accent); }
@@ -724,7 +726,7 @@
     .recipe-picker-body { flex: 1; min-height: 0; }
   }
 
-  /* ── Flatpickr theme overrides ──────────────────────────────── */
+  /* â”€â”€ Flatpickr theme overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   .flatpickr-calendar { background: var(--bg-panel) !important; border: 1px solid var(--border) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important; font-family: inherit !important; }
   .flatpickr-months .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday { background: var(--bg-panel) !important; color: var(--text-muted) !important; }
   .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; background: transparent !important; }
@@ -738,7 +740,7 @@
   .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
   .flatpickr-input { cursor: pointer !important; }
 
-  /* ── Order Success Screen ───────────────────────────────── */
+  /* â”€â”€ Order Success Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   #manualStep3 { max-width: 520px; }
   .order-success-icon { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 38px; color: #fff; line-height: 1; animation: successPop 0.55s cubic-bezier(0.175,0.885,0.32,1.275) both; }
   @keyframes successPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -828,7 +830,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Hide desktop search on mobile — navbar search is used instead */
+    /* Hide desktop search on mobile &mdash; navbar search is used instead */
     .top-bar .search-wrapper {
       display: none !important;
     }
@@ -915,8 +917,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -937,8 +939,8 @@
     </div>
     <div class="search-wrapper" style="flex: 1;">
       <i data-lucide="search" class="search-icon"></i>
-      <input class="nav-search-input" id="navSearchInput" placeholder="Search orders…" oninput="render(); toggleSearchClear('navSearchInput')">
-      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search orders&hellip;" oninput="render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">&times;</button>
     </div>
 
     <!-- Notification Bell -->
@@ -1020,9 +1022,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -1075,7 +1077,7 @@
       <div class="search-wrapper" style="width: 480px;">
         <i data-lucide="search" class="search-icon"></i>
         <input type="text" id="searchInput" placeholder="Search orders..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="render(); toggleSearchClear('searchInput')" />
-        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
+        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">&times;</button>
       </div>
     </div>
 
@@ -1172,7 +1174,7 @@
             <input type="text" placeholder="Item name" class="item-name" required>
             <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
             <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
-            <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">×</span>
+            <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">&times;</span>
           </div>
         </div>
         <button type="button" class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); margin-top: 12px;" onclick="addItemRow()">+ Add Item</button>
@@ -1264,15 +1266,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Calculate totals as items change
   document.getElementById('itemsList').addEventListener('input', calculateTotals);
   
-  // Show the page
+  // Show the page (also done early in loadOrders when cache exists)
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
   document.documentElement.style.visibility = 'visible';
 });
 
+// Rebuild cache after offline writes sync
+window.addEventListener('shelfy:synced', (e) => {
+  const t = e.detail.tables;
+  if (t.includes('sales') || t.includes('ingredients')) {
+    loadOrders().catch(() => {});
+  }
+});
+
 async function loadOrders() {
+  const _lsCached = localStorage.getItem('shelfy_cache_orders');
+  if (_lsCached) {
+    try {
+      orders = JSON.parse(_lsCached);
+      try { render(); } catch (e) {}
+      // Reveal page immediately from cache
+      document.documentElement.style.visibility = 'visible';
+      const _s = document.querySelector('.sidebar');
+      const _m = document.querySelector('.main');
+      if (_s) _s.style.visibility = 'visible';
+      if (_m) _m.style.visibility = 'visible';
+    } catch (e) {}
+  }
+  if (!navigator.onLine) return;
+
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -1289,8 +1315,10 @@ async function loadOrders() {
     if (error) throw error;
 
     orders = data || [];
-    console.log('Loaded orders:', orders);
+    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
+    try { render(); } catch (e) {}
   } catch (error) {
+    if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading orders:', error);
     alert('Failed to load orders: ' + error.message);
   }
@@ -1372,13 +1400,11 @@ function renderRecent(filtered) {
     const source = order.source || 'N/A';
     
     return `
-      <div class="card-small">
-        <h4>
-          <span class="name" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">${order.customer || 'Unknown Customer'}</span>
-        </h4>
-        <div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${date} • ${orderRef} • ${source}</div>
+      <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
+        <h4>${order.customer || 'Unknown Customer'}</h4>
+        <div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${date} &bull; ${orderRef} &bull; ${source}</div>
         <div style="display: flex; justify-content: center; margin: 12px 0;">
-          <div style="text-align: center; cursor: pointer;" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
+          <div style="text-align: center;">
             <div style="font-size: 32px; font-weight: 800; color: var(--text-main);">$${parseFloat(order.revenue || 0).toFixed(2)}</div>
           </div>
         </div>
@@ -1489,7 +1515,7 @@ function renderList(filtered) {
     };
     const statusStyle = statusColors[status] || statusColors.processed;
     const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
-    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">📦 ${order.tracking_number}</span>` : '-';
+    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">ðŸ“¦ ${order.tracking_number}</span>` : '-';
     
     // Show buttons based on status
     let actionButtons = '';
@@ -1577,7 +1603,7 @@ function openAddOrderModal() {
   openOrderMethodModal();
 }
 
-// Legacy: direct CRUD modal for editing — called by editOrder()
+// Legacy: direct CRUD modal for editing &mdash; called by editOrder()
 function openEditOrderModal() {
   editingOrderId = null;
   document.getElementById('modalTitle').textContent = 'Add New Order';
@@ -1589,7 +1615,7 @@ function openEditOrderModal() {
       <input type="text" placeholder="Item name" class="item-name" required>
       <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
       <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
-      <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">×</span>
+      <span class="remove-item" onclick="removeItem(this)" style="visibility: hidden;">&times;</span>
     </div>
   `;
   calculateTotals();
@@ -1632,7 +1658,7 @@ function editOrder(orderId) {
       <input type="text" placeholder="Item name" class="item-name" value="${item.name || ''}" required>
       <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="${item.quantity || 1}" required>
       <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="${item.price || 0}" required>
-      <span class="remove-item" onclick="removeItem(this)" style="visibility: ${items.length > 1 ? 'visible' : 'hidden'};">×</span>
+      <span class="remove-item" onclick="removeItem(this)" style="visibility: ${items.length > 1 ? 'visible' : 'hidden'};">&times;</span>
     `;
     itemsList.appendChild(row);
   });
@@ -1648,7 +1674,7 @@ function addItemRow() {
     <input type="text" placeholder="Item name" class="item-name" required>
     <input type="number" placeholder="Qty" class="item-qty" step="1" min="1" value="1" required>
     <input type="number" placeholder="Price" class="item-price" step="0.01" min="0" value="0" required>
-    <span class="remove-item" onclick="removeItem(this)">×</span>
+    <span class="remove-item" onclick="removeItem(this)">&times;</span>
   `;
   itemsList.appendChild(row);
   updateRemoveButtons();
@@ -1696,7 +1722,8 @@ async function saveOrder(event) {
   event.preventDefault();
   
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session: _so } } = await supabaseClient.auth.getSession();
+    const user = _so?.user;
     if (!user) throw new Error('Not authenticated');
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -1741,33 +1768,26 @@ async function saveOrder(event) {
       notes: document.getElementById('order_notes').value || null
     };
     
-    let result;
+    let savedData, savedError;
     if (editingOrderId) {
-      // Update existing order
-      result = await supabaseClient
-        .from('sales')
-        .update(orderData)
-        .eq('id', editingOrderId)
-        .select();
+      const { data, error } = await offlineWrite('sales', 'update', orderData, 'id', editingOrderId);
+      savedData = data; savedError = error;
     } else {
-      // Insert new order
-      result = await supabaseClient
-        .from('sales')
-        .insert([orderData])
-        .select();
+      const { data, error } = await offlineWrite('sales', 'insert', orderData);
+      savedData = data; savedError = error;
     }
-    
-    if (result.error) throw result.error;
-    
+
+    if (savedError) throw savedError;
+
     // Update inventory for new orders (not edits)
-    if (!editingOrderId && result.data && result.data[0]) {
-      await updateInventoryForOrder(items, user.id, result.data[0].id, result.data[0].order_reference || `Order #${result.data[0].id.substring(0, 8)}`);
+    if (!editingOrderId && savedData && savedData[0]) {
+      await updateInventoryForOrder(items, user.id, savedData[0].id, savedData[0].order_reference || `Order #${(savedData[0].id || 'new').toString().substring(0, 8)}`);
     }
-    
+
     await loadOrders();
-    render();
+    try { render(); } catch (e) {}
     closeOrderModal();
-    
+
     alert(editingOrderId ? 'Order updated successfully!' : 'Order created successfully!');
   } catch (error) {
     console.error('Error saving order:', error);
@@ -1847,26 +1867,19 @@ async function updateInventoryForOrder(items, userId, saleId, orderReference) {
       const oldQuantity = parseFloat(ingredient.quantity) || 0;
       const newQuantity = Math.max(0, oldQuantity - deduction);
       
-      // Update quantity
-      await supabaseClient
-        .from('ingredients')
-        .update({ quantity: newQuantity })
-        .eq('id', ingredient.id);
-      
-      // Create history entry
+      await offlineWrite('ingredients', 'update', { quantity: newQuantity }, 'id', ingredient.id);
+
       try {
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
-            ingredient_id: ingredient.id,
-            profile_id: userId,
-            field_name: 'quantity',
-            old_value: String(oldQuantity),
-            new_value: String(newQuantity),
-            reason: 'order',
-            reference_id: saleId,
-            reference_text: orderReference
-          }]);
+        await offlineWrite('ingredient_history', 'insert', {
+          ingredient_id: ingredient.id,
+          profile_id: userId,
+          field_name: 'quantity',
+          old_value: String(oldQuantity),
+          new_value: String(newQuantity),
+          reason: 'order',
+          reference_id: saleId,
+          reference_text: orderReference
+        });
       } catch (historyError) {
         console.error('Error creating history entry:', historyError);
       }
@@ -1909,7 +1922,7 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
         profile_id: userId,
         type: 'ingredient_out_of_stock',
         ingredient_id: ingredientId,
-        message: `Ingredient ${ingredientName} has run out of stock`,
+        message: `Item ${ingredientName} has run out of stock`,
         is_read: false
       }]);
     
@@ -1923,19 +1936,13 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
 
 async function updateStatusFromList(orderId, newStatus) {
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabaseClient
-      .from('sales')
-      .update({ status: newStatus })
-      .eq('id', orderId)
-      .eq('profile_id', user.id);
-
+    const { error } = await offlineWrite('sales', 'update', { status: newStatus }, 'id', orderId);
     if (error) throw error;
 
-    await loadOrders();
-    render();
+    const o = orders.find(o => o.id === orderId);
+    if (o) o.status = newStatus;
+    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
+    try { render(); } catch (e) {}
   } catch (error) {
     console.error('Error updating order status:', error);
     alert('Failed to update order status: ' + error.message);
@@ -1956,15 +1963,12 @@ async function confirmDelete() {
   if (!orderToDelete) return;
   
   try {
-    const { error } = await supabaseClient
-      .from('sales')
-      .delete()
-      .eq('id', orderToDelete);
-    
+    const { error } = await offlineWrite('sales', 'delete', null, 'id', orderToDelete);
     if (error) throw error;
-    
-    await loadOrders();
-    render();
+
+    orders = orders.filter(o => o.id !== orderToDelete);
+    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
+    try { render(); } catch (e) {}
     closeDeleteModal();
   } catch (error) {
     console.error('Error deleting order:', error);
@@ -1991,9 +1995,9 @@ document.addEventListener('keydown', (e) => {
     <h3 style="margin-top:0; margin-bottom: 24px;">How would you like to add an order?</h3>
     <div style="display: grid; gap: 16px;">
       <div class="method-card" onclick="selectOrderMethod('manual')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for recipe" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Search for recipe</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add recipes to order</p>
+        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for product" width="48" height="48" style="margin-bottom: 16px;">
+        <h4 style="margin: 0 0 8px 0;">Search for product</h4>
+        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add products to order</p>
       </div>
       <div class="method-card" onclick="selectOrderMethod('upload')">
         <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
@@ -2012,23 +2016,23 @@ document.addEventListener('keydown', (e) => {
   <div class="modal-content" id="manualStep1">
     <div class="recipe-picker-header">
       <div>
-        <h3 style="margin:0;font-size:20px;">Add Recipes to Order</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more recipes to include in this order</p>
+        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more products to include in this order</p>
       </div>
-      <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">×</button>
+      <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">&times;</button>
     </div>
 
     <div class="recipe-picker-search">
       <i data-lucide="search" class="search-icon"></i>
-      <input id="orderRecipeSearchInput" type="text" placeholder="Search recipes by name or ingredient..."
+      <input id="orderRecipeSearchInput" type="text" placeholder="Search products by name or item..."
              autocomplete="off"
              oninput="filterOrderRecipes(this.value); toggleOrderSearchClear()"
              onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('');document.getElementById('orderSearchClear').classList.remove('visible')}">
-      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');this.classList.remove('visible');" title="Clear search">×</button>
+      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');this.classList.remove('visible');" title="Clear search">&times;</button>
     </div>
 
     <div class="recipe-picker-body" id="orderRecipePickerBody">
-      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading recipes…</div>
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
     </div>
 
     <div class="recipe-picker-footer" style="padding:10px 28px;">
@@ -2044,7 +2048,7 @@ document.addEventListener('keydown', (e) => {
 
       <!-- Recipe summary -->
       <div style="margin-bottom:10px;">
-        <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Selected Recipes</p>
+        <p style="margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Selected Products</p>
         <div id="step2RecipeSummary" style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
       </div>
 
@@ -2074,7 +2078,7 @@ document.addEventListener('keydown', (e) => {
               <option value="fulfilled">Fulfilled</option>
               <option value="shipped">Shipped</option>
             </select>
-            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some ingredients are out of stock</div>
+            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">âš  Some items are out of stock</div>
           </div>
         </div>
 
@@ -2082,7 +2086,7 @@ document.addEventListener('keydown', (e) => {
         <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
           <div>
             <div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct ingredient quantities based on recipe components</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deduct item quantities based on product components</div>
           </div>
           <label class="inv-toggle">
             <input type="checkbox" id="order_update_inventory" checked>
@@ -2102,7 +2106,7 @@ document.addEventListener('keydown', (e) => {
   <!-- Step 3: Success Screen -->
   <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;text-align:center;">
     <div style="flex:1;min-height:0;overflow-y:auto;padding:32px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
-      <div class="order-success-icon">✓</div>
+      <div class="order-success-icon">âœ“</div>
       <h2 class="order-success-title" id="successOrderTitle">Order Created!</h2>
       <div id="successBadgesRow" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
       <div id="successInvSection"></div>
@@ -2120,7 +2124,7 @@ document.addEventListener('keydown', (e) => {
 <div class="modal-overlay" id="recipeMappingModal">
   <div class="modal-content" style="max-width: 700px;">
     <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched recipes. You can change the recipe selection for each item.</p>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
     <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;"></div>
     <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
       <div class="form-group" style="margin-bottom: 12px;">
@@ -2169,7 +2173,7 @@ document.addEventListener('keydown', (e) => {
           <p id="orderFileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
           <p id="orderFileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
         </div>
-        <button onclick="clearOrderUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+        <button onclick="clearOrderUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">&times;</button>
       </div>
     </div>
     <div id="orderUploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
@@ -2197,8 +2201,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
@@ -2214,14 +2218,14 @@ document.addEventListener('keydown', (e) => {
       </div>
     </div>
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
-      © 2026 ShelfyAI. All rights reserved.
+      Â© 2026 ShelfyAI. All rights reserved.
     </div>
   </div>
 </footer>
 
 <script>
 // =========================================================
-// ORDER CREATION — method modal + manual recipe + AI upload
+// ORDER CREATION &mdash; method modal + manual recipe + AI upload
 // =========================================================
 
 // State
@@ -2248,7 +2252,7 @@ function selectOrderMethod(method) {
 }
 
 // --- Manual Order Modal ---
-// ─── RECIPE PICKER STATE ─────────────────────────────────────────────────────
+// â”€â”€â”€ RECIPE PICKER STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let orderRecipeCache = null;
 let orderFavoriteIds = new Set(); // populated from DB on load
 let orderStockMap = {};
@@ -2330,7 +2334,7 @@ function _renderRecipeCard(recipe) {
     <button class="fav-btn${isFav ? ' is-fav' : ''}"
       onclick="event.stopPropagation();toggleOrderFavorite('${recipe.id}')"
       style="pointer-events:auto"
-      title="Favorite">${isFav ? '★' : '☆'}</button>
+      title="Favorite">${isFav ? '&#9733;' : '&#9734;'}</button>
     <div class="card-name">${recipe.name}</div>
     <div class="card-price">$${price.toFixed(2)}</div>
     ${badge}
@@ -2340,14 +2344,14 @@ function _renderRecipeCard(recipe) {
 function _renderAddedSection() {
   if (!orderRecipes.length) return '';
   return `<div class="added-recipes-section">
-    <div class="recipe-section-title">Added Recipes</div>
+    <div class="recipe-section-title">Added Products</div>
     ${orderRecipes.map(r => `
       <div class="added-recipe-row" id="arr-${r.id}">
         <span class="ar-name">${r.name}</span>
-        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">−</button>
+        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">&minus;</button>
         <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
         <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
-        <button class="ar-remove" type="button" onclick="removeOrderRecipe('${r.id}')">×</button>
+        <button class="ar-remove" type="button" onclick="removeOrderRecipe('${r.id}')">&times;</button>
       </div>`).join('')}
   </div>`;
 }
@@ -2365,7 +2369,7 @@ async function renderOrderRecipeSections(filtered) {
       html += `<div class="recipe-section-title">Search Results</div>
         <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
     } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No recipes match your search</p></div>';
+      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
     }
     body.innerHTML = html;
     return;
@@ -2384,11 +2388,11 @@ async function renderOrderRecipeSections(filtered) {
     <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
   if (recentList.length) html += `<div class="recipe-section-title">Recently Used</div>
     <div class="recipe-picker-grid">${recentList.map(_renderRecipeCard).join('')}</div>`;
-  if (allOnly.length) html += `<div class="recipe-section-title">All Recipes</div>
+  if (allOnly.length) html += `<div class="recipe-section-title">All Products</div>
     <div class="recipe-picker-grid">${allOnly.map(_renderRecipeCard).join('')}</div>`;
 
   if (!favs.length && !recentList.length && !allOnly.length && orderRecipes.length) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All recipes have been added</div>';
+    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All products have been added</div>';
   }
 
   body.innerHTML = html;
@@ -2494,7 +2498,7 @@ function adjustPickerQty(index, delta) {
 }
 
 function proceedToOrderDetails() {
-  if (!orderRecipes.length) { showOrderNotification('Please select at least one recipe', 'warning'); return; }
+  if (!orderRecipes.length) { showOrderNotification('Please select at least one product', 'warning'); return; }
   document.getElementById('manualStep1').style.display = 'none';
   document.getElementById('manualStep2').style.display = 'flex';
   updateOrderTotal();
@@ -2505,7 +2509,7 @@ function proceedToOrderDetails() {
   // Recipe summary rows
   document.getElementById('step2RecipeSummary').innerHTML =
     orderRecipes.map((r, i) => `<div style="display:flex;align-items:center;padding:11px 16px;${i < orderRecipes.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
-      <span style="min-width:36px;color:var(--text-muted);font-weight:500;font-size:13px;flex-shrink:0;">${r.quantity}×</span>
+      <span style="min-width:36px;color:var(--text-muted);font-weight:500;font-size:13px;flex-shrink:0;">${r.quantity}&times;</span>
       <span style="flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</span>
       <span style="color:var(--accent);font-weight:700;flex-shrink:0;">$${(r.price * r.quantity).toFixed(2)}</span>
     </div>`).join('');
@@ -2527,7 +2531,7 @@ function backToRecipePicker() {
   document.getElementById('manualStep1').style.display = 'flex';
 }
 
-// ─── MODAL OPEN / CLOSE ───────────────────────────────────────────────────────
+// â”€â”€â”€ MODAL OPEN / CLOSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openManualOrderModal() {
   orderRecipes = [];
   document.getElementById('manualStep1').style.display = 'flex';
@@ -2616,12 +2620,12 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
   document.getElementById('successOrderTitle').textContent = 'Order ' + ref + ' Created!';
   const badgesRow = document.getElementById('successBadgesRow');
   let badgesHtml = '';
-  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">✓ Inventory Updated</span>';
+  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">âœ“ Inventory Updated</span>';
   if (inventoryUpdated && inventoryChanges && inventoryChanges.length > 0) {
     const oosCount = inventoryChanges.filter(i => i.status === 'out_of_stock').length;
     const lowCount = inventoryChanges.filter(i => i.status === 'low_stock').length;
-    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">⚠ ${oosCount} Out of Stock</span>`;
-    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">↓ ${lowCount} Running Low</span>`;
+    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">âš  ${oosCount} Out of Stock</span>`;
+    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">â†“ ${lowCount} Running Low</span>`;
   }
   badgesRow.innerHTML = badgesHtml;
   const sectionEl = document.getElementById('successInvSection');
@@ -2640,7 +2644,7 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
     return `<div class="inv-change-row" style="animation-delay:${idx * 0.04}s">
       <div class="inv-change-dot ${s}"></div>
       ${nameEl}
-      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">→</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
+      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">â†’</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
       ${pillHtml}
     </div>`;
   }).join('');
@@ -2708,7 +2712,7 @@ async function saveManualOrder(event) {
     if (!user) throw new Error('Not authenticated');
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    if (orderRecipes.length === 0) { showOrderNotification('Please select at least one recipe', 'warning'); return; }
+    if (orderRecipes.length === 0) { showOrderNotification('Please select at least one product', 'warning'); return; }
     const customer = document.getElementById('new_order_customer').value.trim();
     const status = document.getElementById('new_order_status').value;
     const orderReference = document.getElementById('new_order_reference').value.trim();
@@ -3099,7 +3103,7 @@ function renderMappedItems() {
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
           <div style="flex:1;">
             <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${cleanName}</div>
-            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(' · ')||'No attributes'}</div>
+            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(' Â· ')||'No attributes'}</div>
           </div>
           <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
         </div>
@@ -3108,7 +3112,7 @@ function renderMappedItems() {
             <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Recipe:</label>
             ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger);this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
           </div>
-          <input type="text" id="recipeSearchInput_${index}" placeholder="🔍 Search to change recipe or leave empty for custom item..."
+          <input type="text" id="recipeSearchInput_${index}" placeholder="ðŸ” Search to change product or leave empty for custom item..."
             value="${selected ? selected.name : ''}" autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
             onfocus="showMappingRecipeDropdown(${index})"
@@ -3124,7 +3128,7 @@ function renderMappedItems() {
         <div style="display:flex;gap:12px;align-items:center;">
           <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Quantity:</label>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" onclick="adjustMappedQuantity(${index},-1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">−</button>
+            <button type="button" onclick="adjustMappedQuantity(${index},-1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">&minus;</button>
             <span style="font-weight:600;min-width:40px;text-align:center;">${mapping.quantity}</span>
             <button type="button" onclick="adjustMappedQuantity(${index},1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">+</button>
           </div>
@@ -3172,7 +3176,7 @@ async function searchRecipesForMapping(index, searchTerm) {
     if (storeId) query = query.eq('store_id', storeId);
     const { data: allRecipes } = await query;
     if (!allRecipes || allRecipes.length === 0) {
-      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">No recipes found</div>';
+      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">No products found</div>';
       dropdown.style.display = 'block';
       return;
     }
@@ -3297,7 +3301,7 @@ async function confirmMappedOrder() {
 function showOrderNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
-  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
+  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'âœ“':type==='error'?'âœ•':type==='warning'?'âš ':'â„¹'}</span><span>${message}</span>`;
   document.body.appendChild(notification);
   setTimeout(() => {
     notification.style.animation = 'slideInRight 0.3s ease reverse';
@@ -3322,15 +3326,15 @@ function showOrderNotification(message, type = 'info') {
 
 <div class="feedback-modal" id="feedbackModal">
   <div class="feedback-content">
-    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    <button class="feedback-close" onclick="closeFeedback()">&times;</button>
     <div class="feedback-step" id="step1">
       <h3>How would you rate your experience?</h3>
       <div class="emoji-rating">
-        <div class="emoji" onclick="selectRating(1)" data-rating="1"><div class="emoji-face">😡</div><div class="emoji-label">Hate</div></div>
-        <div class="emoji" onclick="selectRating(2)" data-rating="2"><div class="emoji-face">😟</div><div class="emoji-label">Bad</div></div>
-        <div class="emoji" onclick="selectRating(3)" data-rating="3"><div class="emoji-face">😐</div><div class="emoji-label">Okay</div></div>
-        <div class="emoji" onclick="selectRating(4)" data-rating="4"><div class="emoji-face">😊</div><div class="emoji-label">Good</div></div>
-        <div class="emoji" onclick="selectRating(5)" data-rating="5"><div class="emoji-face">🤩</div><div class="emoji-label">Love</div></div>
+        <div class="emoji" onclick="selectRating(1)" data-rating="1"><div class="emoji-face">ðŸ˜¡</div><div class="emoji-label">Hate</div></div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2"><div class="emoji-face">ðŸ˜Ÿ</div><div class="emoji-label">Bad</div></div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3"><div class="emoji-face">ðŸ˜</div><div class="emoji-label">Okay</div></div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4"><div class="emoji-face">ðŸ˜Š</div><div class="emoji-label">Good</div></div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5"><div class="emoji-face">ðŸ¤©</div><div class="emoji-label">Love</div></div>
       </div>
       <button class="btn-feedback-next" onclick="nextStep()">Next</button>
     </div>

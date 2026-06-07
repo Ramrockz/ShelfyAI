@@ -5,12 +5,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Ingredients Master</title>
+<title>ShelfyAI &ndash; Items Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
-<meta name="description" content="Manage your ingredients inventory with ShelfyAI." />
+<meta name="description" content="Manage your items inventory with ShelfyAI." />
 
 <script>
   // Apply theme immediately from localStorage to prevent flash
@@ -37,6 +37,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
@@ -190,9 +191,9 @@
   th { padding: 12px 16px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); text-align: left; position: relative; resize: horizontal; overflow: auto; }
   th.sortable { cursor: pointer; user-select: none; transition: all 0.2s; }
   th.sortable:hover { color: var(--accent); background: rgba(255,255,255,0.02); }
-  th.sortable::after { content: '⇅'; margin-left: 6px; opacity: 0.3; font-size: 12px; }
-  th.sortable.asc::after { content: '▲'; opacity: 1; color: var(--accent); }
-  th.sortable.desc::after { content: '▼'; opacity: 1; color: var(--accent); }
+  th.sortable::after { content: 'â‡…'; margin-left: 6px; opacity: 0.3; font-size: 12px; }
+  th.sortable.asc::after { content: 'â–²'; opacity: 1; color: var(--accent); }
+  th.sortable.desc::after { content: 'â–¼'; opacity: 1; color: var(--accent); }
   td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   
   .ingredient-name-cell {
@@ -309,7 +310,10 @@
     background: var(--accent-hover, var(--accent));
   }
   
-  input, textarea, select { width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; }
+  /* Exclude search wrapper inputs from general input styling */
+  input:not(.search-wrapper input):not(.nav-search-input), 
+  textarea, 
+  select { width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; }
 
   .form-group {
     margin-bottom: 20px;
@@ -579,7 +583,7 @@
     padding: 4px 0 12px;
   }
   .mobile-attr-subfilter.visible { display: flex; }
-  /* Desktop subfilter lives inside the sidebar — hide the mobile one on desktop */
+  /* Desktop subfilter lives inside the sidebar &mdash; hide the mobile one on desktop */
   @media (min-width: 769px) {
     #mobileAttrSubfilter.visible { display: none !important; }
   }
@@ -694,7 +698,7 @@
       flex-shrink: 0;
     }
     
-    /* Hide desktop search on mobile — navbar search is used instead */
+    /* Hide desktop search on mobile &mdash; navbar search is used instead */
     .top-bar .search-wrapper {
       display: none !important;
     }
@@ -891,8 +895,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -913,8 +917,8 @@
     </div>
     <div class="search-wrapper" style="flex: 1;">
       <i data-lucide="search" class="search-icon"></i>
-      <input class="nav-search-input" id="navSearchInput" placeholder="Search ingredients…" oninput="cardsToShow = 15; render(); toggleSearchClear('navSearchInput')">
-      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      <input type="text" class="nav-search-input" id="navSearchInput" placeholder="Search items&hellip;" oninput="cardsToShow = 15; render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">&times;</button>
     </div>
 
     <!-- Notification Bell -->
@@ -996,9 +1000,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -1026,6 +1030,11 @@
       if (roleEl) roleEl.textContent = cachedTier;
     }
   })();
+  
+  // Initialize lucide icons in navbar immediately
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 </script>
 
 <div class="page">
@@ -1033,10 +1042,10 @@
     <div class="cta">
       <h2 style="display: flex; align-items: center; gap: 12px;">
         <img src="https://cdn-icons-png.flaticon.com/128/17577/17577151.png" alt="ingredient icon" style="width: 32px; height: 32px; filter: brightness(0) invert(1);" />
-        Create ingredient
+        Create item
       </h2>
       <p>Add raw materials, supplies, or components required to build your products.</p>
-      <button class="btn btn-primary" onclick="openModal()">+ New Ingredient</button>
+      <button class="btn btn-primary" onclick="openModal()">+ New Item</button>
     </div>
     
     <!-- Type Filter Cards -->
@@ -1084,8 +1093,8 @@
       </div>
       <div class="search-wrapper" style="width: 480px; flex-shrink: 0;">
         <i data-lucide="search" class="search-icon"></i>
-        <input type="text" id="searchInput" placeholder="Search ingredients..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 15; render(); toggleSearchClear('searchInput')" />
-        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
+        <input type="text" id="searchInput" placeholder="Search items..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 15; render(); toggleSearchClear('searchInput')" />
+        <button type="button" class="search-clear" id="searchInput_clear" onclick="document.getElementById('searchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">&times;</button>
       </div>
     </div>
 
@@ -1112,7 +1121,7 @@
   </main>
 
   <!-- Floating Action Button (visible only on mobile) -->
-  <button class="fab" onclick="openModal()" aria-label="Create ingredient"></button>
+  <button class="fab" onclick="openModal()" aria-label="Create item"></button>
 </div>
 
 <div class="drawer" id="drawer">
@@ -1133,8 +1142,8 @@
 
 <div class="modal-overlay" id="methodModal" onclick="if(event.target === this) closeMethodModal()">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your item</p>
     
     <div class="method-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <div class="method-card" onclick="selectMethod('manual')">
@@ -1176,11 +1185,11 @@
 
 <div class="modal-overlay" id="manualModal">
   <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Ingredient</h3>
-    
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Item</h3>
+
     <form id="ingredientForm" onsubmit="saveIngredient(event)" novalidate>
       <div class="form-group">
-        <label for="ing_name">Ingredient Name *</label>
+        <label for="ing_name">Item Name *</label>
         <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
 
@@ -1275,7 +1284,7 @@
 
       <div style="display: flex; gap: 12px; margin-top: 24px;">
         <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeManualModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Ingredient</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Item</button>
       </div>
     </form>
   </div>
@@ -1283,7 +1292,7 @@
 
 <div class="modal-overlay" id="csvModal" onclick="if(event.target === this) closeCSVModal()">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import Ingredients - CSV</h3>
+    <h3 style="margin: 0 0 20px 0;">Import Items - CSV</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a CSV file with columns: name, quantity, unit, cost_per_unit, category, notes</p>
     
     <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);" onclick="document.getElementById('csvFileInput').click()">
@@ -1336,7 +1345,7 @@
           <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
           <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
         </div>
-        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">&times;</button>
       </div>
     </div>
     
@@ -1369,11 +1378,11 @@
 
 <div class="modal-overlay" id="duplicateModal">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated ingredient</p>
-    
+    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Item</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated item</p>
+
     <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Name</label>
-    <input type="text" id="dupName" placeholder="Ingredient Name" style="margin-bottom: 16px;" />
+    <input type="text" id="dupName" placeholder="Item Name" style="margin-bottom: 16px;" />
     
     <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Quantity</label>
     <input id="dupQty" type="number" step="0.01" placeholder="0" style="margin-bottom: 16px;" />
@@ -1478,8 +1487,35 @@ function resolveConfirm(result) {
 
 // Load ingredients from Supabase on page load
 async function loadIngredients() {
+  const _lsCached = localStorage.getItem('shelfy_cache_ingredients');
+  if (_lsCached) {
+    // Each step has its own try/catch — a failure in one cannot block the others.
+    try { ingredients = JSON.parse(_lsCached); } catch (e) {}
+
+    // switchView opens the correct container and calls render(); must always run.
+    try {
+      if (window.innerWidth <= 768) {
+        switchView('recent');
+      } else {
+        const _vp = new URLSearchParams(window.location.search).get('view');
+        switchView((_vp && ['recent','list','kanban'].includes(_vp)) ? _vp : (currentView || 'recent'));
+      }
+    } catch (e) { console.warn('[offline] switchView error', e); }
+
+    // Filter UI — can fail (e.g. lucide not loaded) without breaking the item list.
+    try { if (typeof renderTypeFilterCards === 'function') renderTypeFilterCards(); } catch (e) {}
+    try { if (typeof updateMobileCategoryVisibility === 'function') updateMobileCategoryVisibility(); } catch (e) {}
+
+    // Always reveal the page.
+    document.documentElement.style.visibility = 'visible';
+    const _sidebar = document.querySelector('.sidebar');
+    const _main    = document.querySelector('.main');
+    if (_sidebar) _sidebar.style.visibility = 'visible';
+    if (_main)    _main.style.visibility    = 'visible';
+
+  }
   const recentContainer = document.getElementById('recentView');
-  if (recentContainer) {
+  if (recentContainer && !_lsCached) {
     recentContainer.innerHTML = Array(6).fill(0).map(() => `
       <div class="skeleton-card">
         <div class="skeleton-line" style="width:55%; height:14px;"></div>
@@ -1489,8 +1525,12 @@ async function loadIngredients() {
     `).join('');
   }
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    // getSession() reads the JWT from localStorage (no network) so the fetch path
+    // still runs in flaky-network conditions and can refresh the cache.
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
+    if (!navigator.onLine) return; // offline — keep the cached view, skip the fetch
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
@@ -1501,6 +1541,13 @@ async function loadIngredients() {
       .eq('profile_id', user.id);
     if (storeId) _q1 = _q1.eq('store_id', storeId);
     _q1 = _q1.order('created_at', { ascending: false });
+
+    // Race the query against a 7-second timeout so we never hang indefinitely
+    // (navigator.onLine is unreliable on WiFi-connected-but-no-internet scenarios)
+    _q1 = Promise.race([
+      _q1,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('shelfy-timeout')), 7000))
+    ]);
     const { data, error } = await _q1;
 
     if (error) throw error;
@@ -1524,7 +1571,8 @@ async function loadIngredients() {
       source_url: item.source_url || '',
       reorder_pending: item.reorder_pending || false
     }));
-    
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+
     // Check URL for view parameter, otherwise use saved or default view
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get('view');
@@ -1539,8 +1587,10 @@ async function loadIngredients() {
       switchView(currentView);
     }
   } catch (error) {
+    // Timeout, network failure, or offline — silently keep cached view if available
+    if (_lsCached || error.message === 'shelfy-timeout' || error instanceof TypeError || !navigator.onLine) return;
     console.error('Error loading ingredients:', error);
-    showAlert('Failed to load ingredients: ' + error.message, 'Error');
+    showAlert('Failed to load items: ' + error.message, 'Error');
   }
 }
 
@@ -1551,15 +1601,32 @@ function updateMobileCategoryVisibility() {
   });
 }
 
-lucide.createIcons();
-
 // Call loadIngredients when page is ready
+window.addEventListener('shelfy:id-reconcile', (e) => {
+  const { table, tempId, realId } = e.detail;
+  if (table === 'ingredients') {
+    const item = ingredients.find(i => i.id === tempId);
+    if (item) { item.id = realId; render(); }
+  }
+});
+
+// After the queue drains, re-fetch from Supabase to rebuild the localStorage
+// cache — otherwise the next offline session sees an empty page.
+window.addEventListener('shelfy:synced', (e) => {
+  if (e.detail.tables.includes('ingredients')) {
+    loadIngredients().catch(() => {});
+  }
+});
+
 loadIngredients().then(() => {
   // Show sidebar and main content after data is loaded
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
   renderTypeFilterCards();
   updateMobileCategoryVisibility();
+  
+  // Initialize lucide icons after content is visible
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // Check for inventory filter from operations page
   const inventoryFilter = sessionStorage.getItem('inventoryFilter');
@@ -1654,7 +1721,12 @@ async function checkAIUsage() {
 }
 
 async function openModal() {
-  // Check AI usage before opening
+  // Offline: skip the method picker entirely and go straight to manual entry.
+  // checkAIUsage() is a network call that hangs when offline.
+  if (!navigator.onLine) {
+    document.getElementById('manualModal').classList.add('active');
+    return;
+  }
   await checkAIUsage();
   document.getElementById('methodModal').classList.add('active');
   updateMethodCardsUI();
@@ -2081,7 +2153,7 @@ async function processImageUpload() {
         row.innerHTML = `
           <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <input type="text" value="${result.data.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
         `;
         container.appendChild(row);
       }
@@ -2091,7 +2163,7 @@ async function processImageUpload() {
         row.innerHTML = `
           <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <input type="text" value="${result.data.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
         `;
         container.appendChild(row);
       }
@@ -2229,7 +2301,7 @@ async function handleURLImport() {
         
         // Combine name with attributes using bullet separator
         if (attributes.length > 0) {
-          fullName = `${result.data.name} • ${attributes.join(' • ')}`;
+          fullName = `${result.data.name} &bull; ${attributes.join(' &bull; ')}`;
         }
         
         document.getElementById('ing_name').value = fullName;
@@ -2297,7 +2369,7 @@ async function handleURLImport() {
         row.innerHTML = `
           <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <input type="text" value="${result.data.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
         `;
         container.appendChild(row);
       }
@@ -2307,7 +2379,7 @@ async function handleURLImport() {
         row.innerHTML = `
           <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <input type="text" value="${result.data.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
         `;
         container.appendChild(row);
       }
@@ -2405,7 +2477,7 @@ function handleCSVUpload(event) {
 
       if (error) throw error;
 
-      showAlert(`Successfully imported ${data.length} ingredients!`, 'Success');
+      showAlert(`Successfully imported ${data.length} items!`, 'Success');
       closeCSVModal();
       loadIngredients();
     } catch (error) {
@@ -2601,13 +2673,28 @@ function renderCategoryChips() {
     return;
   }
 
+  // Skip full rebuild if the category set hasn't changed — avoids a double render
+  // when both the cache restore and the network .then() call this function.
+  const existingTitles = [...container.querySelectorAll('button[title]')]
+    .map(b => b.title).sort().join(',');
+  const newTitles = [...presentCats].sort().join(',');
+  if (existingTitles === newTitles && container.children.length > 0) return;
+
+  // Build chips while hidden so the <i>→SVG conversion never flickers.
+  // requestAnimationFrame defers the reveal until after the browser has
+  // composited the icons, eliminating the empty-square flash on mobile.
+  container.style.visibility = 'hidden';
+  const lucideReady = typeof lucide !== 'undefined';
   container.innerHTML = presentCats.map(cat => {
     const icon = _categoryIconMap[cat] || 'tag';
     const sel = activeCategoryFilter === cat;
-    return `<button type="button" onclick="addCategoryFilter('${escapeHtml(cat)}')" title="${escapeHtml(cat)}" style="display:flex;align-items:center;justify-content:center;padding:12px;background:${sel ? 'rgba(6,182,212,0.13)' : 'var(--bg-inner)'};border:1.5px solid ${sel ? 'var(--accent)' : 'var(--border)'};border-radius:10px;cursor:pointer;transition:all 0.15s;color:${sel ? 'var(--accent)' : 'var(--text-muted)'};"><i data-lucide="${icon}"></i></button>`;
+    const inner = lucideReady
+      ? `<i data-lucide="${icon}"></i>`
+      : `<span style="font-size:9px;font-weight:800;letter-spacing:0.03em;line-height:1;">${escapeHtml(cat.slice(0,3).toUpperCase())}</span>`;
+    return `<button type="button" onclick="addCategoryFilter('${escapeHtml(cat)}')" title="${escapeHtml(cat)}" style="display:flex;align-items:center;justify-content:center;padding:12px;background:${sel ? 'rgba(6,182,212,0.13)' : 'var(--bg-inner)'};border:1.5px solid ${sel ? 'var(--accent)' : 'var(--border)'};border-radius:10px;cursor:pointer;transition:all 0.15s;color:${sel ? 'var(--accent)' : 'var(--text-muted)'};">${inner}</button>`;
   }).join('');
-
-  lucide.createIcons();
+  if (lucideReady) lucide.createIcons();
+  requestAnimationFrame(() => { container.style.visibility = 'visible'; });
 }
 
 function renderCategoryLevel() {
@@ -2645,7 +2732,7 @@ function renderCategoryLevel() {
       gap: 12px;
       margin-bottom: 12px;
     " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 20px;">â†</div>
       <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Types</div>
     </div>
   `;
@@ -2672,7 +2759,7 @@ function renderCategoryLevel() {
   if (categories.length === 0) {
     container.innerHTML = backButton + `
       <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-muted);">
-        <p style="font-size: 14px;">No ingredients for ${escapeHtml(selectedType)} yet</p>
+        <p style="font-size: 14px;">No items for ${escapeHtml(selectedType)} yet</p>
       </div>
     `;
   } else {
@@ -2721,7 +2808,7 @@ function renderAttributeKeyLevel() {
       gap: 12px;
       margin-bottom: 12px;
     " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 20px;">â†</div>
       <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Categories</div>
     </div>
   `;
@@ -2785,7 +2872,7 @@ function renderAttributeValueLevel() {
       gap: 12px;
       margin-bottom: 12px;
     " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="font-size: 20px;">←</div>
+      <div style="font-size: 20px;">â†</div>
       <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Back to Attributes</div>
     </div>
   `;
@@ -3006,7 +3093,7 @@ function render() {
       return false;
     }
 
-    // Apply mobile attribute value subfilters (multiselect — item must have ALL selected values, case-insensitive)
+    // Apply mobile attribute value subfilters (multiselect &mdash; item must have ALL selected values, case-insensitive)
     if (activeAttrValueFilters && activeAttrValueFilters.size > 0) {
       if (!i.custom_attributes) return false;
       try {
@@ -3062,11 +3149,11 @@ function render() {
     });
   }
   
-  // Update filter badges
-  renderFilterBadges();
-  
-  // Update type filter cards
-  renderTypeFilterCards();
+  // Update filter badges — isolated so a throw can't abort renderRecent
+  try { renderFilterBadges(); } catch (e) {}
+
+  // Update type filter cards — isolated (renderCategoryChips calls lucide which can throw offline)
+  try { renderTypeFilterCards(); } catch (e) {}
   
   // Update category filters to show only existing categories (only if ingredients exist)
   const existingCategories = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
@@ -3242,7 +3329,7 @@ function renderFilterBadges() {
   badges.push(...sortedActiveFilters.map(([key, value]) => `
     <div class="filter-badge" style="background: #8b5cf6;">
       ${escapeHtml(key)}: ${escapeHtml(value)}
-      <span class="filter-badge-remove" onclick="removeAttributeFilter('${escapeHtml(key).replace(/'/g, "&#39;")}')">×</span>
+      <span class="filter-badge-remove" onclick="removeAttributeFilter('${escapeHtml(key).replace(/'/g, "&#39;")}')">&times;</span>
     </div>
   `));
   
@@ -3286,7 +3373,7 @@ function renderFilterBadges() {
       badges.push(...values.map(value => `
         <div class="filter-badge" style="background: #8b5cf6;">
           ${escapeHtml(value)}
-          <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">×</span>
+          <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">&times;</span>
         </div>
       `));
     });
@@ -3297,7 +3384,7 @@ function renderFilterBadges() {
     badges.push(`
       <div class="filter-badge">
         ${escapeHtml(activeCategoryFilter)}
-        <span class="filter-badge-remove" onclick="removeCategoryFilter()">×</span>
+        <span class="filter-badge-remove" onclick="removeCategoryFilter()">&times;</span>
       </div>
     `);
   }
@@ -3308,7 +3395,7 @@ function renderFilterBadges() {
     badges.push(`
       <div class="filter-badge">
         ${statusLabels[activeStatusFilter]}
-        <span class="filter-badge-remove" onclick="removeStatusFilter()">×</span>
+        <span class="filter-badge-remove" onclick="removeStatusFilter()">&times;</span>
       </div>
     `);
   }
@@ -3318,7 +3405,7 @@ function renderFilterBadges() {
     badges.push(`
       <div class="filter-badge">
         ${escapeHtml(activeDeliveryFilter)}
-        <span class="filter-badge-remove" onclick="removeDeliveryFilter()">×</span>
+        <span class="filter-badge-remove" onclick="removeDeliveryFilter()">&times;</span>
       </div>
     `);
   }
@@ -3328,7 +3415,7 @@ function renderFilterBadges() {
     badges.push(`
       <div class="filter-badge">
         ${escapeHtml(activeTypeFilter)}
-        <span class="filter-badge-remove" onclick="removeTypeFilter()">×</span>
+        <span class="filter-badge-remove" onclick="removeTypeFilter()">&times;</span>
       </div>
     `);
   }
@@ -3348,7 +3435,7 @@ function renderFilterBadges() {
     badges.push(`
       <div class="filter-badge" style="background: ${filterColors[window.inventoryFilterType]};">
         ${filterLabels[window.inventoryFilterType]}
-        <span class="filter-badge-remove" onclick="removeInventoryFilter()">×</span>
+        <span class="filter-badge-remove" onclick="removeInventoryFilter()">&times;</span>
       </div>
     `);
   }
@@ -3372,7 +3459,8 @@ function escapeHtml(text) {
 
 function renderRecent(data) {
   const container = document.getElementById('recentView');
-  
+
+
   // Sort by name alphabetically
   data = [...data].sort((a, b) => {
     return a.name.localeCompare(b.name);
@@ -3404,15 +3492,15 @@ function renderRecent(data) {
     
     container.innerHTML = isFirstTime ? `
       <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
-        <img src="/cat_no_orders.png" alt="No ingredients" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
-        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 24px; max-width: 260px; margin-left: auto; margin-right: auto;">Ingredients are the backbone of your inventory and needed for recipes.</p>
-        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
+        <img src="/cat_no_orders.png" alt="No items" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+        <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No items yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 24px; max-width: 260px; margin-left: auto; margin-right: auto;">Items are the backbone of your inventory and needed for products.</p>
+        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Item</button>
       </div>
     ` : `
       <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No ingredients match your search</p>
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No items match your search</p>
       </div>
     `;
     return;
@@ -3442,7 +3530,7 @@ function renderRecent(data) {
 
   // Shared card builder
   const buildIngCard = i => {
-    const starIcon = i.is_favorite ? '★' : '☆';
+    const starIcon = i.is_favorite ? '&#9733;' : '&#9734;';
     const starClass = i.is_favorite ? 'favorited' : '';
     const safeName = escapeHtml(i.name);
     let qtyColor = 'var(--success)';
@@ -3479,11 +3567,11 @@ function renderRecent(data) {
           })
           .filter(({ value }) => value && value.trim())
           .map(({ value }) => `<span class="attr-badge" data-value="${escapeHtml(value)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(value)}</span>`);
-        if (badges.length > 0) attributesText = badges.join(' • ');
+        if (badges.length > 0) attributesText = badges.join(' &bull; ');
       } catch (e) { console.error('Error parsing attributes:', e); }
     }
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
-    attributesText = attributesText ? categoryBadge + ' • ' + attributesText : categoryBadge;
+    attributesText = attributesText ? categoryBadge + ' &bull; ' + attributesText : categoryBadge;
     const truckHtml = i.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" onclick="event.stopPropagation(); openRestockModal('${i.id}')" title="Delivery pending" style="cursor:pointer; color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : '';
     return `<div class="card-small">
         <h4>
@@ -3493,7 +3581,7 @@ function renderRecent(data) {
         ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
         <div style="display: flex; justify-content: center; margin: 12px 0;">
           <div class="qty-display-container">
-            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">−</button>
+            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
             <span class="qty-number" style="color: ${qtyColor};">${i.qty}</span>
             <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', 1)">+</button>
           </div>
@@ -3534,7 +3622,7 @@ function renderRecent(data) {
   }
   if (otherData.length > 0) {
     const needsLabel = favData.length > 0 || outOfStock.length > 0 || lowStock.length > 0;
-    if (needsLabel) container.innerHTML += sectionLbl('All Ingredients', allOtherData.length);
+    if (needsLabel) container.innerHTML += sectionLbl('All Items', allOtherData.length);
     otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
   
@@ -3622,13 +3710,13 @@ function renderList(data) {
       emptyDiv.id = 'emptyStateList';
       emptyDiv.style.cssText = 'text-align: center; padding: 40px 20px;';
       emptyDiv.innerHTML = isFirstTime ? `
-        <img src="/cat_no_orders.png" alt="No ingredients" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
-        <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No ingredients yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Ingredients are the backbone of your inventory and needed for recipes.</p>
-        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Ingredient</button>
+        <img src="/cat_no_orders.png" alt="No items" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+        <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No items yet</h3>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Items are the backbone of your inventory and needed for products.</p>
+        <button onclick="openModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Add Item</button>
       ` : `
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No ingredients match your search</p>
+        <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No items match your search</p>
       `;
       tableContainer.parentElement.appendChild(emptyDiv);
     }
@@ -3666,7 +3754,7 @@ function renderList(data) {
   paginatedData.forEach((i, index) => {
     const actualIndex = startIndex + index + 1;
     const s = getStatus(i.qty, i.min_stock);
-    const starIcon = i.is_favorite ? '★' : '☆';
+    const starIcon = i.is_favorite ? '&#9733;' : '&#9734;';
     const starClass = i.is_favorite ? 'favorited' : '';
     const safeName = escapeHtml(i.name);
     
@@ -3721,7 +3809,7 @@ function renderList(data) {
         if (sortedValues.length > 0) {
           attributesHtml = sortedValues.map(v => 
             `<span class="attr-badge" data-value="${escapeHtml(v)}" style="cursor: pointer; padding: 2px 6px; background: var(--accent)22; color: var(--accent); border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; margin: 2px;">${escapeHtml(v)}</span>`
-          ).join(' • ');
+          ).join(' &bull; ');
         }
       } catch (e) {
         console.error('Error parsing attributes:', e);
@@ -3779,13 +3867,10 @@ async function toggleFavorite(id) {
   
   // Update database in background
   try {
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .update({ is_favorite: newState })
-      .eq('id', id)
-      .select();
+    const { error } = await offlineWrite('ingredients', 'update', { is_favorite: newState }, 'id', id);
 
     if (error) throw error;
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
   } catch (error) {
     console.error('Error toggling favorite:', error);
     // Revert on error
@@ -3806,10 +3891,7 @@ async function updateQty(id, delta) {
   
   try {
     // Update quantity in database
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .update({ quantity: newQty })
-      .eq('id', id);
+    const { error } = await offlineWrite('ingredients', 'update', { quantity: newQty }, 'id', id);
 
     if (error) throw error;
 
@@ -3823,9 +3905,7 @@ async function updateQty(id, delta) {
         if (newQty === 0 && oldQty > 0) {
           await createOutOfStockNotification(id, item.name, user.id);
         }
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
+        await offlineWrite('ingredient_history', 'insert', {
             ingredient_id: id,
             profile_id: user.id,
             field_name: 'quantity',
@@ -3834,13 +3914,14 @@ async function updateQty(id, delta) {
             reason: 'manual',
             reference_id: null,
             reference_text: 'Manual adjustment'
-          }]);
+          });
       }
     } catch (historyError) {
       console.error('Error creating history entry:', historyError);
     }
 
     render();
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
   } catch (error) {
     showAlert('Failed to update: ' + error.message, 'Error');
   }
@@ -3857,10 +3938,7 @@ async function updateIngredientSKU(id, newSKU) {
   
   try {
     // Update SKU in database
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .update({ sku: trimmedSKU || null })
-      .eq('id', id);
+    const { error } = await offlineWrite('ingredients', 'update', { sku: trimmedSKU || null }, 'id', id);
 
     if (error) throw error;
 
@@ -3871,9 +3949,7 @@ async function updateIngredientSKU(id, newSKU) {
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) {
-        await supabaseClient
-          .from('ingredient_history')
-          .insert([{
+        await offlineWrite('ingredient_history', 'insert', {
             ingredient_id: id,
             profile_id: user.id,
             field_name: 'sku',
@@ -3882,7 +3958,7 @@ async function updateIngredientSKU(id, newSKU) {
             reason: 'manual',
             reference_id: null,
             reference_text: 'SKU updated'
-          }]);
+          });
       }
     } catch (historyError) {
       console.error('Error creating history entry:', historyError);
@@ -3893,6 +3969,7 @@ async function updateIngredientSKU(id, newSKU) {
       const cached = window.allIngredientsCache.find(i => i.id == id);
       if (cached) cached.sku = trimmedSKU;
     }
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
 
   } catch (error) {
     console.error('Failed to update SKU:', error);
@@ -3915,7 +3992,7 @@ function renderPagination(totalPages, totalItems) {
   
   // Previous button
   if (listCurrentPage > 1) {
-    html += `<button onclick="changePage(${listCurrentPage - 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">← Prev</button>`;
+    html += `<button onclick="changePage(${listCurrentPage - 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">â† Prev</button>`;
   }
   
   // Page numbers
@@ -3930,7 +4007,7 @@ function renderPagination(totalPages, totalItems) {
   
   // Next button
   if (listCurrentPage < totalPages) {
-    html += `<button onclick="changePage(${listCurrentPage + 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">Next →</button>`;
+    html += `<button onclick="changePage(${listCurrentPage + 1})" style="padding: 8px 12px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-weight: 600;">Next â†’</button>`;
   }
   
   html += '</div>';
@@ -3947,23 +4024,21 @@ function editIngredient(id) {
 }
 
 async function deleteIng(id) { 
-  const confirmed = await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient', 'Delete', true);
+  const confirmed = await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Delete', true);
   if (!confirmed) return;
   
   try {
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .delete()
-      .eq('id', id);
-    
+    const { error } = await offlineWrite('ingredients', 'delete', null, 'id', id);
+
     if (error) {
       showAlert('Failed to delete: ' + error.message, 'Error');
     } else {
       ingredients = ingredients.filter(i => i.id !== id);
       render();
+      localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
     }
   } catch (err) {
-    showAlert('Error deleting ingredient: ' + err.message, 'Error');
+    showAlert('Error deleting item: ' + err.message, 'Error');
   }
 }
 
@@ -3973,7 +4048,7 @@ let duplicateAttributes = {};
 function openDuplicateModal(id) {
   const ingredient = ingredients.find(i => i.id === id || i.id == id);
   if (!ingredient) {
-    showAlert('Ingredient not found', 'Error');
+    showAlert('Item not found', 'Error');
     return;
   }
   
@@ -4030,7 +4105,7 @@ function renderDupAttributes() {
     attrDiv.innerHTML = `
       <input type="text" value="${key}" onchange="updateDupAttributeKey(this, '${key}')" placeholder="Key" style="flex: 1; margin-bottom: 0; padding: 10px;" />
       <input type="text" value="${value}" onchange="updateDupAttributeValue('${key}', this.value)" placeholder="Value" style="flex: 1; margin-bottom: 0; padding: 10px;" />
-      <button onclick="removeDupAttribute('${key}')" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 600;">×</button>
+      <button onclick="removeDupAttribute('${key}')" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 600;">&times;</button>
     `;
     container.appendChild(attrDiv);
   }
@@ -4074,9 +4149,10 @@ async function saveDuplicate(keepOpen = false) {
   if (!currentDuplicateIngredient) return;
 
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session: _dupSess } } = await supabaseClient.auth.getSession();
+    const user = _dupSess?.user;
     if (!user) {
-      showAlert('Please log in to duplicate ingredients', 'Authentication Required');
+      showAlert('Please log in to duplicate items', 'Authentication Required');
       return;
     }
 
@@ -4093,9 +4169,7 @@ async function saveDuplicate(keepOpen = false) {
     if (loadError) throw loadError;
     
     // Create copy of ingredient
-    const { data, error } = await supabaseClient
-      .from('ingredients')
-      .insert({
+    const { data, error } = await offlineWrite('ingredients', 'insert', {
         name: name,
         quantity: qty,
         unit: fullData.unit,
@@ -4110,9 +4184,8 @@ async function saveDuplicate(keepOpen = false) {
         custom_attributes: Object.keys(duplicateAttributes).length > 0 ? JSON.stringify(duplicateAttributes) : null,
         profile_id: user.id,
         store_id: storeId
-      })
-      .select();
-    
+      });
+
     if (error) throw error;
     
     // Add to local array
@@ -4135,9 +4208,10 @@ async function saveDuplicate(keepOpen = false) {
       estimated_delivery: newIng.estimated_delivery,
       custom_attributes: newIng.custom_attributes
     });
-    
+
     render();
-    
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+
     if (keepOpen) {
       // Update currentDuplicateIngredient to the newly created ingredient
       currentDuplicateIngredient = {
@@ -4182,7 +4256,7 @@ async function saveDuplicate(keepOpen = false) {
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
               <input type="text" value="${escapeHtml(key)}" placeholder="Attribute name" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);" oninput="updateDuplicateAttribute(this)">
               <input type="text" value="${escapeHtml(value)}" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);" oninput="updateDuplicateAttribute(this)">
-              <button type="button" onclick="removeDuplicateAttributeRow(this)" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+              <button type="button" onclick="removeDuplicateAttributeRow(this)" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
             </div>
           `;
         }
@@ -4195,7 +4269,7 @@ async function saveDuplicate(keepOpen = false) {
     }
   } catch (error) {
     console.error('Error duplicating ingredient:', error);
-    showAlert('Failed to duplicate ingredient: ' + error.message, 'Error');
+    showAlert('Failed to duplicate item: ' + error.message, 'Error');
   }
 }
 
@@ -4206,7 +4280,7 @@ function addAttributeRow() {
   row.innerHTML = `
     <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
     <input type="text" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-    <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+    <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
   `;
   container.appendChild(row);
 }
@@ -4230,11 +4304,19 @@ function selectIngCategory(value) {
 async function saveIngredient(event) {
   if (event) event.preventDefault();
 
-  // Get current authenticated user
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  // Disable immediately so the user gets instant feedback — previously this was
+  // set late in the function, after several async calls, making the button appear dead.
+  const submitBtn = document.querySelector('#ingredientForm button[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+
+  try {
+
+  // getSession() reads the JWT from localStorage — works offline, no network needed.
+  const { data: { session: _sess } } = await supabaseClient.auth.getSession();
+  const user = _sess?.user;
 
   if (!user) {
-    showAlert('You must be logged in to add ingredients', 'Authentication Required');
+    showAlert('You must be logged in to add items', 'Authentication Required');
     return;
   }
 
@@ -4264,13 +4346,17 @@ async function saveIngredient(event) {
     return;
   }
 
-  // Ensure a profiles row exists — required by the ingredients_profile_id_fkey constraint
-  await supabaseClient
-    .from('profiles')
-    .upsert(
-      { id: user.id, name: user.email.split('@')[0], role: 'user' },
-      { onConflict: 'id', ignoreDuplicates: true }
-    );
+  // Ensure a profiles row exists — skip when offline (profile already exists)
+  if (navigator.onLine) {
+    try {
+      await supabaseClient
+        .from('profiles')
+        .upsert(
+          { id: user.id, name: user.email.split('@')[0], role: 'user' },
+          { onConflict: 'id', ignoreDuplicates: true }
+        );
+    } catch (e) {}
+  }
   
   // Capitalize attribute keys consistently
   function capitalizeAttributeKey(key) {
@@ -4328,29 +4414,44 @@ async function saveIngredient(event) {
     custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null
   };
 
-  const submitBtn = document.querySelector('#ingredientForm button[type="submit"]');
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
-  }
-
-  try {
-    const { data, error } = await supabaseClient
-      .from('ingredients')
-      .insert([formData]);
+    const { data, error, queued } = await offlineWrite('ingredients', 'insert', formData);
 
     if (error) throw error;
 
     closeManualModal();
-    // Reload ingredients
-    await loadIngredients();
+    if (queued && data) {
+      ingredients.unshift({
+        id: data[0].id,
+        name: formData.name,
+        sku: formData.sku || '',
+        qty: formData.quantity || 0,
+        unit: formData.unit || 'units',
+        cost: formData.cost_per_unit || 0,
+        category: formData.category || 'General',
+        type: formData.type || 'Production',
+        delivery: 'In Warehouse',
+        notes: formData.notes || '',
+        is_favorite: false,
+        custom_attributes: formData.custom_attributes || null,
+        min_stock: formData.min_stock || 0,
+        reorder_point: 10,
+        max_stock: null,
+        source_url: formData.source_url || '',
+        reorder_pending: false
+      });
+      render();
+      localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+    } else {
+      await loadIngredients();
+    }
+
   } catch (error) {
     console.error('Error saving ingredient:', error);
-    showAlert(error.message || 'Failed to save ingredient', 'Error');
+    showAlert(error.message || 'Failed to save item', 'Error');
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Ingredient';
+      submitBtn.textContent = 'Save Item';
     }
   }
 }
@@ -4364,7 +4465,7 @@ async function saveIngredientOld() {
   const notes = document.getElementById('ingNotes').value;
 
   if (!name) {
-    showAlert('Please enter an ingredient name', 'Required');
+    showAlert('Please enter an item name', 'Required');
     return;
   }
 
@@ -4432,15 +4533,15 @@ async function saveIngredientOld() {
 
     render();
     closeManualModal();
-    showAlert('Ingredient added successfully!', 'Success');
+    showAlert('Item added successfully!', 'Success');
   } catch (error) {
-    console.error('Error saving ingredient:', error);
-    showAlert('Failed to save ingredient: ' + error.message, 'Error');
-    
+    console.error('Error saving item:', error);
+    showAlert('Failed to save item: ' + error.message, 'Error');
+
     const submitBtn = document.querySelector('#manualModal button[onclick="saveIngredient()"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Ingredient';
+      submitBtn.textContent = 'Save Item';
     }
   }
 }
@@ -4494,29 +4595,29 @@ window.onclick = (e) => {
 
 <div class="feedback-modal" id="feedbackModal">
   <div class="feedback-content">
-    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    <button class="feedback-close" onclick="closeFeedback()">&times;</button>
     
     <div class="feedback-step" id="step1">
       <h3>How would you rate your experience?</h3>
       <div class="emoji-rating">
         <div class="emoji" onclick="selectRating(1)" data-rating="1">
-          <div class="emoji-face">😡</div>
+          <div class="emoji-face">ðŸ˜¡</div>
           <div class="emoji-label">Hate</div>
         </div>
         <div class="emoji" onclick="selectRating(2)" data-rating="2">
-          <div class="emoji-face">😟</div>
+          <div class="emoji-face">ðŸ˜Ÿ</div>
           <div class="emoji-label">Bad</div>
         </div>
         <div class="emoji" onclick="selectRating(3)" data-rating="3">
-          <div class="emoji-face">😐</div>
+          <div class="emoji-face">ðŸ˜</div>
           <div class="emoji-label">Okay</div>
         </div>
         <div class="emoji" onclick="selectRating(4)" data-rating="4">
-          <div class="emoji-face">😊</div>
+          <div class="emoji-face">ðŸ˜Š</div>
           <div class="emoji-label">Good</div>
         </div>
         <div class="emoji" onclick="selectRating(5)" data-rating="5">
-          <div class="emoji-face">🤩</div>
+          <div class="emoji-face">ðŸ¤©</div>
           <div class="emoji-label">Love</div>
         </div>
       </div>
@@ -4663,8 +4764,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
@@ -4680,7 +4781,7 @@ document.addEventListener('keydown', (e) => {
       </div>
     </div>
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
-      © 2026 ShelfyAI. All rights reserved.
+      Â© 2026 ShelfyAI. All rights reserved.
     </div>
   </div>
 </footer>
@@ -4688,7 +4789,7 @@ document.addEventListener('keydown', (e) => {
 <!-- Restock Modal -->
 <div class="restock-modal" id="restockModal" onclick="if(event.target === this) closeRestockModal()">
   <div class="restock-modal-content">
-    <button class="restock-modal-close" onclick="closeRestockModal()">×</button>
+    <button class="restock-modal-close" onclick="closeRestockModal()">&times;</button>
     <div style="margin-bottom: 24px;">
       <h3 style="margin: 0 0 16px 0; font-size: 20px;">Restock from Source</h3>
       <div class="restock-source-url" id="restockSourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
@@ -4715,12 +4816,12 @@ document.addEventListener('keydown', (e) => {
 <!-- No Source URL Modal (Restock) -->
 <div class="modal-overlay" id="restockNoSourceModal" onclick="if(event.target === this) closeRestockNoSourceModal()">
   <div class="modal-content">
-    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">📍 Source URL Missing</h3>
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">ðŸ“ Source URL Missing</h3>
     <p style="color: var(--text-main); font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
       We don't know where to restock this ingredient from yet.
     </p>
     <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
-      💡 <strong>Tip:</strong> Add a source URL on the ingredient detail page to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
+      ðŸ’¡ <strong>Tip:</strong> Add a source URL on the ingredient detail page to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
     </p>
     <div style="display: flex; gap: 12px;">
       <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="closeRestockNoSourceModal()">Cancel</button>
@@ -4788,7 +4889,7 @@ document.addEventListener('keydown', (e) => {
     _restockAbortController = new AbortController();
 
     const container = document.getElementById('restockIngredientsList');
-    container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Loading ingredients...</p>';
+    container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Loading items...</p>';
 
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
@@ -4811,12 +4912,12 @@ document.addEventListener('keydown', (e) => {
 
       if (error) {
         if (error.name === 'AbortError') return;
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
         return;
       }
 
       if (!data || data.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No other ingredients from this source</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No other items from this source</p>';
         return;
       }
 
@@ -4855,7 +4956,7 @@ document.addEventListener('keydown', (e) => {
       }).join('');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
     }
   }
 

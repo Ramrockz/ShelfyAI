@@ -7,6 +7,12 @@ let notificationCheckInterval = null;
 
 // Initialize notifications on page load
 async function initializeNotifications() {
+  // Clear any existing interval to prevent duplicates
+  if (notificationCheckInterval) {
+    clearInterval(notificationCheckInterval);
+    notificationCheckInterval = null;
+  }
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     const bellElement = document.getElementById('notificationBell');
@@ -23,18 +29,19 @@ async function initializeNotifications() {
 // Load notifications from database
 async function loadNotifications() {
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!navigator.onLine) return; // notifications require the network
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
-    const storeId = typeof getStoreId === 'function' ? getStoreId() : (window.currentStoreId || localStorage.getItem('shelfy_store_id'));
-    let notifQuery = supabaseClient
+    // Don't filter by store_id - show all user's notifications regardless of active store
+    // This prevents notifications from disappearing when switching between pages/stores
+    const { data: notifications, error } = await supabaseClient
       .from('notifications')
       .select('*')
       .eq('profile_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (storeId) notifQuery = notifQuery.eq('store_id', storeId);
-    const { data: notifications, error } = await notifQuery;
 
     if (error) throw error;
 
@@ -80,7 +87,7 @@ function renderNotifications() {
   listContainer.innerHTML = notificationsCache.map(notification => {
     const isPending = notification.ingredient_id && notificationReorderMap[notification.ingredient_id];
     const truckBtn = notification.ingredient_id ? `
-      <button class="notif-reorder-btn${isPending ? ' notif-reorder-pending' : ''}" title="${isPending ? 'Confirm Delivery' : 'Reorder'}" onclick="${isPending ? `openIngredient('${notification.ingredient_id}')` : `markAsReordered('${notification.ingredient_id}', '${notification.id}')`}; event.stopPropagation();">
+      <button class="notif-reorder-btn${isPending ? ' notif-reorder-pending' : ''}" title="${isPending ? 'Confirm Delivery' : 'Reorder'}" onclick="${isPending ? `openDeliveryForIngredient('${notification.ingredient_id}')` : `markAsReordered('${notification.ingredient_id}', '${notification.id}')`}; event.stopPropagation();">
         <span class="truck-anim-icon${isPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
       </button>
     ` : '';
@@ -100,7 +107,10 @@ function renderNotifications() {
   `;
   }).join('');
 
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+  // Re-initialize lucide icons after rendering
+  if (typeof lucide !== 'undefined') {
+    setTimeout(() => lucide.createIcons(), 0);
+  }
 }
 
 // Update notification badge count
@@ -238,6 +248,11 @@ function markAsReordered(ingredientId, notificationId) {
   window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
 }
 
+// Open delivery confirmation modal for pending reorder (navigates to ingredient detail with openDelivery=true)
+function openDeliveryForIngredient(ingredientId) {
+  window.location.href = `/ingredient-detail?id=${ingredientId}&openDelivery=true`;
+}
+
 // Create notification for out-of-stock ingredient
 async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
   try {
@@ -253,16 +268,30 @@ async function createOutOfStockNotification(ingredientId, ingredientName, userId
       return;
     }
 
-    const _storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    // Check if unread notification already exists for this ingredient
+    const { data: existing, error: checkError } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('profile_id', userId)
+      .eq('ingredient_id', ingredientId)
+      .eq('type', 'ingredient_out_of_stock')
+      .eq('is_read', false);
+    
+    if (checkError) throw checkError;
+    
+    // Don't create duplicate if unread notification already exists
+    if (existing && existing.length > 0) {
+      return;
+    }
+
     const { error: insertError } = await supabaseClient
       .from('notifications')
       .insert([{
         profile_id: userId,
         type: 'ingredient_out_of_stock',
         ingredient_id: ingredientId,
-        message: `Ingredient ${ingredientName} has run out of stock`,
-        is_read: false,
-        ..._storeId ? { store_id: _storeId } : {}
+        message: `Item ${ingredientName} has run out of stock`,
+        is_read: false
       }]);
     
     if (insertError) throw insertError;
@@ -369,4 +398,12 @@ async function createAILimitNotification(userId, tier) {
 // Initialize notifications when page loads
 if (typeof window !== 'undefined') {
   window.addEventListener('load', initializeNotifications);
+  
+  // Clear interval when page unloads to prevent memory leaks
+  window.addEventListener('beforeunload', () => {
+    if (notificationCheckInterval) {
+      clearInterval(notificationCheckInterval);
+      notificationCheckInterval = null;
+    }
+  });
 }

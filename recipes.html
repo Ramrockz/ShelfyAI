@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Recipes</title>
+<title>ShelfyAI – Products</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
-<meta name="description" content="Manage your recipes and costs with ShelfyAI." />
+<meta name="description" content="Manage your products and costs with ShelfyAI." />
 
 <script>
   // Apply theme immediately from localStorage to prevent flash
@@ -37,6 +37,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
@@ -510,10 +511,9 @@
       margin-bottom: 20px;
     }
     
-    /* Hide desktop search bar on mobile — replaced by nav search */
-    #searchRecipes {
-      display: none !important;
-    }
+   .top-bar .search-wrapper {
+  display: none !important;
+}
     
     /* Mobile row adjustments */
     .recipe-row { padding: 14px 16px; gap: 12px; }
@@ -893,8 +893,8 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -915,7 +915,7 @@
     </div>
     <div class="search-wrapper" style="flex: 1;">
       <i data-lucide="search" class="search-icon"></i>
-      <input class="nav-search-input" id="navSearchInput" placeholder="Search recipes…" oninput="cardsToShow = 10; render(); toggleSearchClear('navSearchInput')">
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search products…" oninput="cardsToShow = 10; render(); toggleSearchClear('navSearchInput')">
       <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 10; render(); this.classList.remove('visible');" title="Clear search">×</button>
     </div>
 
@@ -998,9 +998,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
@@ -1034,11 +1034,11 @@
   <aside class="sidebar">
     <div class="cta">
       <div class="cta-header">
-        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/941/941085.png" alt="Recipe" width="32" height="32"></span>
-        <h2>Create recipe</h2>
+        <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/941/941085.png" alt="Product" width="32" height="32"></span>
+        <h2>Create product</h2>
       </div>
-      <p>Combine ingredients into a finished product for your catalog.</p>
-      <button class="btn btn-primary" onclick="openBuilder()">+ New Recipe</button>
+      <p>Combine items into a finished product for your catalog.</p>
+      <button class="btn btn-primary" onclick="openBuilder()">+ New Product</button>
     </div>
   </aside>
 
@@ -1052,7 +1052,7 @@
       </div>
       <div class="search-wrapper" style="width: 480px;">
         <i data-lucide="search" class="search-icon"></i>
-        <input type="text" id="searchRecipes" placeholder="Search recipes..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 10; render(); toggleSearchClear('searchRecipes')" />
+        <input type="text" id="searchRecipes" placeholder="Search products..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 10; render(); toggleSearchClear('searchRecipes')" />
         <button type="button" class="search-clear" id="searchRecipes_clear" onclick="document.getElementById('searchRecipes').value = ''; cardsToShow = 10; render(); this.classList.remove('visible');" title="Clear search">×</button>
       </div>
     </div>
@@ -1064,8 +1064,8 @@
         <thead>
           <tr>
             <th style="width: 50px;">#</th>
-            <th style="width: 25%;">Recipe Name</th>
-            <th style="width: 25%;">Ingredients</th>
+            <th style="width: 25%;">Product Name</th>
+            <th style="width: 25%;">Items</th>
             <th style="width: 15%;">Prod. Cost</th>
             <th style="width: 15%;">Production Status</th>
             <th style="width: 15%;">Action</th>
@@ -1079,22 +1079,22 @@
 </div>
 
 <!-- Floating Action Button (Mobile) -->
-<button class="fab" onclick="openBuilder()" aria-label="Create new recipe"></button>
+<button class="fab" onclick="openBuilder()" aria-label="Create new product"></button>
 
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay">
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
       <div class="recipe-name-section">
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Recipe Name <span style="color: var(--danger);">*</span></label>
-        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required style="text-align: center;" />
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required style="text-align: center;" />
       </div>
 
       <!-- Mobile Ingredient Picker (visible only on mobile) -->
       <div class="mobile-ingredient-swiper">
         <div class="search-wrapper" style="width: 100%; margin-bottom: 12px;">
           <i data-lucide="search" class="search-icon"></i>
-          <input type="search" id="mobileRecipeSearch" placeholder="Search ingredients…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
+          <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
           <button type="button" class="search-clear" id="mobileRecipeSearch_clear" onclick="document.getElementById('mobileRecipeSearch').value = ''; renderMobileIngList(); this.classList.remove('visible');" title="Clear search">×</button>
         </div>
         <div id="mobileRecipeCatChips" class="recipe-cat-chips"></div>
@@ -1102,7 +1102,7 @@
         <div id="mobileRecipeIngList"></div>
       </div>
 
-      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div></div>
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
 
       <!-- Step 1 action -->
       <div class="mobile-recipe-actions" id="mobileActions1">
@@ -1111,13 +1111,13 @@
     </div>
     <div class="recipe-panel">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-        <h3 style="margin: 0;">Ingredient Library</h3>
+        <h3 style="margin: 0;">Item Library</h3>
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
       <div class="search-wrapper" style="width: 100%;">
         <i data-lucide="search" class="search-icon"></i>
-        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="filterRecipeIngredients(); toggleSearchClear('recipeSearchIng')" style="width: 100%;" />
-        <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; filterRecipeIngredients(); this.classList.remove('visible');" title="Clear search">\u00d7</button>
+        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="filterRecipeIngredients(); toggleSearchClear('recipeSearchIng')" style="width: 100%;" />
+        <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; filterRecipeIngredients(); this.classList.remove('visible');" title="Clear search">&times;</button>
       </div>
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
       <div id="recipeAttrSubfilter" class="recipe-attr-subfilter"></div>
@@ -1136,10 +1136,10 @@
     </div>
     <div class="ms2-body" id="mobileQtyList"></div>
     <div class="ms2-footer">
-      <input type="text" id="mobileRecipeNameInput" placeholder="Recipe name…"
+      <input type="text" id="mobileRecipeNameInput" placeholder="Product name…"
         style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:16px;background:var(--bg-inner);border:1.5px solid var(--border);border-radius:10px;color:var(--text-main);font-family:inherit;outline:none;margin-bottom:10px;"
         onkeydown="if(event.key==='Enter')saveMobileRecipe()">
-      <button class="btn btn-primary ms2-create-btn" onclick="saveMobileRecipe()">Create Recipe</button>
+      <button class="btn btn-primary ms2-create-btn" onclick="saveMobileRecipe()">Create Product</button>
     </div>
   </div>
 </div>
@@ -1149,7 +1149,7 @@
 <!-- Delete Recipe Modal -->
 <div class="modal-overlay modal-sheet" id="deleteRecipeModal" onclick="if(event.target === this) closeDeleteRecipeModal()">
   <div class="modal-content" style="max-width: 400px;">
-    <h3 style="margin-top:0; margin-bottom: 16px;">Delete Recipe</h3>
+    <h3 style="margin-top:0; margin-bottom: 16px;">Delete Product</h3>
     <p style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;">Are you sure you want to delete "<span id="deleteRecipeName"></span>"? This action cannot be undone.</p>
     <div style="display: flex; gap: 12px;">
       <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeDeleteRecipeModal()">Cancel</button>
@@ -1188,8 +1188,23 @@ function toggleSearchClear(inputId) {
 
 // Load ingredients from Supabase
 async function loadIngredients() {
+  const _cachedIng = localStorage.getItem('shelfy_cache_recipes_ingredients');
+  if (_cachedIng) {
+    try {
+      const _d = JSON.parse(_cachedIng);
+      allIngredients = _d;
+      ingredientData = _d;
+      favoriteIngredients.clear();
+      _d.forEach(ing => { if (ing.is_favorite) favoriteIngredients.add(ing.id); });
+      try { renderRecipeCatChips(); } catch (e) {}
+      try { renderIngredientList(); } catch (e) {}
+    } catch (e) {}
+  }
+  if (!navigator.onLine) return;
+
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -1240,17 +1255,29 @@ async function loadIngredients() {
       }
     });
 
-    renderRecipeCatChips();
-    renderIngredientList();
+    localStorage.setItem('shelfy_cache_recipes_ingredients', JSON.stringify(ingredientData));
+    try { renderRecipeCatChips(); } catch (e) {}
+    try { renderIngredientList(); } catch (e) {}
   } catch (error) {
+    if (!navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading ingredients:', error);
   }
 }
 
 // Load recipes from Supabase
 async function loadRecipes() {
+  const _lsCached = localStorage.getItem('shelfy_cache_recipes');
+  if (_lsCached) {
+    try {
+      recipes = JSON.parse(_lsCached);
+      try { render(); } catch (e) {}
+    } catch (e) {}
+  }
+  if (!navigator.onLine) return;
+
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -1277,8 +1304,10 @@ async function loadRecipes() {
       is_favorite: r.is_favorite || false
     }));
 
-    render();
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+    try { render(); } catch (e) {}
   } catch (error) {
+    if (!navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading recipes:', error);
   }
 }
@@ -1287,7 +1316,7 @@ async function loadRecipes() {
 function deleteRecipe(recipeId) {
   const recipe = recipes.find(r => r.id === recipeId || r.id == recipeId);
   if (!recipe) {
-    alert('Recipe not found');
+    alert('Product not found');
     return;
   }
   
@@ -1309,18 +1338,17 @@ async function confirmDeleteRecipe() {
   if (!currentDeleteRecipeId) return;
   
   try {
-    const { error } = await supabaseClient
-      .from('recipes')
-      .delete()
-      .eq('id', currentDeleteRecipeId);
+    const { error } = await offlineWrite('recipes', 'delete', null, 'id', currentDeleteRecipeId);
 
     if (error) throw error;
-    
+
+    recipes = recipes.filter(r => r.id !== currentDeleteRecipeId);
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
     closeDeleteRecipeModal();
-    await loadRecipes();
+    try { render(); } catch (e) {}
   } catch (error) {
     console.error('Error deleting recipe:', error);
-    alert('Failed to delete recipe');
+    alert('Failed to delete product');
   }
 }
 
@@ -1411,15 +1439,15 @@ function render() {
             
             container.innerHTML = isFirstTime ? `
               <div style="text-align:center; padding:60px 20px;">
-                <img src="/cat_no_orders.png" alt="No recipes" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
-                <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No recipes yet</h3>
-                <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Bundle ingredients into a recipe — then use it to deduct stock in one tap</p>
-                <button onclick="openBuilder()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Create Recipe</button>
+                <img src="/cat_no_orders.png" alt="No products" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+                <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No products yet</h3>
+                <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Bundle items into a product — then use it to deduct stock in one tap</p>
+                <button onclick="openBuilder()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Create Product</button>
               </div>
             ` : `
               <div style="text-align:center; padding:60px 20px;">
                 <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-                <p style="color:var(--text-muted); font-size:15px; margin:0;">No recipes match your search</p>
+                <p style="color:var(--text-muted); font-size:15px; margin:0;">No products match your search</p>
               </div>
             `;
         } else {
@@ -1452,7 +1480,7 @@ function render() {
                     <span class="name" onclick="editRecipe('${r.id}')" onmousedown="if(event.button===1){event.preventDefault();window.open('/recipe-detail?id=${r.id}&from='+currentView,'_blank')}">${r.name}</span>
                     <span class="star-icon ${starClass}" onclick="event.stopPropagation(); toggleRecipeFavorite('${r.id}')">${starIcon}</span>
                   </h4>
-                  <div class="meta">${componentCount} ingredient${componentCount !== 1 ? 's' : ''}</div>
+                  <div class="meta">${componentCount} item${componentCount !== 1 ? 's' : ''}</div>
                   <div style="display:flex; justify-content:center; margin:12px 0;">
                     <div style="text-align:center; cursor:pointer;" onclick="window.location.href='/recipe-detail?id=${r.id}&from='+currentView">
                       <div style="font-size:32px; font-weight:800; color:var(--text-main);">$${r.cost.toFixed(2)}</div>
@@ -1474,15 +1502,15 @@ function render() {
                 html += favData.map(buildCard).join('');
             }
             if (outOfIng.length > 0) {
-                html += sectionLbl('Out of Ingredient', outOfIng.length);
+                html += sectionLbl('Out of Item', outOfIng.length);
                 html += outOfIng.map(buildCard).join('');
             }
             if (lowOnIng.length > 0) {
-                html += sectionLbl('Low on Ingredient', lowOnIng.length);
+                html += sectionLbl('Low on Item', lowOnIng.length);
                 html += lowOnIng.map(buildCard).join('');
             }
             if (otherData.length > 0) {
-                if (hasOtherSections) html += sectionLbl('All Recipes', allOther.length);
+                if (hasOtherSections) html += sectionLbl('All Products', allOther.length);
                 html += otherData.map(buildCard).join('');
             }
             container.innerHTML = html;
@@ -1507,15 +1535,15 @@ function render() {
                 emptyDiv.id = 'emptyStateList';
                 emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh;';
                 emptyDiv.innerHTML = isFirstTime ? `
-                    <img src="/cat_no_orders.png" alt="No recipes" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
-                    <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No recipes yet</h3>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 260px;">Bundle ingredients into a recipe — then use it to deduct stock in one tap
+                    <img src="/cat_no_orders.png" alt="No products" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
+                    <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No products yet</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 260px;">Bundle items into a product — then use it to deduct stock in one tap
 
 </p>
-                    <button onclick="openBuilder()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Create Recipe</button>
+                    <button onclick="openBuilder()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Create Product</button>
                 ` : `
                     <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-                    <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No recipes match your search</p>
+                    <p style="color: var(--text-muted); font-size: 15px; margin: 0;">No products match your search</p>
                 `;
                 tableContainer.parentElement.appendChild(emptyDiv);
             }
@@ -1564,7 +1592,7 @@ async function openBuilder() {
     lucide.createIcons();
   }
   
-  document.getElementById('recipeDropzone').innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div>';
+  document.getElementById('recipeDropzone').innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your product.</div>';
   const costDisplay = document.getElementById('recipeTotalCostDisplay');
   if (costDisplay) costDisplay.textContent = '$0.00';
   document.getElementById('recipeNameInput').value = '';
@@ -1578,7 +1606,7 @@ async function openBuilder() {
 
   const isMobile = window.innerWidth <= 768;
   const btn = document.getElementById('saveRecipeBtn');
-  if (btn) btn.textContent = isMobile ? 'Create Recipe' : 'Create';
+  if (btn) btn.textContent = isMobile ? 'Create Product' : 'Create';
 
   if (isMobile) {
     goToMobileStep1();
@@ -1636,14 +1664,14 @@ function renderIngredientList() {
     if (ingredientData.length === 0) {
       ingredientList.innerHTML = `
         <div style="text-align: center; padding: 60px 20px;">
-          <img src="/cat_no_orders.png" alt="No ingredients" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
-          <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No ingredients yet</p>
+          <img src="/cat_no_orders.png" alt="No items" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-muted);">No items yet</p>
           <button class="btn" style="background: var(--accent); color: white; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px;" onclick="openMethodModalFromRecipe()">
-            + Add Ingredient
+            + Add Item
           </button>
         </div>`;
     } else {
-      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
+      ingredientList.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     }
     return;
   }
@@ -1666,11 +1694,11 @@ function renderIngredientList() {
     if (nonFavorites.length > 0) {
       const allHeader = document.createElement('h4');
       allHeader.style.cssText = 'font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0; font-weight: 700; letter-spacing: 0.05em;';
-      allHeader.textContent = 'All Ingredients';
+      allHeader.textContent = 'All Items';
       ingredientList.appendChild(allHeader);
     }
   }
-  
+
   // Render non-favorites
   nonFavorites.forEach(item => {
     ingredientList.appendChild(createIngredientElement(item));
@@ -1743,10 +1771,7 @@ async function toggleIngredientFavorite(id) {
   
   try {
     // Update database
-    const { error } = await supabaseClient
-      .from('ingredients')
-      .update({ is_favorite: !isFavorite })
-      .eq('id', id);
+    const { error } = await offlineWrite('ingredients', 'update', { is_favorite: !isFavorite }, 'id', id);
     
     if (error) throw error;
     
@@ -1782,12 +1807,9 @@ async function toggleRecipeFavorite(id) {
   recipe.is_favorite = newVal;
   render();
   try {
-    const { error } = await supabaseClient
-      .from('recipes')
-      .update({ is_favorite: newVal })
-      .eq('id', id);
+    const { error } = await offlineWrite('recipes', 'update', { is_favorite: newVal }, 'id', id);
     if (error) throw error;
-    // invalidate orders cache so next open reflects change
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
     if (typeof orderRecipeCache !== 'undefined') orderRecipeCache = null;
   } catch (error) {
     console.error('Error toggling recipe favorite:', error);
@@ -2071,7 +2093,7 @@ function removeIngredient(id) {
 
   const dz = document.getElementById('recipeDropzone');
   if (dz && Object.keys(currentRecipe).length === 0) {
-    dz.innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your recipe.</div>';
+    dz.innerHTML = '<div class="recipe-drop-placeholder">Select ingredients from the list to add them to your product.</div>';
   }
 
   if (window.innerWidth <= 768) renderMobileIngList();
@@ -2102,7 +2124,7 @@ function renderMobileIngList() {
   });
 
   if (visible.length === 0) {
-    container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">No results</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:14px;margin:0;">No items found</p></div>`;
     return;
   }
 
@@ -2118,7 +2140,7 @@ function renderMobileIngList() {
     html += favorites.map(i => renderMobileIngredientRow(i)).join('');
     
     if (nonFavorites.length > 0) {
-      html += '<h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 12px 8px; font-weight: 700; letter-spacing: 0.05em;">All Ingredients</h4>';
+      html += '<h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 12px 8px; font-weight: 700; letter-spacing: 0.05em;">All Items</h4>';
     }
   }
   
@@ -2176,9 +2198,9 @@ function mobilePrimaryAction() {
 function goToMobileStep2() {
   const isEditing = !!currentEditingRecipeId;
   const titleEl = document.querySelector('#mobileStep2Screen .ms2-title');
-  if (titleEl) titleEl.textContent = isEditing ? 'Edit Recipe' : 'Set Quantities';
+  if (titleEl) titleEl.textContent = isEditing ? 'Edit Product' : 'Set Quantities';
   const ctaBtn = document.querySelector('#mobileStep2Screen .ms2-create-btn');
-  if (ctaBtn) ctaBtn.textContent = isEditing ? 'Save Changes' : 'Create Recipe';
+  if (ctaBtn) ctaBtn.textContent = isEditing ? 'Save Changes' : 'Create Product';
   const nameInput = document.getElementById('mobileRecipeNameInput');
   if (nameInput) {
     if (isEditing) {
@@ -2243,7 +2265,7 @@ function updateMobileCreateBtn() {
   const count = Object.keys(currentRecipe).length;
   const btn = document.getElementById('saveRecipeBtn');
   if (!btn || window.innerWidth > 768) return;
-  const label = currentEditingRecipeId ? 'Save Changes' : 'Create Recipe';
+  const label = currentEditingRecipeId ? 'Save Changes' : 'Create Product';
   btn.textContent = count > 0 ? `${label} (${count})` : label;
 }
 
@@ -2265,7 +2287,7 @@ async function saveMobileRecipe() {
     }
   }
   if (Object.keys(currentRecipe).length === 0) {
-    alert('Please add at least one ingredient');
+    alert('Please add at least one item');
     return;
   }
   await _doSaveRecipe(name);
@@ -2290,75 +2312,49 @@ function updateCost() {
 async function finalizeRecipe() {
   const name = document.getElementById("finalRecipeNameInput").value.trim();
   if (!name) {
-    alert('Please enter a recipe name');
+    alert('Please enter a product name');
     return;
   }
 
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      alert('Please log in to save recipes');
-      return;
-    }
+    const { data: { session: _s } } = await supabaseClient.auth.getSession();
+    const user = _s?.user;
+    if (!user) { alert('Please log in to save products'); return; }
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    // Calculate total cost
     let totalCost = 0;
     const components = [];
-
     for (const id in currentRecipe) {
       const item = currentRecipe[id];
       totalCost += item.price * item.quantity;
-      components.push({
-        ingredient_id: id,
-        ingredient_name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        cost: item.price * item.quantity
-      });
+      components.push({ ingredient_id: id, ingredient_name: item.name, quantity: item.quantity, unit: item.unit, cost: item.price * item.quantity });
     }
 
-    // Save to Supabase
-    const { data, error } = await supabaseClient
-      .from('recipes')
-      .insert({
-        name: name,
-        components: components,
-        cost: totalCost,
-        status: 'ready',
-        profile_id: user.id,
-        store_id: storeId
-      })
-      .select();
-    
+    const payload = { name, components, cost: totalCost, status: 'ready', profile_id: user.id, store_id: storeId };
+    const { data, error, queued } = await offlineWrite('recipes', 'insert', payload);
     if (error) throw error;
-    
-    // Add to local recipes array
-    recipes.unshift({
-      id: data[0].id,
-      name: name,
-      count: components.length,
-      cost: totalCost,
-      status: 'ready'
-    });
-    
-    // Close modals and refresh view
+
+    const newRecipe = { id: data[0].id, name, count: components.length, cost: totalCost, status: 'ready', components, is_favorite: false };
+    recipes.unshift(newRecipe);
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+
     closeNamingModal();
     closeRecipeBuilder();
     switchView('recent');
     
   } catch (error) {
     console.error('Error saving recipe:', error);
-    alert('Failed to save recipe. Please try again.');
+    alert('Failed to save product. Please try again.');
   }
 }
 
 async function _doSaveRecipe(name) {
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) { alert('Please log in to save recipes'); return; }
+    const { data: { session: _s2 } } = await supabaseClient.auth.getSession();
+    const user = _s2?.user;
+    if (!user) { alert('Please log in to save products'); return; }
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
@@ -2372,33 +2368,30 @@ async function _doSaveRecipe(name) {
     }
 
     if (currentEditingRecipeId) {
-      // Update existing recipe
       const editId = currentEditingRecipeId;
       const returnUrl = currentEditReturnUrl;
-      const { error } = await supabaseClient
-        .from('recipes')
-        .update({ name, components, cost: totalCost })
-        .eq('id', editId);
+      const { error } = await offlineWrite('recipes', 'update', { name, components, cost: totalCost }, 'id', editId);
       if (error) throw error;
+      const r = recipes.find(r => r.id === editId);
+      if (r) { r.name = name; r.components = components; r.cost = totalCost; r.count = components.length; }
+      localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
       closeRecipeBuilder();
       if (returnUrl) { window.location.href = returnUrl; return; }
-      await loadRecipes();
+      try { render(); } catch (e) {}
       return;
     } else {
-      // Insert new recipe
-      const { data, error } = await supabaseClient
-        .from('recipes')
-        .insert({ name, components, cost: totalCost, status: 'ready', profile_id: user.id, store_id: storeId })
-        .select();
+      const payload = { name, components, cost: totalCost, status: 'ready', profile_id: user.id, store_id: storeId };
+      const { data, error } = await offlineWrite('recipes', 'insert', payload);
       if (error) throw error;
-      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, status: 'ready' });
+      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, status: 'ready', components, is_favorite: false });
+      localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
     }
 
     closeRecipeBuilder();
-    await loadRecipes();
+    try { render(); } catch (e) {}
   } catch (error) {
     console.error('Error saving recipe:', error);
-    alert('Failed to save recipe. Please try again.');
+    alert('Failed to save product. Please try again.');
   }
 }
 
@@ -2414,7 +2407,7 @@ async function saveRecipe() {
     return;
   }
   if (Object.keys(currentRecipe).length === 0) {
-    alert('Please add at least one ingredient');
+    alert('Please add at least one item');
     return;
   }
   await _doSaveRecipe(name);
@@ -2422,7 +2415,8 @@ async function saveRecipe() {
 
 async function duplicateRecipe(recipeId) {
   try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { session: _s3 } } = await supabaseClient.auth.getSession();
+    const user = _s3?.user;
     if (!user) return;
 
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
@@ -2431,32 +2425,24 @@ async function duplicateRecipe(recipeId) {
     const original = recipes.find(r => r.id === recipeId || r.id == recipeId);
     if (!original) return;
 
-    const { data: inserted, error } = await supabaseClient
-      .from('recipes')
-      .insert({
-        profile_id: user.id,
-        store_id: storeId,
-        name: `${original.name} (copy)`,
-        cost: original.cost || 0,
-        components: original.components || [],
-        status: original.status || 'ready',
-        is_favorite: false
-      })
-      .select()
-      .single();
-
+    const payload = {
+      profile_id: user.id,
+      store_id: storeId,
+      name: `${original.name} (copy)`,
+      cost: original.cost || 0,
+      components: original.components || [],
+      status: original.status || 'ready',
+      is_favorite: false
+    };
+    const { data, error } = await offlineWrite('recipes', 'insert', payload);
     if (error) throw error;
 
-    // Prepend so the duplicate appears first in its section
-    recipes.unshift({
-      ...inserted,
-      components: inserted.components || [],
-      is_favorite: false
-    });
-    render();
+    recipes.unshift({ ...payload, id: data[0].id });
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+    try { render(); } catch (e) {}
   } catch (err) {
     console.error('Error duplicating recipe:', err);
-    alert('Failed to duplicate recipe');
+    alert('Failed to duplicate product');
   }
 }
 
@@ -2519,7 +2505,7 @@ function renderSwipeCards(animationClass = null) {
         <div style="text-align: center; color: var(--text-muted);">
           <div style="font-size: 48px; margin-bottom: 16px;">✓</div>
           <div style="font-size: 16px; font-weight: 600;">All Done!</div>
-          <div style="font-size: 14px; margin-top: 8px;">No more ingredients to browse</div>
+          <div style="font-size: 14px; margin-top: 8px;">No more items to browse</div>
         </div>
       </div>
     `;
@@ -2727,7 +2713,7 @@ async function openBuilderForRecipe(recipeId) {
   try {
     const { data: fullRecipe, error } = await supabaseClient
       .from('recipes').select('*').eq('id', recipeId).single();
-    if (error || !fullRecipe) { alert('Recipe not found'); return; }
+    if (error || !fullRecipe) { alert('Product not found'); return; }
 
     currentRecipe = {};
     currentEditingRecipeId = recipeId;
@@ -2765,20 +2751,31 @@ async function openBuilderForRecipe(recipeId) {
     setTimeout(() => initMobileIngredientList(), 100);
   } catch (err) {
     console.error('Error opening builder:', err);
-    alert('Failed to load recipe.');
+    alert('Failed to load product.');
   }
 }
 
+// Patch tempId → realId after an offline recipe insert syncs
+window.addEventListener('shelfy:id-reconcile', (e) => {
+  const { table, tempId, realId } = e.detail;
+  if (table === 'recipes') {
+    const r = recipes.find(r => r.id === tempId);
+    if (r) { r.id = realId; localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes)); try { render(); } catch (e) {} }
+  }
+});
+
+// Rebuild caches after sync so next offline session sees fresh data
+window.addEventListener('shelfy:synced', (e) => {
+  const t = e.detail.tables;
+  if (t.includes('recipes'))     loadRecipes().catch(() => {});
+  if (t.includes('ingredients')) loadIngredients().catch(() => {});
+});
+
 // Initialize
 (async function() {
-  // Initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   await loadIngredients();
   await loadRecipes();
-  // If navigated from recipe-detail's Edit button, open the builder
   const editId = new URLSearchParams(window.location.search).get('edit');
   if (editId) openBuilderForRecipe(editId);
 })();
@@ -2945,8 +2942,8 @@ document.addEventListener('keydown', (e) => {
 <!-- Ingredient Method Modal -->
 <div class="modal-overlay" id="methodModal">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your ingredient</p>
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your item</p>
     <div class="method-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <div class="method-card" onclick="selectMethod('manual')">
         <div style="margin-bottom: 12px;"><img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40" style="display:block;margin:0 auto;"></div>
@@ -2976,10 +2973,10 @@ document.addEventListener('keydown', (e) => {
 <!-- Manual Entry Form Modal -->
 <div class="modal-overlay" id="ingManualEntryModal">
   <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Ingredient</h3>
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Item</h3>
     <form id="ingForm" onsubmit="saveIngredient(event)" novalidate>
       <div class="form-group">
-        <label for="ing_name">Ingredient Name *</label>
+        <label for="ing_name">Item Name *</label>
         <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
       <div class="form-row">
@@ -3049,7 +3046,7 @@ document.addEventListener('keydown', (e) => {
       </div>
       <div style="display:flex;gap:12px;margin-top:24px;">
         <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeManualEntryModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex:1;">Save Ingredient</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Save Item</button>
       </div>
     </form>
   </div>
@@ -3231,7 +3228,7 @@ function stripUrlParams(url) {
 async function saveIngredient(event) {
   event.preventDefault();
   const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) { showAlert('You must be logged in to add ingredients'); return; }
+  if (!user) { showAlert('You must be logged in to add items'); return; }
 
   // Shake-highlight all empty required fields
   const invalidFields = [];
@@ -3291,10 +3288,10 @@ async function saveIngredient(event) {
     await loadIngredients();
     renderIngredientList();
     document.getElementById('recipeBuilderOverlay').classList.add('active');
-    showIngNotification('Ingredient added! You can now add it to your recipe.', 'success');
+    showIngNotification('Item added! You can now add it to your product.', 'success');
   } catch (error) {
-    showAlert('Error saving ingredient: ' + error.message);
-    submitBtn.disabled = false; submitBtn.textContent = 'Save Ingredient';
+    showAlert('Error saving item: ' + error.message);
+    submitBtn.disabled = false; submitBtn.textContent = 'Save Item';
   }
 }
 
@@ -3562,8 +3559,8 @@ function showUploadStatus(message, type) {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
