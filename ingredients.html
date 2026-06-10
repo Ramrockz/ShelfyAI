@@ -2546,24 +2546,30 @@ function _renderAttrSubfilters(cat) {
     // Sort keys alphabetically
     const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
     
-    // Intelligent value sort: numbers first (numerically), then text (alphabetically)
-    const sortValues = (a, b) => {
+    // Intelligent value sort: size-aware, then numbers, then text
+    const sortValues = (key, a, b) => {
+      if (key === 'size') {
+        const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+        const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+      }
       const aNum = parseFloat(a);
       const bNum = parseFloat(b);
       const aIsNum = !isNaN(aNum);
       const bIsNum = !isNaN(bNum);
-      
       if (aIsNum && bIsNum) return aNum - bNum;
       if (aIsNum) return -1;
       if (bIsNum) return 1;
       return a.localeCompare(b, undefined, { sensitivity: 'base' });
     };
-    
+
     // Build chips grouped by key
     const allChips = [];
     sortedKeys.forEach(key => {
       const valuesMap = groupedByKey.get(key);
-      const sortedValues = Array.from(valuesMap.entries()).sort((a, b) => sortValues(a[1], b[1]));
+      const sortedValues = Array.from(valuesMap.entries()).sort((a, b) => sortValues(key, a[1], b[1]));
       
       sortedValues.forEach(([valueKey, displayValue]) => {
         const _active = activeAttrValueFilters.has(key) && activeAttrValueFilters.get(key).has(valueKey);

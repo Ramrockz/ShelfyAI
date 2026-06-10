@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Recipe Intelligence</title>
+<title>ShelfyAI – Product Intelligence</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
-<meta name="description" content="View and manage recipe details in ShelfyAI." />
+<meta name="description" content="View and manage product details in ShelfyAI." />
 
 <script>
   // Apply theme immediately from localStorage to prevent flash
@@ -680,6 +680,24 @@
       padding: 20px 16px;
     }
   }
+  
+  /* Star icon for favorites */
+  .star-icon { 
+    cursor: pointer; 
+    font-size: 18px; 
+    transition: 0.2s; 
+    flex-shrink: 0; 
+  }
+  .star-icon:hover { 
+    transform: scale(1.2); 
+  }
+  .star-icon.favorited { 
+    color: #fbbf24; 
+  }
+  .star-icon:not(.favorited) { 
+    color: var(--text-muted); 
+    opacity: 0.5; 
+  }
 </style>
 </head>
 
@@ -690,10 +708,10 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
   </div>
 
@@ -710,14 +728,14 @@
         </svg>
       </span>
     </div>
-    
+
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
       </svg>
       <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-      
+
       <!-- Notification Dropdown -->
       <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
         <div class="notification-header">
@@ -839,12 +857,12 @@
     
     <div class="panel">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
-        <h3 style="margin:0;">Ingredients</h3>
+        <h3 style="margin:0;">Items</h3>
       </div>
       <!-- hidden: still updated by JS but no longer displayed -->
       <div id="productionCostDisplay" style="display:none;">$0.00</div>
       <div id="ingredientsList">
-        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
       </div>
     </div>
 
@@ -896,7 +914,7 @@ async function loadRecipe() {
   recipeId = params.get('id');
   
   if (!recipeId) {
-    showAlert('No recipe ID provided');
+    showAlert('No product ID provided');
     setTimeout(() => window.location.href = '/recipes', 1500);
     return;
   }
@@ -928,7 +946,7 @@ async function loadRecipe() {
     if (error) throw error;
 
     if (!data) {
-      showAlert('Recipe not found');
+      showAlert('Product not found');
       setTimeout(() => {
         window.location.href = '/recipes';
       }, 1500);
@@ -969,7 +987,7 @@ async function loadRecipe() {
     renderRecipe();
   } catch (error) {
     console.error('Error loading recipe:', error);
-    showAlert('Failed to load recipe');
+    showAlert('Failed to load product');
   }
 }
 
@@ -1114,11 +1132,11 @@ async function renderRecipe() {
       statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
       statusEl.style.color = 'var(--success)';
     } else if (hasOutOfStock) {
-      statusEl.textContent = 'Ingredient out of stock';
+      statusEl.textContent = 'Item out of stock';
       statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
       statusEl.style.color = 'var(--danger)';
     } else {
-      statusEl.textContent = 'Ingredient low on stock';
+      statusEl.textContent = 'Item low on stock';
       statusEl.style.background = 'rgba(245, 158, 11, 0.2)';
       statusEl.style.color = 'var(--warning)';
     }
@@ -1128,7 +1146,7 @@ async function renderRecipe() {
     <div class="ingredient-card" style="border: 2px dashed var(--border); background: transparent; cursor: pointer; transition: all 0.2s;" onclick="openAddIngredientModal()" onmouseover="this.style.borderColor='var(--accent)'; this.style.background='rgba(52, 152, 219, 0.05)'" onmouseout="this.style.borderColor='var(--border)'; this.style.background='transparent'">
       <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;">
         <span style="font-size: 24px; color: var(--accent);">+</span>
-        <span style="color: var(--accent); font-size: 15px; font-weight: 600;">Add Ingredient</span>
+        <span style="color: var(--accent); font-size: 15px; font-weight: 600;">Add Item</span>
       </div>
     </div>
   `;
@@ -1150,7 +1168,7 @@ let swapTargetIndex = null;
 async function openSwapModal(index) {
   swapTargetIndex = index;
   const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Swap Ingredient';
+  if (titleEl) titleEl.textContent = 'Swap Item';
   await openAddIngredientModal();
 
   // Pre-filter by the swapped ingredient's category
@@ -1169,7 +1187,7 @@ async function openSwapModal(index) {
 function closeSwapModal() {
   swapTargetIndex = null;
   const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Add Ingredient to Recipe';
+  if (titleEl) titleEl.textContent = 'Add Item to Product';
   document.getElementById('addIngredientModal').classList.remove('active');
 }
 
@@ -1210,11 +1228,11 @@ function renderMobileOverlay() {
   const addIngBtn = `
     <div class="rdm-add-ing-btn" onclick="openAddIngredientModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add Ingredient
+      Add Item
     </div>`;
 
   if (components.length === 0) {
-    container.innerHTML = `<div style="text-align:center;padding:32px 0 0;color:var(--text-muted);">No ingredients yet.</div>` + addIngBtn;
+    container.innerHTML = `<div style="text-align:center;padding:32px 0 0;color:var(--text-muted);">No items yet.</div>` + addIngBtn;
     return;
   }
   container.innerHTML = components.map((comp, index) => {
@@ -1302,7 +1320,7 @@ let ingredientData = [];
 let currentRecipe = {};
 let favoriteIngredients = new Set();
 let recipeActiveCategoryFilter = null;
-let recipeActiveAttrValueFilters = new Set();
+let recipeActiveAttrValueFilters = new Map();
 
 const _rdCategIconMap = {
   'Apparel':'shirt','Wood':'tree-pine','Boxes':'archive','Cards':'tickets',
@@ -1327,22 +1345,73 @@ function renderRecipeCatChips() {
 }
 
 function renderRecipeAttrSubfilters(cat) {
-  const displayMap = new Map();
+  // Build a map grouped by attribute key: { "color": ["Red", "Blue"], "size": ["S", "M", "L"] }
+  const groupedByKey = new Map();
+  
   ingredientData
     .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.attributes)
     .forEach(i => {
-      Object.values(i.attributes).forEach(v => {
-        const t = String(v).trim();
-        if (t) { const k = t.toLowerCase(); if (!displayMap.has(k)) displayMap.set(k, t); }
-      });
+      try {
+        const attrs = i.attributes;
+        Object.entries(attrs).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          
+          if (!groupedByKey.has(normalizedKey)) {
+            groupedByKey.set(normalizedKey, new Map());
+          }
+          
+          const valuesMap = groupedByKey.get(normalizedKey);
+          if (!valuesMap.has(valueKey)) {
+            valuesMap.set(valueKey, trimmedValue);
+          }
+        });
+      } catch (e) {}
     });
+
   const el = document.getElementById('recipeAttrSubfilter');
   if (!el) return;
-  if (displayMap.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
-  const sorted = [...displayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  el.innerHTML = sorted.map(([key, label]) =>
-    `<button class="recipe-attr-chip${recipeActiveAttrValueFilters.has(key) ? ' active' : ''}" data-val="${key.replace(/"/g,'&quot;')}" onclick="toggleRecipeAttrFilter('${key.replace(/'/g,"&#39;")}')">${label}</button>`
-  ).join('');
+  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+  
+  // Sort keys alphabetically
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  
+  // Intelligent value sort: size-aware, then numbers, then text
+  const sortValues = (key, a, b) => {
+    if (key === 'size') {
+      const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+    }
+    const aNum = parseFloat(a);
+    const bNum = parseFloat(b);
+    const aIsNum = !isNaN(aNum);
+    const bIsNum = !isNaN(bNum);
+    if (aIsNum && bIsNum) return aNum - bNum;
+    if (aIsNum) return -1;
+    if (bIsNum) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+
+  // Build chips grouped by key
+  const allChips = [];
+  sortedKeys.forEach(key => {
+    const valuesMap = groupedByKey.get(key);
+    const sortedValues = Array.from(valuesMap.entries()).sort((a, b) => sortValues(key, a[1], b[1]));
+    
+    sortedValues.forEach(([valueKey, displayValue]) => {
+      const escaped = displayValue.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const _active = recipeActiveAttrValueFilters.has(key) && recipeActiveAttrValueFilters.get(key).has(valueKey);
+      allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${valueKey.replace(/"/g, '&quot;')}" onclick="toggleRecipeAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g, "&#39;")}')">${escaped}</button>`);
+    });
+  });
+  
+  el.innerHTML = allChips.join('');
   el.classList.add('visible');
 }
 
@@ -1353,7 +1422,7 @@ function hideRecipeAttrSubfilters() {
 
 function toggleRecipeCatFilter(cat) {
   recipeActiveCategoryFilter = recipeActiveCategoryFilter === cat ? null : cat;
-  recipeActiveAttrValueFilters = new Set();
+  recipeActiveAttrValueFilters = new Map();
   if (recipeActiveCategoryFilter) {
     renderRecipeAttrSubfilters(recipeActiveCategoryFilter);
   } else {
@@ -1363,14 +1432,18 @@ function toggleRecipeCatFilter(cat) {
   renderIngredientList();
 }
 
-function toggleRecipeAttrFilter(value) {
-  if (recipeActiveAttrValueFilters.has(value)) {
-    recipeActiveAttrValueFilters.delete(value);
+function toggleRecipeAttrFilter(key, value) {
+  if (!recipeActiveAttrValueFilters.has(key)) recipeActiveAttrValueFilters.set(key, new Set());
+  const keySet = recipeActiveAttrValueFilters.get(key);
+  if (keySet.has(value)) {
+    keySet.delete(value);
+    if (keySet.size === 0) recipeActiveAttrValueFilters.delete(key);
   } else {
-    recipeActiveAttrValueFilters.add(value);
+    keySet.add(value);
   }
   document.querySelectorAll('.recipe-attr-chip').forEach(chip => {
-    chip.classList.toggle('active', recipeActiveAttrValueFilters.has(chip.dataset.val));
+    const k = chip.dataset.key, v = chip.dataset.val;
+    chip.classList.toggle('active', !!k && recipeActiveAttrValueFilters.has(k) && recipeActiveAttrValueFilters.get(k).has(v));
   });
   renderIngredientList();
 }
@@ -1452,7 +1525,7 @@ async function editRecipe() {
 function closeRecipeBuilder() {
   document.getElementById('recipeBuilderOverlay').classList.remove('active');
   recipeActiveCategoryFilter = null;
-  recipeActiveAttrValueFilters = new Set();
+  recipeActiveAttrValueFilters = new Map();
   hideRecipeAttrSubfilters();
 }
 
@@ -1537,8 +1610,12 @@ function renderIngredientList() {
     if (recipeActiveCategoryFilter && item.category !== recipeActiveCategoryFilter) return false;
     if (recipeActiveAttrValueFilters.size > 0) {
       if (!item.attributes) return false;
-      const vals = new Set(Object.values(item.attributes).map(v => String(v).trim().toLowerCase()));
-      for (const v of recipeActiveAttrValueFilters) { if (!vals.has(v)) return false; }
+      for (const [attrKey, valSet] of recipeActiveAttrValueFilters) {
+        if (valSet.size === 0) continue;
+        const matchingKey = Object.keys(item.attributes).find(k => k.toLowerCase() === attrKey);
+        if (!matchingKey) return false;
+        if (!valSet.has(String(item.attributes[matchingKey]).trim().toLowerCase())) return false;
+      }
     }
     return true;
   });
@@ -1559,11 +1636,11 @@ function renderIngredientList() {
     if (nonFavorites.length > 0) {
       const allHeader = document.createElement('h4');
       allHeader.style.cssText = 'font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 0 8px 0; font-weight: 700; letter-spacing: 0.05em;';
-      allHeader.textContent = 'All Ingredients';
+      allHeader.textContent = 'All Items';
       ingredientList.appendChild(allHeader);
     }
   }
-  
+
   nonFavorites.forEach(item => ingredientList.appendChild(createIngredientElement(item)));
 }
 
@@ -1788,7 +1865,7 @@ function removeIngredient(id) {
   
   const dz = document.getElementById('recipeDropzone');
   if (dz && Object.keys(currentRecipe).length === 0) {
-    dz.innerHTML = '<div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your recipe</div>';
+    dz.innerHTML = '<div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your product</div>';
   }
 }
 
@@ -1822,7 +1899,7 @@ async function saveRecipeChanges() {
   }
   
   if (Object.keys(currentRecipe).length === 0) {
-    showAlert('Please add at least one ingredient');
+    showAlert('Please add at least one item');
     return;
   }
   
@@ -1860,12 +1937,12 @@ async function saveRecipeChanges() {
     if (error) throw error;
     
     closeRecipeBuilder();
-    showAlert('Recipe updated successfully!');
+    showAlert('Product updated successfully!');
     await loadRecipe();
     
   } catch (error) {
     console.error('Error saving recipe:', error);
-    showAlert('Failed to save recipe. Please try again.');
+    showAlert('Failed to save product. Please try again.');
   }
 }
 
@@ -1896,7 +1973,7 @@ async function duplicateRecipe() {
     window.location.href = `/recipe-detail?id=${inserted.id}`;
   } catch (err) {
     console.error('Error duplicating recipe:', err);
-    showAlert('Failed to duplicate recipe');
+    showAlert('Failed to duplicate product');
   }
 }
 
@@ -1914,7 +1991,7 @@ async function saveRecipeName() {
     recipe.name = newName;
   } catch (error) {
     console.error('Error updating recipe name:', error);
-    showAlert('Failed to update recipe name');
+    showAlert('Failed to update product name');
   }
 }
 
@@ -1923,7 +2000,7 @@ async function updateRetailPrice() {
   const newPrice = parseFloat(priceInput.value) || 0;
   
   if (newPrice < 0) {
-    priceInput.value = (recipe.retail_price || (recipe.cost * 1.6)).toFixed(2);
+    priceInput.value = (recipe.retail_price || 0).toFixed(2);
     return;
   }
   
@@ -1944,7 +2021,7 @@ async function updateRetailPrice() {
 
 async function saveRecipe() {
   await saveRecipeName();
-  showAlert('Recipe saved successfully!');
+  showAlert('Product saved successfully!');
 }
 
 async function increaseIngredientQuantity(index) {
@@ -1994,13 +2071,13 @@ async function updateRecipeInDatabase() {
     if (costEl) costEl.textContent = `$${totalCost.toFixed(2)}`;
   } catch (error) {
     console.error('Error updating recipe:', error);
-    showAlert('Failed to update recipe');
+    showAlert('Failed to update product');
   }
 }
 
 async function confirmDelete() {
-  const name = recipe?.name || 'this recipe';
-  if (!await showConfirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`, 'Delete Recipe', 'Delete', true)) return;
+  const name = recipe?.name || 'this product';
+  if (!await showConfirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`, 'Delete Product', 'Delete', true)) return;
   
   try {
     const { error } = await window.supabaseClient
@@ -2013,7 +2090,7 @@ async function confirmDelete() {
     window.location.href = "/recipes";
   } catch (error) {
     console.error('Error deleting recipe:', error);
-    showAlert('Failed to delete recipe');
+    showAlert('Failed to delete product');
   }
 }
 
@@ -2039,7 +2116,7 @@ async function reorderIngredient(ingredientId) {
     }
   } catch (error) {
     console.error('Error loading ingredient:', error);
-    showAlert('Failed to load ingredient details');
+    showAlert('Failed to load item details');
   }
 }
 
@@ -2103,7 +2180,7 @@ async function openReorderModal() {
   if (!currentReorderIngredient) return;
 
   if (!currentReorderIngredient.source_url || !currentReorderIngredient.source_url.trim()) {
-    const goTo = await showConfirm('This ingredient has no source URL. Go to its settings to add one?', 'Source URL Missing');
+    const goTo = await showConfirm('This item has no source URL. Go to its settings to add one?', 'Source URL Missing');
     if (goTo) window.location.href = `ingredient-detail.html?id=${currentReorderIngredient.id}`;
     currentReorderIngredient = null;
     return;
@@ -2201,7 +2278,7 @@ async function loadReorderIngredients(sourceUrl) {
     const visible = isMobile ? data : data.slice(0, PAGE);
     const remaining = isMobile ? 0 : data.length - PAGE;
 
-    container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--text-muted);">Other ingredients from this source</h4>'
+    container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 0 0 12px; color: var(--text-muted);">Other items from this source</h4>'
       + '<div id="reorderItemsVisible">' + visible.map(renderReorderItem).join('') + '</div>'
       + (remaining > 0 ? `<button id="reorderShowMore" onclick="showMoreReorderItemsRDM()" style="margin-top: 10px; width: 100%; padding: 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer;">Show ${remaining} more</button>` : '');
 
@@ -2210,7 +2287,7 @@ async function loadReorderIngredients(sourceUrl) {
     }
   } catch (error) {
     console.error('Error loading reorder ingredients:', error);
-    document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+    document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
   }
 }
 
@@ -2283,28 +2360,46 @@ async function rdmMarkAsReordered() {
 // Add Ingredient Modal Functions
 let availableIngredients = [];
 let detailActiveCategoryFilter = null;
-let detailActiveAttrValueFilters = new Set();
+let detailActiveAttrValueFilters = new Map();
 
 function renderDetailAttrSubfilter(cat) {
-  const displayMap = new Map();
+  // Group by attribute key (same pattern as other filter panels)
+  const groupedByKey = new Map();
   availableIngredients
     .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.custom_attributes)
     .forEach(i => {
       try {
         const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-        Object.values(attrs).forEach(v => {
-          const t = String(v).trim();
-          if (t) { const k = t.toLowerCase(); if (!displayMap.has(k)) displayMap.set(k, t); }
+        Object.entries(attrs).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());
+          const vm = groupedByKey.get(normalizedKey);
+          if (!vm.has(valueKey)) vm.set(valueKey, trimmedValue);
         });
       } catch (e) {}
     });
   const el = document.getElementById('detailAttrSubfilter');
   if (!el) return;
-  if (displayMap.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
-  const sorted = [...displayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  el.innerHTML = sorted.map(([key, label]) =>
-    `<button class="recipe-attr-chip${detailActiveAttrValueFilters.has(key) ? ' active' : ''}" data-val="${key.replace(/"/g,'&quot;')}" onclick="toggleDetailAttrFilter('${key.replace(/'/g,"&#39;")}')">${label}</button>`
-  ).join('');
+  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+  const sortVals = (a, b) => {
+    const an = parseFloat(a), bn = parseFloat(b);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  const allChips = [];
+  sortedKeys.forEach(key => {
+    const sortedValues = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortVals(a[1], b[1]));
+    sortedValues.forEach(([valueKey, displayValue]) => {
+      const _active = detailActiveAttrValueFilters.has(key) && detailActiveAttrValueFilters.get(key).has(valueKey);
+      allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${valueKey.replace(/"/g,'&quot;')}" onclick="toggleDetailAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g,"&#39;")}')">${displayValue.replace(/"/g,'&quot;')}</button>`);
+    });
+  });
+  el.innerHTML = allChips.join('');
   el.classList.add('visible');
 }
 
@@ -2313,14 +2408,18 @@ function hideDetailAttrSubfilter() {
   if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
 }
 
-function toggleDetailAttrFilter(value) {
-  if (detailActiveAttrValueFilters.has(value)) {
-    detailActiveAttrValueFilters.delete(value);
+function toggleDetailAttrFilter(key, value) {
+  if (!detailActiveAttrValueFilters.has(key)) detailActiveAttrValueFilters.set(key, new Set());
+  const keySet = detailActiveAttrValueFilters.get(key);
+  if (keySet.has(value)) {
+    keySet.delete(value);
+    if (keySet.size === 0) detailActiveAttrValueFilters.delete(key);
   } else {
-    detailActiveAttrValueFilters.add(value);
+    keySet.add(value);
   }
   document.querySelectorAll('#detailAttrSubfilter .recipe-attr-chip').forEach(chip => {
-    chip.classList.toggle('active', detailActiveAttrValueFilters.has(chip.dataset.val));
+    const k = chip.dataset.key, v = chip.dataset.val;
+    chip.classList.toggle('active', !!k && detailActiveAttrValueFilters.has(k) && detailActiveAttrValueFilters.get(k).has(v));
   });
   renderAvailableIngredients();
 }
@@ -2354,7 +2453,7 @@ function renderDetailCatChips() {
 
 function toggleDetailCatFilter(cat) {
   detailActiveCategoryFilter = (detailActiveCategoryFilter === cat) ? null : cat;
-  detailActiveAttrValueFilters = new Set();
+  detailActiveAttrValueFilters = new Map();
   if (detailActiveCategoryFilter) {
     renderDetailAttrSubfilter(detailActiveCategoryFilter);
   } else {
@@ -2366,7 +2465,7 @@ function toggleDetailCatFilter(cat) {
 
 async function openAddIngredientModal() {
   detailActiveCategoryFilter = null;
-  detailActiveAttrValueFilters = new Set();
+  detailActiveAttrValueFilters = new Map();
   hideDetailAttrSubfilter();
   document.getElementById('addIngredientModal').classList.add('active');
   document.getElementById('ingredientSearchInput').value = '';
@@ -2397,7 +2496,7 @@ async function openAddIngredientModal() {
       availableIngredients = data || [];
     } catch (error) {
       console.error('Error loading ingredients:', error);
-      showAlert('Failed to load ingredients');
+      showAlert('Failed to load items');
       return;
     }
   }
@@ -2409,10 +2508,10 @@ async function openAddIngredientModal() {
 function closeAddIngredientModal() {
   swapTargetIndex = null;
   detailActiveCategoryFilter = null;
-  detailActiveAttrValueFilters = new Set();
+  detailActiveAttrValueFilters = new Map();
   hideDetailAttrSubfilter();
   const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Add Ingredient to Recipe';
+  if (titleEl) titleEl.textContent = 'Add Item to Product';
   document.getElementById('addIngredientModal').classList.remove('active');
   
   // Show bottom buttons on mobile
@@ -2443,13 +2542,17 @@ function renderAvailableIngredients() {
     // Category filter
     if (detailActiveCategoryFilter && ing.category !== detailActiveCategoryFilter) return false;
 
-    // Attribute value subfilter (multiselect, case-insensitive, must match ALL)
+    // Attribute value subfilter — OR within key, AND between keys
     if (detailActiveAttrValueFilters.size > 0) {
       if (!ing.custom_attributes) return false;
       try {
         const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-        const vals = new Set(Object.values(attrs).map(v => String(v).trim().toLowerCase()));
-        for (const v of detailActiveAttrValueFilters) { if (!vals.has(v)) return false; }
+        for (const [attrKey, valSet] of detailActiveAttrValueFilters) {
+          if (valSet.size === 0) continue;
+          const matchingKey = Object.keys(attrs).find(k => k.toLowerCase() === attrKey);
+          if (!matchingKey) return false;
+          if (!valSet.has(String(attrs[matchingKey]).trim().toLowerCase())) return false;
+        }
       } catch (e) { return false; }
     }
 
@@ -2471,11 +2574,16 @@ function renderAvailableIngredients() {
   });
   
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
+    container.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     return;
   }
   
-  container.innerHTML = filtered.map(ing => {
+  // Separate favorites and non-favorites
+  const favorites = filtered.filter(ing => ing.is_favorite);
+  const nonFavorites = filtered.filter(ing => !ing.is_favorite);
+  
+  // Build ingredient card
+  const buildIngCard = (ing) => {
     let attributes = '';
     if (ing.custom_attributes) {
       try {
@@ -2486,6 +2594,8 @@ function renderAvailableIngredients() {
     
     const swapPill = ing.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '<span class="stock-pill low">Low</span>' : '';
     const isCurrentSwap = swapIngredientId && ing.id === swapIngredientId;
+    const starIcon = ing.is_favorite ? '★' : '☆';
+    const starClass = ing.is_favorite ? 'favorited' : '';
 
     return `
       <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: ${isCurrentSwap ? 'default' : 'pointer'}; transition: all 0.2s; background: var(--bg-panel); ${isCurrentSwap ? 'opacity:0.35; pointer-events:none;' : ''}"
@@ -2494,14 +2604,63 @@ function renderAvailableIngredients() {
         onmouseout="${isCurrentSwap ? '' : "this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'"}">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+              <span style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${ing.name}</span>
+              <span class="star-icon ${starClass}" onclick="event.stopPropagation(); toggleRecipeIngredientFavorite('${ing.id}')" title="${ing.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">${starIcon}</span>
+            </div>
             ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
           </div>
           ${swapPill}
         </div>
       </div>
     `;
-  }).join('');
+  };
+  
+  // Section label helper
+  const sectionLabel = (label, count) => `<div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 20px 0 10px 0;">${label} <span style="font-weight: 500; letter-spacing: 0;">(${count})</span></div>`;
+  
+  container.innerHTML = '';
+  
+  // Render favorites section
+  if (favorites.length > 0) {
+    container.innerHTML += sectionLabel('Favorites', favorites.length);
+    container.innerHTML += favorites.map(buildIngCard).join('');
+  }
+  
+  // Render other ingredients
+  if (nonFavorites.length > 0) {
+    if (favorites.length > 0) {
+      container.innerHTML += sectionLabel('All Items', nonFavorites.length);
+    }
+    container.innerHTML += nonFavorites.map(buildIngCard).join('');
+  }
+}
+
+async function toggleRecipeIngredientFavorite(ingredientId) {
+  const ingredient = availableIngredients.find(i => i.id === ingredientId);
+  if (!ingredient) return;
+  
+  const newState = !ingredient.is_favorite;
+  
+  // Optimistically update UI
+  ingredient.is_favorite = newState;
+  renderAvailableIngredients();
+  
+  // Update database in background
+  try {
+    const { error } = await window.supabaseClient
+      .from('ingredients')
+      .update({ is_favorite: newState })
+      .eq('id', ingredientId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    // Revert on error
+    ingredient.is_favorite = !newState;
+    renderAvailableIngredients();
+    showAlert('Failed to update favorite status');
+  }
 }
 
 async function addIngredientToRecipe(ingredientId) {
@@ -2734,7 +2893,7 @@ document.addEventListener('keydown', (e) => {
   </div>
   <div class="rdm-body" id="rdmBodyOuter">
     <div class="rdm-name-section">
-      <input type="text" class="rdm-title" id="rdmTitle" value="Recipe" onblur="saveMobileRecipeName()">
+      <input type="text" class="rdm-title" id="rdmTitle" value="Product" onblur="saveMobileRecipeName()">
     </div>
     <div id="rdmQtyList" style="padding:0 20px;"></div>
   </div>
@@ -2757,10 +2916,10 @@ document.addEventListener('keydown', (e) => {
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
       <div>
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Recipe Name <span style="color: var(--danger);">*</span></label>
-        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter recipe name..." required />
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Product Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required />
       </div>
-      <div id="recipeDropzone"><div class="recipe-drop-placeholder">🍳<br>Drag ingredients here to build your recipe</div></div>
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">🍳<br>Drag items here to build your product</div></div>
       <div class="recipe-cost-summary">
         <label>Total Cost</label>
         <div class="amount" id="recipeTotalCostDisplay">$0.00</div>
@@ -2769,12 +2928,12 @@ document.addEventListener('keydown', (e) => {
     </div>
     <div class="recipe-panel">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-        <h3 style="margin: 0;">Ingredient Library</h3>
+        <h3 style="margin: 0;">Item Library</h3>
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
       <div class="search-wrapper" style="width: 100%;">
         <i data-lucide="search" class="search-icon"></i>
-        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search ingredients..." oninput="renderIngredientList(); toggleSearchClear('recipeSearchIng')" />
+        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="renderIngredientList(); toggleSearchClear('recipeSearchIng')" />
         <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; renderIngredientList(); this.classList.remove('visible');" title="Clear search">×</button>
       </div>
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
@@ -2790,7 +2949,7 @@ document.addEventListener('keydown', (e) => {
 <div class="recipe-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()" style="align-items: flex-start; padding: 5vh 0; overflow-y: auto;">
   <div class="recipe-builder" style="display: flex; flex-direction: column; max-width: 900px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 80vh; overflow: hidden;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
-      <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Add Ingredient to Recipe</h3>
+      <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Add Item to Recipe</h3>
       <span onclick="closeAddIngredientModal()" style="cursor: pointer; color: var(--text-muted); font-size: 32px; line-height: 1; font-weight: 300; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
     </div>
 
@@ -2809,7 +2968,7 @@ document.addEventListener('keydown', (e) => {
     />
 
     <div id="availableIngredientsList" style="overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; flex: 1; min-height: 0;">
-      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
     </div>
   </div>
 </div>
@@ -2888,8 +3047,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
