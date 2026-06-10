@@ -1798,7 +1798,7 @@
         <h3>Track Expenses</h3>
       </div>
       <p>Increase your inventory buy tracking what items you bought</p>
-      <button class="btn-action btn-action-cyan" onclick="openImageUploadModal('item')">+ New Expense</button>
+      <button class="btn-action btn-action-cyan" onclick="openExpenseChoiceModal()">+ New Expense</button>
     </div>
   </section>
 
@@ -1818,8 +1818,433 @@
 
 </div>
 
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="expenseModal" onclick="if(event.target===this)closeExpenseModal()">
+  <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+    <h3 style="margin-top:0; margin-bottom: 24px;">Add Expense</h3>
+    <form id="expenseForm" onsubmit="saveExpense(event)">
+
+      <!-- Items Section -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text-main);">Items</label>
+
+        <!-- Search -->
+        <div style="position: relative; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">SEARCH</div>
+          <div class="search-wrapper" style="width: 100%;">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="exp_ingredient_search" placeholder="Search items..."
+              onfocus="opsShowIngredientDropdown()"
+              oninput="opsSearchIngredients(); opsToggleSearchClear()"
+              autocomplete="off"
+              style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
+            <button type="button" class="search-clear" id="exp_ingredient_search_clear"
+              onclick="document.getElementById('exp_ingredient_search').value = ''; opsSearchIngredients(); this.classList.remove('visible');" title="Clear search">&times;</button>
+          </div>
+          <div id="exp_ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+        </div>
+
+        <!-- Categories -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">CATEGORIES</div>
+          <div id="opsExpenseCategoryChips" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          <div id="opsExpenseAttrSubfilter" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+        </div>
+
+        <!-- Recommended Ingredients -->
+        <div id="ops_recommended_section" style="display: none; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">RECOMMENDED</div>
+          <div id="ops_recommended_list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Selected Ingredients -->
+        <div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">SELECTED</div>
+          <div id="ops_selected_ingredients" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- Amount and Date -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text-main);">Amount *</label>
+          <input type="number" id="exp_amount" step="0.01" required placeholder="0.00"
+            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel); color:var(--text-main); font-size:14px; font-family:inherit; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text-main);">Expense Date *</label>
+          <input type="date" id="exp_date" required
+            style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel); color:var(--text-main); font-size:14px; font-family:inherit; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- Vendor -->
+      <div style="margin-bottom: 20px;">
+        <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text-main);">Vendor</label>
+        <input type="text" id="exp_vendor" placeholder="Supplier name (optional)"
+          style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel); color:var(--text-main); font-size:14px; font-family:inherit; box-sizing:border-box;">
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; gap: 12px;">
+        <button type="button" onclick="closeExpenseModal()"
+          style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-panel); color:var(--text-main); font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="submit" id="expSubmitBtn"
+          style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:700; cursor:pointer;">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 let confirmResolver = null;
+
+// --- EXPENSE MODAL ---
+function openExpenseChoiceModal() {
+  document.getElementById('expenseChoiceModal').classList.add('active');
+}
+
+let opsAllIngredients = [];
+let opsSelectedIngredients = [];
+let opsExpenseCategory = null;
+let opsExpenseAttrFilters = new Map(); // Map<key, Set<values>> — OR within key, AND between keys
+let opsRecentIngredients = [];
+
+async function openAddExpenseModal() {
+  await opsLoadIngredients();
+  opsSelectedIngredients = [];
+  opsExpenseCategory = null;
+  opsExpenseAttrFilters = new Map();
+  document.getElementById('expenseForm').reset();
+  document.getElementById('exp_date').valueAsDate = new Date();
+  document.getElementById('exp_ingredient_search').value = '';
+  document.getElementById('exp_ingredient_results').style.display = 'none';
+  opsRenderSelectedIngredients();
+  opsRenderCategoryChips();
+  opsRenderAttrSubfilter();
+  document.getElementById('expenseModal').classList.add('active');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeExpenseModal() {
+  document.getElementById('expenseModal').classList.remove('active');
+  opsSelectedIngredients = [];
+  opsExpenseCategory = null;
+  opsExpenseAttrFilters = new Map();
+}
+
+async function opsLoadIngredients() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let q = supabaseClient.from('ingredients').select('*').eq('profile_id', user.id);
+    if (storeId) q = q.eq('store_id', storeId);
+    const { data, error } = await q.order('name');
+    if (error) throw error;
+    opsAllIngredients = data || [];
+  } catch (e) {
+    console.error('Error loading ingredients:', e);
+  }
+}
+
+function opsRenderCategoryChips() {
+  const container = document.getElementById('opsExpenseCategoryChips');
+  if (!container) return;
+  const existingCats = new Set(opsAllIngredients.map(i => i.category).filter(Boolean));
+  const allCategories = [
+    { name: 'Apparel', icon: 'shirt' }, { name: 'Wood', icon: 'tree-pine' },
+    { name: 'Boxes', icon: 'archive' }, { name: 'Cards', icon: 'tickets' },
+    { name: 'Plants', icon: 'sprout' }, { name: 'Candy', icon: 'lollipop' },
+    { name: 'Beverage', icon: 'amphora' }, { name: 'Jewelry', icon: 'gem' },
+    { name: 'Party Supplies', icon: 'party-popper' }, { name: 'Gaming', icon: 'gamepad-2' },
+    { name: 'Toys', icon: 'drum' }, { name: 'Office Supplies', icon: 'paperclip' },
+    { name: 'Colors', icon: 'palette' }, { name: 'Rope', icon: 'lasso' },
+    { name: 'Paper', icon: 'origami' }, { name: 'Spool', icon: 'spool' },
+    { name: 'Letter', icon: 'mail' }, { name: 'Giveaway', icon: 'gift' },
+    { name: 'Electronics', icon: 'plug' }, { name: 'Printing Supplies', icon: 'printer' },
+    { name: 'Tools', icon: 'wrench' }, { name: 'Packaging', icon: 'package' },
+    { name: 'Food', icon: 'wheat' }
+  ];
+  const cats = allCategories.filter(c => existingCats.has(c.name));
+  container.innerHTML = cats.map(cat => `
+    <div class="ops-cat-chip" data-category="${cat.name}" onclick="opsSelectCategory('${cat.name}')" title="${cat.name}"
+      style="padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        background: ${opsExpenseCategory === cat.name ? 'var(--accent)' : 'var(--bg-panel)'};
+        border: 1px solid ${opsExpenseCategory === cat.name ? 'var(--accent)' : 'var(--border)'};
+        color: ${opsExpenseCategory === cat.name ? '#fff' : 'var(--text-main)'};
+        display: flex; align-items: center; justify-content: center;">
+      <i data-lucide="${cat.icon}" style="width: 18px; height: 18px;"></i>
+    </div>
+  `).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function opsSelectCategory(category) {
+  opsExpenseCategory = opsExpenseCategory === category ? null : category;
+  opsExpenseAttrFilters = new Map();
+  opsRenderCategoryChips();
+  opsRenderAttrSubfilter();
+  opsRenderRecommended();
+  opsSearchIngredients();
+}
+
+function opsRenderAttrSubfilter() {
+  const container = document.getElementById('opsExpenseAttrSubfilter');
+  if (!container) return;
+  if (!opsExpenseCategory) { container.style.display = 'none'; container.innerHTML = ''; return; }
+  container.style.display = 'flex';
+  const catIngs = opsAllIngredients.filter(i => i.category === opsExpenseCategory);
+  const allAttrs = {};
+  catIngs.forEach(ing => {
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = null; } }
+    if (attrs && typeof attrs === 'object') {
+      Object.entries(attrs).forEach(([k, v]) => {
+        if (v) { if (!allAttrs[k]) allAttrs[k] = new Set(); allAttrs[k].add(String(v)); }
+      });
+    }
+  });
+  if (Object.keys(allAttrs).length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+  const chips = [];
+  Object.entries(allAttrs).forEach(([key, values]) => {
+    values.forEach(value => {
+      const isSel = opsExpenseAttrFilters.has(key) && opsExpenseAttrFilters.get(key).has(value);
+      chips.push(`<div onclick="opsToggleAttr('${key}','${value}')" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; ${
+        isSel ? 'background:#8b5cf6;color:#fff;border:1px solid #8b5cf6;' : 'background:var(--bg-inner);color:var(--text-muted);border:1px solid var(--border);'
+      }">${value}</div>`);
+    });
+  });
+  container.innerHTML = chips.join('');
+}
+
+function opsToggleAttr(key, value) {
+  if (!opsExpenseAttrFilters.has(key)) opsExpenseAttrFilters.set(key, new Set());
+  const valSet = opsExpenseAttrFilters.get(key);
+  if (valSet.has(value)) { valSet.delete(value); if (valSet.size === 0) opsExpenseAttrFilters.delete(key); }
+  else { valSet.add(value); }
+  opsRenderAttrSubfilter();
+  opsRenderRecommended();
+  opsSearchIngredients();
+}
+
+function opsRenderRecommended() {
+  const section = document.getElementById('ops_recommended_section');
+  const listDiv = document.getElementById('ops_recommended_list');
+  if (!section || !listDiv) return;
+  const hasFilters = opsExpenseCategory || opsExpenseAttrFilters.size > 0;
+  if (!hasFilters) { section.style.display = 'none'; return; }
+  const filtered = opsAllIngredients.filter(ing => {
+    if (opsSelectedIngredients.some(s => s.id === ing.id)) return false;
+    if (opsExpenseCategory && ing.category !== opsExpenseCategory) return false;
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = {}; } }
+    if (opsExpenseAttrFilters.size > 0) {
+      attrs = attrs || {};
+      for (const [k, valSet] of opsExpenseAttrFilters) {
+        if (valSet.size === 0) continue;
+        const ingVal = String(attrs[k] ?? '').trim().toLowerCase();
+        if (![...valSet].some(v => v.trim().toLowerCase() === ingVal)) return false;
+      }
+    }
+    return true;
+  });
+  if (filtered.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  listDiv.innerHTML = filtered.slice(0, 5).map(ing => {
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = {}; } }
+    const attrText = attrs && typeof attrs === 'object' ? Object.values(attrs).filter(v => v).join(' • ') : '';
+    return `<div onclick="opsAddIngredient('${ing.id}')" style="padding:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s;">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;color:var(--text-main);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ing.name}</div>
+          ${attrText ? `<div style="font-size:11px;color:var(--text-muted);">${attrText}</div>` : ''}
+        </div>
+        <div style="flex-shrink:0;padding:4px 8px;background:var(--accent);color:white;border-radius:4px;font-size:11px;font-weight:600;">Add</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function opsShowIngredientDropdown() {
+  const searchTerm = document.getElementById('exp_ingredient_search').value.trim();
+  if (!searchTerm && opsRecentIngredients.length > 0) {
+    const resultsDiv = document.getElementById('exp_ingredient_results');
+    resultsDiv.innerHTML = opsRecentIngredients.slice(0, 3).map(ing => `
+      <div onclick="opsAddIngredient('${ing.id}')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
+        <div style="font-weight:600;font-size:14px;">${ing.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${opsFormatAttrs(ing.custom_attributes)}</div>
+      </div>`).join('');
+    resultsDiv.style.display = 'block';
+    return;
+  }
+  opsSearchIngredients();
+}
+
+function opsSearchIngredients() {
+  const searchTerm = document.getElementById('exp_ingredient_search').value.toLowerCase().trim();
+  const resultsDiv = document.getElementById('exp_ingredient_results');
+  let filtered = opsAllIngredients.filter(ing => {
+    if (opsSelectedIngredients.some(s => s.id === ing.id)) return false;
+    if (opsExpenseCategory && ing.category !== opsExpenseCategory) return false;
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = {}; } }
+    if (opsExpenseAttrFilters.size > 0) {
+      attrs = attrs || {};
+      for (const [k, valSet] of opsExpenseAttrFilters) {
+        if (valSet.size === 0) continue;
+        const ingVal = String(attrs[k] ?? '').trim().toLowerCase();
+        if (![...valSet].some(v => v.trim().toLowerCase() === ingVal)) return false;
+      }
+    }
+    if (searchTerm) {
+      const nameMatch = ing.name.toLowerCase().includes(searchTerm);
+      let attrMatch = false;
+      if (attrs && typeof attrs === 'object') attrMatch = Object.values(attrs).some(v => v && String(v).toLowerCase().includes(searchTerm));
+      return nameMatch || attrMatch;
+    }
+    return true;
+  });
+  resultsDiv.style.display = 'block';
+  if (filtered.length === 0) {
+    resultsDiv.innerHTML = '<div style="text-align:center;padding:40px 20px;"><p style="color:var(--text-muted);font-size:14px;margin:0;">No items found</p></div>';
+    return;
+  }
+  resultsDiv.innerHTML = filtered.slice(0, 8).map(ing => {
+    let attrs = ing.custom_attributes;
+    if (typeof attrs === 'string') { try { attrs = JSON.parse(attrs); } catch (e) { attrs = null; } }
+    return `<div onclick="opsAddIngredient('${ing.id}')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
+      <div style="font-weight:600;font-size:14px;">${ing.name}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${opsFormatAttrs(attrs)}</div>
+    </div>`;
+  }).join('');
+}
+
+function opsFormatAttrs(attrs) {
+  if (!attrs || typeof attrs !== 'object') return '';
+  return Object.values(attrs).filter(v => v).join(' · ') || '';
+}
+
+function opsToggleSearchClear() {
+  const input = document.getElementById('exp_ingredient_search');
+  const btn = document.getElementById('exp_ingredient_search_clear');
+  if (input && btn) { input.value.trim() ? btn.classList.add('visible') : btn.classList.remove('visible'); }
+}
+
+function opsAddIngredient(id) {
+  const ing = opsAllIngredients.find(i => i.id === id);
+  if (!ing) return;
+  opsRecentIngredients = opsRecentIngredients.filter(i => i.id !== id);
+  opsRecentIngredients.unshift(ing);
+  if (opsRecentIngredients.length > 3) opsRecentIngredients = opsRecentIngredients.slice(0, 3);
+  opsSelectedIngredients.push({ id: ing.id, name: ing.name, quantity: 1 });
+  opsRenderSelectedIngredients();
+  opsRenderRecommended();
+  opsCalcTotal();
+  document.getElementById('exp_ingredient_search').value = '';
+  document.getElementById('exp_ingredient_results').style.display = 'none';
+}
+
+function opsRemoveIngredient(id) {
+  opsSelectedIngredients = opsSelectedIngredients.filter(i => i.id !== id);
+  opsRenderSelectedIngredients();
+  opsRenderRecommended();
+  opsCalcTotal();
+}
+
+function opsChangeQty(id, delta) {
+  const ing = opsSelectedIngredients.find(i => i.id === id);
+  if (!ing) return;
+  const newQty = (ing.quantity || 0) + delta;
+  if (newQty < 1) { opsRemoveIngredient(id); return; }
+  ing.quantity = newQty;
+  opsRenderSelectedIngredients();
+  opsCalcTotal();
+}
+
+function opsUpdateQty(id, val) {
+  const ing = opsSelectedIngredients.find(i => i.id === id);
+  if (ing) { ing.quantity = Math.max(0, parseFloat(val) || 0); opsRenderSelectedIngredients(); opsCalcTotal(); }
+}
+
+function opsCalcTotal() {
+  let total = 0;
+  opsSelectedIngredients.forEach(sel => {
+    const ing = opsAllIngredients.find(i => i.id === sel.id);
+    if (ing) total += (parseFloat(ing.cost_per_unit || ing.price) || 0) * (parseFloat(sel.quantity) || 0);
+  });
+  const f = document.getElementById('exp_amount');
+  if (f) f.value = total.toFixed(2);
+}
+
+function opsRenderSelectedIngredients() {
+  const container = document.getElementById('ops_selected_ingredients');
+  if (!container) return;
+  if (opsSelectedIngredients.length === 0) {
+    container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;">No items linked yet</div>';
+    return;
+  }
+  container.innerHTML = opsSelectedIngredients.map(ing => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;">
+      <div style="flex:1;font-weight:600;font-size:14px;">${ing.name}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" onclick="opsChangeQty('${ing.id}',-1)" style="width:28px;height:28px;padding:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-main);display:flex;align-items:center;justify-content:center;">−</button>
+        <input type="number" value="${ing.quantity}" min="0" step="0.01" onchange="opsUpdateQty('${ing.id}',this.value)"
+          style="width:70px;padding:6px 8px;text-align:center;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;background:var(--bg-inner);color:var(--text-main);">
+        <button type="button" onclick="opsChangeQty('${ing.id}',1)" style="width:28px;height:28px;padding:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-main);display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+      <button type="button" onclick="opsRemoveIngredient('${ing.id}')" style="width:32px;height:32px;padding:0;background:var(--danger);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">
+        <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+      </button>
+    </div>`).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  const dd = document.getElementById('exp_ingredient_results');
+  const inp = document.getElementById('exp_ingredient_search');
+  if (dd && inp && !dd.contains(e.target) && !inp.contains(e.target)) dd.style.display = 'none';
+});
+
+async function saveExpense(event) {
+  event.preventDefault();
+  if (opsSelectedIngredients.length === 0) {
+    showAlert('Please link at least one item to this expense');
+    return;
+  }
+  const btn = document.getElementById('expSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    const vendor = document.getElementById('exp_vendor').value?.trim();
+    const payload = {
+      profile_id: user.id,
+      store_id: storeId || null,
+      description: vendor ? `${vendor} Purchase` : 'Expense Purchase',
+      amount: parseFloat(document.getElementById('exp_amount').value) || 0,
+      expense_date: document.getElementById('exp_date').value,
+      vendor: vendor || null,
+      category: null,
+      receipt_url: null,
+      ingredients: opsSelectedIngredients
+    };
+    const { error } = await offlineWrite('expenses', 'insert', payload);
+    if (error) throw error;
+    closeExpenseModal();
+    showNotification('Expense saved successfully!', 'success');
+  } catch (e) {
+    showAlert('Failed to save expense: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
 
 // Custom modal functions
 function showAlert(message, title = 'Alert') {
@@ -2178,6 +2603,34 @@ function resolveConfirm(result) {
     </div>
 
     <button class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 100%; margin-top: 24px;" onclick="closeMethodModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Expense Method Choice Modal -->
+<div class="modal-overlay" id="expenseChoiceModal">
+  <div class="modal-content" style="max-width: 480px;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Add Expense</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="method-card" onclick="document.getElementById('expenseChoiceModal').classList.remove('active'); openAddExpenseModal();">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
+      </div>
+
+      <div class="method-card" onclick="document.getElementById('expenseChoiceModal').classList.remove('active'); openImageUploadModal('ingredient');">
+        <div style="margin-bottom: 12px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40" style="display: block; margin: 0 auto;">
+        </div>
+        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
+      </div>
+    </div>
+
+    <button class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 100%; margin-top: 24px;" onclick="document.getElementById('expenseChoiceModal').classList.remove('active')">Cancel</button>
   </div>
 </div>
 
@@ -2909,7 +3362,7 @@ function showImportStatus(message, type) {
       
       <div class="method-card" onclick="selectOrderMethod('upload')">
         <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Upload Screenshot</h4>
+        <h4 style="margin: 0 0 8px 0;">PDF / Image Upload</h4>
         <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Scan an order screenshot with AI</p>
       </div>
     </div>
@@ -3035,8 +3488,20 @@ function showImportStatus(message, type) {
     <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
     
-    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;">
       <!-- Mapped items will appear here -->
+    </div>
+
+    <button type="button" onclick="addManualMappedItem()"
+      style="width: 100%; padding: 10px; background: var(--bg-panel); border: 2px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: all 0.2s;"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+      + Add Product
+    </button>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; font-weight: 700; font-size: 15px;">
+      <span>Estimated Total</span>
+      <span id="mappedTotalRevenue">$0.00</span>
     </div>
 
     <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
@@ -3855,117 +4320,58 @@ async function matchItemToRecipes(itemData) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
-    
+
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    // Fetch all recipes
-    let _q4 = supabaseClient
-      .from('recipes')
-      .select('*')
-      .eq('profile_id', user.id);
+    let _q4 = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
     if (storeId) _q4 = _q4.eq('store_id', storeId);
     const { data: recipes, error } = await _q4;
-
     if (error) throw error;
     if (!recipes || recipes.length === 0) return [];
-    
+
+    const itemName = (itemData.name || '').toLowerCase();
     const itemAttributes = itemData.attributes || {};
-    
-    // If no attributes to match, return empty
-    if (Object.keys(itemAttributes).length === 0) return [];
-    
-    // Collect all unique ingredient IDs from all recipes
-    const allIngredientIds = new Set();
-    recipes.forEach(recipe => {
-      if (recipe.components && Array.isArray(recipe.components)) {
-        recipe.components.forEach(comp => {
-          if (comp.ingredient_id) allIngredientIds.add(comp.ingredient_id);
-        });
-      }
-    });
-    
-    console.log('Found ingredient IDs:', Array.from(allIngredientIds));
-    
-    // Fetch all ingredients
-    const { data: ingredients, error: ingError } = await supabaseClient
-      .from('ingredients')
-      .select('id, name, custom_attributes')
-      .in('id', Array.from(allIngredientIds));
-    
-    if (ingError) throw ingError;
-    
-    // Create ingredient map
-    const ingredientMap = {};
-    if (ingredients) {
-      ingredients.forEach(ing => {
-        ingredientMap[ing.id] = ing;
-      });
+    const attrValues = Object.values(itemAttributes).map(v => String(v).toLowerCase());
+
+    const stopWords = new Set(['für','the','and','or','of','in','mit','und','der','die','das','ein','eine','aus','bei','von','for']);
+
+    function tokenise(str) {
+      return str.toLowerCase().split(/[\s\-\/,&]+/).filter(t => t.length > 1 && !stopWords.has(t));
     }
-    
-    // Score each recipe based on ingredient attributes
+
+    const itemTokens = tokenise(itemName);
+
     const scoredRecipes = recipes.map(recipe => {
-      let score = 0;
-      
-      if (!recipe.components || recipe.components.length === 0) {
-        return { recipe, score: 0, matchReason: 'No ingredients' };
+      const recipeName = (recipe.name || '').toLowerCase();
+      const recipeTokens = tokenise(recipeName);
+
+      // Name similarity: proportion of item tokens found in recipe name
+      let nameMatches = 0;
+      for (const tok of itemTokens) {
+        if (recipeTokens.some(rt => rt.includes(tok) || tok.includes(rt))) nameMatches++;
       }
-      
-      // Check if any ingredient in this recipe has matching attributes
-      for (const comp of recipe.components) {
-        const ingredient = ingredientMap[comp.ingredient_id];
-        if (!ingredient) continue;
-        
-        if (!ingredient.custom_attributes) continue;
-        
-        try {
-          const ingAttrs = typeof ingredient.custom_attributes === 'string'
-            ? JSON.parse(ingredient.custom_attributes)
-            : ingredient.custom_attributes;
-          
-          // Convert ingredient attributes to lowercase keys for case-insensitive matching
-          const ingAttrsLower = {};
-          Object.entries(ingAttrs).forEach(([key, value]) => {
-            ingAttrsLower[key.toLowerCase()] = value;
-          });
-          
-          let attrMatches = 0;
-          let attrTotal = Object.keys(itemAttributes).length;
-          
-          for (const [key, value] of Object.entries(itemAttributes)) {
-            const keyLower = key.toLowerCase();
-            const ingValue = ingAttrsLower[keyLower];
-            const itemValue = value.toString().toLowerCase();
-            const ingValueLower = ingValue ? ingValue.toString().toLowerCase() : null;
-            
-            if (ingValue && ingValueLower === itemValue) {
-              attrMatches++;
-            }
-          }
-          
-          const ingredientScore = attrMatches / attrTotal;
-          
-          if (ingredientScore > score) {
-            score = ingredientScore; // Take the best matching ingredient
-          }
-        } catch (e) {
-          console.warn('Error parsing ingredient attributes:', e);
-        }
+      const nameScore = itemTokens.length > 0 ? nameMatches / itemTokens.length : 0;
+
+      // Attribute bonus: each attribute value appearing in the product name adds 0.1
+      let attrBonus = 0;
+      for (const val of attrValues) {
+        if (val.length > 1 && recipeName.includes(val)) attrBonus += 0.1;
       }
-      
+
+      const score = Math.min(nameScore + attrBonus, 1);
       return {
         recipe,
         score,
-        matchReason: score === 1 ? 'Perfect match' : score >= 0.5 ? 'Partial match' : 'Low match'
+        matchReason: score >= 0.8 ? 'Perfect match' : score >= 0.5 ? 'Good match' : 'Partial match'
       };
     });
-    
-    // Sort by score and return all matches
+
     return scoredRecipes
-      .filter(r => r.score > 0) // Only return matches with some score
+      .filter(r => r.score >= 0.25)
       .sort((a, b) => b.score - a.score);
-      
+
   } catch (error) {
-    console.error('Error matching recipes:', error);
+    console.error('Error matching products:', error);
     return [];
   }
 }
@@ -3975,7 +4381,7 @@ async function showRecipeMappingModal(orderData) {
   mappedRecipes = [];
   
   const itemsList = document.getElementById('mappedItemsList');
-  itemsList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Matching recipes...</div>';
+  itemsList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Matching products...</div>';
   
   // Pre-fill form fields
   document.getElementById('mapped_customer').value = orderData.customer || '';
@@ -4032,54 +4438,60 @@ function renderMappedItems() {
     const matches = mapping.matches || [];
     // Clean item name by removing quantity prefixes like "x1", "1x", "2x", etc.
     const cleanName = item.name.replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
-    // Use selected recipe's retail price if available, otherwise use item price
-    const displayPrice = selected ? (selected.retail_price || selected.cost * 1.6 || 0) : (item.price || 0);
-    
+    const retailPrice = selected ? (parseFloat(selected.retail_price) || 0) : (item.price || 0);
+    const priceLabel = selected
+      ? (selected.retail_price ? 'Sales price' : 'No sales price set')
+      : 'Receipt price';
+
     return `
       <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
           <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${cleanName}</div>
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${cleanName || '<span style="color:var(--text-muted);font-style:italic;">Custom item</span>'}</div>
             <div style="font-size: 13px; color: var(--text-muted);">
-              ${Object.entries(item.attributes || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || 'No attributes'}
+              ${Object.entries(item.attributes || {}).map(([k,v]) => `${k}: ${v}`).join(' · ')}
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 14px; font-weight: 600; color: var(--accent);">$${displayPrice.toFixed(2)}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--accent);">$${retailPrice.toFixed(2)}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">${priceLabel}</div>
           </div>
         </div>
-        
+
         <div style="margin-bottom: 12px; position: relative;">
-          <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Matched Recipe:</label>
-          <input 
-            type="text" 
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Matched Product:</label>
+            ${selected ? `<button type="button" onclick="clearMappedRecipe(${index})" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:0;line-height:1;" title="Remove product">×</button>` : ''}
+          </div>
+          <input
+            type="text"
             id="recipeSearchInput_${index}"
-            placeholder="🔍 Search to change product or leave empty for custom item..."
+            placeholder="🔍 Search product..."
             value="${selected ? selected.name : ''}"
             autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
             onfocus="showRecipeDropdown(${index})"
             onkeydown="if(event.key === 'Escape') hideRecipeDropdown(${index})"
-            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-main); color: var(--text-main); font-size: 14px;"
+            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-main); color: var(--text-main); font-size: 14px; box-sizing: border-box;"
           />
-          <div 
-            id="recipeDropdown_${index}" 
+          <div
+            id="recipeDropdown_${index}"
             style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 200px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             ${matches.map(m => `
-              <div 
+              <div
                 onclick="selectRecipeForMapping(${index}, '${m.recipe.id}')"
                 style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;"
                 onmouseover="this.style.background='var(--bg-inner)'"
                 onmouseout="this.style.background='transparent'"
               >
                 <div style="font-weight: 600; font-size: 13px;">${m.recipe.name}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${m.matchReason} (${(m.score * 100).toFixed(0)}% attribute match)</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${m.matchReason} (${(m.score * 100).toFixed(0)}%)</div>
               </div>
             `).join('')}
-            ${matches.length === 0 ? '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching recipes found</div>' : ''}
+            ${matches.length === 0 ? '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching products found</div>' : ''}
           </div>
         </div>
-        
+
         <div style="display: flex; gap: 12px; align-items: center;">
           <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Quantity:</label>
           <div style="display: flex; gap: 8px; align-items: center;">
@@ -4087,7 +4499,7 @@ function renderMappedItems() {
             <span style="font-weight: 600; min-width: 40px; text-align: center;">${mapping.quantity}</span>
             <button type="button" onclick="adjustMappedQuantity(${index}, 1)" style="width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer; font-size: 16px;">+</button>
           </div>
-          ${selected ? `<span style="font-size: 13px; color: var(--text-muted); margin-left: auto;">Product cost: $${(parseFloat(selected.cost) || 0).toFixed(2)}</span>` : ''}
+          ${selected ? `<span style="font-size: 13px; color: var(--text-muted); margin-left: auto;">Cost: $${(parseFloat(selected.cost) || 0).toFixed(2)}</span>` : ''}
         </div>
       </div>
     `;
@@ -4128,7 +4540,7 @@ async function searchRecipesForMapping(index, searchTerm) {
         <div style="font-weight: 600; font-size: 13px;">${m.recipe.name}</div>
         <div style="font-size: 12px; color: var(--text-muted);">${m.matchReason} (${(m.score * 100).toFixed(0)}% attribute match)</div>
       </div>
-    `).join('') || '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching recipes found</div>';
+    `).join('') || '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching products found</div>';
     dropdown.style.display = 'block';
     return;
   }
@@ -4201,6 +4613,23 @@ function hideRecipeDropdown(index) {
   }
 }
 
+function clearMappedRecipe(index) {
+  mappedRecipes[index].selectedRecipe = null;
+  renderMappedItems();
+  updateMappedTotal();
+}
+
+function addManualMappedItem() {
+  mappedRecipes.push({
+    itemData: { name: '', attributes: {}, price: 0, quantity: 1 },
+    selectedRecipe: null,
+    matches: [],
+    quantity: 1
+  });
+  renderMappedItems();
+  updateMappedTotal();
+}
+
 function selectRecipeForMapping(index, recipeId) {
   const match = mappedRecipes[index].matches.find(m => m.recipe.id === recipeId);
   if (match) {
@@ -4259,7 +4688,7 @@ function updateMappedTotal() {
   const total = mappedRecipes.reduce((sum, mapping) => {
     if (mapping.selectedRecipe) {
       const recipeCost = parseFloat(mapping.selectedRecipe.cost) || 0;
-      const retailPrice = mapping.selectedRecipe.retail_price || (recipeCost * 1.6); // Default markup if no retail price
+      const retailPrice = parseFloat(mapping.selectedRecipe.retail_price) || 0;
       return sum + (retailPrice * mapping.quantity);
     } else {
       // Use item price if no recipe matched
@@ -4267,7 +4696,8 @@ function updateMappedTotal() {
     }
   }, 0);
   
-  document.getElementById('mappedTotalRevenue').textContent = `$${total.toFixed(2)}`;
+  const totalEl = document.getElementById('mappedTotalRevenue');
+  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
 }
 
 function closeRecipeMappingModal() {

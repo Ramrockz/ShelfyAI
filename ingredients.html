@@ -290,6 +290,13 @@
     scrollbar-color: var(--accent) transparent;
   }
 
+  @media (max-width: 768px) {
+    .modal-content {
+      scrollbar-width: none;
+    }
+    .modal-content::-webkit-scrollbar { display: none; }
+  }
+
   /* Custom scrollbar for modal */
   .modal-content::-webkit-scrollbar {
     width: 8px;
@@ -1193,26 +1200,9 @@
         <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="ing_quantity">Quantity *</label>
-          <input type="number" id="ing_quantity" step="0.01" required placeholder="0">
-        </div>
-
-        <div class="form-group">
-          <label for="ing_unit">Unit *</label>
-          <select id="ing_unit" required>
-            <option value="">Select unit</option>
-            <option value="kg">Kilograms (kg)</option>
-            <option value="g">Grams (g)</option>
-            <option value="l">Liters (l)</option>
-            <option value="ml">Milliliters (ml)</option>
-            <option value="cm">Centimeters (cm)</option>
-            <option value="pcs">Pieces (pcs)</option>
-            <option value="lb">Pounds (lb)</option>
-            <option value="oz">Ounces (oz)</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label for="ing_quantity">Quantity *</label>
+        <input type="number" id="ing_quantity" step="0.01" required placeholder="0">
       </div>
 
       <div class="form-row">
@@ -1240,7 +1230,7 @@
       </div>
 
       <div class="form-group">
-        <label>Category</label>
+        <label>Category <span style="color: var(--danger);">*</span></label>
         <input type="hidden" id="ing_category">
         <div class="ing-cat-grid">
           <button type="button" class="ing-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
@@ -1427,7 +1417,7 @@ let currentView = (['recent', 'list'].includes(localStorage.getItem('ingredients
 let ingredients = [];
 let activeAttributeFilters = {};
 let activeCategoryFilter = null;
-let activeAttrValueFilters = new Set();
+let activeAttrValueFilters = new Map(); // Map<attrKey, Set<valueKey>> — OR within key, AND between keys
 let activeStatusFilter = null;
 let activeDeliveryFilter = null;
 let activeTypeFilter = null;
@@ -1770,7 +1760,6 @@ function closeManualModal() {
   // Clear form
   document.getElementById('ing_name').value = '';
   document.getElementById('ing_quantity').value = '';
-  document.getElementById('ing_unit').value = '';
   document.getElementById('ing_cost').value = '';
   document.getElementById('ing_category').value = '';
   document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.remove('selected'));
@@ -2122,7 +2111,6 @@ async function processImageUpload() {
           'pcs': 'pcs',
           'stückzahl': 'pcs'
         };
-        document.getElementById('ing_unit').value = unitMap[unit] || 'pcs';
       }
       
       // SKU
@@ -2322,31 +2310,6 @@ async function handleURLImport() {
         document.getElementById('ing_quantity').value = result.data.quantity;
       }
       
-      // Handle unit - set default to "pcs" if null or "null"
-      const unitSelect = document.getElementById('ing_unit');
-      if (result.data.unit && result.data.unit !== 'null') {
-        // Try to match the unit to the dropdown options
-        const unitLower = result.data.unit.toLowerCase();
-        // Map common units
-        const unitMap = {
-          'pieces': 'pcs',
-          'piece': 'pcs',
-          'stück': 'pcs',
-          'stückzahl': 'pcs',
-          'blatt': 'pcs',
-          'sheets': 'pcs',
-          'sheet': 'pcs',
-          'kilograms': 'kg',
-          'kilogram': 'kg',
-          'liters': 'l',
-          'liter': 'l'
-        };
-        const mappedUnit = unitMap[unitLower] || result.data.unit;
-        unitSelect.value = mappedUnit;
-      } else {
-        // Default to pieces if unit is null or "null"
-        unitSelect.value = 'pcs';
-      }
       if (result.data.sku) {
         document.getElementById('ing_sku').value = result.data.sku;
       }
@@ -2519,11 +2482,11 @@ function switchView(view) {
 function filterByCategory(cat) {
   if (activeCategoryFilter === cat) {
     activeCategoryFilter = null;
-    activeAttrValueFilters = new Set();
+    activeAttrValueFilters = new Map();
     _hideAttrSubfilters();
   } else {
     activeCategoryFilter = cat;
-    activeAttrValueFilters = new Set();
+    activeAttrValueFilters = new Map();
     _renderAttrSubfilters(cat);
   }
 
@@ -2547,15 +2510,26 @@ function _renderAttrSubfilters(cat) {
         const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
         Object.entries(attrs).forEach(([key, value]) => {
           if (!value || !String(value).trim()) return;
-          
+
           const normalizedKey = key.toLowerCase();
           const trimmedValue = String(value).trim();
           const valueKey = trimmedValue.toLowerCase();
-          
+
+          // Only show this value if the item passes all OTHER active attribute filters
+          if (activeAttrValueFilters.size > 0) {
+            for (const [filterKey, filterSet] of activeAttrValueFilters) {
+              if (filterKey === normalizedKey) continue;
+              if (!filterSet || filterSet.size === 0) continue;
+              const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === filterKey);
+              if (!matchKey) return;
+              if (!filterSet.has(String(attrs[matchKey]).trim().toLowerCase())) return;
+            }
+          }
+
           if (!groupedByKey.has(normalizedKey)) {
             groupedByKey.set(normalizedKey, new Map());
           }
-          
+
           const valuesMap = groupedByKey.get(normalizedKey);
           if (!valuesMap.has(valueKey)) {
             valuesMap.set(valueKey, trimmedValue);
@@ -2592,7 +2566,8 @@ function _renderAttrSubfilters(cat) {
       const sortedValues = Array.from(valuesMap.entries()).sort((a, b) => sortValues(a[1], b[1]));
       
       sortedValues.forEach(([valueKey, displayValue]) => {
-        allChips.push(`<button class="attr-chip${activeAttrValueFilters.has(valueKey) ? ' active' : ''}" data-val="${escapeHtml(valueKey)}" onclick="toggleAttrValueFilter('${escapeHtml(valueKey)}')">${escapeHtml(displayValue)}</button>`);
+        const _active = activeAttrValueFilters.has(key) && activeAttrValueFilters.get(key).has(valueKey);
+        allChips.push(`<button class="attr-chip${_active ? ' active' : ''}" data-key="${escapeHtml(key)}" data-val="${escapeHtml(valueKey)}" onclick="toggleAttrValueFilter('${escapeHtml(key)}','${escapeHtml(valueKey)}')">${escapeHtml(displayValue)}</button>`);
       });
     });
     
@@ -2608,16 +2583,16 @@ function _hideAttrSubfilters() {
   });
 }
 
-function toggleAttrValueFilter(value) {
-  // value is already lowercase (key)
-  if (activeAttrValueFilters.has(value)) {
-    activeAttrValueFilters.delete(value);
+function toggleAttrValueFilter(key, value) {
+  if (!activeAttrValueFilters.has(key)) activeAttrValueFilters.set(key, new Set());
+  const keySet = activeAttrValueFilters.get(key);
+  if (keySet.has(value)) {
+    keySet.delete(value);
+    if (keySet.size === 0) activeAttrValueFilters.delete(key);
   } else {
-    activeAttrValueFilters.add(value);
+    keySet.add(value);
   }
-  document.querySelectorAll('.attr-chip').forEach(chip => {
-    chip.classList.toggle('active', activeAttrValueFilters.has(chip.dataset.val));
-  });
+  if (activeCategoryFilter) _renderAttrSubfilters(activeCategoryFilter);
   listCurrentPage = 1;
   cardsToShow = 15;
   render();
@@ -2666,7 +2641,8 @@ function renderCategoryChips() {
   container.style.flexDirection = '';
   container.style.gap = '8px';
 
-  const presentCats = [...new Set(ingredients.map(i => i.category).filter(Boolean))];
+  const presentCatSet = new Set(ingredients.map(i => i.category).filter(Boolean));
+  const presentCats = Object.keys(_categoryIconMap).filter(cat => presentCatSet.has(cat));
 
   if (presentCats.length === 0) {
     container.innerHTML = '';
@@ -3093,14 +3069,19 @@ function render() {
       return false;
     }
 
-    // Apply mobile attribute value subfilters (multiselect &mdash; item must have ALL selected values, case-insensitive)
+    // Apply mobile attribute value subfilters — OR within the same key, AND between keys.
+    // e.g. (Size=L OR Size=M) AND (Color=Black OR Color=Blue)
     if (activeAttrValueFilters && activeAttrValueFilters.size > 0) {
       if (!i.custom_attributes) return false;
       try {
         const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-        const attrValues = new Set(Object.values(attrs).map(v => String(v).trim().toLowerCase()));
-        for (const val of activeAttrValueFilters) {
-          if (!attrValues.has(val)) return false; // val is already lowercase
+        for (const [attrKey, valSet] of activeAttrValueFilters) {
+          if (valSet.size === 0) continue;
+          // Case-insensitive lookup of the attribute key on the item
+          const matchingKey = Object.keys(attrs).find(k => k.toLowerCase() === attrKey);
+          if (!matchingKey) return false; // item doesn't have this attribute at all
+          // OR: item's value must be one of the selected values for this key
+          if (!valSet.has(String(attrs[matchingKey]).trim().toLowerCase())) return false;
         }
       } catch (e) { return false; }
     }
@@ -3211,12 +3192,12 @@ function removeAttributeFilter(key) {
   render();
 }
 
-function removeAttrValueFilter(value) {
-  activeAttrValueFilters.delete(value);
-  // Update active state of chips
-  document.querySelectorAll('.attr-chip').forEach(chip => {
-    chip.classList.toggle('active', activeAttrValueFilters.has(chip.dataset.val));
-  });
+function removeAttrValueFilter(key, value) {
+  if (activeAttrValueFilters.has(key)) {
+    activeAttrValueFilters.get(key).delete(value);
+    if (activeAttrValueFilters.get(key).size === 0) activeAttrValueFilters.delete(key);
+  }
+  if (activeCategoryFilter) _renderAttrSubfilters(activeCategoryFilter);
   listCurrentPage = 1;
   cardsToShow = 15;
   render();
@@ -3224,7 +3205,7 @@ function removeAttrValueFilter(value) {
 
 function addCategoryFilter(value) {
   activeCategoryFilter = activeCategoryFilter === value ? null : value;
-  activeAttrValueFilters = new Set();
+  activeAttrValueFilters = new Map();
   if (activeCategoryFilter) {
     _renderAttrSubfilters(activeCategoryFilter);
   } else {
@@ -3241,7 +3222,7 @@ function addCategoryFilter(value) {
 
 function removeCategoryFilter() {
   activeCategoryFilter = null;
-  activeAttrValueFilters = new Set();
+  activeAttrValueFilters = new Map();
   _hideAttrSubfilters();
   document.querySelectorAll('.mobile-type-filter').forEach(c => c.classList.remove('active'));
   listCurrentPage = 1;
@@ -3333,47 +3314,24 @@ function renderFilterBadges() {
     </div>
   `));
   
-  // Add attribute value filter badges from mobile multi-select (grouped by key, sorted)
+  // Add attribute value filter badges — now structured as Map<key, Set<value>>
   if (activeAttrValueFilters && activeAttrValueFilters.size > 0) {
-    // Map values to their keys by scanning ingredients
-    const valueToKeys = new Map();
-    activeAttrValueFilters.forEach(value => {
-      const keys = new Set();
-      ingredients.forEach(ing => {
-        if (ing.custom_attributes) {
-          try {
-            const attrs = typeof ing.custom_attributes === 'string' 
-              ? JSON.parse(ing.custom_attributes) 
-              : ing.custom_attributes;
-            Object.entries(attrs).forEach(([k, v]) => {
-              if (v && v.toLowerCase() === value.toLowerCase()) {
-                keys.add(k);
-              }
-            });
-          } catch (e) {}
-        }
-      });
-      valueToKeys.set(value, Array.from(keys)[0] || 'Other');
-    });
-    
-    // Group values by key
-    const groupedByKey = new Map();
-    valueToKeys.forEach((key, value) => {
-      if (!groupedByKey.has(key)) groupedByKey.set(key, []);
-      groupedByKey.get(key).push(value);
-    });
-    
-    // Sort keys and values within each group
-    const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => 
+    const sortedAttrKeys = Array.from(activeAttrValueFilters.keys()).sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: 'base' })
     );
-    
-    sortedKeys.forEach(key => {
-      const values = groupedByKey.get(key).sort(sortValues);
-      badges.push(...values.map(value => `
+    sortedAttrKeys.forEach(key => {
+      const valSet = activeAttrValueFilters.get(key);
+      const sortedVals = Array.from(valSet).sort((a, b) => {
+        const aNum = parseFloat(a), bNum = parseFloat(b);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        if (!isNaN(aNum)) return -1;
+        if (!isNaN(bNum)) return 1;
+        return a.localeCompare(b);
+      });
+      badges.push(...sortedVals.map(value => `
         <div class="filter-badge" style="background: #8b5cf6;">
           ${escapeHtml(value)}
-          <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(value).replace(/'/g, "&#39;")}')">&times;</span>
+          <span class="filter-badge-remove" onclick="removeAttrValueFilter('${escapeHtml(key).replace(/'/g,"&#39;")}','${escapeHtml(value).replace(/'/g,"&#39;")}')">&times;</span>
         </div>
       `));
     });
@@ -4335,6 +4293,19 @@ async function saveIngredient(event) {
   if (minStockEl && minStockEl.value.trim() === '') {
     if (!invalidFields.includes(minStockEl)) invalidFields.push(minStockEl);
   }
+  // Validate category (hidden input, shake the grid)
+  const categoryEl = document.getElementById('ing_category');
+  if (!categoryEl || !categoryEl.value.trim()) {
+    const grid = document.querySelector('.ing-cat-grid');
+    if (grid) {
+      grid.classList.remove('input-invalid');
+      void grid.offsetWidth;
+      grid.classList.add('input-invalid');
+      setTimeout(() => grid.classList.remove('input-invalid'), 1500);
+    }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Item'; }
+    return;
+  }
   if (invalidFields.length > 0) {
     invalidFields.forEach(el => {
       el.classList.remove('input-invalid');
@@ -4403,7 +4374,7 @@ async function saveIngredient(event) {
     store_id: storeId,
     name: document.getElementById('ing_name').value,
     quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
-    unit: document.getElementById('ing_unit').value,
+    unit: 'pcs',
     cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
     category: document.getElementById('ing_category').value,
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
@@ -4565,7 +4536,7 @@ function resetFilters() {
   document.getElementById('fCat').value = "";
   activeAttributeFilters = {};
   activeCategoryFilter = null;
-  activeAttrValueFilters = new Set();
+  activeAttrValueFilters = new Map();
   activeStatusFilter = null;
   activeDeliveryFilter = null;
   sortBy = null;

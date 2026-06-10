@@ -1497,7 +1497,7 @@ async function selectMethod(method) {
 // Selected ingredients storage
 let selectedExpenseIngredients = [];
 let expenseSelectedCategory = null;
-let expenseSelectedAttributes = {};
+let expenseActiveAttrFilters = new Map(); // Map<key, Set<values>> — OR within key, AND between keys
 let recentIngredients = []; // Store last 3 accessed ingredients
 
 async function openAddExpenseModal() {
@@ -1507,7 +1507,7 @@ async function openAddExpenseModal() {
   editingExpenseId = null;
   selectedExpenseIngredients = [];
   expenseSelectedCategory = null;
-  expenseSelectedAttributes = {};
+  expenseActiveAttrFilters = new Map();
   
   document.getElementById('modalTitle').textContent = 'Add New Expense';
   document.getElementById('expenseForm').reset();
@@ -1532,7 +1532,7 @@ function closeExpenseModal() {
   document.getElementById('expenseModal').classList.remove('active');
   selectedExpenseIngredients = [];
   expenseSelectedCategory = null;
-  expenseSelectedAttributes = {};
+  expenseActiveAttrFilters = new Map();
 }
 
 // Ingredient search and selection functions
@@ -1616,10 +1616,10 @@ function renderExpenseCategoryChips() {
 function selectExpenseCategory(category) {
   if (expenseSelectedCategory === category) {
     expenseSelectedCategory = null;
-    expenseSelectedAttributes = {};
+    expenseActiveAttrFilters = new Map();
   } else {
     expenseSelectedCategory = category;
-    expenseSelectedAttributes = {};
+    expenseActiveAttrFilters = new Map();
   }
   
   // Update chip styling
@@ -1652,21 +1652,21 @@ function renderRecommendedIngredients() {
   if (!section || !listDiv) return;
   
   // Only show if category or attributes are selected
-  const hasFilters = expenseSelectedCategory || Object.keys(expenseSelectedAttributes).length > 0;
-  
+  const hasFilters = expenseSelectedCategory || expenseActiveAttrFilters.size > 0;
+
   if (!hasFilters) {
     section.style.display = 'none';
     return;
   }
-  
+
   // Filter ingredients based on selected category and attributes
   let filtered = allIngredients.filter(ing => {
     // Don't show already selected ingredients
     if (selectedExpenseIngredients.some(sel => sel.id === ing.id)) return false;
-    
+
     // Category filter
     if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
-    
+
     // Parse custom_attributes if needed
     let ingAttrs = ing.custom_attributes;
     if (typeof ingAttrs === 'string') {
@@ -1676,15 +1676,18 @@ function renderRecommendedIngredients() {
         ingAttrs = {};
       }
     }
-    
-    // Attribute filters
-    if (Object.keys(expenseSelectedAttributes).length > 0) {
+
+    // Attribute filters: OR within key, AND between keys
+    if (expenseActiveAttrFilters.size > 0) {
       ingAttrs = ingAttrs || {};
-      for (const [key, value] of Object.entries(expenseSelectedAttributes)) {
-        if (ingAttrs[key] !== value) return false;
+      for (const [key, valSet] of expenseActiveAttrFilters) {
+        if (valSet.size === 0) continue;
+        const ingVal = String(ingAttrs[key] ?? '').trim().toLowerCase();
+        const matches = [...valSet].some(v => v.trim().toLowerCase() === ingVal);
+        if (!matches) return false;
       }
     }
-    
+
     return true;
   });
   
@@ -1770,7 +1773,7 @@ function renderExpenseAttrSubfilter() {
   const chips = [];
   Object.entries(allAttrs).forEach(([key, values]) => {
     values.forEach(value => {
-      const isSelected = expenseSelectedAttributes[key] === value;
+      const isSelected = expenseActiveAttrFilters.has(key) && expenseActiveAttrFilters.get(key).has(value);
       chips.push(`
         <div class="expense-attr-chip" data-attr-key="${key}" data-attr-value="${value}" 
           onclick="toggleExpenseAttribute('${key}', '${value}')"
@@ -1789,12 +1792,14 @@ function renderExpenseAttrSubfilter() {
 }
 
 function toggleExpenseAttribute(key, value) {
-  if (expenseSelectedAttributes[key] === value) {
-    delete expenseSelectedAttributes[key];
+  if (!expenseActiveAttrFilters.has(key)) expenseActiveAttrFilters.set(key, new Set());
+  const valSet = expenseActiveAttrFilters.get(key);
+  if (valSet.has(value)) {
+    valSet.delete(value);
+    if (valSet.size === 0) expenseActiveAttrFilters.delete(key);
   } else {
-    expenseSelectedAttributes[key] = value;
+    valSet.add(value);
   }
-  
   renderExpenseAttrSubfilter();
   renderRecommendedIngredients();
   searchIngredientsExpense();
@@ -1843,33 +1848,36 @@ function searchIngredientsExpense() {
       }
     }
     
-    // Attribute filters
-    if (Object.keys(expenseSelectedAttributes).length > 0) {
+    // Attribute filters: OR within key, AND between keys
+    if (expenseActiveAttrFilters.size > 0) {
       ingAttrs = ingAttrs || {};
-      for (const [key, value] of Object.entries(expenseSelectedAttributes)) {
-        if (ingAttrs[key] !== value) return false;
+      for (const [key, valSet] of expenseActiveAttrFilters) {
+        if (valSet.size === 0) continue;
+        const ingVal = String(ingAttrs[key] ?? '').trim().toLowerCase();
+        const matches = [...valSet].some(v => v.trim().toLowerCase() === ingVal);
+        if (!matches) return false;
       }
     }
-    
+
     // Search term
     if (searchTerm) {
       const nameMatch = ing.name.toLowerCase().includes(searchTerm);
       let attrMatch = false;
-      
+
       if (ingAttrs && typeof ingAttrs === 'object') {
-        attrMatch = Object.values(ingAttrs).some(val => 
+        attrMatch = Object.values(ingAttrs).some(val =>
           val && typeof val === 'string' && val.toLowerCase().includes(searchTerm)
         );
       }
-      
+
       return nameMatch || attrMatch;
     }
-    
+
     return true;
   });
-  
+
   // Show results if there are filters active OR search term OR just show all
-  const hasFilters = expenseSelectedCategory || Object.keys(expenseSelectedAttributes).length > 0 || searchTerm;
+  const hasFilters = expenseSelectedCategory || expenseActiveAttrFilters.size > 0 || searchTerm;
   
   resultsDiv.style.display = 'block';
   
@@ -2039,7 +2047,7 @@ async function editExpense(expenseId) {
   editingExpenseId = expenseId;
   selectedExpenseIngredients = [];
   expenseSelectedCategory = null;
-  expenseSelectedAttributes = {};
+  expenseActiveAttrFilters = new Map();
   
   document.getElementById('modalTitle').textContent = 'Edit Expense';
   document.getElementById('expense_id').value = expense.id;

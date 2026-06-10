@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -2001,7 +2001,7 @@ document.addEventListener('keydown', (e) => {
       </div>
       <div class="method-card" onclick="selectOrderMethod('upload')">
         <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Upload Screenshot</h4>
+        <h4 style="margin: 0 0 8px 0;">PDF / Image Upload</h4>
         <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Scan an order screenshot with AI</p>
       </div>
     </div>
@@ -2125,7 +2125,8 @@ document.addEventListener('keydown', (e) => {
   <div class="modal-content" style="max-width: 700px;">
     <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
-    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;"></div>
+    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;"></div>
+    <button type="button" onclick="addMappedItemRow()" style="width:100%;padding:10px;margin-bottom:16px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">+ Add Product</button>
     <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
       <div class="form-group" style="margin-bottom: 12px;">
         <label for="mapped_customer">Customer Name</label>
@@ -2159,13 +2160,14 @@ document.addEventListener('keydown', (e) => {
       <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
       <input type="file" id="orderImageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
     </div>
-    <div style="margin-top: 20px; text-align: center;">
+    <div id="screenshotSectionOrders" style="margin-top: 20px; text-align: center;">
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
       <button class="btn btn-secondary" onclick="captureOrderScreenshot()" style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);">
         <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
         Capture Screenshot
       </button>
     </div>
+    <script>if(/android|iphone|ipad|ipod/i.test(navigator.userAgent)){document.getElementById('screenshotSectionOrders').style.display='none';}</script>
     <div id="orderUploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <img id="orderPreviewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
@@ -2985,8 +2987,29 @@ async function matchItemToRecipes(itemData) {
     console.log('Item attributes:', JSON.stringify(itemAttributes, null, 2));
     console.log('Attribute count:', Object.keys(itemAttributes).length);
     if (Object.keys(itemAttributes).length === 0) {
-      console.log('No attributes on item - returning empty matches');
-      return [];
+      // Fallback: word-overlap name matching when AI extracts no attributes
+      const searchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+      if (!searchName) return [];
+      const sWords = searchName.split(/[\s\-_,/]+/).filter(w => w.length > 0);
+      const nameMatches = recipes
+        .map(recipe => {
+          const rn = (recipe.name || '').toLowerCase();
+          const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 0);
+          // Count words from item that appear in recipe name (and vice versa)
+          const meaningful = sWords.filter(w => w.length > 1);
+          const forward = meaningful.length > 0
+            ? meaningful.filter(w => rWords.includes(w) || rn.includes(w)).length / meaningful.length
+            : 0;
+          const rMeaningful = rWords.filter(w => w.length > 1);
+          const backward = rMeaningful.length > 0
+            ? rMeaningful.filter(w => sWords.includes(w) || searchName.includes(w)).length / rMeaningful.length
+            : 0;
+          const score = Math.max(forward, backward);
+          return { recipe, score, matchReason: 'Name match' };
+        })
+        .filter(r => r.score >= 0.3)
+        .sort((a, b) => b.score - a.score);
+      return nameMatches;
     }
     const allIngredientIds = new Set();
     recipes.forEach(recipe => {
@@ -3034,7 +3057,7 @@ async function showRecipeMappingModal(orderData) {
   mappedOrderData = orderData;
   mappedRecipes = [];
   const itemsList = document.getElementById('mappedItemsList');
-  itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching recipes...</div>';
+  itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching products...</div>';
   document.getElementById('mapped_customer').value = orderData.customer || '';
   document.getElementById('mapped_reference').value = orderData.order_reference || '';
   document.getElementById('recipeMappingModal').classList.add('active');
@@ -3103,16 +3126,16 @@ function renderMappedItems() {
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
           <div style="flex:1;">
             <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${cleanName}</div>
-            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(' Â· ')||'No attributes'}</div>
+            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(', ')||'No attributes'}</div>
           </div>
           <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
         </div>
         <div style="margin-bottom:12px;position:relative;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Recipe:</label>
+            <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Product:</label>
             ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger);this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
           </div>
-          <input type="text" id="recipeSearchInput_${index}" placeholder="ðŸ” Search to change product or leave empty for custom item..."
+          <input type="text" id="recipeSearchInput_${index}" placeholder="Search to change product or leave empty for custom item..."
             value="${selected ? selected.name : ''}" autocomplete="off"
             oninput="searchRecipesForMapping(${index}, this.value)"
             onfocus="showMappingRecipeDropdown(${index})"
@@ -3122,7 +3145,7 @@ function renderMappedItems() {
             ${matches.map(m=>`<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
               <div style="font-weight:600;font-size:13px;">${m.recipe.name}</div>
               <div style="font-size:12px;color:var(--text-muted);">${m.matchReason} (${(m.score*100).toFixed(0)}% match)</div></div>`).join('')}
-            ${matches.length===0?'<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching recipes found</div>':''}
+            ${matches.length===0?'<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching products found</div>':''}
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
@@ -3138,6 +3161,20 @@ function renderMappedItems() {
   setTimeout(() => {
     document.addEventListener('click', handleMappingDropdownClickOutside);
   }, 100);
+}
+
+function addMappedItemRow() {
+  mappedRecipes.push({
+    itemData: { name: 'New Item', quantity: 1, price: 0, attributes: {} },
+    selectedRecipe: null,
+    matches: [],
+    quantity: 1
+  });
+  renderMappedItems();
+  updateMappedTotal();
+  // Scroll to the new row
+  const list = document.getElementById('mappedItemsList');
+  if (list) list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function handleMappingDropdownClickOutside(event) {
@@ -3163,7 +3200,7 @@ async function searchRecipesForMapping(index, searchTerm) {
   const dropdown = document.getElementById(`recipeDropdown_${index}`);
   if (!searchTerm.trim()) {
     const matches = mappedRecipes[index].matches || [];
-    dropdown.innerHTML = matches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);">No matching recipes found</div>';
+    dropdown.innerHTML = matches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);">No matching products found</div>';
     dropdown.style.display = 'block';
     return;
   }
@@ -3184,6 +3221,8 @@ async function searchRecipesForMapping(index, searchTerm) {
     dropdown.style.display = 'block';
   } catch (error) {
     console.error('Error searching recipes:', error);
+    dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">Search failed. Please try again.</div>';
+    dropdown.style.display = 'block';
   }
 }
 
