@@ -292,8 +292,13 @@
     #alertModal, #confirmModal { z-index: 10006 !important; }
     #rdmDeliveryModal { z-index: 10006 !important; }
 
-    /* === Full-screen recipe view overlay (ms2-style) === */
+    /* === Full-screen recipe view overlay (ms2-style) ===
+       Shown unconditionally via CSS (not gated on the recipe finishing its
+       fetch) so there's no blank gap between the desktop layout being
+       hidden above and JS populating real content -- the placeholder
+       markup (title="Product", "$0.00", etc.) fills that gap instead. */
     #mobileViewOverlay {
+      display: flex;
       flex-direction: column;
       position: fixed;
       inset: 0;
@@ -1230,7 +1235,6 @@ function renderMobileOverlay() {
   if (window.innerWidth > 768 || !recipe) return;
   const overlay = document.getElementById('mobileViewOverlay');
   if (!overlay) return;
-  overlay.style.display = 'flex';
 
   // .navbar has z-index:1000 which creates a stacking context below the overlay (z-index:10002).
   // Moving the dropdowns to <body> puts them in the root stacking context so their own
@@ -2000,6 +2004,7 @@ async function duplicateRecipe() {
         store_id: storeId,
         name: `${recipe.name} (Copy)`,
         cost: recipe.cost || 0,
+        retail_price: recipe.retail_price || null,
         components: recipe.components || [],
         status: recipe.status || 'ready',
         is_favorite: false
