@@ -86,6 +86,10 @@
        this it renders as a stray flex child of .navbar on desktop too,
        colliding with the logo and nav-links. */
     .mobile-page-title { display: none; }
+    /* Hidden by default — its real (circular, transparent) styling only
+       exists inside the mobile media query below; without this base rule
+       it falls back to a bare unstyled browser <button> on desktop. */
+    .nav-search-toggle { display: none; }
     @media (max-width: 768px) {
       body {
         -webkit-user-select: none;
