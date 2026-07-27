@@ -1368,8 +1368,10 @@ async function loadTierInformation(settings) {
   console.log('Loading tier information:', tier);
   
   // Define scan limits (unified pool: ingredients + orders + expenses)
-  const scanLimits = { free: 20, starter: 100, pro: 300 };
-  const scanLimit = scanLimits[tier] ?? 20;
+  // Must match api/extract-receipt.js's scanLimits -- this is the source of
+  // truth for enforcement, this is just the display.
+  const scanLimits = { free: 5, starter: 100, pro: 300 };
+  const scanLimit = scanLimits[tier] ?? 5;
 
   // Store limit info
   const storeLimits = { free: 1, starter: 5, pro: Infinity };

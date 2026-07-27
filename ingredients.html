@@ -1657,8 +1657,8 @@ async function checkAIUsage() {
       .single();
 
     const tier = settings?.tier || 'free';
-    const scanLimits = { free: 20, starter: 100, pro: 300 };
-    const limit = scanLimits[tier] ?? 20;
+    const scanLimits = { free: 5, starter: 100, pro: 300 };
+    const limit = scanLimits[tier] ?? 5;
 
     // Get current month's usage (unified pool: ingredients + orders + expenses)
     const now = new Date();

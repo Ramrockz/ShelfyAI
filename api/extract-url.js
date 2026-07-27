@@ -79,8 +79,8 @@ module.exports = async (req, res) => {
 
     const tier = settings?.tier || 'free';
     const bonusScans = settings?.bonus_scans || 0;
-    const scanLimits = { free: 20, starter: 100, pro: 300 };
-    const effectiveLimit = (scanLimits[tier] ?? 20) + bonusScans;
+    const scanLimits = { free: 5, starter: 100, pro: 300 };
+    const effectiveLimit = (scanLimits[tier] ?? 5) + bonusScans;
 
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
