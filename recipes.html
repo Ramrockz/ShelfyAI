@@ -1549,22 +1549,16 @@ function render() {
             const isFirstTime = !recipes || recipes.length === 0;
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = isFirstTime ? 'none' : '';
-            
-            // Override grid to center content when empty
-            container.style.display = 'flex';
-            container.style.alignItems = 'center';
-            container.style.justifyContent = 'center';
-            container.style.minHeight = '60vh';
-            
+
             container.innerHTML = isFirstTime ? `
-              <div style="text-align:center; padding:60px 20px;">
+              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
                 <img src="/cat_no_orders.png" alt="No products" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
                 <h3 style="margin:0 0 8px; font-size:18px; font-weight:700; color:var(--text-main);">No products yet</h3>
                 <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px; max-width:260px; margin-left:auto; margin-right:auto;">Bundle items into a product — then use it to deduct stock in one tap</p>
                 <button onclick="openBuilder()" style="padding:14px 28px; font-size:14px; font-weight:700; background:var(--accent); color:#fff; border:none; border-radius:10px; cursor:pointer;">+ Create Product</button>
               </div>
             ` : `
-              <div style="text-align:center; padding:60px 20px;">
+              <div style="grid-column:1/-1; text-align:center; padding:60px 20px;">
                 <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
                 <p style="color:var(--text-muted); font-size:15px; margin:0;">No products match your search</p>
               </div>
@@ -1572,12 +1566,6 @@ function render() {
         } else {
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = '';
-            
-            // Restore grid layout when showing recipes
-            container.style.display = '';
-            container.style.alignItems = '';
-            container.style.justifyContent = '';
-            container.style.minHeight = '';
 
             const favData    = allData.filter(r => r.is_favorite);
             const nonFavData = allData.filter(r => !r.is_favorite);
@@ -1652,13 +1640,11 @@ function render() {
             if (!document.getElementById('emptyStateList')) {
                 const emptyDiv = document.createElement('div');
                 emptyDiv.id = 'emptyStateList';
-                emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh;';
+                emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px;';
                 emptyDiv.innerHTML = isFirstTime ? `
                     <img src="/cat_no_orders.png" alt="No products" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
                     <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No products yet</h3>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 260px;">Bundle items into a product — then use it to deduct stock in one tap
-
-</p>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 260px;">Bundle items into a product — then use it to deduct stock in one tap</p>
                     <button onclick="openBuilder()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ Create Product</button>
                 ` : `
                     <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
