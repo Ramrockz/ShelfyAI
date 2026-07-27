@@ -1010,6 +1010,7 @@ async function loadRecipe() {
             return {
               ...comp,
               ingredient_id: ingId, // Ensure ingredient_id is set
+              ingredient_name: ingredientMap[ingId]?.name || comp.ingredient_name || comp.name,
               attributes: ingredientMap[ingId]?.custom_attributes || comp.attributes || ''
             };
           });

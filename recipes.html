@@ -3087,7 +3087,7 @@ async function openBuilderForRecipe(recipeId) {
         const id = comp.ingredient_id || comp.id;
         const ing = ingredientData.find(i => i.id === id);
         currentRecipe[id] = {
-          name: comp.ingredient_name || comp.name || (ing?.name ?? ''),
+          name: ing?.name || comp.ingredient_name || comp.name || '',
           price: ing?.price ?? (comp.quantity > 0 ? comp.cost / comp.quantity : 0),
           unit: comp.unit || ing?.unit || '',
           quantity: comp.quantity || 1
