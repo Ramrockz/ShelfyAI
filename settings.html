@@ -1037,6 +1037,35 @@
     </div>
   </div>
 
+  <!-- Change Logs Section -->
+  <div class="settings-section">
+    <h2>
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      Change Logs
+    </h2>
+    <p style="color: var(--text-muted); font-size: 13px; margin: -8px 0 16px;">A history of every inventory quantity change — manual edits, orders, expenses, and restocks.</p>
+    <div class="table-container" style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Old Value</th>
+            <th>New Value</th>
+          </tr>
+        </thead>
+        <tbody id="changeLogsTableBody">
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="text-align: center; margin-top: 16px;">
+      <button class="btn btn-secondary" id="changeLogsLoadMoreBtn" onclick="loadMoreChangeLogs()" style="display: none;">Load More</button>
+    </div>
+  </div>
+
   <!-- Data Export Section -->
   <div class="settings-section">
     <h2>
@@ -1078,6 +1107,19 @@
         <p>Export all expenses data as CSV</p>
       </div>
       <button class="btn btn-secondary" onclick="downloadExpenses(event)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        Download CSV
+      </button>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Download Change Logs</h3>
+        <p>Export all inventory change history as CSV</p>
+      </div>
+      <button class="btn btn-secondary" onclick="downloadChangeLogs(event)">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
         </svg>
@@ -1331,6 +1373,9 @@ async function loadSettings() {
 
     // Load tier information
     loadTierInformation(settings);
+
+    // Load change logs
+    loadChangeLogs();
 
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -2070,6 +2115,151 @@ async function downloadExpenses(e) {
   } catch (error) {
     console.error('Error downloading expenses:', error);
     alert('Failed to download expenses: ' + error.message);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// --- Change Logs (ingredient_history) ---
+function _escapeHtmlSettings(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let changeLogsOffset = 0;
+const CHANGE_LOGS_PAGE_SIZE = 50;
+const changeLogsIngredientNames = {};
+
+async function _resolveChangeLogNames(historyRows) {
+  const missingIds = [...new Set(
+    (historyRows || []).map(h => h.ingredient_id).filter(id => id && !changeLogsIngredientNames[id])
+  )];
+  if (missingIds.length === 0) return;
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name').in('id', missingIds);
+  (ingredients || []).forEach(ing => { changeLogsIngredientNames[ing.id] = ing.name; });
+}
+
+async function loadChangeLogs(reset = true) {
+  const tbody = document.getElementById('changeLogsTableBody');
+  const loadMoreBtn = document.getElementById('changeLogsLoadMoreBtn');
+  if (!tbody) return;
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    if (reset) {
+      changeLogsOffset = 0;
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>';
+    }
+
+    const { data: history, error } = await supabaseClient
+      .from('ingredient_history')
+      .select('ingredient_id, old_value, new_value, created_at')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(changeLogsOffset, changeLogsOffset + CHANGE_LOGS_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    if (reset && (!history || history.length === 0)) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No changes recorded yet</td></tr>';
+      if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+      return;
+    }
+
+    await _resolveChangeLogNames(history);
+
+    const rowsHtml = (history || []).map(h => {
+      const date = h.created_at
+        ? new Date(h.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '-';
+      const itemName = changeLogsIngredientNames[h.ingredient_id] || 'Deleted item';
+      return `<tr>
+        <td>${date}</td>
+        <td>${_escapeHtmlSettings(itemName)}</td>
+        <td>${_escapeHtmlSettings(h.old_value ?? '')}</td>
+        <td>${_escapeHtmlSettings(h.new_value ?? '')}</td>
+      </tr>`;
+    }).join('');
+
+    if (reset) {
+      tbody.innerHTML = rowsHtml;
+    } else {
+      tbody.insertAdjacentHTML('beforeend', rowsHtml);
+    }
+
+    changeLogsOffset += (history || []).length;
+    if (loadMoreBtn) {
+      loadMoreBtn.style.display = (history && history.length === CHANGE_LOGS_PAGE_SIZE) ? 'inline-block' : 'none';
+    }
+  } catch (error) {
+    console.error('Error loading change logs:', error);
+    if (reset) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Failed to load change logs</td></tr>';
+  }
+}
+
+function loadMoreChangeLogs() {
+  loadChangeLogs(false);
+}
+
+async function downloadChangeLogs(e) {
+  const btn = e.target;
+  let originalText = btn.innerHTML;
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in to download data');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = 'Downloading...';
+
+    // Fetch every row (paginated to avoid Supabase's default row cap)
+    let allHistory = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('ingredient_history')
+        .select('ingredient_id, old_value, new_value, created_at')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      allHistory = allHistory.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+
+    if (allHistory.length === 0) {
+      alert('No change logs found to export');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+
+    await _resolveChangeLogNames(allHistory);
+
+    const rows = allHistory.map(h => ({
+      date: h.created_at ? new Date(h.created_at).toISOString() : '',
+      item: changeLogsIngredientNames[h.ingredient_id] || 'Deleted item',
+      old_value: h.old_value ?? '',
+      new_value: h.new_value ?? ''
+    }));
+
+    const headers = ['date', 'item', 'old_value', 'new_value'];
+    const csv = convertToCSV(rows, headers);
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadCSV(csv, `change_logs_${timestamp}.csv`);
+
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    alert('Change logs exported successfully!');
+  } catch (error) {
+    console.error('Error downloading change logs:', error);
+    alert('Failed to download change logs: ' + error.message);
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
