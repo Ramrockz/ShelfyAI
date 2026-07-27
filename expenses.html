@@ -81,7 +81,7 @@
     border-radius: 16px; 
     padding: 20px; 
     transition: all 0.3s ease; 
-    animation: slideIn 0.3s ease;
+    animation: none;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -94,7 +94,9 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  
+
+  #recentView.no-anim .card-small { animation: none; }
+
   .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); transition: color 0.2s; }
   .card-small:hover h4 { color: var(--accent); }
   .card-small .expense-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
@@ -768,13 +770,10 @@
         <thead>
           <tr>
             <th style="width: 60px;">#</th>
-            <th class="sortable" onclick="sortTable('date')" style="width: 12%;">Date</th>
-            <th class="sortable" onclick="sortTable('description')" style="width: 25%;">Description</th>
-            <th class="sortable" onclick="sortTable('vendor')" style="width: 18%;">Vendor</th>
-            <th class="sortable" onclick="sortTable('category')" style="width: 15%;">Category</th>
-            <th class="sortable" onclick="sortTable('amount')" style="width: 12%;">Amount</th>
-            <th style="width: 10%;">Receipt</th>
-            <th style="width: 10%;">Action</th>
+            <th class="sortable" onclick="sortTable('date')" style="width: 15%;">Date</th>
+            <th class="sortable" onclick="sortTable('description')" style="width: 45%;">Description</th>
+            <th class="sortable" onclick="sortTable('amount')" style="width: 20%;">Amount</th>
+            <th style="width: 20%;">Action</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -875,10 +874,16 @@
         </div>
       </div>
 
-      <!-- Vendor -->
-      <div class="form-group">
-        <label for="expense_vendor">Vendor</label>
-        <input type="text" id="expense_vendor" placeholder="Supplier name (optional)">
+      <!-- Inventory update toggle -->
+      <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Add purchased quantities to item stock</div>
+        </div>
+        <label class="toggle-switch" style="margin:0;">
+          <input type="checkbox" id="expense_update_inventory" checked onchange="manualExpenseUpdateInventory=this.checked">
+          <span class="toggle-slider"></span>
+        </label>
       </div>
 
       <!-- Form Actions -->
@@ -972,6 +977,12 @@
       </label>
     </div>
 
+    <!-- Expense Date -->
+    <div style="margin-bottom: 20px;">
+      <label style="display:block; font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:6px;">Expense Date</label>
+      <input type="date" id="expenseDateInput" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+    </div>
+
     <!-- Detected Items List -->
     <div id="detectedItemsList" style="margin-bottom: 20px;"></div>
 
@@ -999,26 +1010,9 @@
         <input type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="quick_ing_quantity">Quantity *</label>
-          <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
-        </div>
-
-        <div class="form-group">
-          <label for="quick_ing_unit">Unit *</label>
-          <select id="quick_ing_unit" required>
-            <option value="">Select unit</option>
-            <option value="kg">Kilograms (kg)</option>
-            <option value="g">Grams (g)</option>
-            <option value="l">Liters (l)</option>
-            <option value="ml">Milliliters (ml)</option>
-            <option value="cm">Centimeters (cm)</option>
-            <option value="pcs" selected>Pieces (pcs)</option>
-            <option value="lb">Pounds (lb)</option>
-            <option value="oz">Ounces (oz)</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label for="quick_ing_quantity">Quantity *</label>
+        <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
       </div>
 
       <div class="form-row">
@@ -1122,9 +1116,10 @@
 <script>
 let expenses = [];
 let currentView = 'recent';
+let _expensesAlreadyRendered = false;
 let sortColumn = 'date';
 let sortDirection = 'desc';
-let cardsToShow = 10;
+let cardsToShow = 15;
 let itemsPerPage = 10;
 let listCurrentPage = 1;
 let expenseToDelete = null;
@@ -1153,13 +1148,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadExpenses();
   await loadIngredientsForExpense();
   
-  // On mobile, force Cards view
-  if (window.innerWidth <= 768) {
-    switchView('recent');
-  } else {
-    render();
+  if (!_expensesAlreadyRendered) {
+    const _rcInit = document.getElementById('recentView');
+    if (_rcInit) _rcInit.classList.add('no-anim');
+    if (window.innerWidth <= 768) {
+      switchView('recent');
+    } else {
+      render();
+    }
+    if (_rcInit) requestAnimationFrame(() => _rcInit.classList.remove('no-anim'));
   }
-  
+
   // Show the page (also done early in loadExpenses when cache exists)
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
@@ -1175,13 +1174,34 @@ async function loadExpenses() {
   if (_lsCached) {
     try {
       expenses = JSON.parse(_lsCached);
-      try { render(); } catch (e) {}
+      try {
+        const _rc = document.getElementById('recentView');
+        if (_rc) _rc.classList.add('no-anim');
+        render();
+        if (_rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
+      } catch (e) {}
       document.documentElement.style.visibility = 'visible';
       const _s = document.querySelector('.sidebar');
       const _m = document.querySelector('.main');
       if (_s) _s.style.visibility = 'visible';
       if (_m) _m.style.visibility = 'visible';
+      _expensesAlreadyRendered = true;
     } catch (e) {}
+  }
+  const _skeletonContainer = document.getElementById('recentView');
+  if (_skeletonContainer && !_lsCached) {
+    _skeletonContainer.innerHTML = Array(6).fill(0).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:55%; height:14px;"></div>
+        <div class="skeleton-line" style="width:35%; height:11px; margin-top:6px;"></div>
+        <div class="skeleton-line" style="width:100%; height:36px; margin-top:14px;"></div>
+      </div>
+    `).join('');
+    document.documentElement.style.visibility = 'visible';
+    const _s = document.querySelector('.sidebar');
+    const _m = document.querySelector('.main');
+    if (_s) _s.style.visibility = 'visible';
+    if (_m) _m.style.visibility = 'visible';
   }
   if (!navigator.onLine) return;
 
@@ -1203,9 +1223,18 @@ async function loadExpenses() {
 
     if (error) throw error;
 
+    const _fp = arr => (arr || []).map(r => r.id + '|' + (r.updated_at || r.created_at || '')).join(',');
+    const _changed = _fp(data) !== _fp(expenses);
     expenses = data || [];
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
-    try { render(); } catch (e) {}
+    if (_changed) {
+      try {
+        const _rc = document.getElementById('recentView');
+        if (_rc) _rc.classList.add('no-anim');
+        render();
+        if (_rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
+      } catch (e) {}
+    }
   } catch (error) {
     if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading expenses:', error);
@@ -1235,7 +1264,7 @@ function switchView(view) {
 
 function render() {
   const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
-  
+
   // Reset pagination when search changes
   if (currentView === 'list') {
     listCurrentPage = 1;
@@ -1299,12 +1328,12 @@ function renderRecent(filtered) {
         <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
           ${dateVendorText}
         </div>
-        <div style="display: flex; justify-content: center; margin: 12px 0;">
+        <div style="display: flex; justify-content: center; margin: 12px 0; margin-top: auto;">
           <div style="text-align: center;">
             <div style="font-size: 32px; font-weight: 800; color: var(--text-main);">$${parseFloat(expense.amount || 0).toFixed(2)}</div>
           </div>
         </div>
-        <div style="height: 1px; background: var(--border); margin: auto 0 16px 0;"></div>
+        <div style="height: 1px; background: var(--border); margin: 0 0 16px 0;"></div>
         <div style="display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em;">
           <span onclick="window.location.href='/expense-detail?id=${expense.id}'" style="color: var(--accent); cursor: pointer; text-transform: uppercase;">Edit</span>
           <span onclick="event.stopPropagation(); deleteExpense('${expense.id}')" style="color: var(--danger); cursor: pointer; text-transform: uppercase;">Delete</span>
@@ -1326,7 +1355,7 @@ function renderRecent(filtered) {
 }
 
 function showMoreExpenses() {
-  cardsToShow += 10;
+  cardsToShow += 15;
   render();
 }
 
@@ -1402,18 +1431,12 @@ function renderList(filtered) {
   paginatedData.forEach((expense, index) => {
     const actualIndex = startIndex + index + 1;
     const date = new Date(expense.expense_date).toLocaleDateString();
-    const receiptLink = expense.receipt_url ? 
-      `<a href="${expense.receipt_url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent);">View</a>` : '-';
-    
     tbody.innerHTML += `
       <tr onclick="window.location.href='/expense-detail?id=${expense.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/expense-detail?id=${expense.id}','_blank')}" style="cursor: pointer;">
         <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
         <td>${date}</td>
         <td>${expense.description || 'Expense Purchase'}</td>
-        <td>${expense.vendor || '-'}</td>
-        <td><span class="category-badge">${expense.category || 'N/A'}</span></td>
         <td><strong>$${parseFloat(expense.amount || 0).toFixed(2)}</strong></td>
-        <td>${receiptLink}</td>
         <td>
           <span style="color:var(--accent); font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="editExpense('${expense.id}')">EDIT</span>
           <span style="color:var(--danger); font-weight:700; cursor:pointer; font-size: 11px;" onclick="deleteExpense('${expense.id}')">DELETE</span>
@@ -1508,6 +1531,9 @@ async function openAddExpenseModal() {
   selectedExpenseIngredients = [];
   expenseSelectedCategory = null;
   expenseActiveAttrFilters = new Map();
+  manualExpenseUpdateInventory = true;
+  const invToggle = document.getElementById('expense_update_inventory');
+  if (invToggle) invToggle.checked = true;
   
   document.getElementById('modalTitle').textContent = 'Add New Expense';
   document.getElementById('expenseForm').reset();
@@ -2125,10 +2151,23 @@ async function saveExpense(event) {
       expenses.unshift({ ...expenseData, id: savedData[0].id });
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+
+    // Update inventory if toggle is on (add purchased qty to stock)
+    if (manualExpenseUpdateInventory && !editingExpenseId) {
+      for (const item of selectedExpenseIngredients) {
+        const ing = allIngredients.find(i => i.id === item.id);
+        if (ing && item.quantity > 0) {
+          const oldQty = parseFloat(ing.quantity) || 0;
+          const newQty = oldQty + item.quantity;
+          await supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', item.id);
+          ing.quantity = newQty;
+        }
+      }
+    }
+
     try { render(); } catch (e2) {}
     closeExpenseModal();
-    
-    showNotification(editingExpenseId ? 'Expense updated successfully!' : 'Expense created successfully!', 'success');
+
   } catch (error) {
     console.error('Error saving expense:', error);
     showNotification('Failed to save expense', 'error');
@@ -2165,6 +2204,7 @@ async function confirmDelete() {
 
 // === Image Upload Functions ===
 let uploadedFile = null;
+let pendingExpenseReceiptUrl = null;
 
 function openImageUploadModal() {
   document.getElementById('imageUploadModal').classList.add('active');
@@ -2385,6 +2425,7 @@ let pendingExpenseData = null;
 let mappedItems = []; // Array of { detectedName, detectedPrice, detectedQty, ingredientId, ingredientName, quantity, price }
 let allIngredientsCache = [];
 let updateInventory = true;
+let manualExpenseUpdateInventory = true;
 let dropdownActiveFor = null;
 
 function toggleUpdateInventory() {
@@ -2487,6 +2528,30 @@ async function showIngredientMappingModal(expenseData) {
   mappedItems = [];
   updateInventory = true;
   document.getElementById('updateInventoryToggle').checked = true;
+
+  // Populate date field — parse AI date safely, fall back to today
+  const today = new Date().toISOString().split('T')[0];
+  let parsedDate = today;
+  if (expenseData.date) {
+    const raw = String(expenseData.date).trim();
+    // Handle German DD.MM.YYYY or DD.M.YYYY or DD/MM/YYYY
+    const dmy = raw.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})$/);
+    if (dmy) {
+      let [, d, m, y] = dmy;
+      if (y.length === 2) y = '20' + y;
+      const candidate = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+      if (!isNaN(candidate) && candidate.getFullYear() >= 2015 && candidate.getFullYear() <= new Date().getFullYear() + 1) {
+        parsedDate = candidate.toISOString().split('T')[0];
+      }
+    } else {
+      // Try native parse (ISO, English formats)
+      const candidate = new Date(raw);
+      if (!isNaN(candidate) && candidate.getFullYear() >= 2015 && candidate.getFullYear() <= new Date().getFullYear() + 1) {
+        parsedDate = candidate.toISOString().split('T')[0];
+      }
+    }
+  }
+  document.getElementById('expenseDateInput').value = parsedDate;
 
   // Load all ingredients
   const { data: { user } } = await supabaseClient.auth.getUser();
@@ -2906,20 +2971,13 @@ function openQuickCreateIngredient(index, detectedName) {
   // Pre-fill form with detected data
   document.getElementById('quick_ing_name').value = detectedName || '';
   
-  // Pre-fill cost if we have a detected price
+  // Pre-fill from detected data
   const detectedPrice = mappedItems[index]?.detectedPrice;
   const detectedQty = mappedItems[index]?.detectedQty || 1;
-  if (detectedPrice && detectedQty) {
-    const costPerUnit = (detectedPrice / detectedQty).toFixed(2);
-    document.getElementById('quick_ing_cost').value = costPerUnit;
-  } else {
-    document.getElementById('quick_ing_cost').value = '';
-  }
-  
-  // Reset other fields
-  document.getElementById('quick_ing_quantity').value = '1';
-  document.getElementById('quick_ing_unit').value = 'pcs';
-  document.getElementById('quick_ing_sku').value = '';
+  const detectedSku = mappedItems[index]?.detectedItem?.SKU || mappedItems[index]?.detectedItem?.sku || '';
+  document.getElementById('quick_ing_quantity').value = detectedQty;
+  document.getElementById('quick_ing_cost').value = detectedPrice ? parseFloat(detectedPrice).toFixed(2) : '';
+  document.getElementById('quick_ing_sku').value = detectedSku;
   document.getElementById('quick_ing_min_stock').value = '5';
   document.getElementById('quick_ing_category').value = '';
   
@@ -2974,14 +3032,13 @@ async function saveQuickIngredient(e) {
   
   const name = document.getElementById('quick_ing_name').value.trim();
   const quantity = parseFloat(document.getElementById('quick_ing_quantity').value) || 0;
-  const unit = document.getElementById('quick_ing_unit').value;
   const cost = parseFloat(document.getElementById('quick_ing_cost').value) || 0;
   const sku = document.getElementById('quick_ing_sku').value.trim();
   const minStock = parseFloat(document.getElementById('quick_ing_min_stock').value) || 0;
   const category = document.getElementById('quick_ing_category').value;
-  
-  if (!name || !unit || !category) {
-    alert('Please fill in all required fields (Name, Unit, Category)');
+
+  if (!name || !category) {
+    alert('Please fill in all required fields (Name, Category)');
     return;
   }
   
@@ -2992,14 +3049,16 @@ async function saveQuickIngredient(e) {
       return;
     }
     
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
     // Create ingredient in database
     const { data: newIngredient, error } = await supabaseClient
       .from('ingredients')
       .insert([{
-        user_id: user.id,
+        profile_id: user.id,
+        store_id: storeId,
         name: name,
         quantity: quantity,
-        unit: unit,
         cost_per_unit: cost,
         sku: sku,
         min_stock: minStock,
@@ -3028,9 +3087,6 @@ async function saveQuickIngredient(e) {
     
     // Close modal
     closeQuickCreateIngredientModal();
-    
-    // Show success message
-    alert('Item created and mapped successfully!');
     
   } catch (err) {
     console.error('Error saving ingredient:', err);
@@ -3081,38 +3137,36 @@ async function confirmIngredientMapping() {
     }, 0) || (d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null);
 
     const vendor = d.vendor || '';
-    const rawDate = d.date || '';
-    let expenseDate = null;
-    if (rawDate) {
-      const parsed = new Date(rawDate);
-      if (!isNaN(parsed)) expenseDate = parsed.toISOString().split('T')[0];
-    }
+    const expenseDate = document.getElementById('expenseDateInput')?.value || new Date().toISOString().split('T')[0];
 
     // Build ingredients array for expense
     const expenseIngredients = mappedItems
       .filter(item => item.ingredientId)
       .map(item => ({
         ingredient_id: item.ingredientId,
-        name: item.ingredientName,
-        quantity: item.quantity,
-        price: item.price
+        ingredient_name: item.ingredientName,
+        quantity_added: item.quantity,
+        unit: allIngredientsCache.find(i => i.id === item.ingredientId)?.unit || '',
+        cost_per_unit: item.price || 0
       }));
 
+    const receiptUrl = pendingExpenseReceiptUrl || null;
+    pendingExpenseReceiptUrl = null;
     const { error } = await supabaseClient.from('expenses').insert([{
       profile_id: user.id,
       store_id: storeId,
       description: d.description || mappedItems[0]?.detectedName || 'Expense',
       amount: totalAmount,
-      expense_date: expenseDate || new Date().toISOString().split('T')[0],
+      expense_date: expenseDate,
       vendor,
       category: d.category || null,
-      ingredients: expenseIngredients.length > 0 ? expenseIngredients : null
+      ingredients: expenseIngredients.length > 0 ? expenseIngredients : null,
+      ...(receiptUrl ? { receipt_url: receiptUrl, receipt_urls: [receiptUrl] } : {})
     }]);
 
     if (error) throw error;
 
     closeIngredientMappingModal();
-    showNotification('Expense saved' + (updateInventory && expenseIngredients.length > 0 ? ' and inventory updated' : ''), 'success');
     await loadExpenses();
   } catch (err) {
     console.error('Error confirming ingredient mapping:', err);
@@ -3185,6 +3239,26 @@ async function processImageUpload() {
     }
     
     if (result.success && result.data) {
+      // Upload the receipt file immediately while we still have the File reference
+      pendingExpenseReceiptUrl = null;
+      if (fileToUpload) {
+        try {
+          const ts = Date.now();
+          const fileName = `${session.user.id}/${ts}_${fileToUpload.name}`;
+          const { error: upErr } = await supabaseClient.storage
+            .from('expenses')
+            .upload(fileName, fileToUpload, { cacheControl: '3600', upsert: false });
+          if (upErr) {
+            console.error('Expense receipt upload error:', upErr);
+          } else {
+            const { data: { publicUrl } } = supabaseClient.storage.from('expenses').getPublicUrl(fileName);
+            pendingExpenseReceiptUrl = publicUrl;
+            console.log('Expense receipt pre-uploaded:', publicUrl);
+          }
+        } catch (upEx) {
+          console.error('Expense receipt upload exception:', upEx);
+        }
+      }
       hideGlobalLoader();
       showIngredientMappingModal(result.data);
     } else {

@@ -82,7 +82,7 @@
     border-radius: 16px; 
     padding: 20px; 
     transition: all 0.3s ease; 
-    animation: slideIn 0.3s ease;
+    animation: none;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -95,7 +95,9 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  
+
+  #recentView.no-anim .card-small { animation: none; }
+
   .card-small h4 { margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); transition: color 0.2s; }
   .card-small:hover h4 { color: var(--accent); }
   .card-small .order-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
@@ -865,6 +867,11 @@
       overflow-y: auto;
       transform: none !important;
     }
+    /* Recipe mapping modal uses internal flex scroll — override padding/overflow */
+    #recipeMappingModal .modal-content {
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
     .modal-overlay.active .modal-content,
     .modal-overlay.active .modal-content-custom,
     .modal-overlay.active .reorder-modal-content,
@@ -1214,8 +1221,8 @@
 <div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
   <div class="modal-content" style="max-width: 400px;">
     <h3 style="margin-top:0;">Delete Order</h3>
-    <p style="color: var(--text-muted); margin-bottom: 24px;">Are you sure you want to delete this order? This action cannot be undone.</p>
-    
+    <p id="deleteModalDesc" style="color: var(--text-muted); margin-bottom: 24px;">Are you sure you want to delete this order? This action cannot be undone.</p>
+
     <div style="display: flex; gap: 12px;">
       <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeDeleteModal()">Cancel</button>
       <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
@@ -1226,9 +1233,10 @@
 <script>
 let orders = [];
 let currentView = 'recent';
+let _ordersAlreadyRendered = false;
 let sortColumn = 'date';
 let sortDirection = 'desc';
-let cardsToShow = 10;
+let cardsToShow = 15;
 let itemsPerPage = 10;
 let listCurrentPage = 1;
 let orderToDelete = null;
@@ -1256,13 +1264,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   await loadOrders();
   
-  // On mobile, force Cards view
-  if (window.innerWidth <= 768) {
-    switchView('recent');
-  } else {
-    render();
+  if (!_ordersAlreadyRendered) {
+    const _rcInit = document.getElementById('recentView');
+    if (_rcInit) _rcInit.classList.add('no-anim');
+    if (window.innerWidth <= 768) {
+      switchView('recent');
+    } else {
+      render();
+    }
+    if (_rcInit) requestAnimationFrame(() => _rcInit.classList.remove('no-anim'));
   }
-  
+
   // Calculate totals as items change
   document.getElementById('itemsList').addEventListener('input', calculateTotals);
   
@@ -1285,14 +1297,35 @@ async function loadOrders() {
   if (_lsCached) {
     try {
       orders = JSON.parse(_lsCached);
-      try { render(); } catch (e) {}
+      try {
+        const _rc = document.getElementById('recentView');
+        if (_rc) _rc.classList.add('no-anim');
+        render();
+        if (_rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
+      } catch (e) {}
       // Reveal page immediately from cache
       document.documentElement.style.visibility = 'visible';
       const _s = document.querySelector('.sidebar');
       const _m = document.querySelector('.main');
       if (_s) _s.style.visibility = 'visible';
       if (_m) _m.style.visibility = 'visible';
+      _ordersAlreadyRendered = true;
     } catch (e) {}
+  }
+  const _skeletonContainer = document.getElementById('recentView');
+  if (_skeletonContainer && !_lsCached) {
+    _skeletonContainer.innerHTML = Array(6).fill(0).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton-line" style="width:55%; height:14px;"></div>
+        <div class="skeleton-line" style="width:35%; height:11px; margin-top:6px;"></div>
+        <div class="skeleton-line" style="width:100%; height:36px; margin-top:14px;"></div>
+      </div>
+    `).join('');
+    document.documentElement.style.visibility = 'visible';
+    const _s = document.querySelector('.sidebar');
+    const _m = document.querySelector('.main');
+    if (_s) _s.style.visibility = 'visible';
+    if (_m) _m.style.visibility = 'visible';
   }
   if (!navigator.onLine) return;
 
@@ -1314,9 +1347,18 @@ async function loadOrders() {
 
     if (error) throw error;
 
+    const _fp = arr => (arr || []).map(r => r.id + '|' + (r.updated_at || r.created_at || '')).join(',');
+    const _changed = _fp(data) !== _fp(orders);
     orders = data || [];
     localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
-    try { render(); } catch (e) {}
+    if (_changed) {
+      try {
+        const _rc = document.getElementById('recentView');
+        if (_rc) _rc.classList.add('no-anim');
+        render();
+        if (_rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
+      } catch (e) {}
+    }
   } catch (error) {
     if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading orders:', error);
@@ -1428,7 +1470,7 @@ function renderRecent(filtered) {
 }
 
 function showMoreOrders() {
-  cardsToShow += 10;
+  cardsToShow += 15;
   render();
 }
 
@@ -1515,7 +1557,7 @@ function renderList(filtered) {
     };
     const statusStyle = statusColors[status] || statusColors.processed;
     const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
-    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">ðŸ“¦ ${order.tracking_number}</span>` : '-';
+    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">ðŸ"¦ ${order.tracking_number}</span>` : '-';
     
     // Show buttons based on status
     let actionButtons = '';
@@ -1951,6 +1993,13 @@ async function updateStatusFromList(orderId, newStatus) {
 
 function deleteOrder(orderId) {
   orderToDelete = orderId;
+  const order = orders.find(o => o.id === orderId);
+  const desc = document.getElementById('deleteModalDesc');
+  if (desc && order) {
+    const ref = order.order_reference ? ` · ${order.order_reference}` : '';
+    const date = order.sale_date ? new Date(order.sale_date).toLocaleDateString() : '';
+    desc.innerHTML = `Delete order from <strong>${order.customer || 'Unknown customer'}</strong>${ref}${date ? ` on ${date}` : ''}?<br><span style="font-size:13px;color:var(--text-muted);">This action cannot be undone.</span>`;
+  }
   document.getElementById('deleteModal').classList.add('active');
 }
 
@@ -2066,17 +2115,15 @@ document.addEventListener('keydown', (e) => {
             <input type="text" id="new_order_date" readonly placeholder="Select date...">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="new_order_reference">Reference <span style="color:var(--danger);">*</span></label>
-            <input type="text" id="new_order_reference" placeholder="e.g., ORD-12345">
-          </div>
+        <div class="form-group">
+          <label for="new_order_reference">Reference <span style="color:var(--danger);">*</span></label>
+          <input type="text" id="new_order_reference" placeholder="e.g., ORD-12345">
+        </div>
+        <div style="display:none"><!-- status removed -->
           <div class="form-group">
             <label for="new_order_status">Status</label>
-            <select id="new_order_status" onchange="_updateStatusRestriction()">
+            <select id="new_order_status">
               <option value="processed" selected>Processed</option>
-              <option value="fulfilled">Fulfilled</option>
-              <option value="shipped">Shipped</option>
             </select>
             <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">âš  Some items are out of stock</div>
           </div>
@@ -2106,7 +2153,9 @@ document.addEventListener('keydown', (e) => {
   <!-- Step 3: Success Screen -->
   <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;text-align:center;">
     <div style="flex:1;min-height:0;overflow-y:auto;padding:32px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
-      <div class="order-success-icon">âœ“</div>
+      <div class="order-success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
       <h2 class="order-success-title" id="successOrderTitle">Order Created!</h2>
       <div id="successBadgesRow" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
       <div id="successInvSection"></div>
@@ -2122,26 +2171,38 @@ document.addEventListener('keydown', (e) => {
 
 <!-- Recipe Mapping Modal (AI upload result) -->
 <div class="modal-overlay" id="recipeMappingModal">
-  <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
-    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;"></div>
-    <button type="button" onclick="addMappedItemRow()" style="width:100%;padding:10px;margin-bottom:16px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">+ Add Product</button>
-    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-      <div class="form-group" style="margin-bottom: 12px;">
-        <label for="mapped_customer">Customer Name</label>
-        <input type="text" id="mapped_customer" placeholder="e.g., John Smith, ABC Company">
-      </div>
-      <div class="form-row">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="mapped_reference">Order Reference</label>
-          <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
+  <div class="modal-content" style="max-width: 700px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+    <!-- Scrollable body -->
+    <div style="flex: 1; overflow-y: auto; padding: 24px 24px 16px; min-height: 0;">
+      <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
+      <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;"></div>
+      <button type="button" onclick="addMappedItemRow()" style="width:100%;padding:10px;margin-bottom:16px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">+ Add Product</button>
+      <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="mapped_customer">Customer Name *</label>
+          <input type="text" id="mapped_customer" placeholder="e.g., John Smith, ABC Company" oninput="document.getElementById('mapped_customer_error').style.display='none';this.style.borderColor='';">
+          <p id="mapped_customer_error" style="display:none;color:var(--danger);font-size:12px;margin:4px 0 0;">Please enter a customer name</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="mapped_reference">Order Reference</label>
+            <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
+          </div>
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 12px; margin-top: 16px;">
-      <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
+    <!-- Sticky footer: inventory toggle + action buttons always visible -->
+    <div style="flex-shrink: 0; border-top: 1px solid var(--border); padding: 16px 24px; background: var(--bg-panel);">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:4px;">
+        <input type="checkbox" id="mapped_update_inventory" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+        Update inventory when creating this order
+      </label>
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px 26px;">Deduct matched product ingredients from stock</p>
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn" style="flex: 1; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2233,6 +2294,7 @@ document.addEventListener('keydown', (e) => {
 // State
 let orderRecipes = [];
 let orderUploadedFile = null;
+let pendingReceiptUrl = null;
 let mappedOrderData = null;
 let mappedRecipes = [];
 let orderAIUsageStatus = null;
@@ -2619,6 +2681,9 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
   const step3 = document.getElementById('manualStep3');
   step3.style.display = 'flex';
   const ref = order.order_reference || ('Order #' + order.id);
+  // Wire up View button
+  const viewBtn = step3.querySelector('.btn-primary');
+  if (viewBtn) viewBtn.onclick = () => { window.location.href = '/order-detail?id=' + order.id; };
   document.getElementById('successOrderTitle').textContent = 'Order ' + ref + ' Created!';
   const badgesRow = document.getElementById('successBadgesRow');
   let badgesHtml = '';
@@ -2939,6 +3004,31 @@ async function processOrderImageUpload() {
     if (result.success && result.data) {
       showOrderUploadStatus('Matching recipes...', 'info');
       try {
+        // Upload the receipt file immediately while we still have the File reference,
+        // then store the URL so confirmMappedOrder() can attach it to the sales record.
+        pendingReceiptUrl = null;
+        if (orderUploadedFile) {
+          try {
+            showOrderUploadStatus('Uploading receipt...', 'info');
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (user) {
+              const ts = Date.now();
+              const fileName = `${user.id}/${ts}_${orderUploadedFile.name}`;
+              const { error: upErr } = await supabaseClient.storage
+                .from('expenses')
+                .upload(fileName, orderUploadedFile, { cacheControl: '3600', upsert: false });
+              if (upErr) {
+                console.error('Receipt upload error:', upErr);
+              } else {
+                const { data: { publicUrl } } = supabaseClient.storage.from('expenses').getPublicUrl(fileName);
+                pendingReceiptUrl = publicUrl;
+                console.log('Receipt pre-uploaded, URL:', publicUrl);
+              }
+            }
+          } catch (upEx) {
+            console.error('Receipt upload exception:', upEx);
+          }
+        }
         closeOrderImageUploadModal();
         await showRecipeMappingModal(result.data);
       } catch (error) {
@@ -3043,7 +3133,35 @@ async function matchItemToRecipes(itemData) {
       }
       return { recipe, score, matchReason: score === 1 ? 'Perfect match' : score >= 0.5 ? 'Partial match' : 'Low match' };
     });
-    return scoredRecipes.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+    const attrMatches = scoredRecipes.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+    if (attrMatches.length > 0) return attrMatches;
+
+    // No ingredient-attribute matches — fall back to name + attribute value matching
+    const searchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+    // Normalize attribute values: split "140/146" → ["140", "146"] so partial matches work
+    const attrValues = Object.values(itemData.attributes || {}).flatMap(v =>
+      v.toString().toLowerCase().split(/[\/\-\s]+/)
+    ).filter(v => v.length > 0);
+    if (!searchName && attrValues.length === 0) return [];
+    const sWords = searchName.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+    return recipes
+      .map(recipe => {
+        const rn = (recipe.name || '').toLowerCase();
+        const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+        // Name overlap (word-level, exact only to avoid "Kinder" matching "Kinderzeichnung")
+        const forward = sWords.length > 0 ? sWords.filter(w => rWords.includes(w)).length / sWords.length : 0;
+        const backward = rWords.length > 0 ? rWords.filter(w => sWords.includes(w)).length / rWords.length : 0;
+        const nameScore = Math.max(forward, backward);
+        // Attribute value match: how many attr values appear literally in recipe name
+        const attrScore = attrValues.length > 0
+          ? attrValues.filter(v => rn.includes(v)).length / attrValues.length
+          : 0;
+        // When attributes are present, they dominate; otherwise pure name score
+        const score = attrValues.length > 0 ? (nameScore * 0.4 + attrScore * 0.6) : nameScore;
+        return { recipe, score, matchReason: 'Name+attribute match' };
+      })
+      .filter(r => r.score >= 0.15)
+      .sort((a, b) => b.score - a.score);
   } catch (error) {
     console.error('Error matching item to recipes:', error);
     return [];
@@ -3128,24 +3246,30 @@ function renderMappedItems() {
             <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${cleanName}</div>
             <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(', ')||'No attributes'}</div>
           </div>
-          <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
+          <div style="display:flex;align-items:start;gap:12px;">
+            <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
+            <button type="button" onclick="removeMappedItem(${index})" title="Remove item" style="width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0;flex-shrink:0;">&times;</button>
+          </div>
         </div>
-        <div style="margin-bottom:12px;position:relative;">
+        <div style="margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Product:</label>
-            ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger);this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
+            ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
           </div>
-          <input type="text" id="recipeSearchInput_${index}" placeholder="Search to change product or leave empty for custom item..."
-            value="${selected ? selected.name : ''}" autocomplete="off"
-            oninput="searchRecipesForMapping(${index}, this.value)"
-            onfocus="showMappingRecipeDropdown(${index})"
-            onkeydown="if(event.key==='Escape') hideMappingRecipeDropdown(${index})"
-            style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;" />
-          <div id="recipeDropdown_${index}" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-            ${matches.map(m=>`<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
-              <div style="font-weight:600;font-size:13px;">${m.recipe.name}</div>
-              <div style="font-size:12px;color:var(--text-muted);">${m.matchReason} (${(m.score*100).toFixed(0)}% match)</div></div>`).join('')}
-            ${matches.length===0?'<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No matching products found</div>':''}
+          <div style="position:relative;">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--text-muted);pointer-events:none;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="recipeSearchInput_${index}" placeholder="Search products..."
+              value="${selected ? selected.name : ''}" autocomplete="off"
+              oninput="searchRecipesForMapping(${index}, this.value)"
+              onfocus="showMappingRecipeDropdown(${index})"
+              onkeydown="if(event.key==='Escape') hideMappingRecipeDropdown(${index})"
+              style="width:100%;padding:10px 10px 10px 34px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;box-sizing:border-box;" />
+            <div id="recipeDropdown_${index}" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+              ${matches.map(m=>`<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
+                <div style="font-weight:600;font-size:13px;">${m.recipe.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${m.matchReason} (${(m.score*100).toFixed(0)}% match)</div></div>`).join('')}
+              ${matches.length===0?'<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>':''}
+            </div>
           </div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
@@ -3165,7 +3289,7 @@ function renderMappedItems() {
 
 function addMappedItemRow() {
   mappedRecipes.push({
-    itemData: { name: 'New Item', quantity: 1, price: 0, attributes: {} },
+    itemData: { name: 'Custom item', quantity: 1, price: 0, attributes: {} },
     selectedRecipe: null,
     matches: [],
     quantity: 1
@@ -3175,6 +3299,12 @@ function addMappedItemRow() {
   // Scroll to the new row
   const list = document.getElementById('mappedItemsList');
   if (list) list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeMappedItem(index) {
+  mappedRecipes.splice(index, 1);
+  renderMappedItems();
+  updateMappedTotal();
 }
 
 function handleMappingDropdownClickOutside(event) {
@@ -3189,7 +3319,12 @@ function handleMappingDropdownClickOutside(event) {
 
 function showMappingRecipeDropdown(index) {
   const d = document.getElementById(`recipeDropdown_${index}`);
-  if (d) d.style.display = 'block';
+  if (!d) return;
+  d.style.display = 'block';
+  const input = document.getElementById(`recipeSearchInput_${index}`);
+  const currentVal = input ? input.value : '';
+  // Always refresh the dropdown when it opens so the list is populated
+  searchRecipesForMapping(index, currentVal);
 }
 function hideMappingRecipeDropdown(index) {
   const d = document.getElementById(`recipeDropdown_${index}`);
@@ -3198,31 +3333,43 @@ function hideMappingRecipeDropdown(index) {
 
 async function searchRecipesForMapping(index, searchTerm) {
   const dropdown = document.getElementById(`recipeDropdown_${index}`);
-  if (!searchTerm.trim()) {
-    const matches = mappedRecipes[index].matches || [];
-    dropdown.innerHTML = matches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text-muted);">No matching products found</div>';
+  if (!dropdown) return;
+  const preMatches = mappedRecipes[index]?.matches || [];
+
+  // If there's a search term, or no pre-matches to show, hit the DB
+  const needsDbFetch = searchTerm.trim() || preMatches.length === 0;
+
+  if (!needsDbFetch) {
+    // Show pre-matched suggestions
+    dropdown.innerHTML = preMatches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('');
     dropdown.style.display = 'block';
     return;
   }
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    let query = supabaseClient.from('recipes').select('id, name, cost').eq('profile_id', user.id).ilike('name', `%${searchTerm}%`).limit(10);
+    let query = supabaseClient.from('recipes').select('id, name, cost, retail_price').eq('profile_id', user.id).limit(20);
+    if (searchTerm.trim()) query = query.ilike('name', `%${searchTerm}%`);
     if (storeId) query = query.eq('store_id', storeId);
     const { data: allRecipes } = await query;
+    // If the user closed the dropdown while fetching, don't re-open it
+    if (dropdown.style.display === 'none') return;
     if (!allRecipes || allRecipes.length === 0) {
-      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">No products found</div>';
+      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No products found</div>';
       dropdown.style.display = 'block';
       return;
     }
-    dropdown.innerHTML = allRecipes.map(recipe => `<div onclick="selectRecipeForMappingById(${index},'${recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${recipe.name}</div></div>`).join('');
+    dropdown.innerHTML = allRecipes.map(recipe => `<div onclick="selectRecipeForMappingById(${index},'${recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${recipe.name}</div>${recipe.retail_price ? `<div style="font-size:12px;color:var(--text-muted);">€${recipe.retail_price.toFixed(2)}</div>` : ''}</div>`).join('');
     dropdown.style.display = 'block';
   } catch (error) {
     console.error('Error searching recipes:', error);
-    dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">Search failed. Please try again.</div>';
-    dropdown.style.display = 'block';
+    if (dropdown.style.display !== 'none') {
+      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">Search failed. Please try again.</div>';
+      dropdown.style.display = 'block';
+    }
   }
 }
 
@@ -3290,24 +3437,38 @@ function closeRecipeMappingModal() {
 async function confirmMappedOrder() {
   try {
     const customer = document.getElementById('mapped_customer').value.trim();
-    if (!customer) { showOrderNotification('Please enter a customer name', 'error'); return; }
+    if (!customer) {
+      const inp = document.getElementById('mapped_customer');
+      const err = document.getElementById('mapped_customer_error');
+      if (inp) inp.style.borderColor = 'var(--danger)';
+      if (err) err.style.display = 'block';
+      inp?.focus();
+      return;
+    }
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const items = [], selectedOrderRecipes = [];
-    mappedRecipes.forEach(mapping => {
+    mappedRecipes.forEach((mapping, idx) => {
       if (mapping.selectedRecipe) {
         const recipeCostPrice = parseFloat(mapping.selectedRecipe.cost) || 0;
         selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
         items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
       } else {
-        items.push({ name: mapping.itemData.name, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
+        // Use whatever the user typed in the search box, fall back to itemData name
+        const typedName = document.getElementById(`recipeSearchInput_${idx}`)?.value?.trim();
+        const itemName = typedName || mapping.itemData.name || 'Custom item';
+        items.push({ name: itemName, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
       }
     });
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const orderReference = document.getElementById('mapped_reference').value || null;
+    // Use the URL pre-uploaded during processOrderImageUpload()
+    const receiptUrls = pendingReceiptUrl ? [pendingReceiptUrl] : null;
+    pendingReceiptUrl = null;
+
     const salesRecord = {
       profile_id: user.id,
       store_id: storeId,
@@ -3319,15 +3480,16 @@ async function confirmMappedOrder() {
       revenue: totalRevenue,
       order_reference: orderReference,
       status: 'processed',
-      custom_attributes: mappedOrderData?.attributes || {}
+      custom_attributes: mappedOrderData?.attributes || {},
+      ...(receiptUrls ? { receipt_urls: receiptUrls } : {})
     };
     const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
     if (error) throw error;
-    if (selectedOrderRecipes.length > 0 && data && data[0]) {
+    const updateInventory = document.getElementById('mapped_update_inventory')?.checked !== false;
+    if (updateInventory && selectedOrderRecipes.length > 0 && data && data[0]) {
       await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
     closeRecipeMappingModal();
-    showOrderNotification('Order created successfully!', 'success');
     await loadOrders();
     render();
   } catch (error) {
@@ -3340,7 +3502,7 @@ async function confirmMappedOrder() {
 function showOrderNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
-  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'âœ“':type==='error'?'âœ•':type==='warning'?'âš ':'â„¹'}</span><span>${message}</span>`;
+  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
   document.body.appendChild(notification);
   setTimeout(() => {
     notification.style.animation = 'slideInRight 0.3s ease reverse';

@@ -1885,6 +1885,19 @@
           style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-panel); color:var(--text-main); font-size:14px; font-family:inherit; box-sizing:border-box;">
       </div>
 
+      <!-- Update Inventory toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg-inner);border-radius:10px;border:1px solid var(--border);margin-bottom:20px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-main);">Update Inventory</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Add purchased quantities to stock</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+          <input type="checkbox" id="exp_update_inventory" checked style="opacity:0;width:0;height:0;">
+          <span onclick="this.previousElementSibling.click()" style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:12px;transition:0.2s;"></span>
+          <span id="exp_inv_thumb" style="position:absolute;content:'';height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none;"></span>
+        </label>
+      </div>
+
       <!-- Actions -->
       <div style="display: flex; gap: 12px;">
         <button type="button" onclick="closeExpenseModal()"
@@ -1924,6 +1937,18 @@ async function openAddExpenseModal() {
   opsRenderAttrSubfilter();
   document.getElementById('expenseModal').classList.add('active');
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  // Sync toggle visuals on open
+  const cb = document.getElementById('exp_update_inventory');
+  if (cb) { cb.checked = true; _syncExpInvToggle(); cb.addEventListener('change', _syncExpInvToggle); }
+}
+
+function _syncExpInvToggle() {
+  const cb = document.getElementById('exp_update_inventory');
+  const track = cb?.nextElementSibling;
+  const thumb = document.getElementById('exp_inv_thumb');
+  if (!cb || !track || !thumb) return;
+  track.style.background = cb.checked ? 'var(--accent)' : 'var(--border)';
+  thumb.style.transform = cb.checked ? 'translateX(20px)' : 'translateX(0)';
 }
 
 function closeExpenseModal() {
@@ -2237,8 +2262,30 @@ async function saveExpense(event) {
     };
     const { error } = await offlineWrite('expenses', 'insert', payload);
     if (error) throw error;
+
+    // Update inventory quantities if toggle is on
+    const updateInv = document.getElementById('exp_update_inventory')?.checked;
+    if (updateInv && opsSelectedIngredients.length > 0) {
+      const ids = opsSelectedIngredients.map(i => i.id);
+      const { data: current } = await supabaseClient
+        .from('ingredients')
+        .select('id, quantity')
+        .in('id', ids)
+        .eq('profile_id', user.id);
+      if (current) {
+        await Promise.all(current.map(row => {
+          const added = opsSelectedIngredients.find(i => i.id === row.id)?.quantity || 0;
+          return supabaseClient
+            .from('ingredients')
+            .update({ quantity: (row.quantity || 0) + added })
+            .eq('id', row.id)
+            .eq('profile_id', user.id);
+        }));
+      }
+    }
+
     closeExpenseModal();
-    showNotification('Expense saved successfully!', 'success');
+    showNotification(updateInv ? 'Expense saved & inventory updated!' : 'Expense saved successfully!', 'success');
   } catch (e) {
     showAlert('Failed to save expense: ' + e.message);
   } finally {
@@ -2743,9 +2790,8 @@ function selectMethod(method) {
     openUrlImportModal();
   } else if (method === 'image') {
     openImageUploadModal('ingredient');
-  } else {
-    // Redirect to ingredients page with the selected method
-    window.location.href = `/ingredients?method=${method}`;
+  } else if (method === 'csv') {
+    if (typeof openCSVImport === 'function') openCSVImport('ingredient');
   }
 }
 
@@ -3392,6 +3438,11 @@ function showImportStatus(message, type) {
       <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');" title="Clear search">×</button>
     </div>
 
+    <div id="orderPickerFilterBar" style="padding: 0 28px 10px; flex-shrink: 0; display: none;">
+      <div id="orderPickerCatChips" class="recipe-cat-chips"></div>
+      <div id="orderPickerAttrSubfilter" class="recipe-attr-subfilter"></div>
+    </div>
+
     <div class="recipe-picker-body" id="orderRecipePickerBody">
       <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
     </div>
@@ -3433,15 +3484,6 @@ function showImportStatus(message, type) {
             <label for="new_order_reference">Reference <span style="color:var(--danger);">*</span></label>
             <input type="text" id="new_order_reference" placeholder="e.g., ORD-12345">
           </div>
-          <div class="form-group">
-            <label for="new_order_status">Status</label>
-            <select id="new_order_status" onchange="_updateStatusRestriction()">
-              <option value="processed" selected>Processed</option>
-              <option value="fulfilled">Fulfilled</option>
-              <option value="shipped">Shipped</option>
-            </select>
-            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some items are out of stock</div>
-          </div>
         </div>
 
         <!-- Inventory update toggle -->
@@ -3474,7 +3516,7 @@ function showImportStatus(message, type) {
       <div id="successInvSection"></div>
     </div>
     <div class="recipe-picker-footer" style="padding:14px 24px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button type="button" class="btn btn-primary" style="flex:1;min-width:80px;" onclick="window.location.href='/orders'">View</button>
+      <button type="button" id="successViewBtn" class="btn btn-primary" style="flex:1;min-width:80px;">View</button>
       <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="startAnotherOrder()">New</button>
       <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeManualOrderModal()">Done</button>
     </div>
@@ -4968,25 +5010,75 @@ const _recipeCategIconMap = {
   'Packaging': 'package', 'Food': 'wheat'
 };
 let recipeActiveCategoryFilter = null;
-let recipeActiveAttrValueFilters = new Set();
+let recipeActiveAttrValueFilters = new Map();
 
 function renderRecipeAttrSubfilters(cat) {
-  const displayMap = new Map();
-  recipeIngredientData
-    .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.attributes)
-    .forEach(i => {
-      Object.values(i.attributes).forEach(v => {
-        const t = String(v).trim();
-        if (t) { const k = t.toLowerCase(); if (!displayMap.has(k)) displayMap.set(k, t); }
-      });
-    });
+  const catItems = recipeIngredientData
+    .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.attributes);
+
+  // Collect all attribute keys present in this category
+  const allKeys = new Set();
+  catItems.forEach(i => { try { Object.keys(i.attributes).forEach(k => allKeys.add(k.toLowerCase())); } catch(e){} });
+
   const el = document.getElementById('recipeAttrSubfilter');
   if (!el) return;
-  if (displayMap.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
-  const sorted = [...displayMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  el.innerHTML = sorted.map(([key, label]) =>
-    `<button class="recipe-attr-chip${recipeActiveAttrValueFilters.has(key) ? ' active' : ''}" data-val="${key.replace(/"/g,'&quot;')}" onclick="toggleRecipeAttrFilter('${key.replace(/'/g,"&#39;")}')">${label}</button>`
-  ).join('');
+  if (allKeys.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+
+  const sortedKeys = Array.from(allKeys).sort((a, b) => a.localeCompare(b));
+
+  const sortValues = (key, a, b) => {
+    if (key === 'size') {
+      const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+    }
+    const aNum = parseFloat(a), bNum = parseFloat(b);
+    const aIsNum = !isNaN(aNum), bIsNum = !isNaN(bNum);
+    if (aIsNum && bIsNum) return aNum - bNum;
+    if (aIsNum) return -1;
+    if (bIsNum) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+
+  const allChips = [];
+  sortedKeys.forEach(key => {
+    // Eligible items for this key = items passing ALL active filters EXCEPT this key
+    const eligible = catItems.filter(item => {
+      for (const [attrKey, valSet] of recipeActiveAttrValueFilters) {
+        if (attrKey === key || valSet.size === 0) continue;
+        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === attrKey);
+        if (!mk || !valSet.has(String(item.attributes[mk]).trim().toLowerCase())) return false;
+      }
+      return true;
+    });
+
+    // Collect available values from eligible items only
+    const valuesMap = new Map();
+    eligible.forEach(item => {
+      try {
+        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === key);
+        if (!mk) return;
+        const val = String(item.attributes[mk]).trim();
+        if (!val) return;
+        const vk = val.toLowerCase();
+        if (!valuesMap.has(vk)) valuesMap.set(vk, val);
+      } catch(e) {}
+    });
+
+    if (valuesMap.size === 0) return;
+
+    Array.from(valuesMap.entries())
+      .sort((a, b) => sortValues(key, a[1], b[1]))
+      .forEach(([valueKey, displayValue]) => {
+        const escaped = displayValue.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const _active = recipeActiveAttrValueFilters.has(key) && recipeActiveAttrValueFilters.get(key).has(valueKey);
+        allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${valueKey.replace(/"/g,'&quot;')}" onclick="toggleRecipeAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g,"&#39;")}')">${escaped}</button>`);
+      });
+  });
+
+  el.innerHTML = allChips.join('');
   el.classList.add('visible');
 }
 
@@ -4995,15 +5087,16 @@ function hideRecipeAttrSubfilters() {
   if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
 }
 
-function toggleRecipeAttrFilter(value) {
-  if (recipeActiveAttrValueFilters.has(value)) {
-    recipeActiveAttrValueFilters.delete(value);
+function toggleRecipeAttrFilter(key, value) {
+  if (!recipeActiveAttrValueFilters.has(key)) recipeActiveAttrValueFilters.set(key, new Set());
+  const keySet = recipeActiveAttrValueFilters.get(key);
+  if (keySet.has(value)) {
+    keySet.delete(value);
+    if (keySet.size === 0) recipeActiveAttrValueFilters.delete(key);
   } else {
-    recipeActiveAttrValueFilters.add(value);
+    keySet.add(value);
   }
-  document.querySelectorAll('.recipe-attr-chip').forEach(chip => {
-    chip.classList.toggle('active', recipeActiveAttrValueFilters.has(chip.dataset.val));
-  });
+  if (recipeActiveCategoryFilter) renderRecipeAttrSubfilters(recipeActiveCategoryFilter);
   renderRecipeIngredientList();
 }
 
@@ -5020,7 +5113,7 @@ function renderRecipeCatChips() {
 
 function toggleRecipeCatFilter(cat) {
   recipeActiveCategoryFilter = recipeActiveCategoryFilter === cat ? null : cat;
-  recipeActiveAttrValueFilters = new Set();
+  recipeActiveAttrValueFilters = new Map();
   if (recipeActiveCategoryFilter) {
     renderRecipeAttrSubfilters(recipeActiveCategoryFilter);
   } else {
@@ -5043,8 +5136,12 @@ function renderRecipeIngredientList() {
     if (recipeActiveCategoryFilter && item.category !== recipeActiveCategoryFilter) return false;
     if (recipeActiveAttrValueFilters.size > 0) {
       if (!item.attributes) return false;
-      const vals = new Set(Object.values(item.attributes).map(v => String(v).trim().toLowerCase()));
-      for (const v of recipeActiveAttrValueFilters) { if (!vals.has(v)) return false; }
+      for (const [attrKey, valSet] of recipeActiveAttrValueFilters) {
+        if (valSet.size === 0) continue;
+        const matchingKey = Object.keys(item.attributes).find(k => k.toLowerCase() === attrKey);
+        if (!matchingKey) return false;
+        if (!valSet.has(String(item.attributes[matchingKey]).trim().toLowerCase())) return false;
+      }
     }
     return true;
   });
@@ -5660,10 +5757,13 @@ function selectOrderMethod(method) {
 // === Manual Order Creation ===
 let orderRecipes = [];
 let orderRecipeCache = null;
+let orderIngredientData = [];
 let orderFavoriteIds = new Set();
 let orderStockMap = {};
 let orderMinMap = {};
 let orderDatePicker = null;
+let orderPickerCatFilter = null;
+let orderPickerAttrValueFilters = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
   orderDatePicker = flatpickr('#new_order_date', {
@@ -5682,10 +5782,19 @@ async function loadOrderRecipeData() {
   let _qr = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
   if (storeId) _qr = _qr.eq('store_id', storeId);
   _qr = _qr.order('name');
-  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id);
+  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock, category, custom_attributes, name').eq('profile_id', user.id);
   if (storeId) _qi = _qi.eq('store_id', storeId);
   const [{ data: recipes }, { data: ingredients }] = await Promise.all([_qr, _qi]);
   orderStockMap = {}; orderMinMap = {};
+  orderIngredientData = (ingredients || []).map(ing => {
+    let attributes = null;
+    try {
+      if (ing.custom_attributes) {
+        attributes = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+      }
+    } catch (e) {}
+    return { ...ing, attributes };
+  });
   if (ingredients) ingredients.forEach(i => {
     orderStockMap[i.id] = parseFloat(i.quantity) || 0;
     orderMinMap[i.id] = parseFloat(i.min_stock) || 0;
@@ -5749,7 +5858,7 @@ function _renderRecipeCard(recipe) {
   const esc = recipe.name.replace(/'/g, "\\'" );
   const cantBuild = status === 'out';
   return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
-      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price});${cantBuild ? 'showOosToast(event)' : ''}">
+      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price})"
     <div class="card-name">${recipe.name}</div>
   </div>`;
 }
@@ -5812,9 +5921,11 @@ async function renderOrderRecipeSections(filtered) {
 function filterOrderRecipes(query) {
   const clearBtn = document.getElementById('orderSearchClear');
   if (clearBtn) clearBtn.style.display = (query && query.trim()) ? 'flex' : 'none';
-  if (!query || !query.trim()) { renderOrderRecipeSections(null); return; }
+  const catFiltered = _getOrderPickerFilteredList();
+  if (!query || !query.trim()) { renderOrderRecipeSections(catFiltered); return; }
   const term = query.trim().toLowerCase();
-  const filtered = (orderRecipeCache || []).filter(r => {
+  const base = catFiltered ?? (orderRecipeCache || []);
+  const filtered = base.filter(r => {
     if ((r.name || '').toLowerCase().includes(term)) return true;
     if (Array.isArray(r.components)) {
       return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(term));
@@ -5822,6 +5933,133 @@ function filterOrderRecipes(query) {
     return false;
   });
   renderOrderRecipeSections(filtered);
+}
+
+function _getOrderPickerMatchingIngIds() {
+  if (!orderPickerCatFilter && orderPickerAttrValueFilters.size === 0) return null;
+  return new Set(
+    orderIngredientData.filter(ing => {
+      if (orderPickerCatFilter && (!ing.category || ing.category.toLowerCase() !== orderPickerCatFilter.toLowerCase())) return false;
+      if (orderPickerAttrValueFilters.size > 0) {
+        if (!ing.attributes) return false;
+        for (const [attrKey, valSet] of orderPickerAttrValueFilters) {
+          if (valSet.size === 0) continue;
+          const matchingKey = Object.keys(ing.attributes).find(k => k.toLowerCase() === attrKey);
+          if (!matchingKey) return false;
+          if (!valSet.has(String(ing.attributes[matchingKey]).trim().toLowerCase())) return false;
+        }
+      }
+      return true;
+    }).map(ing => ing.id)
+  );
+}
+
+function _getOrderPickerFilteredList() {
+  const matchingIngIds = _getOrderPickerMatchingIngIds();
+  if (!matchingIngIds) return null;
+  return (orderRecipeCache || []).filter(r =>
+    (r.components || []).some(c => matchingIngIds.has(c.ingredient_id))
+  );
+}
+
+function renderOrderPickerCatChips() {
+  const el = document.getElementById('orderPickerCatChips');
+  const bar = document.getElementById('orderPickerFilterBar');
+  if (!el || !bar) return;
+  const presentCatSet = new Set(orderIngredientData.map(ing => ing.category).filter(Boolean));
+  const knownOrder = ['Apparel','Wood','Boxes','Cards','Plants','Candy','Beverage','Jewelry','Party Supplies','Gaming','Toys','Office Supplies','Colors','Rope','Paper','Spool','Letter','Giveaway','Electronics','Printing Supplies','Tools','Packaging','Food'];
+  const allCats = [...knownOrder.filter(c => presentCatSet.has(c)), ...Array.from(presentCatSet).filter(c => !knownOrder.includes(c)).sort()];
+  if (!allCats.length) { bar.style.display = 'none'; return; }
+  el.innerHTML = allCats.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    const selected = orderPickerCatFilter === cat;
+    return `<button type="button" class="recipe-cat-chip${selected ? ' selected' : ''}" onclick="toggleOrderPickerCatFilter('${cat.replace(/'/g,"&#39;")}')" title="${cat.replace(/"/g,'&quot;')}"><i data-lucide="${icon}"></i></button>`;
+  }).join('');
+  bar.style.display = '';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleOrderPickerCatFilter(cat) {
+  orderPickerCatFilter = orderPickerCatFilter === cat ? null : cat;
+  orderPickerAttrValueFilters = new Map();
+  renderOrderPickerCatChips();
+  if (orderPickerCatFilter) {
+    _renderOrderPickerAttrSubfilters(orderPickerCatFilter);
+  } else {
+    _hideOrderPickerAttrSubfilters();
+  }
+  const q = document.getElementById('orderRecipeSearchInput')?.value || '';
+  filterOrderRecipes(q);
+}
+
+function _renderOrderPickerAttrSubfilters(cat) {
+  const el = document.getElementById('orderPickerAttrSubfilter');
+  if (!el) return;
+  const catItems = orderIngredientData.filter(ing =>
+    ing.category && ing.category.toLowerCase() === cat.toLowerCase() && ing.attributes
+  );
+  const allKeys = new Set();
+  catItems.forEach(i => { try { Object.keys(i.attributes).forEach(k => allKeys.add(k.toLowerCase())); } catch(e){} });
+  if (allKeys.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+  const sortValues = (key, a, b) => {
+    if (key === 'size') {
+      const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1; if (bi !== -1) return 1;
+    }
+    const aNum = parseFloat(a), bNum = parseFloat(b);
+    const aIsNum = !isNaN(aNum), bIsNum = !isNaN(bNum);
+    if (aIsNum && bIsNum) return aNum - bNum;
+    if (aIsNum) return -1; if (bIsNum) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+  const sortedKeys = Array.from(allKeys).sort((a, b) => a.localeCompare(b));
+  const allChips = [];
+  sortedKeys.forEach(key => {
+    const eligible = catItems.filter(item => {
+      for (const [attrKey, valSet] of orderPickerAttrValueFilters) {
+        if (attrKey === key || valSet.size === 0) continue;
+        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === attrKey);
+        if (!mk || !valSet.has(String(item.attributes[mk]).trim().toLowerCase())) return false;
+      }
+      return true;
+    });
+    const valuesMap = new Map();
+    eligible.forEach(item => {
+      try {
+        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === key);
+        if (!mk) return;
+        const val = String(item.attributes[mk]).trim();
+        if (!val) return;
+        const vk = val.toLowerCase();
+        if (!valuesMap.has(vk)) valuesMap.set(vk, val);
+      } catch(e) {}
+    });
+    if (valuesMap.size === 0) return;
+    Array.from(valuesMap.entries()).sort((a, b) => sortValues(key, a[1], b[1])).forEach(([valueKey, displayValue]) => {
+      const esc = displayValue.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const _active = orderPickerAttrValueFilters.has(key) && orderPickerAttrValueFilters.get(key).has(valueKey);
+      allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" onclick="toggleOrderPickerAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g,"&#39;")}')">${esc}</button>`);
+    });
+  });
+  el.innerHTML = allChips.join('');
+  el.classList.add('visible');
+}
+
+function _hideOrderPickerAttrSubfilters() {
+  const el = document.getElementById('orderPickerAttrSubfilter');
+  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
+}
+
+function toggleOrderPickerAttrFilter(key, value) {
+  if (!orderPickerAttrValueFilters.has(key)) orderPickerAttrValueFilters.set(key, new Set());
+  const keySet = orderPickerAttrValueFilters.get(key);
+  if (keySet.has(value)) { keySet.delete(value); if (keySet.size === 0) orderPickerAttrValueFilters.delete(key); }
+  else { keySet.add(value); }
+  if (orderPickerCatFilter) _renderOrderPickerAttrSubfilters(orderPickerCatFilter);
+  const q = document.getElementById('orderRecipeSearchInput')?.value || '';
+  filterOrderRecipes(q);
 }
 
 function toggleOrderRecipeSelect(id, name, price) {
@@ -5962,12 +6200,16 @@ function openManualOrderModal() {
   // Populate customer autocomplete from recent sales
   _populateCustomerSuggestions();
   document.getElementById('orderRecipeSearchInput').value = '';
+  orderPickerCatFilter = null;
+  orderPickerAttrValueFilters = new Map();
+  _hideOrderPickerAttrSubfilters();
   updatePickerFooter();
   document.getElementById('manualOrderModal').classList.add('active');
   if (orderRecipeCache) {
+    renderOrderPickerCatChips();
     renderOrderRecipeSections(null);
   } else {
-    loadOrderRecipeData().then(() => renderOrderRecipeSections(null));
+    loadOrderRecipeData().then(() => { renderOrderPickerCatChips(); renderOrderRecipeSections(null); });
   }
 }
 
@@ -6006,6 +6248,9 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
   document.getElementById('manualStep2').style.display = 'none';
   const step3 = document.getElementById('manualStep3');
   step3.style.display = 'flex';
+
+  const viewBtn = document.getElementById('successViewBtn');
+  if (viewBtn) viewBtn.onclick = () => window.location.href = '/order-detail?id=' + order.id;
 
   // Title with reference
   const ref = order.order_reference || ('Order #' + order.id);
@@ -6064,37 +6309,6 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
   sectionEl.innerHTML = '<div class="inv-changes-list">' + rowsHtml + '</div>';
 }
 
-function showOosToast(event) {
-  event.stopPropagation();
-  document.querySelectorAll('.recipe-oos-toast').forEach(t => t.remove());
-  const toast = document.createElement('div');
-  toast.className = 'recipe-oos-toast';
-  toast.textContent = 'Can be processed but not produced.';
-  document.body.appendChild(toast);
-  const btn = document.getElementById('orderContinueBtn');
-  const tw = toast.offsetWidth || 260;
-  let x, y;
-  if (btn) {
-    const r = btn.getBoundingClientRect();
-    x = r.left + r.width / 2 - tw / 2;
-    y = r.top - toast.offsetHeight - 10;
-  } else {
-    x = window.innerWidth / 2 - tw / 2;
-    y = event.clientY - 46;
-  }
-  x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
-  y = Math.max(8, y);
-  toast.style.left = x + 'px';
-  toast.style.top  = y + 'px';
-  const remove = () => {
-    toast.classList.add('hiding');
-    setTimeout(() => toast.remove(), 240);
-  };
-  const timer = setTimeout(remove, 1500);
-  const clickaway = () => { clearTimeout(timer); remove(); document.removeEventListener('click', clickaway); };
-  setTimeout(() => document.addEventListener('click', clickaway), 60);
-}
-
 function startAnotherOrder() {
   // Save last customer for autofill, then reset
   const lastCustomer = document.getElementById('new_order_customer')?.value.trim() || '';
@@ -6118,8 +6332,11 @@ function startAnotherOrder() {
   const inp = document.getElementById('orderRecipeSearchInput');
   if (inp) inp.value = '';
   updatePickerFooter();
-  if (orderRecipeCache) renderOrderRecipeSections(null);
-  else loadOrderRecipeData().then(() => renderOrderRecipeSections(null));
+  orderPickerCatFilter = null;
+  orderPickerAttrValueFilters = new Map();
+  _hideOrderPickerAttrSubfilters();
+  if (orderRecipeCache) { renderOrderPickerCatChips(); renderOrderRecipeSections(null); }
+  else loadOrderRecipeData().then(() => { renderOrderPickerCatChips(); renderOrderRecipeSections(null); });
 }
 
 // kept for compatibility
@@ -6164,7 +6381,7 @@ async function saveManualOrder(event) {
     
     // Collect form data
     const customer = document.getElementById('new_order_customer').value.trim();
-    const status = document.getElementById('new_order_status').value;
+    const status = 'processed';
     const orderReference = document.getElementById('new_order_reference').value.trim();
     const orderDateVal = document.getElementById('new_order_date').value;
     const saleDate = orderDateVal ? new Date(orderDateVal).toISOString() : new Date().toISOString();
@@ -6492,6 +6709,8 @@ document.addEventListener('keydown', (e) => {
       closeManualOrderModal();
     } else if (document.getElementById('feedbackModal').classList.contains('active')) {
       closeFeedback();
+    } else if (document.getElementById('csvImportModal') && document.getElementById('csvImportModal').classList.contains('active')) {
+      if (typeof closeCSVImport === 'function') closeCSVImport();
     } else if (document.getElementById('urlImportModal').classList.contains('active')) {
       closeUrlImportModal();
     } else if (document.getElementById('imageUploadModal').classList.contains('active')) {
@@ -6653,6 +6872,7 @@ function hideGlobalLoader(){document.getElementById('globalLoader').style.displa
 </script>
 <script src="store-modal.js"></script>
 <script src="switch-account-modal.js"></script>
+<script src="/csv-import.js"></script>
 
 <!-- Onboarding Modal -->
 <div id="onboardingModal" class="onboarding-overlay" style="display: none;">

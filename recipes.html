@@ -997,8 +997,8 @@
     </div>
     <div class="search-wrapper" style="flex: 1;">
       <i data-lucide="search" class="search-icon"></i>
-      <input class="nav-search-input" id="navSearchInput" placeholder="Search products…" oninput="cardsToShow = 10; render(); toggleSearchClear('navSearchInput')">
-      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 10; render(); this.classList.remove('visible');" title="Clear search">×</button>
+      <input class="nav-search-input" id="navSearchInput" placeholder="Search products…" oninput="cardsToShow = 15; render(); toggleSearchClear('navSearchInput')">
+      <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
     </div>
 
     <!-- Notification Bell -->
@@ -1146,8 +1146,8 @@
       </div>
       <div class="search-wrapper" style="width: 480px; flex-shrink: 0;">
         <i data-lucide="search" class="search-icon"></i>
-        <input type="text" id="searchRecipes" placeholder="Search products..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 10; render(); toggleSearchClear('searchRecipes')" />
-        <button type="button" class="search-clear" id="searchRecipes_clear" onclick="document.getElementById('searchRecipes').value = ''; cardsToShow = 10; render(); this.classList.remove('visible');" title="Clear search">×</button>
+        <input type="text" id="searchRecipes" placeholder="Search products..." style="border-radius: 24px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px;" oninput="cardsToShow = 15; render(); toggleSearchClear('searchRecipes')" />
+        <button type="button" class="search-clear" id="searchRecipes_clear" onclick="document.getElementById('searchRecipes').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
       </div>
     </div>
 
@@ -1272,7 +1272,7 @@ let allIngredients = [];
 let recipes = [];
 let currentRecipe = {};
 let currentView = 'recent';
-let cardsToShow = 10;
+let cardsToShow = 15;
 let favoriteIngredients = new Set();
 let currentDeleteRecipeId = null;
 let currentDuplicateRecipeId = null;
@@ -1507,7 +1507,7 @@ function toggleIngredients(recipeId) {
 function switchView(view) {
     currentView = view;
     if (view === 'recent') {
-        cardsToShow = 10;
+        cardsToShow = 15;
     }
     ['recent', 'list'].forEach(v => {
         document.getElementById(`viewBtn${v.charAt(0).toUpperCase() + v.slice(1)}`).classList.toggle('active', v === view);
@@ -1517,7 +1517,7 @@ function switchView(view) {
 }
 
 function showMoreRecipes() {
-    cardsToShow += 10;
+    cardsToShow += 15;
     render();
 }
 
@@ -1761,7 +1761,7 @@ function toggleProductCatFilter(cat) {
   document.querySelectorAll('.prod-cat-chip').forEach(btn => {
     btn.classList.toggle('selected', btn.title === productCategoryFilter);
   });
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -1848,7 +1848,7 @@ function toggleProductAttrFilter(key, value) {
     keySet.add(value);
   }
   if (productCategoryFilter) _renderProductAttrSubfilters(productCategoryFilter);
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -1876,7 +1876,7 @@ function removeProductCategoryFilter() {
   productAttrValueFilters = new Map();
   _hideProductAttrSubfilters();
   document.querySelectorAll('.prod-cat-chip').forEach(btn => btn.classList.remove('selected'));
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 
@@ -1886,7 +1886,7 @@ function removeProductAttrFilter(key, value) {
     if (productAttrValueFilters.get(key).size === 0) productAttrValueFilters.delete(key);
   }
   if (productCategoryFilter) _renderProductAttrSubfilters(productCategoryFilter);
-  cardsToShow = 10;
+  cardsToShow = 15;
   render();
 }
 

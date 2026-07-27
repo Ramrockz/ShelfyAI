@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -231,8 +231,8 @@
   <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -760,7 +760,7 @@ function renderReorderPredictions() {
   if (!el) return;
 
   if (!allIngredients.length) {
-    el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     return;
   }
 
@@ -793,7 +793,7 @@ function renderReorderPredictions() {
 
   el.innerHTML = `<div class="table-scroll"><table class="top-products-table">
       <thead><tr>
-        <th>Ingredient</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Action</th>
+        <th>Item</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Action</th>
       </tr></thead>
       <tbody>
         ${predictions.map(p => {
@@ -818,7 +818,7 @@ function renderDeadStock() {
   if (!el) return;
 
   if (!allIngredients.length) {
-    el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No ingredients found</p></div>';
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
     return;
   }
 
@@ -861,7 +861,7 @@ function renderDeadStock() {
     </p>
     <div class="table-scroll"><table class="top-products-table">
       <thead><tr>
-        <th>Ingredient</th><th>In Stock</th><th>Tied-up Value</th>
+        <th>Item</th><th>In Stock</th><th>Tied-up Value</th>
       </tr></thead>
       <tbody>
         ${dead.map(ing => `<tr>

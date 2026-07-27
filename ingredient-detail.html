@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2026-05-31-nav-fix -->
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Ingredient Detail</title>
+<title>ShelfyAI &ndash; Item Detail</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
-<meta name="description" content="View and edit ingredient details in ShelfyAI." />
+<meta name="description" content="View and edit item details in ShelfyAI." />
 
 <script>
   // Apply theme immediately from localStorage to prevent flash
@@ -37,6 +38,7 @@
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
+<script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
@@ -988,7 +990,7 @@
       padding: 16px !important;
     }
 
-    /* Alert block — more compact */
+    /* Alert block &mdash; more compact */
     .alert-blocking {
       padding: 12px 16px;
       border-radius: 10px;
@@ -1002,7 +1004,7 @@
       font-size: 13px;
     }
 
-    /* Ingredient name — bigger */
+    /* Ingredient name &mdash; bigger */
     #ingredientName {
       font-size: 26px !important;
       font-weight: 800;
@@ -1018,10 +1020,10 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/ingredients" class="nav-link active" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
   </div>
 
@@ -1146,7 +1148,7 @@
 
   <div class="detail-header">
     <div>
-      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Ingredient name…" required oninput="document.getElementById('name').value=this.value" onblur="document.getElementById('name').value=this.value;autoSave()">
+      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Item name&hellip;" required oninput="document.getElementById('name').value=this.value" onblur="document.getElementById('name').value=this.value;autoSave()">
     </div>
     <div style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
@@ -1168,26 +1170,12 @@
     
     <!-- Left Column: Main Details -->
     <div class="panel">
-      <h3 class="ingredient-details-h3">Ingredient Details</h3>
+      <h3 class="ingredient-details-h3">Item Details</h3>
 
       <div class="form-section">
         <div class="form-group" id="name-desktop-group">
           <label for="name">Name *</label>
           <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required onblur="autoSave()">
-        </div>
-        <div class="form-group">
-          <label for="unit">Unit *</label>
-          <select id="unit" class="form-input" required onchange="autoSave(); updateStatsDisplay()">
-            <option value="">Select unit</option>
-            <option value="kg">Kilograms (kg)</option>
-            <option value="g">Grams (g)</option>
-            <option value="l">Liters (l)</option>
-            <option value="ml">Milliliters (ml)</option>
-            <option value="cm">Centimeters (cm)</option>
-            <option value="pcs">Pieces (pcs)</option>
-            <option value="lb">Pounds (lb)</option>
-            <option value="oz">Ounces (oz)</option>
-          </select>
         </div>
 
         <div class="form-row">
@@ -1260,7 +1248,7 @@
 
         <div class="form-group">
           <label for="notes">Notes</label>
-          <textarea id="notes" class="form-input" placeholder="Additional information about this ingredient..." onblur="autoSave()"></textarea>
+          <textarea id="notes" class="form-input" placeholder="Additional information about this item..." onblur="autoSave()"></textarea>
         </div>
       </div>
     </div>
@@ -1269,7 +1257,7 @@
     <div>
       <div class="panel" style="padding: 20px;">
         <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-          <button class="qty-adjust-btn" onclick="adjustQty(-1)">−</button>
+          <button class="qty-adjust-btn" onclick="adjustQty(-1)">&minus;</button>
           <span id="qtyDisplay" contenteditable="true" inputmode="decimal" spellcheck="false"
             style="font-size: 40px; font-weight: 800; line-height: 1; color: var(--success); outline: none; min-width: 1ch; cursor: text; border-radius: 8px; padding: 2px 6px;"
             onblur="commitQtyInput(this)"
@@ -1288,7 +1276,7 @@
       </div>
 
       <div class="panel" style="margin-top: 16px; padding: 20px;">
-        <h3 style="font-size: 14px; margin-bottom: 12px;">Used in Recipes</h3>
+        <h3 style="font-size: 14px; margin-bottom: 12px;">Used in Products</h3>
         <div id="recipesList" style="color: var(--text-muted); font-size: 12px;">
           <p>Loading...</p>
         </div>
@@ -1302,7 +1290,7 @@
 <!-- Place Reorder Modal -->
 <div class="reorder-modal" id="reorderModal" onclick="if(event.target === this) closeReorderModal()">
   <div class="reorder-modal-content">
-    <button class="modal-close" onclick="closeReorderModal()">×</button>
+    <button class="modal-close" onclick="closeReorderModal()">&times;</button>
     <div class="modal-header">
       <h3>Place Reorder</h3>
       <div class="source-url-display" id="sourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
@@ -1322,7 +1310,7 @@
 <!-- Confirm Delivery Modal -->
 <div class="modal-overlay modal-sheet" id="deliveryModal" onclick="if(event.target===this) closeDeliveryModal()">
   <div class="modal-content" style="position:relative;">
-    <button onclick="closeDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">×</button>
+    <button onclick="closeDeliveryModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;padding:4px 8px;">&times;</button>
     <h3 style="margin:0 0 8px 0;">Delivery</h3>
     <p style="color:var(--text-muted); font-size:14px; margin:0 0 24px 0;">Mark this delivery as received or cancel it.</p>
     <div style="display:flex; gap:12px;">
@@ -1364,7 +1352,7 @@
           <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
           <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
         </div>
-        <button onclick="clearFile()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
+        <button onclick="clearFile()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">&times;</button>
       </div>
     </div>
     
@@ -1427,7 +1415,7 @@
     const from = urlParams.get('from') || 'list';
     
     if (!id) {
-      showAlert('No ingredient ID provided');
+      showAlert('No item ID provided');
       setTimeout(() => {
         window.location.href = `/ingredients?view=${from}`;
       }, 1500);
@@ -1448,7 +1436,7 @@
         .single();
 
       if (error || !data) {
-        showAlert('Ingredient not found');
+        showAlert('Item not found');
         setTimeout(() => {
           window.location.href = `/ingredients?view=${from}`;
         }, 1500);
@@ -1474,7 +1462,7 @@
         }, 300);
       }
     } catch (err) {
-      showAlert('Error loading ingredient: ' + err.message);
+      showAlert('Error loading item: ' + err.message);
     }
   }
 
@@ -1493,7 +1481,6 @@
     document.getElementById('name').value = ing.name || '';
     const mobileNameEl = document.getElementById('name-mobile');
     if (mobileNameEl) mobileNameEl.value = ing.name || '';
-    document.getElementById('unit').value = ing.unit || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
     document.getElementById('category').value = ing.category || '';
     document.getElementById('min_stock').value = ing.min_stock || '';
@@ -1557,7 +1544,7 @@
   function getCurrentFormState() {
     return {
       name: document.getElementById('name').value,
-      unit: document.getElementById('unit').value,
+      unit: currentIngredient?.unit || '',
       cost_per_unit: document.getElementById('cost_per_unit').value,
       category: document.getElementById('category').value,
       min_stock: document.getElementById('min_stock').value,
@@ -1600,7 +1587,7 @@
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Please log in to view recipes</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Please log in to view products</p>';
         return;
       }
 
@@ -1626,7 +1613,7 @@
       });
 
       if (recipesWithIngredient.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Not used in any recipes yet</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Not used in any products yet</p>';
         return;
       }
 
@@ -1637,7 +1624,7 @@
           return compIngId === ingredientId;
         });
         
-        const quantity = component ? `${component.quantity} ${component.unit || ''}` : '';
+        const quantity = component ? `${component.quantity}` : '';
         
         return `
           <div style="padding: 12px; background: var(--bg-inner); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" 
@@ -1657,7 +1644,7 @@
 
     } catch (error) {
       console.error('Error loading recipes:', error);
-      container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Error loading recipes</p>';
+      container.innerHTML = '<p style="color: var(--danger); font-size: 13px;">Error loading products</p>';
     }
   }
 
@@ -2117,10 +2104,10 @@
       if (error) {
         // Don't show error if request was aborted
         if (error.name === 'AbortError') return;
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
         return;
       }
-      
+
       if (!data || data.length === 0) {
         container.innerHTML = '';
         return;
@@ -2158,7 +2145,7 @@
           <div class="ingredient-item-content">
             <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
             ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
-            <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
+            <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty}</div>
           </div>
           ${stockBadge}
         </div>`;
@@ -2169,7 +2156,7 @@
       const visible = isMobile ? data : data.slice(0, PAGE);
       const remaining = isMobile ? 0 : data.length - PAGE;
 
-      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other ingredients from this source</h4>'
+      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other items from this source</h4>'
         + '<div id="reorderItemsVisible">' + visible.map(renderReorderItem).join('') + '</div>'
         + (remaining > 0 ? `<button id="reorderShowMore" onclick="showMoreReorderItems()" style="margin-top: 10px; width: 100%; padding: 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer;">Show ${remaining} more</button>` : '');
 
@@ -2178,7 +2165,7 @@
       }
     } catch (err) {
       console.error('Error loading reorder ingredients:', err);
-      document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading ingredients</p>';
+      document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
     }
   }
 
@@ -2209,7 +2196,7 @@
         <div class="ingredient-item-content">
           <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
           ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
-          <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty} ${ing.unit || 'units'}</div>
+          <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty}</div>
         </div>
         ${stockBadge}
       </div>`;
@@ -2326,7 +2313,7 @@
       row.innerHTML = `
         <input type="text" value="${key}" placeholder="Attribute name" onchange="updateCustomAttribute('${key}', this.value, this.nextElementSibling.value)">
         <input type="text" value="${value}" placeholder="Value" onchange="updateCustomAttribute('${key}', this.previousElementSibling.value, this.value)">
-        <button onclick="removeCustomAttribute('${key}')">×</button>
+        <button onclick="removeCustomAttribute('${key}')">&times;</button>
       `;
       container.appendChild(row);
     });
@@ -2369,10 +2356,10 @@
       
       const starIcon = document.getElementById('starIcon');
       if (newState) {
-        starIcon.textContent = '★';
+        starIcon.textContent = '&#9733;';
         starIcon.classList.add('favorited');
       } else {
-        starIcon.textContent = '☆';
+        starIcon.textContent = '&#9734;';
         starIcon.classList.remove('favorited');
       }
       
@@ -2387,7 +2374,7 @@
 
     const updateData = {
       name: document.getElementById('name').value,
-      unit: document.getElementById('unit').value,
+      unit: currentIngredient?.unit || '',
       cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
       category: document.getElementById('category').value,
       min_stock: parseFloat(document.getElementById('min_stock').value) || null,
@@ -2455,7 +2442,7 @@
       div.innerHTML = `
         <input type="text" value="${key}" onchange="updateDetailDupAttributeKey(this,'${key}')" placeholder="Key" style="flex:1;margin-bottom:0;padding:10px;" />
         <input type="text" value="${value}" onchange="updateDetailDupAttributeValue('${key}',this.value)" placeholder="Value" style="flex:1;margin-bottom:0;padding:10px;" />
-        <button onclick="removeDetailDupAttribute('${key}')" style="background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:0 14px;cursor:pointer;font-weight:600;">×</button>`;
+        <button onclick="removeDetailDupAttribute('${key}')" style="background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:0 14px;cursor:pointer;font-weight:600;">&times;</button>`;
       container.appendChild(div);
     }
   }
@@ -2531,7 +2518,7 @@
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
-        showAlert('Please log in to duplicate ingredients');
+        showAlert('Please log in to duplicate items');
         return;
       }
 
@@ -2542,7 +2529,7 @@
       const duplicateData = {
         name: (document.getElementById('name')?.value || currentIngredient.name) + ' (Copy)',
         quantity: parseFloat(currentIngredient.quantity) || 0,
-        unit: document.getElementById('unit')?.value || currentIngredient.unit || '',
+        unit: currentIngredient.unit || '',
         cost_per_unit: parseFloat(document.getElementById('cost_per_unit')?.value ?? currentIngredient.cost_per_unit) || 0,
         category: document.getElementById('category')?.value || currentIngredient.category || '',
         min_stock: parseFloat(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock) || null,
@@ -2568,14 +2555,14 @@
       }
     } catch (err) {
       console.error('Error duplicating ingredient:', err);
-      showAlert('Failed to duplicate ingredient: ' + err.message);
+      showAlert('Failed to duplicate item: ' + err.message);
     }
   }
 
   async function deleteIngredient() {
     if (!currentIngredient) return;
     
-    if (!await showConfirm('Are you sure you want to delete this ingredient?', 'Delete Ingredient', 'Cancel', 'Delete', true)) return;
+    if (!await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Cancel', 'Delete', true)) return;
 
     try {
       const { error } = await supabaseClient
@@ -2601,268 +2588,48 @@
 
 
   // === Notification System ===
-  let notificationsCache = [];
-  let notificationReorderMap = {};
-  let notificationCheckInterval = null;
-
-  async function initializeNotifications() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
-      document.getElementById('notificationBell').style.display = 'flex';
-      await loadNotifications();
-      notificationCheckInterval = setInterval(loadNotifications, 30000);
-    }
-  }
-
-  async function loadNotifications() {
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      
-      const { data: notifications, error } = await supabaseClient
-        .from('notifications')
-        .select('*')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      
-      notificationsCache = notifications || [];
-
-      // Fetch reorder_pending for each ingredient referenced in notifications
-      const ingIds = [...new Set(notificationsCache.map(n => n.ingredient_id).filter(Boolean))];
-      if (ingIds.length > 0) {
-        const { data: ings } = await supabaseClient
-          .from('ingredients').select('id, reorder_pending').in('id', ingIds);
-        notificationReorderMap = {};
-        (ings || []).forEach(ing => { notificationReorderMap[ing.id] = ing.reorder_pending; });
-      } else {
-        notificationReorderMap = {};
-      }
-
-      renderNotifications();
-      updateNotificationBadge();
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    }
-  }
-
-  function renderNotifications() {
-    const listContainer = document.getElementById('notificationList');
-    
-    if (notificationsCache.length === 0) {
-      listContainer.innerHTML = `
-        <div class="notification-empty">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-          </svg>
-          <p>No notifications</p>
-        </div>
-      `;
-      return;
-    }
-    
-    listContainer.innerHTML = notificationsCache.map(notification => `
-      <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
-           data-notification-id="${notification.id}"
-           onmouseenter="markAsRead('${notification.id}')"
-           ${notification.ingredient_id ? `onclick="openIngredient('${notification.ingredient_id}')"` : ''}>
-        <div class="notification-message">${notification.message}</div>
-        <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
-        <div class="notification-actions">
-          ${notification.ingredient_id ? `
-            <button class="notif-reorder-btn" title="${notificationReorderMap[notification.ingredient_id] ? 'Confirm Delivery' : 'Reorder'}" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-              <span class="truck-anim-icon${notificationReorderMap[notification.ingredient_id] ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
-            </button>
-            <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
-          ` : ''}
-          <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function updateNotificationBadge() {
-    const unreadCount = notificationsCache.filter(n => !n.is_read).length;
-    const badge = document.getElementById('notificationBadge');
-    
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-      badge.style.display = 'block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-
-  function formatNotificationTime(timestamp) {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diff = Math.floor((now - time) / 1000);
-    
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
-    return time.toLocaleDateString();
-  }
-
-  function toggleNotifications() {
-    const dropdown = document.getElementById('notificationDropdown');
-    dropdown.classList.toggle('active');
-  }
-
-  document.addEventListener('click', (e) => {
-    const bell = document.getElementById('notificationBell');
-    const dropdown = document.getElementById('notificationDropdown');
-    
-    if (bell && dropdown && !bell.contains(e.target)) {
-      dropdown.classList.remove('active');
-    }
-  });
-
-  async function markAsRead(notificationId) {
-    const notification = notificationsCache.find(n => n.id === notificationId);
-    if (!notification || notification.is_read) return;
-    
-    try {
-      const { error } = await supabaseClient
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('id', notificationId);
-      
-      if (error) throw error;
-      
-      notification.is_read = true;
-      updateNotificationBadge();
-      
-      const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
-      if (item) {
-        item.classList.remove('unread');
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  }
-
-  async function markAllAsRead() {
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      
-      const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
-      if (unreadIds.length === 0) return;
-      
-      const { error } = await supabaseClient
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .in('id', unreadIds);
-      
-      if (error) throw error;
-      
-      notificationsCache.forEach(n => {
-        if (!n.is_read) n.is_read = true;
-      });
-      
-      renderNotifications();
-      updateNotificationBadge();
-      
-      if (typeof showNotification === 'function') {
-        showNotification('All notifications marked as read', 'success');
-      }
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-    }
-  }
-
-  async function deleteNotification(notificationId) {
-    try {
-      const { error } = await supabaseClient
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-      
-      if (error) throw error;
-      
-      notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
-      
-      renderNotifications();
-      updateNotificationBadge();
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-    }
-  }
-
-  function openIngredient(ingredientId) {
-    window.location.href = `/ingredient-detail?id=${ingredientId}`;
-  }
-
-  async function restockIngredient(ingredientId, notificationId) {
-    try {
-      // Check if we're already on this ingredient's detail page
-      if (currentIngredient && ingredientId === currentIngredient.id) {
-        // Close notification dropdown
-        const dropdown = document.getElementById('notificationDropdown');
-        if (dropdown) dropdown.classList.remove('active');
-        
-        // Trigger reorder (will show hint if no source URL)
-        handleReorderClick();
-      } else {
-        // Navigate to the ingredient detail page with openReorder parameter
-        window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
-      }
-    } catch (error) {
-      console.error('Error restocking ingredient:', error);
-      showAlert('Failed to restock ingredient', 'error');
-    }
-  }
-
+  // All notification functions are handled by notifications.js
+  // Page-specific helper for out-of-stock notifications
   async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
-    try {
-      // Check user's notification settings from database
-      const { data: settings } = await supabaseClient
-        .from('user_settings')
-        .select('notifications_enabled, out_of_stock_notifications')
-        .eq('user_id', userId)
-        .single();
-      
-      // Don't create notification if disabled
-      if (!settings || !settings.notifications_enabled || !settings.out_of_stock_notifications) {
-        return;
-      }
+    // This function is still needed for ingredient-specific logic
+    if (typeof window.createOutOfStockNotification === 'function') {
+      await window.createOutOfStockNotification(ingredientId, ingredientName, userId);
+    }
+  }
 
-      const { data: existing, error: checkError } = await supabaseClient
-        .from('notifications')
-        .select('id')
-        .eq('profile_id', userId)
-        .eq('ingredient_id', ingredientId)
-        .eq('type', 'ingredient_out_of_stock')
-        .eq('is_read', false);
+  // Check URL parameters for auto-opening modals
+  function checkUrlParameters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Auto-open delivery modal if openDelivery=true
+    if (urlParams.get('openDelivery') === 'true') {
+      // Wait for ingredient to load, then open delivery modal
+      const checkIngredient = setInterval(() => {
+        if (currentIngredient && currentIngredient.reorder_pending) {
+          clearInterval(checkIngredient);
+          openDeliveryModal();
+        }
+      }, 100);
       
-      if (checkError) throw checkError;
+      // Clear interval after 5 seconds to prevent infinite checking
+      setTimeout(() => clearInterval(checkIngredient), 5000);
+    }
+    
+    // Auto-open reorder modal if openReorder=true (existing functionality)
+    if (urlParams.get('openReorder') === 'true') {
+      const checkIngredient = setInterval(() => {
+        if (currentIngredient) {
+          clearInterval(checkIngredient);
+          handleReorderClick();
+        }
+      }, 100);
       
-      if (existing && existing.length > 0) return;
-      
-      const { error: insertError } = await supabaseClient
-        .from('notifications')
-        .insert([{
-          profile_id: userId,
-          type: 'ingredient_out_of_stock',
-          ingredient_id: ingredientId,
-          message: `Ingredient ${ingredientName} has run out of stock`,
-          is_read: false
-        }]);
-      
-      if (insertError) throw insertError;
-      
-      await loadNotifications();
-    } catch (error) {
-      console.error('Error creating notification:', error);
+      setTimeout(() => clearInterval(checkIngredient), 5000);
     }
   }
 
   loadIngredientDetail();
-  initializeNotifications();
+  checkUrlParameters();
   lucide.createIcons();
 </script>
 
@@ -2873,29 +2640,29 @@
 
 <div class="feedback-modal" id="feedbackModal" onclick="if(event.target === this) closeFeedback()">
   <div class="feedback-content">
-    <button class="feedback-close" onclick="closeFeedback()">×</button>
+    <button class="feedback-close" onclick="closeFeedback()">&times;</button>
     
     <div class="feedback-step" id="step1">
       <h3>How would you rate your experience?</h3>
       <div class="emoji-rating">
         <div class="emoji" onclick="selectRating(1)" data-rating="1">
-          <div class="emoji-face">😡</div>
+          <div class="emoji-face">ðŸ˜¡</div>
           <div class="emoji-label">Hate</div>
         </div>
         <div class="emoji" onclick="selectRating(2)" data-rating="2">
-          <div class="emoji-face">😟</div>
+          <div class="emoji-face">ðŸ˜Ÿ</div>
           <div class="emoji-label">Bad</div>
         </div>
         <div class="emoji" onclick="selectRating(3)" data-rating="3">
-          <div class="emoji-face">😐</div>
+          <div class="emoji-face">ðŸ˜</div>
           <div class="emoji-label">Okay</div>
         </div>
         <div class="emoji" onclick="selectRating(4)" data-rating="4">
-          <div class="emoji-face">😊</div>
+          <div class="emoji-face">ðŸ˜Š</div>
           <div class="emoji-label">Good</div>
         </div>
         <div class="emoji" onclick="selectRating(5)" data-rating="5">
-          <div class="emoji-face">🤩</div>
+          <div class="emoji-face">ðŸ¤©</div>
           <div class="emoji-label">Love</div>
         </div>
       </div>
@@ -3056,10 +2823,10 @@ document.addEventListener('keydown', (e) => {
 <!-- Duplicate Ingredient Modal -->
 <div class="modal-overlay" id="detailDuplicateModal" onclick="if(event.target===this)closeDetailDuplicateModal()">
   <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Ingredient</h3>
-    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated ingredient</p>
+    <h3 style="margin-top:0; margin-bottom: 8px;">Duplicate Item</h3>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Customize the duplicated item</p>
     <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Name</label>
-    <input type="text" id="detailDupName" placeholder="Ingredient Name" style="margin-bottom: 16px;" />
+    <input type="text" id="detailDupName" placeholder="Item Name" style="margin-bottom: 16px;" />
     <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Quantity</label>
     <input id="detailDupQty" type="number" step="0.01" placeholder="0" style="margin-bottom: 16px;" />
     <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px; letter-spacing: 0.05em;">Source URL</label>
@@ -3099,12 +2866,12 @@ document.addEventListener('keydown', (e) => {
 <!-- No Source URL Modal -->
 <div class="modal-overlay modal-sheet" id="noSourceModal" onclick="if(event.target === this) closeNoSourceModal()">
   <div class="modal-content">
-    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">📍 Source URL Missing</h3>
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">ðŸ“ Source URL Missing</h3>
     <p style="color: var(--text-main); font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
       We don't know where to restock this ingredient from yet.
     </p>
     <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
-      💡 <strong>Tip:</strong> Add a source URL (like a supplier website or product page) to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
+      ðŸ’¡ <strong>Tip:</strong> Add a source URL (like a supplier website or product page) to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
     </p>
     <div style="display: flex; gap: 12px;">
       <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="closeNoSourceModal()">Cancel</button>
@@ -3130,8 +2897,8 @@ document.addEventListener('keydown', (e) => {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
@@ -3147,7 +2914,7 @@ document.addEventListener('keydown', (e) => {
       </div>
     </div>
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
-      © 2026 ShelfyAI. All rights reserved.
+      Â© 2026 ShelfyAI. All rights reserved.
     </div>
   </div>
 </footer>

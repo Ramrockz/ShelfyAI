@@ -56,7 +56,21 @@
       "Bash(git commit -m 'Add switch-account-modal.js; global modal-content styles; fix analytics/expense-detail/order-detail *)",
       "Bash(findstr /i \"cat delivery\")",
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\\" | Where-Object { $_.Name -match \"cat|delivery|png|jpg|webp\" } | Select-Object Name)",
-      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\\" | Where-Object { $_.Name -match \"order|cat|search|empty|magnif\" -and $_.Name -match \"\\\\.\\(png|jpg|webp|svg\\)\" } | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\\" | Where-Object { $_.Name -match \"order|cat|search|empty|magnif\" -and $_.Name -match \"\\\\.\\(png|jpg|webp|svg\\)\" } | Select-Object Name)",
+      "Bash(powershell -Command \"\\(Get-Content 'ingredient-detail.html'\\) -replace 'data-page=\\\\\"recipes\\\\\">Recipes</a>', 'data-page=\\\\\"recipes\\\\\">Products</a>' | Set-Content 'ingredient-detail.html' -Encoding UTF8\")",
+      "Bash(powershell -Command \"\\(Get-Content 'ingredient-detail.html'\\) -replace '<h3 style=\\\\\"font-size: 14px; margin-bottom: 12px;\\\\\">Used in Recipes</h3>', '<h3 style=\\\\\"font-size: 14px; margin-bottom: 12px;\\\\\">Used in Products</h3>' | Set-Content 'ingredient-detail.html' -Encoding UTF8\")",
+      "Bash(powershell -Command \"\\(Get-Content 'ingredients.html'\\) -replace 'data-page=\\\\\"recipes\\\\\">Recipes</a>', 'data-page=\\\\\"recipes\\\\\">Products</a>' | Set-Content 'ingredients.html' -Encoding UTF8\")",
+      "Bash(powershell -Command \"\\(Get-Content 'orders.html'\\) -replace 'data-page=\\\\\"recipes\\\\\">Recipes</a>', 'data-page=\\\\\"recipes\\\\\">Products</a>' | Set-Content 'orders.html' -Encoding UTF8\")",
+      "Bash(powershell -Command \"\\(Get-Content 'orders.html' -Raw\\) -replace 'Loading recipes.*', '' | Select-Object -First 1\")",
+      "Bash(powershell -Command \"\\(Get-Content 'order-detail.html'\\) -replace 'data-page=\\\\\"recipes\\\\\">Recipes</a>', 'data-page=\\\\\"recipes\\\\\">Products</a>' | Set-Content 'order-detail.html' -Encoding UTF8\")",
+      "Bash(grep -v \"//\")",
+      "Bash(grep -v \"//\\\\|class\\\\|id=\\\\|href\\\\|data-page\\\\|\\\\\\\\.from\\\\|\\\\.recipe\")",
+      "Bash(Get-Content \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\styles.css\")",
+      "Bash(Measure-Object -Line)",
+      "Bash(powershell -Command \"Get-Content 'c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\operations.html' | Select-Object -Last 200 | Select-Object -First 100\")",
+      "Bash(powershell -Command \"\\(Get-Content 'c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\\\\operations.html' -ReadCount 0 | Measure-Object -Line\\).Lines\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Shelfy-Main-main\\\\Shelfy-Main-main\\\\Shelfy-main\\\\Shelfy-main\" -Recurse -Include \"*.html\")",
+      "Bash(grep -E \"\\\\.\\(js|html\\)$\")"
     ]
   }
 }

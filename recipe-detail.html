@@ -709,7 +709,7 @@
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
     <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
+    <a href="/recipes" class="nav-link active" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
@@ -853,14 +853,30 @@
     </div>
   </div>
 
+  <!-- Cost / Sales Price summary -->
+  <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:160px;background:var(--bg-inner);border:2px solid var(--border);border-radius:14px;padding:16px 20px;">
+      <div style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">Production Cost</div>
+      <div id="productionCostDisplay" style="font-size:28px;font-weight:800;color:var(--text-main);">$0.00</div>
+    </div>
+    <div style="flex:1;min-width:160px;background:var(--bg-inner);border:2px solid var(--border);border-radius:14px;padding:16px 20px;">
+      <div style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;margin-bottom:6px;">Sales Price</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:22px;font-weight:700;color:var(--text-main);">$</span>
+        <input type="number" id="retailPriceInput" min="0" step="0.01" placeholder="0.00"
+          style="font-size:22px;font-weight:700;color:var(--text-main);background:transparent;border:none;border-bottom:2px solid var(--border);width:100%;outline:none;padding:2px 0;"
+          onblur="updateRetailPrice()"
+          onkeydown="if(event.key==='Enter')this.blur();" />
+      </div>
+    </div>
+  </div>
+
   <div style="max-width: 100%;">
-    
+
     <div class="panel">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
         <h3 style="margin:0;">Items</h3>
       </div>
-      <!-- hidden: still updated by JS but no longer displayed -->
-      <div id="productionCostDisplay" style="display:none;">$0.00</div>
       <div id="ingredientsList">
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
       </div>
@@ -1001,6 +1017,12 @@ async function renderRecipe() {
   const cost = parseFloat(recipe.cost) || 0;
   const costEl = document.getElementById('productionCostDisplay');
   if (costEl) costEl.textContent = `$${cost.toFixed(2)}`;
+
+  // Sales price
+  const priceInput = document.getElementById('retailPriceInput');
+  if (priceInput && document.activeElement !== priceInput) {
+    priceInput.value = recipe.retail_price != null ? parseFloat(recipe.retail_price).toFixed(2) : '';
+  }
 
   // Ingredients List
   const components = recipe.components || [];

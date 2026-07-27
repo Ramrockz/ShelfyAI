@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Version: 2026-05-31-ingredient-match -->
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>ShelfyAI – Order Detail</title>
+<title>ShelfyAI &ndash; Order Detail</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <!-- Prevent search engine indexing -->
@@ -31,10 +32,12 @@
   document.documentElement.style.visibility = 'hidden';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
+<script src="notifications.js"></script>
 
 <style>
   .container {
@@ -56,18 +59,37 @@
   .detail-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    gap: 24px;
     margin-bottom: 32px;
   }
+  .detail-header > div:first-child { min-width: 0; flex: 1; }
+  .detail-header > div:last-child { flex-shrink: 0; }
+
+  .detail-title-input {
+    font-size: 26px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    outline: none;
+    font-family: inherit;
+    color: var(--text-main);
+    padding: 2px 0;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .detail-title-input:focus { border-bottom-color: var(--accent); }
 
   .header-title {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
   }
 
   .header-title h1 {
-    font-size: 32px;
+    font-size: 26px;
+    font-weight: 500;
     margin: 0;
     color: var(--text-main);
   }
@@ -105,6 +127,69 @@
     display: flex;
     gap: 12px;
     align-items: center;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-outline { 
+    background: var(--bg-inner); 
+    color: var(--text-muted); 
+    border: 1px solid var(--border); 
+    font-size: 13px; 
+    padding: 7px 14px; 
+    border-radius: 8px; 
+  }
+  .btn-outline:hover { 
+    background: var(--border); 
+    color: var(--text-main); 
+  }
+  .btn-danger { 
+    background: transparent; 
+    color: var(--danger); 
+    border: 1px solid rgba(239, 68, 68, 0.3); 
+    font-size: 13px; 
+    padding: 7px 14px; 
+    border-radius: 8px; 
+  }
+  .btn-danger:hover { 
+    background: var(--danger); 
+    color: #fff; 
+    border-color: var(--danger); 
+  }
+
+  .detail-del-btn {
+    background: none; 
+    border: none; 
+    cursor: pointer;
+    font-size: 11px; 
+    font-weight: 800; 
+    letter-spacing: 0.05em; 
+    text-transform: uppercase; 
+    padding: 0;
+    color: var(--danger);
+  }
+
+  .detail-cta-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0;
+    color: var(--accent);
+  }
+
+  .detail-cta-btn:hover, .detail-del-btn:hover {
+    opacity: 0.7;
   }
 
   .btn-status {
@@ -153,6 +238,108 @@
 
   .btn-status.refunded:hover {
     background: rgba(239, 68, 68, 0.2);
+  }
+
+  /* Form styling - matching ingredient-detail */
+  .form-section {
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .form-section h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .form-input, .info-value {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  .info-value {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+  }
+
+  .cat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .cat-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: var(--bg-inner);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1 1 44px;
+    max-width: 54px;
+    color: var(--text-muted);
+  }
+
+  .cat-chip svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.75;
+  }
+
+  .cat-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .cat-chip.selected {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
   .btn-delete {
@@ -206,6 +393,19 @@
     color: var(--text-main);
   }
 
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
   .modal-content p {
     margin: 0 0 24px 0;
     color: var(--text-muted);
@@ -220,9 +420,9 @@
 
   .modal-actions button {
     flex: 1;
-    padding: 12px 24px;
+    padding: 14px 24px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -299,22 +499,17 @@
     color: var(--text-main);
   }
 
-  .section {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
+  .recipes-section {
+    margin-top: 32px;
   }
 
   .section-title {
-    font-size: 16px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-muted);
     font-weight: 700;
-    color: var(--text-main);
-    margin: 0 0 20px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin: 0 0 16px 0;
+    letter-spacing: 0.05em;
   }
 
   .receipt-attach-btn {
@@ -350,6 +545,11 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+  }
+
+  @keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
   }
 
   table {
@@ -421,7 +621,384 @@
     margin-bottom: 6px;
   }
 
+  .receipt-attach-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--bg-inner);
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+  .receipt-attach-btn:hover, .receipt-attach-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .receipt-preview-img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .receipt-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .receipt-actions a,
+  .receipt-actions button {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 16px;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .receipt-actions a:hover,
+  .receipt-actions button:hover {
+    background: var(--border);
+  }
+
+  /* Inline editing */
+  .editable-field {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .editable-field:hover {
+    background: var(--bg-inner);
+  }
+
+  .editable-input {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    background: var(--bg-main);
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: inherit;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Sales Channel Logos */
+  .channel-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .channel-etsy { background: #F56400; }
+  .channel-shopify { background: #96BF48; }
+  .channel-woocommerce { background: #96588A; }
+  .channel-website { background: #3b82f6; }
+  .channel-local { background: #6b7280; }
+
+  .cat-chip img { width: 20px; height: 20px; display: block; }
+
+  .items-desktop-table { display: table; }
+  .items-mobile-list   { display: none; }
+
+  /* Mobile Bottom CTAs */
+  .mobile-bottom-ctas {
+    display: none;
+  }
+
+  .mobile-cta-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-panel);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mobile-cta-btn svg,
+  .mobile-cta-btn i {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+  }
+
+  .mobile-cta-btn.delete {
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .mobile-cta-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Recipe Cards for Mobile */
+  .recipe-card {
+    display: none;
+    background: var(--bg-inner);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .recipe-card-header {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-main);
+    margin-bottom: 12px;
+  }
+
+  .recipe-card-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .recipe-card-row:last-child {
+    border-bottom: none;
+  }
+
+  .recipe-card-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .recipe-card-value {
+    font-size: 14px;
+    color: var(--text-main);
+    font-weight: 500;
+    text-align: right;
+  }
+
+  /* ---------- RECIPE PICKER MODAL ---------- */
+  .recipe-picker-modal .modal-content {
+    max-width: 880px !important;
+    width: calc(100% - 32px) !important;
+    height: auto !important;
+    max-height: 88vh !important;
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .recipe-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  
+  .recipe-picker-search {
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+  }
+  
+  .recipe-picker-search input {
+    width: 100%;
+    padding: 12px 38px 12px 38px !important;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .recipe-picker-search input:focus { border-color: var(--accent); }
+  
+  .recipe-picker-search .search-icon {
+    position: absolute;
+    left: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 10;
+  }
+  
+  .recipe-picker-search .search-clear {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    transition: all 0.2s;
+    z-index: 10;
+  }
+  
+  .recipe-picker-search .search-clear:hover {
+    background: var(--bg-inner);
+    color: var(--text-main);
+  }
+  
+  .recipe-picker-search .search-clear.visible { display: flex; }
+  
+  .recipe-picker-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 28px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+  
+  .recipe-picker-body::-webkit-scrollbar { width: 6px; }
+  .recipe-picker-body::-webkit-scrollbar-track { background: transparent; }
+  .recipe-picker-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+  
+  .recipe-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 0 0 12px 0;
+  }
+  
+  .recipe-picker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  
+  .recipe-ing-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .recipe-ing-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .recipe-ing-chip.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
+
+  .recipe-pick-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+  }
+  
+  .recipe-pick-card:hover { border-color: var(--accent); }
+  
+  .recipe-pick-card .card-name { 
+    font-weight: 600; 
+    font-size: 14px; 
+    flex: 1; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    min-width: 0; 
+    margin: 0; 
+    padding-right: 0; 
+  }
+  
+  .recipe-pick-card .card-price { 
+    font-size: 13px; 
+    color: var(--accent); 
+    font-weight: 700; 
+    white-space: nowrap; 
+    margin: 0; 
+    flex-shrink: 0; 
+  }
+  
+  .recipe-pick-card .fav-btn {
+    font-size: 16px; 
+    background: none; 
+    border: none; 
+    cursor: pointer; 
+    padding: 0; 
+    line-height: 1; 
+    flex-shrink: 0;
+    color: var(--text-muted); 
+    opacity: 0.5; 
+    transition: opacity 0.2s, color 0.2s, transform 0.2s;
+  }
+  
+  .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
+  .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
+  
+  .recipe-picker-footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 28px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+  }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
+  @media (max-width: 968px) {
+    .container { padding: 24px 16px; }
+
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel { padding: 24px 20px; }
+  }
+
   @media (max-width: 768px) {
     /* Hide chat and feedback widgets on mobile */
     #chat-widget,
@@ -430,71 +1007,58 @@
     }
 
     .container {
-      padding: 16px 12px;
+      padding: 16px 12px 240px 12px;
     }
 
-    /* Detail header: stack on mobile */
-    .detail-header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
-    }
-
-    .header-title {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .header-title h1 {
-      font-size: 24px;
-    }
-
+    /* Hide desktop actions, show mobile CTAs */
     .header-actions {
-      flex-direction: column;
+      display: none !important;
+    }
+
+    .mobile-bottom-ctas {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
-      width: 100%;
+      padding: 12px;
+      position: fixed;
+      bottom: 60px;
+      left: 0;
+      right: 0;
+      background: var(--bg-main);
+      border-top: 1px solid var(--border);
+      z-index: 999;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 
-    .header-actions button {
-      width: 100%;
-      padding: 12px 18px;
+    #receiptPanel {
+      margin-bottom: 160px;
     }
 
-    /* Main grid: single column on mobile */
-    .main-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
+    .mobile-cta-btn:not(.delete) {
+      color: var(--accent);
+      border-color: rgba(6, 182, 212, 0.3);
     }
 
-    /* Panel adjustments */
     .panel {
       padding: 16px;
       border-radius: 12px;
     }
 
-    /* Info grid */
-    .info-grid {
+    .form-row {
       grid-template-columns: 1fr;
       gap: 12px;
     }
 
-    /* Items table - horizontal scroll */
-    .items-table-wrapper {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      margin: 0 -16px;
-      padding: 0 16px;
+    /* Hide table, show cards */
+    .items-desktop-table { display: none !important; }
+    .items-mobile-list   { display: block !important; }
+
+    #itemsTable {
+      display: none;
     }
 
-    table {
-      min-width: 500px;
-      font-size: 13px;
-    }
-
-    table th,
-    table td {
-      padding: 12px 6px;
+    .recipe-card {
+      display: block;
     }
 
     /* Modal adjustments */
@@ -558,10 +1122,10 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
+    <a href="/orders" class="nav-link active" data-page="orders">Orders</a>
     <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
-    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
   </div>
 
@@ -687,110 +1251,169 @@
 
 <div class="container">
   
-  <div class="detail-header">
-    <div class="header-title">
-      <h1 id="orderTitle">Order Details</h1>
-      <span id="orderStatus" class="status-badge"></span>
+  <div class="main-grid">
+
+    <!-- Revenue Panel (first in DOM = first on mobile) -->
+    <div id="revenuePanel" class="panel" style="padding: 24px;">
+      <div style="text-align: center; margin-bottom: 8px;">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 8px;">Total Revenue</div>
+        <div id="totalRevenue" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1;">-</div>
+      </div>
     </div>
-    <div class="header-actions">
-      <button id="btnFulfilled" class="btn-status fulfilled" onclick="showStatusModal('fulfilled')" title="Mark as Fulfilled">
-        <i data-lucide="check"></i>
-      </button>
-      <button id="btnShipped" class="btn-status shipped" onclick="showTrackingModal()" title="Mark as Shipped">
-        <i data-lucide="package"></i>
-      </button>
-      <button id="btnRefunded" class="btn-status refunded" onclick="showStatusModal('refunded')" title="Mark as Refunded">
-        <i data-lucide="undo-2"></i>
-      </button>
-      <button class="btn-delete" onclick="showDeleteModal()" title="Delete Order">
-        <i data-lucide="trash-2"></i>
-      </button>
+
+    <!-- Left Column: Order Details -->
+    <div id="leftColumn">
+
+      <div class="form-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Order Details</h2>
+            <span id="orderStatus" class="status-badge"></span>
+          </div>
+          <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
+            <button id="btnShipped" class="detail-cta-btn" onclick="showTrackingModal()" title="Mark as Shipped">Shipped</button>
+            <button id="btnRefunded" class="detail-cta-btn" onclick="showStatusModal('refunded')" title="Mark as Refunded">Refunded</button>
+            <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="customerName">Customer Name *</label>
+          <div class="info-value editable-field" id="customerName" onclick="makeEditable('customerName', 'customer')">-</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="orderReference">Order Reference</label>
+            <div class="info-value editable-field" id="orderReference" onclick="makeEditable('orderReference', 'order_reference')">-</div>
+          </div>
+          <div class="form-group">
+            <label for="orderDate">Order Date</label>
+            <div class="info-value editable-field" id="orderDate" onclick="makeEditable('orderDate', 'sale_date')" style="cursor: pointer;">-</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="salesChannel">Sales Channel</label>
+            <div id="salesChannelPicker" class="cat-grid" style="margin-bottom: 12px;">
+              <div class="cat-chip" data-channel="Etsy" onclick="selectChannel('Etsy')" title="Etsy">
+                <img src="https://cdn.simpleicons.org/etsy/F56400" alt="Etsy">
+              </div>
+              <div class="cat-chip" data-channel="Shopify" onclick="selectChannel('Shopify')" title="Shopify">
+                <img src="https://cdn.simpleicons.org/shopify/96BF48" alt="Shopify">
+              </div>
+              <div class="cat-chip" data-channel="Website" onclick="selectChannel('Website')" title="Own Website">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              </div>
+              <div class="cat-chip" data-channel="Local" onclick="selectChannel('Local')" title="Local / In-person">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div class="cat-chip" data-channel="Other" onclick="selectChannel('Other')" title="Other" style="font-size:11px;font-weight:600;">
+                Other
+              </div>
+            </div>
+            <div class="info-value" id="salesChannel" style="display: none;">-</div>
+          </div>
+        </div>
+        <div class="form-group" id="trackingGroup" style="display: none;">
+          <label for="trackingNumber">Tracking Number</label>
+          <div class="info-value editable-field" id="trackingNumber" onclick="makeEditable('trackingNumber', 'tracking_number')">-</div>
+        </div>
+      </div>
+
+      <div class="form-section recipes-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Included Products</h3>
+          <button onclick="openRecipeModal()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+            Add
+          </button>
+        </div>
+        
+        <!-- Desktop Table -->
+        <table id="itemsTable" class="items-desktop-table">
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTableBody"></tbody>
+        </table>
+
+        <!-- Mobile Cards -->
+        <div id="recipesCardsContainer" class="items-mobile-list"></div>
+      </div>
+
+      <div class="form-section" id="notesSection" style="display: none;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Notes</h3>
+        <p id="orderNotes" style="margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.6;"></p>
+      </div>
+    </div>
+
+    <!-- Receipt Panel -->
+    <div id="receiptPanel" class="panel" style="padding: 24px; border: 1px solid var(--border);">
+      <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Receipts</h3>
+      <div id="receiptContent">
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Receipt upload requires Supabase storage bucket setup. Please contact support to enable this feature.</p>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="info-grid">
-    <div class="info-card">
-      <div class="info-card-label">Customer</div>
-      <div class="info-card-value" id="customerName">-</div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">Sales Channel</div>
-      <div class="info-card-value" id="salesChannel">-</div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">Order Date</div>
-      <div class="info-card-value" id="orderDate">-</div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">Order Reference</div>
-      <div class="info-card-value" id="orderReference">-</div>
-    </div>
-    <div class="info-card" id="trackingCard" style="display: none;">
-      <div class="info-card-label">Tracking Number</div>
-      <div class="info-card-value" id="trackingNumber">-</div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">Total Quantity</div>
-      <div class="info-card-value" id="totalQuantity">-</div>
-    </div>
-    <div class="info-card">
-      <div class="info-card-label">Total Revenue</div>
-      <div class="info-card-value" id="totalRevenue">-</div>
-    </div>
+<!-- Mobile Bottom CTAs -->
+<div class="mobile-bottom-ctas">
+  <div class="mobile-cta-btn delete" onclick="showDeleteModal()" title="Delete">
+    <i data-lucide="trash-2"></i>
   </div>
-
-  <div class="section">
-    <h3 class="section-title">Order Items</h3>
-    <table id="itemsTable">
-      <thead>
-        <tr>
-          <th>Item Name</th>
-          <th>Quantity</th>
-          <th>Unit Price</th>
-          <th>Total</th>
-          <th>Recipe Used</th>
-        </tr>
-      </thead>
-      <tbody id="itemsTableBody"></tbody>
-    </table>
+  <div class="mobile-cta-btn" onclick="showStatusModal('refunded')" title="Refund">
+    <i data-lucide="undo-2"></i>
   </div>
-
-  <div class="section" id="affectedIngredientsSection" style="display: none;">
-    <h3 class="section-title">Updated Inventory</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Ingredient</th>
-          <th>Old Quantity</th>
-          <th>New Quantity</th>
-          <th>Change</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody id="affectedIngredientsBody"></tbody>
-    </table>
+  <div class="mobile-cta-btn" onclick="showTrackingModal()" title="Mark as Shipped">
+    <i data-lucide="package"></i>
   </div>
+</div>
 
-  <div class="section" id="notesSection" style="display: none;">
-    <h3 class="section-title">📝 Notes</h3>
-    <p id="orderNotes" style="margin: 0; color: var(--text-muted);"></p>
-  </div>
-
-  <!-- Receipt Section -->
-  <div class="section" id="receiptSection">
-    <h3 class="section-title">Receipt</h3>
-    <div id="receiptContent">
-      <!-- Filled by displayReceiptSection() -->
+<!-- Add Recipe Modal -->
+<div class="modal-overlay recipe-picker-modal" id="recipeModal">
+  <div class="modal-content">
+    <div class="recipe-picker-header">
+      <div>
+        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select products to add to this order</p>
+      </div>
+      <button onclick="closeRecipeModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">&times;</button>
     </div>
-    <!-- Hidden file input — opened by the attach button -->
-    <input type="file" id="receiptFileInput" accept="image/*,application/pdf" capture="environment" style="display:none;" onchange="handleReceiptFile(this.files[0])">
+
+    <!-- Attribute filter chips -->
+    <div id="recipeAttrFilterWrapper" style="padding:6px 24px 0;border-bottom:1px solid var(--border);">
+      <div id="recipeModalAttrChips" style="display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px;min-height:36px;"></div>
+    </div>
+
+    <div class="recipe-picker-search">
+      <i data-lucide="search" class="search-icon"></i>
+      <input id="recipeSearchInput" type="text" placeholder="Search products by name..."
+             autocomplete="off"
+             oninput="filterRecipesInModal()"
+             onkeydown="if(event.key==='Escape'){this.value='';filterRecipesInModal();}">
+      <button class="search-clear" id="recipeSearchClear" type="button" onclick="document.getElementById('recipeSearchInput').value='';filterRecipesInModal();this.classList.remove('visible');" title="Clear search">&times;</button>
+    </div>
+
+    <div class="recipe-picker-body" id="recipeListContainer">
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
+    </div>
+
+    <div class="recipe-picker-footer" style="padding:14px 24px;">
+      <button class="btn" style="width:100%;padding:10px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeRecipeModal()">Close</button>
+    </div>
   </div>
 </div>
 
 <!-- Status Confirmation Modal -->
 <div class="modal-overlay" id="statusModal" onclick="if(event.target === this) closeStatusModal()">
   <div class="modal-content">
-    <h3>Confirm Status Change</h3>
+    <h3 id="statusModalTitle">Confirm Status Change</h3>
     <p id="statusModalMessage">Are you sure you want to update this order status?</p>
     <div class="modal-actions">
       <button class="btn-primary" onclick="confirmStatusChange()">Confirm</button>
@@ -819,11 +1442,48 @@
 <!-- Delete Confirmation Modal -->
 <div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
   <div class="modal-content">
-    <h3>Delete Order</h3>
-    <p>Are you sure you want to delete this order? This action cannot be undone.</p>
+    <div class="modal-header">
+      <h3>Delete Order</h3>
+      <button onclick="closeDeleteModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">&times;</button>
+    </div>
+    <p id="deleteModalText" style="margin: 16px 0; color: var(--text-main);">Are you sure you want to delete this order? This action cannot be undone.</p>
     <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-      <button class="btn-primary" style="background: #ef4444;" onclick="confirmDelete()">Delete</button>
+      <button class="btn-secondary" onclick="closeDeleteModal()" style="flex: 1;">Cancel</button>
+      <button class="btn-primary" style="background: #ef4444; flex: 1;" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quantity Input Modal -->
+<div class="modal-overlay" id="quantityModal" onclick="if(event.target === this) closeQuantityModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add Product</h3>
+      <button onclick="closeQuantityModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">&times;</button>
+    </div>
+    <p id="quantityModalRecipeName" style="margin: 16px 0 8px; color: var(--text-muted); font-size: 14px;"></p>
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label for="quantityInput">Quantity</label>
+      <input type="number" id="quantityInput" class="form-input" placeholder="Enter quantity" min="1" value="1" style="width: 100%; padding: 12px; font-size: 16px;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddRecipe();}">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeQuantityModal()" style="flex: 1;">Cancel</button>
+      <button class="btn-primary" onclick="confirmAddRecipe()" style="flex: 1;">Add to Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remove Recipe Modal -->
+<div class="modal-overlay" id="removeRecipeModal" onclick="if(event.target === this) closeRemoveRecipeModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Remove Product</h3>
+      <button onclick="closeRemoveRecipeModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">&times;</button>
+    </div>
+    <p style="margin: 16px 0; color: var(--text-main);">Remove this product from the order?</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeRemoveRecipeModal()" style="flex: 1;">Cancel</button>
+      <button class="btn-primary" style="background: #ef4444; flex: 1;" onclick="confirmRemoveRecipe()">Remove</button>
     </div>
   </div>
 </div>
@@ -833,10 +1493,10 @@
 let orderId = null;
 let orderData = null;
 let recipes = [];
-let notificationsCache = [];
-let notificationCheckInterval = null;
+// notificationsCache and notificationCheckInterval are declared in notifications.js
 
 async function init() {
+  console.log('[Order Detail] Init starting - Version: 2026-05-31-nav-fix');
   const params = new URLSearchParams(window.location.search);
   orderId = params.get('id');
   
@@ -847,7 +1507,9 @@ async function init() {
   }
 
   await loadOrder();
-  await loadRecipes();  await loadAffectedIngredients();  displayOrder();
+  await loadRecipes();
+  displayOrder();
+  console.log('[Order Detail] Init complete, orderData:', orderData);
 }
 
 async function loadOrder() {
@@ -879,6 +1541,19 @@ async function loadOrder() {
     }
 
     orderData = data;
+    
+    // Parse items if it's a JSON string
+    if (orderData.items && typeof orderData.items === 'string') {
+      try {
+        orderData.items = JSON.parse(orderData.items);
+      } catch (e) {
+        console.error('Error parsing items:', e);
+        orderData.items = [];
+      }
+    }
+    if (!Array.isArray(orderData.items)) {
+      orderData.items = [];
+    }
   } catch (error) {
     console.error('Error loading order:', error);
     showNotification('Failed to load order: ' + error.message, 'error');
@@ -896,7 +1571,7 @@ async function loadRecipes() {
 
     let _q2 = window.supabaseClient
       .from('recipes')
-      .select('id, name, cost, retail_price')
+      .select('*')
       .eq('profile_id', user.id);
     if (storeId) _q2 = _q2.eq('store_id', storeId);
     const { data, error } = await _q2;
@@ -912,64 +1587,78 @@ async function loadRecipes() {
 function displayOrder() {
   if (!orderData) return;
 
-  // Set title and status
-  document.getElementById('orderTitle').textContent = orderData.order_reference || `Order #${orderData.id.substring(0, 8)}`;
-  
   const statusBadge = document.getElementById('orderStatus');
   const status = orderData.status || 'processed';
-  statusBadge.textContent = status;
-  statusBadge.className = `status-badge status-${status}`;
+  if (statusBadge) {
+    statusBadge.textContent = status;
+    statusBadge.className = `status-badge status-${status}`;
+  }
 
-  // Set info cards
-  document.getElementById('customerName').textContent = orderData.customer || 'Unknown';
-  document.getElementById('salesChannel').textContent = orderData.source || 'N/A';
-  document.getElementById('orderDate').textContent = new Date(orderData.sale_date).toLocaleString();
-  document.getElementById('orderReference').textContent = orderData.order_reference || 'N/A';
-  document.getElementById('totalQuantity').textContent = orderData.total_quantity || 0;
-  document.getElementById('totalRevenue').textContent = `$${parseFloat(orderData.revenue || 0).toFixed(2)}`;
+  // Set customer info
+  const customerEl = document.getElementById('customerName');
+  if (customerEl) {
+    customerEl.textContent = orderData.customer || 'Unknown';
+  }
+  
+  // Sales channel chip selection
+  {
+    const source = orderData.source || 'Website';
+    document.querySelectorAll('.cat-chip').forEach(chip => chip.classList.remove('selected'));
+    const selectedChip = document.querySelector(`.cat-chip[data-channel="${source}"]`);
+    if (selectedChip) selectedChip.classList.add('selected');
+  }
+  
+  const dateEl = document.getElementById('orderDate');
+  if (dateEl) {
+    const date = new Date(orderData.sale_date);
+    dateEl.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  
+  const refEl = document.getElementById('orderReference');
+  if (refEl) refEl.textContent = orderData.order_reference || 'N/A';
+  
+  const revEl = document.getElementById('totalRevenue');
+  if (revEl) revEl.textContent = `$${parseFloat(orderData.revenue || 0).toFixed(2)}`;
   
   // Display tracking number if present
   if (orderData.tracking_number) {
-    document.getElementById('trackingCard').style.display = 'block';
-    document.getElementById('trackingNumber').textContent = orderData.tracking_number;
+    document.getElementById('trackingGroup').style.display = 'block';
+    const trackEl = document.getElementById('trackingNumber');
+    if (trackEl) trackEl.textContent = orderData.tracking_number;
   }
 
   // Show/hide status buttons based on current status
-  const btnFulfilled = document.getElementById('btnFulfilled');
   const btnShipped = document.getElementById('btnShipped');
   const btnRefunded = document.getElementById('btnRefunded');
   
-  if (status === 'processed') {
-    // Processed: can be fulfilled, shipped, or refunded
-    btnFulfilled.style.display = 'inline-flex';
-    btnShipped.style.display = 'inline-flex';
-    btnRefunded.style.display = 'inline-flex';
-  } else if (status === 'fulfilled') {
-    // Fulfilled: can only be shipped (not refunded)
-    btnFulfilled.style.display = 'none';
-    btnShipped.style.display = 'inline-flex';
-    btnRefunded.style.display = 'none';
-  } else if (status === 'shipped') {
-    // Shipped: no actions available
-    btnFulfilled.style.display = 'none';
-    btnShipped.style.display = 'none';
-    btnRefunded.style.display = 'none';
-  } else if (status === 'refunded') {
-    // Refunded: no actions available
-    btnFulfilled.style.display = 'none';
-    btnShipped.style.display = 'none';
-    btnRefunded.style.display = 'none';
+  if (btnShipped && btnRefunded) {
+    if (status === 'processed' || status === 'fulfilled') {
+      // Processed or Fulfilled: can be shipped or refunded
+      btnShipped.style.display = 'inline-flex';
+      btnRefunded.style.display = 'inline-flex';
+    } else if (status === 'shipped') {
+      // Shipped: hide shipped button but keep refund available
+      btnShipped.style.display = 'none';
+      btnRefunded.style.display = 'inline-flex';
+    } else if (status === 'refunded') {
+      // Refunded: no actions available
+      btnShipped.style.display = 'none';
+      btnRefunded.style.display = 'none';
+    }
   }
 
   // Display items
   const items = Array.isArray(orderData.items) ? orderData.items : [];
   const tableBody = document.getElementById('itemsTableBody');
+  const cardsContainer = document.getElementById('recipesCardsContainer');
   
   if (items.length === 0) {
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No items found</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No products added yet</td></tr>';
+    cardsContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">No products added yet</div>';
   } else {
-    tableBody.innerHTML = items.map(item => {
-      const itemName = item.name || 'Unknown';
+    // Desktop table
+    tableBody.innerHTML = items.map((item, index) => {
+      const itemName = item.name || 'Custom item';
       const quantity = item.quantity || 0;
       const price = parseFloat(item.price || 0);
       const total = price * quantity;
@@ -981,21 +1670,52 @@ function displayOrder() {
         r.name.toLowerCase().includes(itemName.toLowerCase())
       );
       
-      let recipeCell = '<span class="no-recipe">No recipe match</span>';
-      if (matchedRecipe) {
-        recipeCell = `<a href="/recipe-detail?id=${matchedRecipe.id}" class="recipe-link">${matchedRecipe.name}</a>`;
-      }
+      const recipeLink = matchedRecipe ? `/recipe-detail?id=${matchedRecipe.id}` : '#';
       
       return `
         <tr>
-          <td>${itemName}</td>
-          <td>${quantity}</td>
+          <td><a href="${recipeLink}" class="recipe-link">${itemName}</a></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="changeOrderItemQty(${index},-1)" style="width:26px;height:26px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;">&minus;</button>
+              <span style="min-width:24px;text-align:center;font-weight:600;">${quantity}</span>
+              <button onclick="changeOrderItemQty(${index},1)" style="width:26px;height:26px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;">+</button>
+            </div>
+          </td>
           <td>$${price.toFixed(2)}</td>
           <td><strong>$${total.toFixed(2)}</strong></td>
-          <td>${recipeCell}</td>
+          <td><button onclick="removeRecipeItem(${index})" style="padding: 6px 12px; background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button></td>
         </tr>
       `;
     }).join('');
+    
+    // Mobile cards — same style as expense-detail "Involved Items"
+    cardsContainer.innerHTML = items.map((item, index) => {
+      const itemName = item.name || 'Custom item';
+      const quantity = item.quantity || 0;
+      const price = parseFloat(item.price || 0);
+      const lineTotal = (price * quantity).toFixed(2);
+
+      return `
+        <div style="background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 15px; color: var(--text-main); flex: 1; margin-right: 8px;">${itemName}</div>
+            <button onclick="removeRecipeItem(${index})" style="padding: 4px; background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0;" title="Remove">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button onclick="changeOrderItemQty(${index},-1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">&minus;</button>
+              <span style="min-width: 36px; text-align: center; font-weight: 700; font-size: 16px;">${quantity}</span>
+              <button onclick="changeOrderItemQty(${index},1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">+</button>
+            </div>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">$${lineTotal}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
   // Display notes if present
@@ -1007,129 +1727,280 @@ function displayOrder() {
   displayReceiptSection();
 }
 
-function displayReceiptSection() {
-  const content = document.getElementById('receiptContent');
-  if (!content) return;
-  const url = orderData?.receipt_url;
-  if (url) {
-    const isImage = /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
-    content.innerHTML = `
-      ${isImage ? `<img src="${url}" class="receipt-preview-img" alt="Receipt">` : ''}
-      <div class="receipt-actions">
-        <a href="${url}" target="_blank" rel="noopener" style="padding:10px 18px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-main); text-decoration:none;">View Receipt</a>
-        <button onclick="document.getElementById('receiptFileInput').click()" style="padding:10px 18px; background:var(--bg-inner); border:1px solid var(--border); border-radius:8px; font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer;">Replace</button>
-      </div>
-    `;
-  } else {
-    content.innerHTML = `
-      <button class="receipt-attach-btn" onclick="document.getElementById('receiptFileInput').click()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-        Attach Receipt
-      </button>
-    `;
+async function downloadReceipt(url, index) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `receipt-${index + 1}.${blob.type.split('/')[1] || 'jpg'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Download error:', error);
   }
 }
 
-async function handleReceiptFile(file) {
-  if (!file) return;
-  const btn = document.querySelector('.receipt-attach-btn');
-  if (btn) { btn.textContent = 'Uploading…'; btn.disabled = true; }
+function displayReceiptSection() {
+  const content = document.getElementById('receiptContent');
+  if (!content) return;
+  
+  // Parse receipt URLs (support both old single URL and new array format)
+  let receiptUrls = [];
+  if (orderData.receipt_urls) {
+    receiptUrls = typeof orderData.receipt_urls === 'string' ? JSON.parse(orderData.receipt_urls) : orderData.receipt_urls;
+  } else if (orderData.receipt_url) {
+    receiptUrls = [orderData.receipt_url];
+  }
+  
+  if (receiptUrls.length > 0) {
+    // Show existing receipts in grid
+    content.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+        ${receiptUrls.map((url, index) => `
+          <div style="position: relative; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--bg-inner);">
+            <img src="${url}" alt="Receipt ${index + 1}" onclick="window.open('${url}', '_blank')" style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" title="Click to preview" />
+            <div style="display: flex; gap: 8px; font-size: 12px;">
+              <button onclick="downloadReceipt('${url}', ${index})" style="flex: 1; background: transparent; color: var(--accent); border: none; cursor: pointer; font-weight: 600; padding: 4px 0; text-decoration: none; text-align: center;">Download</button>
+              <button onclick="deleteReceipt(${index})" style="flex: 1; background: transparent; color: var(--danger); border: none; cursor: pointer; font-weight: 600; padding: 4px 0;">Delete</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <input type="file" id="receiptInput" accept="image/*,.pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)" />
+      <button onclick="document.getElementById('receiptInput').click()" class="receipt-attach-btn">
+        <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+        Add More Receipts
+      </button>
+    `;
+    lucide.createIcons();
+  } else {
+    // Show upload button
+    content.innerHTML = `
+      <input type="file" id="receiptInput" accept="image/*,.pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)" />
+      <button onclick="document.getElementById('receiptInput').click()" class="receipt-attach-btn">
+        <i data-lucide="paperclip" style="width: 18px; height: 18px;"></i>
+        Upload Receipts
+      </button>
+      <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Supported: JPG, PNG, PDF (max 10MB each, multiple files allowed)</p>
+    `;
+    lucide.createIcons();
+  }
+}
+
+async function checkStorageLimit(fileSize) {
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${user.id}/${orderId}.${ext}`;
-    const { error: uploadError } = await window.supabaseClient.storage
-      .from('receipts')
-      .upload(path, file, { upsert: true });
-    if (uploadError) throw uploadError;
-    const { data: urlData } = window.supabaseClient.storage
-      .from('receipts')
-      .getPublicUrl(path);
-    const { error: updateError } = await window.supabaseClient
+    if (!user) return false;
+
+    // Get user's storage stats
+    const { data: settings } = await window.supabaseClient
+      .from('user_settings')
+      .select('storage_used_bytes, storage_limit_bytes, user_tier')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!settings) {
+      // Default to free tier (10 MB)
+      const availableSpace = 10485760; // 10 MB
+      if (fileSize > availableSpace) {
+        return false;
+      }
+      return true;
+    }
+
+    const availableSpace = settings.storage_limit_bytes - settings.storage_used_bytes;
+
+    if (fileSize > availableSpace) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking storage:', error);
+    return true; // allow upload if storage check fails
+  }
+}
+
+async function handleReceiptFiles(files) {
+  if (!files || files.length === 0) return;
+  
+  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  const validFiles = [];
+  
+  // Validate all files first
+  for (let file of files) {
+    if (file.size > maxFileSize) {
+      continue;
+    }
+    const hasSpace = await checkStorageLimit(file.size);
+    if (!hasSpace) return;
+    validFiles.push(file);
+  }
+  
+  if (validFiles.length === 0) return;
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get existing URLs
+    let receiptUrls = [];
+    if (orderData.receipt_urls) {
+      receiptUrls = typeof orderData.receipt_urls === 'string' ? JSON.parse(orderData.receipt_urls) : orderData.receipt_urls;
+    } else if (orderData.receipt_url) {
+      receiptUrls = [orderData.receipt_url];
+    }
+
+    // Upload each file
+    for (let file of validFiles) {
+      const timestamp = Date.now() + Math.random();
+      const fileName = `${user.id}/${timestamp}_${file.name}`;
+
+      const { data, error } = await window.supabaseClient.storage
+        .from('expenses')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = window.supabaseClient.storage
+        .from('expenses')
+        .getPublicUrl(fileName);
+
+      receiptUrls.push(publicUrl);
+    }
+
+    // Update order record — try receipt_urls (JSONB array) first, fall back to receipt_url (TEXT)
+    const { error: urlsError } = await window.supabaseClient
       .from('sales')
-      .update({ receipt_url: urlData.publicUrl })
-      .eq('id', orderId);
-    if (updateError) throw updateError;
-    orderData.receipt_url = urlData.publicUrl;
+      .update({ receipt_urls: receiptUrls })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    if (urlsError) {
+      console.warn('receipt_urls update failed (column may not exist), trying receipt_url fallback:', urlsError.message);
+      const { error: urlError } = await window.supabaseClient
+        .from('sales')
+        .update({ receipt_url: receiptUrls[receiptUrls.length - 1] })
+        .eq('id', orderId)
+        .eq('profile_id', user.id);
+      if (urlError) {
+        console.error('receipt_url fallback also failed:', urlError.message);
+        return;
+      }
+      // Fallback worked — mirror into receipt_urls so display works
+      orderData.receipt_url = receiptUrls[receiptUrls.length - 1];
+    } else {
+      orderData.receipt_urls = receiptUrls;
+      delete orderData.receipt_url;
+    }
+
     displayReceiptSection();
-    showNotification('Receipt attached', 'success');
-  } catch (err) {
-    console.error('Receipt upload failed:', err);
-    showNotification('Upload failed: ' + err.message, 'error');
+  } catch (error) {
+    console.error('Error uploading receipts:', error);
+  }
+}
+
+async function deleteReceipt(index) {
+  if (!confirm('Delete this receipt?')) return;
+  
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get current URLs
+    let receiptUrls = [];
+    if (orderData.receipt_urls) {
+      receiptUrls = typeof orderData.receipt_urls === 'string' ? JSON.parse(orderData.receipt_urls) : orderData.receipt_urls;
+    } else if (orderData.receipt_url) {
+      receiptUrls = [orderData.receipt_url];
+    }
+
+    if (index < 0 || index >= receiptUrls.length) return;
+
+    const urlToDelete = receiptUrls[index];
+    const url = new URL(urlToDelete);
+    const filePath = url.pathname.split('/expenses/')[1];
+
+    // Delete from storage
+    const { error: storageError } = await window.supabaseClient.storage
+      .from('expenses')
+      .remove([filePath]);
+
+    if (storageError) console.warn('Storage deletion warning:', storageError);
+
+    // Remove from array
+    receiptUrls.splice(index, 1);
+
+    // Update order record (orders use sales table)
+    await window.supabaseClient
+      .from('sales')
+      .update({ receipt_urls: receiptUrls.length > 0 ? receiptUrls : null })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    orderData.receipt_urls = receiptUrls;
+    if (receiptUrls.length === 0) {
+      delete orderData.receipt_urls;
+      delete orderData.receipt_url;
+    }
     displayReceiptSection();
+  } catch (error) {
+    console.error('Error deleting receipt:', error);
   }
 }
 
 async function loadAffectedIngredients() {
-  try {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) return;
-
-    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
-    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-    // Query ingredient_history for this order
-    let _q3 = window.supabaseClient
-      .from('ingredient_history')
-      .select('*, ingredients:ingredient_id(name, unit)')
-      .eq('profile_id', user.id);
-    if (storeId) _q3 = _q3.eq('store_id', storeId);
-    _q3 = _q3.eq('reason', 'order')
-      .eq('reference_id', orderId)
-      .order('changed_at', { ascending: false });
-    const { data: historyEntries, error } = await _q3;
-
-    if (error) throw error;
-
-    const section = document.getElementById('affectedIngredientsSection');
-    const tbody = document.getElementById('affectedIngredientsBody');
-    section.style.display = 'block';
-
-    const fmt = n => n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
-
-    if (historyEntries && historyEntries.length > 0) {
-      tbody.innerHTML = historyEntries.map(entry => {
-        const ingredientName = entry.ingredients?.name || 'Unknown';
-        const ingredientId = entry.ingredient_id;
-        const unit = entry.ingredients?.unit || '';
-        const oldQty = parseFloat(entry.old_value || 0);
-        const newQty = parseFloat(entry.new_value || 0);
-        const change = newQty - oldQty;
-        const changeColor = change >= 0 ? '#10b981' : '#ef4444';
-        const changeSign = change >= 0 ? '+' : '';
-        const changeDate = new Date(entry.changed_at).toLocaleDateString();
-
-        return `
-          <tr>
-            <td><a href="/ingredient-detail?id=${ingredientId}" class="recipe-link">${ingredientName}</a></td>
-            <td>${fmt(oldQty)}</td>
-            <td>${fmt(newQty)}</td>
-            <td style="color: ${changeColor}; font-weight: 600;">${changeSign}${fmt(change)}</td>
-            <td>${changeDate}</td>
-          </tr>
-        `;
-      }).join('');
-    } else {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">No updates on inventory</td></tr>';
-    }
-  } catch (error) {
-    console.error('Error loading affected ingredients:', error);
-  }
+  // Removed - no longer showing Updated Inventory section
 }
 
 let pendingStatus = null;
 
 function showStatusModal(newStatus) {
   pendingStatus = newStatus;
-  const modal = document.getElementById('statusModal');
-  const message = document.getElementById('statusModalMessage');
-  message.textContent = `Are you sure you want to mark this order as ${newStatus}?`;
-  modal.classList.add('active');
+  const titles = { refunded: 'Refund Order', shipped: 'Mark as Shipped', processed: 'Mark as Processed', fulfilled: 'Mark as Fulfilled' };
+  const messages = { refunded: 'Are you sure you want to refund this order?', shipped: 'Are you sure you want to mark this order as shipped?' };
+  document.getElementById('statusModalTitle').textContent = titles[newStatus] || 'Confirm Status Change';
+  document.getElementById('statusModalMessage').textContent = messages[newStatus] || `Are you sure you want to mark this order as ${newStatus}?`;
+  document.getElementById('statusModal').classList.add('active');
 }
 
 function closeStatusModal() {
   document.getElementById('statusModal').classList.remove('active');
   pendingStatus = null;
+}
+
+async function selectChannel(channel) {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) throw new Error('No user found');
+
+    const { error } = await window.supabaseClient
+      .from('sales')
+      .update({ source: channel })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+
+    if (error) throw error;
+
+    orderData.source = channel;
+    
+    // Update selected chip
+    document.querySelectorAll('.cat-chip').forEach(chip => chip.classList.remove('selected'));
+    const selectedChip = document.querySelector(`.cat-chip[data-channel="${channel}"]`);
+    if (selectedChip) selectedChip.classList.add('selected');
+
+    showNotification('Sales channel updated', 'success');
+  } catch (error) {
+    console.error('Error updating sales channel:', error);
+    showNotification('Failed to update sales channel', 'error');
+  }
 }
 
 function showTrackingModal() {
@@ -1207,7 +2078,11 @@ function showNotification(message, type = 'success') {
 }
 
 function showDeleteModal() {
-  document.getElementById('deleteModal').classList.add('active');
+  const modal = document.getElementById('deleteModal');
+  const text = document.getElementById('deleteModalText');
+  const reference = orderData?.order_reference || `#${orderData?.id?.substring(0, 8) || 'unknown'}`;
+  text.textContent = `Delete Order ${reference}?`;
+  modal.classList.add('active');
 }
 
 function closeDeleteModal() {
@@ -1224,6 +2099,38 @@ async function confirmDelete() {
       return;
     }
 
+    // Delete receipt files from storage first
+    let receiptUrls = [];
+    if (orderData.receipt_urls) {
+      receiptUrls = typeof orderData.receipt_urls === 'string' ? JSON.parse(orderData.receipt_urls) : orderData.receipt_urls;
+    } else if (orderData.receipt_url) {
+      receiptUrls = [orderData.receipt_url];
+    }
+
+    if (receiptUrls.length > 0) {
+      const filePaths = [];
+      for (const url of receiptUrls) {
+        try {
+          const urlObj = new URL(url);
+          const filePath = urlObj.pathname.split('/expenses/')[1];
+          if (filePath) filePaths.push(filePath);
+        } catch (e) {
+          console.warn('Could not parse receipt URL:', url, e);
+        }
+      }
+
+      if (filePaths.length > 0) {
+        const { error: storageError } = await window.supabaseClient.storage
+          .from('expenses')
+          .remove(filePaths);
+
+        if (storageError) {
+          console.warn('Storage deletion warning:', storageError);
+        }
+      }
+    }
+
+    // Delete order from database
     const { error } = await window.supabaseClient
       .from('sales')
       .delete()
@@ -1242,192 +2149,476 @@ async function confirmDelete() {
   }
 }
 
-// Notification System
-async function initializeNotifications() {
-  const { data: { session } } = await window.supabaseClient.auth.getSession();
-  if (session) {
-    document.getElementById('notificationBell').style.display = 'flex';
-    await loadNotifications();
-    notificationCheckInterval = setInterval(loadNotifications, 30000);
-  }
-}
-
-async function loadNotifications() {
-  try {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    const { data: notifications, error } = await window.supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('profile_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    
-    if (error) throw error;
-    
-    notificationsCache = notifications || [];
-    renderNotifications();
-    updateNotificationBadge();
-  } catch (error) {
-    console.error('Error loading notifications:', error);
-  }
-}
-
-function renderNotifications() {
-  const listContainer = document.getElementById('notificationList');
+// Inline editing
+async function makeEditable(elementId, fieldName) {
+  const element = document.getElementById(elementId);
+  if (!element || element.querySelector('input')) return;
   
-  if (notificationsCache.length === 0) {
-    listContainer.innerHTML = `
-      <div class="notification-empty">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-        </svg>
-        <p>No notifications</p>
-      </div>
+  // Get text content, stripping out any HTML (like channel logos)
+  let currentValue = element.textContent.trim();
+  if (fieldName === 'source' && element.querySelector('.channel-logo')) {
+    // Extract just the text, not the logo
+    currentValue = orderData[fieldName] || '';
+  }
+  
+  const input = document.createElement('input');
+  
+  // Special handling for date fields
+  if (fieldName === 'sale_date') {
+    input.type = 'date';
+    // Convert display date back to YYYY-MM-DD format
+    const dateValue = orderData[fieldName];
+    if (dateValue) {
+      const date = new Date(dateValue);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      input.value = `${year}-${month}-${day}`;
+    }
+  } else {
+    input.type = 'text';
+    input.value = currentValue === '-' || currentValue === 'N/A' || currentValue === 'Unknown' ? '' : currentValue;
+  }
+  
+  input.className = 'form-input';
+  input.style.padding = '8px 12px';
+  input.style.fontSize = '14px';
+  
+  element.innerHTML = '';
+  element.appendChild(input);
+  input.focus();
+  if (input.type !== 'date') input.select();
+  
+  const save = async () => {
+    let newValue = input.value.trim();
+    
+    // For date fields, convert to ISO format
+    if (fieldName === 'sale_date' && newValue) {
+      // Input is already in YYYY-MM-DD format
+      newValue = newValue + 'T00:00:00.000Z';
+    }
+    
+    if (newValue && newValue !== currentValue) {
+      try {
+        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        if (!user) return;
+        
+        const updateData = {};
+        updateData[fieldName] = newValue;
+        
+        const { error } = await window.supabaseClient
+          .from('sales')
+          .update(updateData)
+          .eq('id', orderId)
+          .eq('profile_id', user.id);
+        
+        if (error) throw error;
+        
+        orderData[fieldName] = newValue;
+        
+        // Update display
+        if (fieldName === 'source') {
+          const channel = newValue.toLowerCase();
+          let logoClass = 'channel-website';
+          if (channel.includes('etsy')) logoClass = 'channel-etsy';
+          else if (channel.includes('shopify')) logoClass = 'channel-shopify';
+          else if (channel.includes('woo')) logoClass = 'channel-woocommerce';
+          else if (channel.includes('local')) logoClass = 'channel-local';
+          element.innerHTML = `<span class="channel-logo ${logoClass}"></span>${newValue}`;
+        } else if (fieldName === 'sale_date') {
+          const date = new Date(newValue);
+          element.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else {
+          element.textContent = newValue;
+        }
+        
+        showNotification('Field updated successfully', 'success');
+      } catch (error) {
+        console.error('Error updating field:', error);
+        element.textContent = currentValue;
+        showNotification('Failed to update field', 'error');
+      }
+    } else {
+      if (fieldName === 'source' && currentValue.includes('channel-logo')) {
+        element.innerHTML = currentValue;
+      } else {
+        element.textContent = currentValue;
+      }
+    }
+  };
+  
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      save();
+    } else if (e.key === 'Escape') {
+      element.textContent = currentValue;
+    }
+  });
+}
+
+// Recipe Modal
+function openRecipeModal() {
+  recipeModalAttrValueFilters = new Map();
+  document.getElementById('recipeModal').classList.add('active');
+  document.getElementById('recipeSearchInput').value = '';
+  renderRecipeModalAttrChips();
+  renderRecipeModal();
+}
+
+function renderRecipeModalAttrChips() {
+  const container = document.getElementById('recipeModalAttrChips');
+  if (!container) return;
+
+  const groupedByKey = new Map();
+  const sortVals = (key, a, b) => {
+    if (key === 'size') {
+      const SZ = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SZ.indexOf(a.toLowerCase()), bi = SZ.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1; if (bi !== -1) return 1;
+    }
+    const an = parseFloat(a), bn = parseFloat(b);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+
+  recipes.forEach(r => {
+    if (!r.custom_attributes) return;
+    try {
+      const attrs = typeof r.custom_attributes === 'string' ? JSON.parse(r.custom_attributes) : r.custom_attributes;
+      Object.entries(attrs).forEach(([key, value]) => {
+        if (!value || !String(value).trim()) return;
+        const nk = key.toLowerCase();
+        const tv = String(value).trim();
+        const vk = tv.toLowerCase();
+        if (!groupedByKey.has(nk)) groupedByKey.set(nk, new Map());
+        const vm = groupedByKey.get(nk);
+        if (!vm.has(vk)) vm.set(vk, tv);
+      });
+    } catch (e) {}
+  });
+
+  if (groupedByKey.size === 0) { container.innerHTML = ''; return; }
+
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  const chips = [];
+  sortedKeys.forEach(key => {
+    const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortVals(key, a[1], b[1]));
+    sorted.forEach(([vk, dv]) => {
+      const active = recipeModalAttrValueFilters.has(key) && recipeModalAttrValueFilters.get(key).has(vk);
+      chips.push(`<button class="recipe-ing-chip${active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${vk.replace(/"/g,'&quot;')}" onclick="toggleRecipeModalAttrFilter('${key.replace(/'/g,"&#39;")}','${vk.replace(/'/g,"&#39;")}')">${dv.replace(/"/g,'&quot;')}</button>`);
+    });
+  });
+  container.innerHTML = chips.join('');
+}
+
+function toggleRecipeModalAttrFilter(key, value) {
+  if (!recipeModalAttrValueFilters.has(key)) recipeModalAttrValueFilters.set(key, new Set());
+  const ks = recipeModalAttrValueFilters.get(key);
+  if (ks.has(value)) { ks.delete(value); if (ks.size === 0) recipeModalAttrValueFilters.delete(key); }
+  else { ks.add(value); }
+  document.querySelectorAll('#recipeModalAttrChips .recipe-ing-chip').forEach(chip => {
+    const k = chip.dataset.key, v = chip.dataset.val;
+    chip.classList.toggle('active', !!k && recipeModalAttrValueFilters.has(k) && recipeModalAttrValueFilters.get(k).has(v));
+  });
+  renderRecipeModal();
+}
+
+function closeRecipeModal() {
+  document.getElementById('recipeModal').classList.remove('active');
+}
+
+function filterRecipesInModal() {
+  const input = document.getElementById('recipeSearchInput');
+  const clearBtn = document.getElementById('recipeSearchClear');
+  const query = input.value.trim();
+  
+  if (clearBtn) {
+    clearBtn.classList.toggle('visible', query !== '');
+  }
+  
+  renderRecipeModal();
+}
+
+function renderRecipeModal() {
+  const container = document.getElementById('recipeListContainer');
+  const searchQuery = document.getElementById('recipeSearchInput').value.trim().toLowerCase();
+
+  let filteredRecipes = recipes;
+
+  // Filter by active attribute values (AND between keys, OR within key)
+  if (recipeModalAttrValueFilters.size > 0) {
+    filteredRecipes = filteredRecipes.filter(r => {
+      if (!r.custom_attributes) return false;
+      try {
+        const attrs = typeof r.custom_attributes === 'string' ? JSON.parse(r.custom_attributes) : r.custom_attributes;
+        const normalized = {};
+        Object.entries(attrs).forEach(([k, v]) => { normalized[k.toLowerCase()] = String(v).trim().toLowerCase(); });
+        for (const [fk, fset] of recipeModalAttrValueFilters) {
+          if (!normalized[fk] || !fset.has(normalized[fk])) return false;
+        }
+        return true;
+      } catch (e) { return false; }
+    });
+  }
+
+  // Filter by search
+  if (searchQuery) {
+    filteredRecipes = filteredRecipes.filter(r =>
+      r.name.toLowerCase().includes(searchQuery)
+    );
+    
+    if (filteredRecipes.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:60px 20px;"><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
+      return;
+    }
+    
+    // Show search results
+    container.innerHTML = `
+      <div class="recipe-section-title">Search Results</div>
+      <div class="recipe-picker-grid">${filteredRecipes.map(_renderRecipeCard).join('')}</div>
     `;
+    lucide.createIcons();
     return;
   }
   
-  listContainer.innerHTML = notificationsCache.map(notification => `
-    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
-         data-notification-id="${notification.id}"
-         onmouseenter="markAsRead('${notification.id}')">
-      <div class="notification-message">${notification.message}</div>
-      <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
-      <div class="notification-actions">
-        ${notification.ingredient_id ? `
-          <button class="notif-reorder-btn" title="Reorder" onclick="restockIngredient('${notification.ingredient_id}', '${notification.id}'); event.stopPropagation();">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </button>
-          <span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>
-        ` : ''}
-        <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function updateNotificationBadge() {
-  const unreadCount = notificationsCache.filter(n => !n.is_read).length;
-  const badge = document.getElementById('notificationBadge');
+  // Not searching - show organized sections
+  const favs = filteredRecipes.filter(r => r.is_favorite);
+  const nonFavs = filteredRecipes.filter(r => !r.is_favorite);
   
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    badge.style.display = 'block';
-  } else {
-    badge.style.display = 'none';
+  let html = '';
+  
+  if (favs.length) {
+    html += `<div class="recipe-section-title">Favorites</div>
+      <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
   }
-}
-
-function formatNotificationTime(timestamp) {
-  const now = new Date();
-  const time = new Date(timestamp);
-  const diff = Math.floor((now - time) / 1000);
   
-  if (diff < 60) return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
-  return time.toLocaleDateString();
-}
-
-function toggleNotifications() {
-  const dropdown = document.getElementById('notificationDropdown');
-  dropdown.classList.toggle('active');
-}
-
-document.addEventListener('click', (e) => {
-  const bell = document.getElementById('notificationBell');
-  const dropdown = document.getElementById('notificationDropdown');
-  
-  if (bell && dropdown && !bell.contains(e.target)) {
-    dropdown.classList.remove('active');
+  if (nonFavs.length) {
+    html += `<div class="recipe-section-title">All Products</div>
+      <div class="recipe-picker-grid">${nonFavs.map(_renderRecipeCard).join('')}</div>`;
   }
-});
-
-async function markAsRead(notificationId) {
-  const notification = notificationsCache.find(n => n.id === notificationId);
-  if (!notification || notification.is_read) return;
   
+  if (!favs.length && !nonFavs.length) {
+    html = '<div style="text-align:center;padding:40px;color:var(--text-muted);">No products available</div>';
+  }
+  
+  container.innerHTML = html;
+  lucide.createIcons();
+}
+
+function _renderRecipeCard(recipe) {
+  // Use retail_price if available, otherwise fall back to cost
+  const price = parseFloat(recipe.retail_price || recipe.cost || 0);
+  const isFav = recipe.is_favorite;
+  const esc = recipe.name.replace(/'/g, "\\'");
+  
+  return `<div class="recipe-pick-card" id="rpc-${recipe.id}"
+      onclick="promptAndAddRecipe('${recipe.id}','${esc}',${price})">
+    <button class="fav-btn${isFav ? ' is-fav' : ''}"
+      onclick="event.stopPropagation();toggleRecipeFavorite('${recipe.id}')"
+      style="pointer-events:auto"
+      title="Favorite">${isFav ? '&#9733;' : '&#9734;'}</button>
+    <div class="card-name">${recipe.name}</div>
+    <div class="card-price">$${price.toFixed(2)}</div>
+  </div>`;
+}
+
+async function toggleRecipeFavorite(recipeId) {
   try {
-    const { error } = await window.supabaseClient
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq('id', notificationId);
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
     
-    if (error) throw error;
+    const newVal = !recipe.is_favorite;
+    recipe.is_favorite = newVal;
     
-    notification.is_read = true;
-    updateNotificationBadge();
-    
-    const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
-    if (item) {
-      item.classList.remove('unread');
+    // Update UI immediately
+    const card = document.getElementById(`rpc-${recipeId}`);
+    if (card) {
+      const btn = card.querySelector('.fav-btn');
+      if (btn) {
+        btn.textContent = newVal ? '&#9733;' : '&#9734;';
+        btn.classList.toggle('is-fav', newVal);
+      }
     }
+    
+    // Persist to DB
+    await window.supabaseClient
+      .from('recipes')
+      .update({ is_favorite: newVal })
+      .eq('id', recipeId);
+    
+    // Re-render to move to correct section
+    setTimeout(() => renderRecipeModal(), 300);
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    console.error('Error toggling favorite:', error);
   }
 }
 
-async function markAllAsRead() {
+let pendingRecipeAdd = null;
+let recipeModalAttrValueFilters = new Map();
+
+async function promptAndAddRecipe(recipeId, recipeName, price) {
+  // Store recipe details for later confirmation
+  pendingRecipeAdd = { recipeId, recipeName, price };
+  
+  // Show modal
+  document.getElementById('quantityModalRecipeName').textContent = `Adding: ${recipeName} ($${parseFloat(price).toFixed(2)})`;
+  document.getElementById('quantityInput').value = '1';
+  document.getElementById('quantityModal').classList.add('active');
+  
+  // Focus on input
+  setTimeout(() => {
+    const input = document.getElementById('quantityInput');
+    input.focus();
+    input.select();
+  }, 100);
+}
+
+function closeQuantityModal() {
+  document.getElementById('quantityModal').classList.remove('active');
+  pendingRecipeAdd = null;
+}
+
+async function confirmAddRecipe() {
+  if (!pendingRecipeAdd) return;
+  
+  const quantityInput = document.getElementById('quantityInput');
+  const quantity = parseInt(quantityInput.value);
+  
+  if (!quantity || isNaN(quantity) || quantity <= 0) {
+    showNotification('Please enter a valid quantity', 'error');
+    return;
+  }
+  
   try {
+    const { recipeId, recipeName, price } = pendingRecipeAdd;
+    
+    // Add to items array
+    const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
+    items.push({
+      name: recipeName,
+      quantity: quantity,
+      price: price
+    });
+    
+    // Update totals
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalRevenue = items.reduce((sum, item) => sum + (item.quantity || 0) * parseFloat(item.price || 0), 0);
+    
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
     
-    const unreadIds = notificationsCache.filter(n => !n.is_read).map(n => n.id);
-    if (unreadIds.length === 0) return;
-    
     const { error } = await window.supabaseClient
-      .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .in('id', unreadIds);
+      .from('sales')
+      .update({
+        items: items,
+        total_quantity: totalQuantity,
+        revenue: totalRevenue
+      })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
     
     if (error) throw error;
     
-    notificationsCache.forEach(n => {
-      if (!n.is_read) n.is_read = true;
-    });
+    orderData.items = items;
+    orderData.total_quantity = totalQuantity;
+    orderData.revenue = totalRevenue;
     
-    renderNotifications();
-    updateNotificationBadge();
+    displayOrder();
+    closeQuantityModal();
+    closeRecipeModal();
+    showNotification('Recipe added to order', 'success');
   } catch (error) {
-    console.error('Error marking all as read:', error);
+    console.error('Error adding recipe:', error);
+    showNotification('Failed to add product', 'error');
   }
 }
 
-async function deleteNotification(notificationId) {
+let pendingRecipeRemoveIndex = null;
+
+async function changeOrderItemQty(index, delta) {
+  const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
+  if (!items[index]) return;
+  const newQty = Math.max(1, (items[index].quantity || 1) + delta);
+  items[index].quantity = newQty;
+
+  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const totalRevenue = items.reduce((sum, item) => sum + (item.quantity || 0) * parseFloat(item.price || 0), 0);
+
   try {
-    const { error } = await window.supabaseClient
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-    
-    if (error) throw error;
-    
-    notificationsCache = notificationsCache.filter(n => n.id !== notificationId);
-    
-    renderNotifications();
-    updateNotificationBadge();
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    await window.supabaseClient.from('sales').update({ items, total_quantity: totalQuantity, revenue: totalRevenue }).eq('id', orderId).eq('profile_id', user.id);
+    orderData.items = items;
+    orderData.total_quantity = totalQuantity;
+    orderData.revenue = totalRevenue;
+    displayOrder();
   } catch (error) {
-    console.error('Error deleting notification:', error);
+    console.error('Error updating quantity:', error);
   }
 }
 
-function openIngredient(ingredientId) {
-  window.location.href = `/ingredient-detail?id=${ingredientId}`;
+async function removeRecipeItem(index) {
+  pendingRecipeRemoveIndex = index;
+  document.getElementById('removeRecipeModal').classList.add('active');
 }
 
-async function restockIngredient(ingredientId, notificationId) {
-  window.location.href = `/ingredient-detail?id=${ingredientId}&openReorder=true`;
+function closeRemoveRecipeModal() {
+  document.getElementById('removeRecipeModal').classList.remove('active');
+  pendingRecipeRemoveIndex = null;
 }
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
+async function confirmRemoveRecipe() {
+  if (pendingRecipeRemoveIndex === null) return;
+  
+  try {
+    const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
+    items.splice(pendingRecipeRemoveIndex, 1);
+    
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalRevenue = items.reduce((sum, item) => sum + (item.quantity || 0) * parseFloat(item.price || 0), 0);
+    
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await window.supabaseClient
+      .from('sales')
+      .update({
+        items: items,
+        total_quantity: totalQuantity,
+        revenue: totalRevenue
+      })
+      .eq('id', orderId)
+      .eq('profile_id', user.id);
+    
+    if (error) throw error;
+    
+    orderData.items = items;
+    orderData.total_quantity = totalQuantity;
+    orderData.revenue = totalRevenue;
+    
+    displayOrder();
+    closeRemoveRecipeModal();
+    showNotification('Recipe removed', 'success');
+  } catch (error) {
+    console.error('Error removing recipe:', error);
+    showNotification('Failed to remove product', 'error');
+    closeRemoveRecipeModal();
+  }
+}
+
+// Notification System - handled by notifications.js
+// No duplicate functions needed
+
+// Initialize page when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
   init();
-});
-
-initializeNotifications();
+}
 </script>
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
@@ -1445,8 +2636,8 @@ initializeNotifications();
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
@@ -1462,11 +2653,10 @@ initializeNotifications();
       </div>
     </div>
     <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
-      © 2026 ShelfyAI. All rights reserved.
+      Â© 2026 ShelfyAI. All rights reserved.
     </div>
   </div>
 </footer>
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
 <script src="store-modal.js"></script>
 <script src="switch-account-modal.js"></script>

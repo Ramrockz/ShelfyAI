@@ -81,7 +81,7 @@
 
   /* ---------- CARDS (SMALL CARDS) ---------- */
   .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .card-small { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s ease; animation: slideIn 0.3s ease; }
+  .card-small { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s ease; }
   
   @keyframes slideIn {
     from {
@@ -1280,28 +1280,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="csvModal" onclick="if(event.target === this) closeCSVModal()">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import Items - CSV</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a CSV file with columns: name, quantity, unit, cost_per_unit, category, notes</p>
-    
-    <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);" onclick="document.getElementById('csvFileInput').click()">
-      <div style="margin-bottom: 16px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/17751/17751513.png" alt="CSV" width="48" height="48" style="opacity: 0.5;">
-      </div>
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your CSV file here</p>
-      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: CSV files only</p>
-      <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)" />
-    </div>
-    
-    <div id="csvStatus" style="display: none; padding: 12px; border-radius: 8px; margin-top: 16px; font-size: 13px;"></div>
-    
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeCSVModal()">Cancel</button>
-    </div>
-  </div>
-</div>
+<!-- CSV Import modal injected by csv-import.js -->
 
 
 <div class="modal-overlay" id="imageModal" onclick="if(event.target === this) closeImageModal()">
@@ -1561,20 +1540,22 @@ async function loadIngredients() {
       source_url: item.source_url || '',
       reorder_pending: item.reorder_pending || false
     }));
-    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+    const _freshJSON = JSON.stringify(ingredients);
+    if (_freshJSON !== _lsCached) {
+      localStorage.setItem('shelfy_cache_ingredients', _freshJSON);
 
-    // Check URL for view parameter, otherwise use saved or default view
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewParam = urlParams.get('view');
-    
-    // On mobile, force Cards view
-    if (window.innerWidth <= 768) {
-      switchView('recent');
-    } else if (viewParam && ['recent', 'list', 'kanban'].includes(viewParam)) {
-      switchView(viewParam);
-    } else {
-      // Initialize UI for the current view (from localStorage or default)
-      switchView(currentView);
+      // Check URL for view parameter, otherwise use saved or default view
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get('view');
+
+      // On mobile, force Cards view
+      if (window.innerWidth <= 768) {
+        switchView('recent');
+      } else if (viewParam && ['recent', 'list', 'kanban'].includes(viewParam)) {
+        switchView(viewParam);
+      } else {
+        switchView(currentView);
+      }
     }
   } catch (error) {
     // Timeout, network failure, or offline — silently keep cached view if available
@@ -1740,7 +1721,7 @@ function selectMethod(method) {
   if (method === 'manual') {
     document.getElementById('manualModal').classList.add('active');
   } else if (method === 'csv') {
-    document.getElementById('csvModal').classList.add('active');
+    if (typeof openCSVImport === 'function') openCSVImport('ingredient');
   } else if (method === 'image') {
     document.getElementById('imageModal').classList.add('active');
   } else if (method === 'url') {
@@ -1771,7 +1752,7 @@ function closeManualModal() {
 }
 
 function closeCSVModal() {
-  document.getElementById('csvModal').classList.remove('active');
+  if (typeof closeCSVImport === 'function') closeCSVImport();
 }
 
 function closeImageModal() {
@@ -2381,76 +2362,7 @@ async function handleURLImport() {
   }
 }
 
-function handleCSVUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    try {
-      const text = e.target.result;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-      
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
-        showAlert('You must be logged in', 'Authentication Required');
-        return;
-      }
-
-      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
-      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-      const ingredientsToInsert = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(',').map(v => v.trim());
-        const minStockVal = parseFloat(values[7]);
-        if (isNaN(minStockVal) || minStockVal < 0) {
-          showAlert(`Row ${i}: Minimum Stock Alert is required. Please add a min_stock column (column 8) to your CSV.`, 'Validation Error');
-          return;
-        }
-        const ingredient = {
-          profile_id: user.id,
-          store_id: storeId,
-          name: values[0] || 'Unnamed',
-          quantity: parseFloat(values[1]) || 0,
-          unit: values[2] || 'units',
-          cost_per_unit: parseFloat(values[3]) || 0,
-          category: values[4] || 'General',
-          sku: values[6] || '',
-          notes: values[5] || '',
-          min_stock: minStockVal
-        };
-        
-        ingredientsToInsert.push(ingredient);
-      }
-
-      if (ingredientsToInsert.length === 0) {
-        showAlert('No valid data found in CSV', 'Invalid File');
-        return;
-      }
-
-      const { data, error } = await supabaseClient
-        .from('ingredients')
-        .insert(ingredientsToInsert)
-        .select();
-
-      if (error) throw error;
-
-      showAlert(`Successfully imported ${data.length} items!`, 'Success');
-      closeCSVModal();
-      loadIngredients();
-    } catch (error) {
-      console.error('CSV import error:', error);
-      showAlert('Failed to import CSV: ' + error.message, 'Error');
-    }
-  };
-  
-  reader.readAsText(file);
-}
+// handleCSVUpload replaced by csv-import.js
 
 function switchView(view) {
   currentView = view;
@@ -4706,8 +4618,8 @@ document.addEventListener('keydown', (e) => {
       closeMethodModal();
     } else if (document.getElementById('manualModal').classList.contains('active')) {
       closeManualModal();
-    } else if (document.getElementById('csvModal').classList.contains('active')) {
-      closeCSVModal();
+    } else if (document.getElementById('csvImportModal') && document.getElementById('csvImportModal').classList.contains('active')) {
+      closeCSVImport();
     } else if (document.getElementById('imageModal').classList.contains('active')) {
       closeImageModal();
     } else if (document.getElementById('urlModal').classList.contains('active')) {
@@ -4997,5 +4909,6 @@ function hideGlobalLoader(){document.getElementById('globalLoader').style.displa
 </script>
 <script src="store-modal.js"></script>
 <script src="switch-account-modal.js"></script>
+<script src="/csv-import.js"></script>
 </body>
 </html>

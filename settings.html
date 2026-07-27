@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -695,10 +695,10 @@
   
   <div class="nav-links" id="navLinks">
     <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
-    <a href="/ingredients" class="nav-link" data-page="ingredients">Ingredients</a>
-    <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
-    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
     <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
   </div>
   
@@ -887,6 +887,7 @@
 
     <div class="tier-features">
       <h4>AI Scans this month <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(ingredients, orders &amp; expenses)</span></h4>
+      <p style="font-size: 12px; color: var(--text-muted); margin: 8px 0 12px 0;" id="scanResetDate">Resets on ...</p>
       <div class="tier-feature-list">
         <div class="usage-item">
           <div class="usage-header">
@@ -895,6 +896,21 @@
           </div>
           <div class="usage-bar">
             <div class="usage-bar-fill" id="scanBar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier-features" style="margin-top:16px;">
+      <h4>Receipt Storage <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(for uploaded receipts)</span></h4>
+      <div class="tier-feature-list">
+        <div class="usage-item">
+          <div class="usage-header">
+            <span class="usage-label" id="storageUsage">0 MB / 100 MB used</span>
+            <span class="usage-count" id="storagePercent"></span>
+          </div>
+          <div class="usage-bar">
+            <div class="usage-bar-fill" id="storageBar" style="width: 0%"></div>
           </div>
         </div>
       </div>
@@ -977,18 +993,6 @@
       <div class="toggle-switch" id="personalizedCategoriesToggle" onclick="togglePersonalizedCategoriesSetting()"></div>
     </div>
 
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Retake Onboarding</h3>
-        <p>Go through the welcome flow again to update your preferences</p>
-      </div>
-      <button class="btn btn-secondary" onclick="retakeOnboarding()">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-        </svg>
-        Restart Onboarding
-      </button>
-    </div>
   </div>
 
   <!-- Notifications Section -->
@@ -1082,6 +1086,23 @@
     </div>
   </div>
 
+  <!-- Onboarding -->
+  <div class="settings-section">
+    <h2>
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+      </svg>
+      Onboarding
+    </h2>
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Retake Onboarding</h3>
+        <p>Go through the setup questionnaire again</p>
+      </div>
+      <button class="btn btn-secondary" onclick="retakeOnboarding()">Retake</button>
+    </div>
+  </div>
+
   <!-- Danger Zone -->
   <div class="settings-section danger-zone">
     <h2>
@@ -1094,9 +1115,17 @@
     <div class="settings-row">
       <div class="settings-label">
         <h3>Delete All Data</h3>
-        <p>Remove all ingredients, recipes, expenses, and orders</p>
+        <p>Remove all ingredients, products, expenses, and orders</p>
       </div>
       <button class="btn btn-danger" onclick="openDeleteDataModal()">Delete All Data</button>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Delete All Files</h3>
+        <p>Permanently delete all uploaded receipt images</p>
+      </div>
+      <button class="btn btn-danger" onclick="openDeleteFilesModal()">Delete All Files</button>
     </div>
 
     <div class="settings-row">
@@ -1141,7 +1170,7 @@
 <div class="modal-overlay" id="deleteDataModal">
   <div class="modal-content">
     <h3>Delete All Data</h3>
-    <p>This will permanently delete all your ingredients, recipes, expenses, and orders. This action cannot be undone.</p>
+    <p>This will permanently delete all your ingredients, products, expenses, and orders. This action cannot be undone.</p>
     <p style="font-weight: 600; color: var(--danger);">Type "DELETE" to confirm:</p>
     <input type="text" id="deleteDataConfirm" class="form-input" placeholder="Type DELETE" style="width: 100%; margin-bottom: 20px;">
     <div class="modal-actions">
@@ -1161,6 +1190,19 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeDeleteAccountModal()">Cancel</button>
       <button class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete All Files Modal -->
+<div class="modal-overlay" id="deleteFilesModal">
+  <div class="modal-content">
+    <h3>Delete All Files</h3>
+    <p>This will permanently delete all your uploaded receipt images from storage.</p>
+    <p style="color: var(--text-muted); font-size: 13px; margin: 12px 0;">This will free up storage space but cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeDeleteFilesModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDeleteFiles()">Delete All Files</button>
     </div>
   </div>
 </div>
@@ -1381,10 +1423,77 @@ async function loadTierInformation(settings) {
   }
   updateUsageBar('scanBar', totalScans, scanLimit);
 
+  // Calculate and display reset date (first day of next month)
+  const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const resetDateFormatted = `${String(resetDate.getDate()).padStart(2, '0')}-${String(resetDate.getMonth() + 1).padStart(2, '0')}-${resetDate.getFullYear()}`;
+  const scanResetDateEl = document.getElementById('scanResetDate');
+  if (scanResetDateEl) {
+    scanResetDateEl.textContent = `Resets on ${resetDateFormatted}`;
+  }
+
+  // Load storage usage
+  await loadStorageStats(tier);
+
   // Hide upgrade button when on pro
   const upgradeBtn = document.getElementById('upgradeBtn');
   if (upgradeBtn && tier === 'pro') {
     upgradeBtn.style.display = 'none';
+  }
+}
+
+async function loadStorageStats(tier) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    // Get user's storage stats
+    const { data: settings } = await supabaseClient
+      .from('user_settings')
+      .select('storage_used_bytes, storage_limit_bytes')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!settings) {
+      // If no storage data yet, show defaults based on tier
+      const storageLimits = { free: 10485760, starter: 52428800, pro: 262144000 }; // 10MB, 50MB, 250MB
+      const limitBytes = storageLimits[tier] || 10485760;
+      updateStorageDisplay(0, limitBytes);
+      return;
+    }
+
+    updateStorageDisplay(settings.storage_used_bytes || 0, settings.storage_limit_bytes || 10485760);
+  } catch (error) {
+    console.error('Error loading storage stats:', error);
+  }
+}
+
+function updateStorageDisplay(usedBytes, limitBytes) {
+  const usedMB = (usedBytes / 1048576).toFixed(1);
+  const limitMB = limitBytes > 0 ? `${(limitBytes / 1048576).toFixed(0)} MB` : '0 MB';
+  
+  const percentUsed = limitBytes > 0 ? ((usedBytes / limitBytes) * 100).toFixed(1) : 0;
+
+  const storageUsageEl = document.getElementById('storageUsage');
+  if (storageUsageEl) {
+    storageUsageEl.textContent = `${usedMB} MB / ${limitMB} used`;
+  }
+
+  const storagePercentEl = document.getElementById('storagePercent');
+  if (storagePercentEl) {
+    storagePercentEl.textContent = `${percentUsed}%`;
+  }
+
+  const storageBar = document.getElementById('storageBar');
+  if (storageBar) {
+    storageBar.style.width = `${percentUsed}%`;
+    
+    // Change color based on usage
+    storageBar.classList.remove('warning', 'danger');
+    if (percentUsed >= 90) {
+      storageBar.classList.add('danger');
+    } else if (percentUsed >= 75) {
+      storageBar.classList.add('warning');
+    }
   }
 }
 
@@ -1823,7 +1932,7 @@ async function downloadIngredients(e) {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      alert('No ingredients found to export');
+      alert('No items found to export');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
@@ -2009,6 +2118,80 @@ async function deleteAllData() {
 // Delete account functions
 function openDeleteAccountModal() {
   document.getElementById('deleteAccountModal').classList.add('active');
+  document.getElementById('deleteAccountConfirm').value = '';
+}
+
+function closeDeleteAccountModal() {
+  document.getElementById('deleteAccountModal').classList.remove('active');
+}
+
+// Delete files functions
+function openDeleteFilesModal() {
+  document.getElementById('deleteFilesModal').classList.add('active');
+}
+
+function closeDeleteFilesModal() {
+  document.getElementById('deleteFilesModal').classList.remove('active');
+}
+
+async function confirmDeleteFiles() {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get all files in the user's folder
+    const { data: files, error: listError } = await supabaseClient.storage
+      .from('expenses')
+      .list(user.id, {
+        limit: 1000,
+        sortBy: { column: 'name', order: 'asc' }
+      });
+
+    if (listError) throw listError;
+
+    if (!files || files.length === 0) {
+      showNotification('No files to delete', 'info');
+      closeDeleteFilesModal();
+      return;
+    }
+
+    // Create array of file paths to delete
+    const filePaths = files.map(file => `${user.id}/${file.name}`);
+
+    // Delete all files
+    const { error: deleteError } = await supabaseClient.storage
+      .from('expenses')
+      .remove(filePaths);
+
+    if (deleteError) throw deleteError;
+
+    // Clear receipt URLs from expenses and sales tables
+    await supabaseClient
+      .from('expenses')
+      .update({ receipt_url: null })
+      .eq('profile_id', user.id)
+      .not('receipt_url', 'is', null);
+
+    await supabaseClient
+      .from('sales')
+      .update({ receipt_url: null })
+      .eq('profile_id', user.id)
+      .not('receipt_url', 'is', null);
+
+    showNotification(`Successfully deleted ${files.length} file(s)`, 'success');
+    closeDeleteFilesModal();
+    
+    // Reload storage stats
+    const tier = localStorage.getItem('shelfy_user_tier') || 'free';
+    await loadStorageStats(tier);
+  } catch (error) {
+    console.error('Error deleting files:', error);
+    showNotification('Failed to delete files', 'error');
+  }
+}
+
+function openDeleteAccountModal() {
+  document.getElementById('deleteAccountModal').classList.add('active');
 }
 
 function closeDeleteAccountModal() {
@@ -2088,8 +2271,8 @@ document.addEventListener('DOMContentLoaded', function() {
       <div>
         <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
-          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Ingredients</a>
-          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Recipes</a>
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
           <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
           <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
         </div>
@@ -2492,10 +2675,23 @@ window.handleSubscribe = async function() {
 <!-- Onboarding Modal -->
 <div id="onboardingModal" class="onboarding-overlay" style="display: none;">
   <div class="onboarding-modal">
-    
+
+    <!-- Progress Bar -->
+    <div class="onboarding-progress" id="onboardingProgress">
+      <div class="progress-dots">
+        <div class="progress-dot active" data-step="1"></div>
+        <div class="progress-dot" data-step="2"></div>
+        <div class="progress-dot" data-step="3"></div>
+      </div>
+      <button class="onboarding-skip" onclick="completeOnboarding()" title="Skip onboarding">
+        Skip →
+      </button>
+    </div>
+
     <!-- Greeting Screen -->
     <div id="onboarding-greeting" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="onboarding-icon">👋</div>
         <div class="greeting-text">
           <div class="greeting-line" data-delay="0">Hello there,</div>
           <div class="greeting-line" data-delay="400"></div>
@@ -2504,7 +2700,7 @@ window.handleSubscribe = async function() {
           <div class="greeting-line" data-delay="1600">to find the sweet spot for the two of us</div>
         </div>
         <button class="onboarding-btn onboarding-primary" onclick="nextOnboardingStep()" style="opacity: 0;" id="greetingContinue">
-          Let's go
+          Let's go →
         </button>
       </div>
     </div>
@@ -2512,13 +2708,24 @@ window.handleSubscribe = async function() {
     <!-- Question 1: Store Count -->
     <div id="onboarding-q1" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="onboarding-icon">🏪</div>
         <div class="onboarding-question">
+          <div class="question-number">Question 1 of 3</div>
           <div class="question-text">How many stores do you want to manage with shelfyAI?</div>
         </div>
         <div class="onboarding-options">
-          <button class="onboarding-option" onclick="selectStoreCount('1')">1</button>
-          <button class="onboarding-option" onclick="selectStoreCount('2-5')">2 - 5</button>
-          <button class="onboarding-option" onclick="selectStoreCount('more-than-5')">more than 5</button>
+          <button class="onboarding-option" onclick="selectStoreCount('1')">
+            <span class="option-emoji">1️⃣</span>
+            <span class="option-text">Just one</span>
+          </button>
+          <button class="onboarding-option" onclick="selectStoreCount('2-5')">
+            <span class="option-emoji">🔢</span>
+            <span class="option-text">2 - 5 stores</span>
+          </button>
+          <button class="onboarding-option" onclick="selectStoreCount('more-than-5')">
+            <span class="option-emoji">🚀</span>
+            <span class="option-text">More than 5</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2526,6 +2733,7 @@ window.handleSubscribe = async function() {
     <!-- Transition 1: Store Count Response -->
     <div id="onboarding-t1" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="transition-emoji" id="storeCountEmoji">😎</div>
         <div class="transition-text" id="storeCountResponse"></div>
       </div>
     </div>
@@ -2533,26 +2741,52 @@ window.handleSubscribe = async function() {
     <!-- Question 2: Product Categories -->
     <div id="onboarding-q2" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="onboarding-icon">📦</div>
         <div class="onboarding-question">
+          <div class="question-number">Question 2 of 3</div>
           <div class="question-text">What kind of products do you sell in your store(s)?</div>
           <div class="question-hint">Select all that apply</div>
         </div>
         <div class="onboarding-categories">
-          <button class="category-pill" data-category="Handmade Crafts & Art" onclick="toggleCategory(this)">Handmade Crafts & Art</button>
-          <button class="category-pill" data-category="Jewelry & Accessories" onclick="toggleCategory(this)">Jewelry & Accessories</button>
-          <button class="category-pill" data-category="Home Decor" onclick="toggleCategory(this)">Home Decor</button>
-          <button class="category-pill" data-category="Apparel & Fashion" onclick="toggleCategory(this)">Apparel & Fashion</button>
-          <button class="category-pill" data-category="Beauty & Skincare" onclick="toggleCategory(this)">Beauty & Skincare</button>
-          <button class="category-pill" data-category="Food & Beverage" onclick="toggleCategory(this)">Food & Beverage</button>
-          <button class="category-pill" data-category="Stationery & Paper Goods" onclick="toggleCategory(this)">Stationery & Paper Goods</button>
-          <button class="category-pill" data-category="Toys & Games" onclick="toggleCategory(this)">Toys & Games</button>
-          <button class="category-pill" data-category="Party Supplies & Gifts" onclick="toggleCategory(this)">Party Supplies & Gifts</button>
-          <button class="category-pill" data-category="Electronics & Gadgets" onclick="toggleCategory(this)">Electronics & Gadgets</button>
-          <button class="category-pill" data-category="Tools & Supplies" onclick="toggleCategory(this)">Tools & Supplies</button>
-          <button class="category-pill" data-category="Whatever" onclick="toggleCategory(this)">Whatever</button>
+          <button class="category-pill" data-category="Handmade Crafts & Art" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎨</span> Handmade Crafts & Art
+          </button>
+          <button class="category-pill" data-category="Jewelry & Accessories" onclick="toggleCategory(this)">
+            <span class="cat-emoji">💎</span> Jewelry & Accessories
+          </button>
+          <button class="category-pill" data-category="Home Decor" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🏠</span> Home Decor
+          </button>
+          <button class="category-pill" data-category="Apparel & Fashion" onclick="toggleCategory(this)">
+            <span class="cat-emoji">👕</span> Apparel & Fashion
+          </button>
+          <button class="category-pill" data-category="Beauty & Skincare" onclick="toggleCategory(this)">
+            <span class="cat-emoji">💄</span> Beauty & Skincare
+          </button>
+          <button class="category-pill" data-category="Food & Beverage" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🍰</span> Food & Beverage
+          </button>
+          <button class="category-pill" data-category="Stationery & Paper Goods" onclick="toggleCategory(this)">
+            <span class="cat-emoji">📝</span> Stationery & Paper Goods
+          </button>
+          <button class="category-pill" data-category="Toys & Games" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎮</span> Toys & Games
+          </button>
+          <button class="category-pill" data-category="Party Supplies & Gifts" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🎁</span> Party Supplies & Gifts
+          </button>
+          <button class="category-pill" data-category="Electronics & Gadgets" onclick="toggleCategory(this)">
+            <span class="cat-emoji">⚡</span> Electronics & Gadgets
+          </button>
+          <button class="category-pill" data-category="Tools & Supplies" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🔧</span> Tools & Supplies
+          </button>
+          <button class="category-pill" data-category="Whatever" onclick="toggleCategory(this)">
+            <span class="cat-emoji">🤷</span> Whatever
+          </button>
         </div>
         <button class="onboarding-btn onboarding-primary" onclick="submitCategories()">
-          Continue
+          Continue →
         </button>
       </div>
     </div>
@@ -2560,6 +2794,7 @@ window.handleSubscribe = async function() {
     <!-- Transition 2: Category Response -->
     <div id="onboarding-t2" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="transition-emoji" id="categoryEmoji">✨</div>
         <div class="transition-text" id="categoryResponse"></div>
       </div>
     </div>
@@ -2567,13 +2802,24 @@ window.handleSubscribe = async function() {
     <!-- Question 3: Order Volume -->
     <div id="onboarding-q3" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="onboarding-icon">📈</div>
         <div class="onboarding-question">
+          <div class="question-number">Question 3 of 3</div>
           <div class="question-text">How many orders do you have per month?</div>
         </div>
         <div class="onboarding-options">
-          <button class="onboarding-option" onclick="selectOrderVolume('1-10')">1 - 10</button>
-          <button class="onboarding-option" onclick="selectOrderVolume('11-50')">11 - 50</button>
-          <button class="onboarding-option" onclick="selectOrderVolume('more-than-50')">more than 50</button>
+          <button class="onboarding-option" onclick="selectOrderVolume('1-10')">
+            <span class="option-emoji">🌱</span>
+            <span class="option-text">1 - 10</span>
+          </button>
+          <button class="onboarding-option" onclick="selectOrderVolume('11-50')">
+            <span class="option-emoji">📊</span>
+            <span class="option-text">11 - 50</span>
+          </button>
+          <button class="onboarding-option" onclick="selectOrderVolume('more-than-50')">
+            <span class="option-emoji">🔥</span>
+            <span class="option-text">More than 50</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2581,6 +2827,7 @@ window.handleSubscribe = async function() {
     <!-- Transition 3: Order Volume Response -->
     <div id="onboarding-t3" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="transition-emoji" id="orderVolumeEmoji">💪</div>
         <div class="transition-text" id="orderVolumeResponse"></div>
       </div>
     </div>
@@ -2588,6 +2835,7 @@ window.handleSubscribe = async function() {
     <!-- Final: Plan Recommendation -->
     <div id="onboarding-final" class="onboarding-screen" style="display: none;">
       <div class="onboarding-content">
+        <div class="celebration-emoji">🎉</div>
         <div class="recommendation-content">
           <div class="recommendation-title">Perfect! Here's what we recommend</div>
           <div class="recommendation-plan">
@@ -2602,7 +2850,7 @@ window.handleSubscribe = async function() {
           </div>
           <div class="recommendation-actions">
             <button class="onboarding-btn onboarding-primary" onclick="upgradeToPlan()">
-              <span id="upgradeButtonText">Upgrade to Starter</span>
+              <span id="upgradeButtonText">Upgrade to Starter</span> →
             </button>
             <button class="onboarding-btn onboarding-secondary" onclick="completeOnboarding()">
               Maybe later

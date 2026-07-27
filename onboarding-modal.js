@@ -294,7 +294,7 @@ function updateRecommendationUI(plan) {
       featuresEl.innerHTML = `
         <div class="plan-feature">✓ 1 store</div>
         <div class="plan-feature">✓ 5 AI scans per month</div>
-        <div class="plan-feature">✓ Unlimited ingredients & recipes</div>
+        <div class="plan-feature">✓ Unlimited ingredients & products</div>
       `;
     }
     if (upgradeBtn) upgradeBtn.textContent = 'Start with Free';
@@ -392,9 +392,12 @@ async function checkAndShowOnboarding() {
     const userId = user?.data?.user?.id || user?.id;
     
     if (!userId) return;
-    
+
     // Skip onboarding on desktop
     if (window.innerWidth > 768) return;
+
+    // Skip auto-show on settings page (user can retake manually)
+    if (window.location.pathname.includes('settings')) return;
     
     // For testing: always show onboarding
     // In production, check onboarding_completed flag
