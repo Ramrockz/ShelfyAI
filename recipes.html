@@ -1549,6 +1549,8 @@ function render() {
             const isFirstTime = !recipes || recipes.length === 0;
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = isFirstTime ? 'none' : '';
+            const mobileFilterRow = document.getElementById('prodMobileFilterRow');
+            if (mobileFilterRow) mobileFilterRow.style.display = isFirstTime ? 'none' : '';
 
             container.innerHTML = isFirstTime ? `
               <div style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; text-align:center; padding:60px 20px;">
@@ -1566,6 +1568,8 @@ function render() {
         } else {
             const fab = document.querySelector('.fab');
             if (fab) fab.style.display = '';
+            const mobileFilterRow = document.getElementById('prodMobileFilterRow');
+            if (mobileFilterRow) mobileFilterRow.style.display = '';
 
             const favData    = allData.filter(r => r.is_favorite);
             const nonFavData = allData.filter(r => !r.is_favorite);
