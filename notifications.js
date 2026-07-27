@@ -19,10 +19,44 @@ async function initializeNotifications() {
     if (bellElement) {
       bellElement.style.display = 'flex';
     }
+    await ensureWelcomeNotification(session.user.id);
     await loadNotifications();
 
     // Check for new notifications every 30 seconds
     notificationCheckInterval = setInterval(loadNotifications, 30000);
+  }
+}
+
+// One-time "getting started" notification pointing at the docs/tutorials
+// page. Gated by a user_settings flag (not by checking for an existing
+// notification row) so it never reappears once the user deletes it.
+async function ensureWelcomeNotification(userId) {
+  try {
+    const { data: settings, error } = await supabaseClient
+      .from('user_settings')
+      .select('welcome_notification_sent')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (settings?.welcome_notification_sent) return;
+
+    const { error: insertError } = await supabaseClient
+      .from('notifications')
+      .insert([{
+        profile_id: userId,
+        type: 'welcome_guide',
+        message: 'New to ShelfyAI? Check out our quick-start guides for creating items, products, and orders.',
+        is_read: false
+      }]);
+    if (insertError) throw insertError;
+
+    // Upsert (not update) — some users may not have a user_settings row yet.
+    await supabaseClient
+      .from('user_settings')
+      .upsert({ user_id: userId, welcome_notification_sent: true }, { onConflict: 'user_id' });
+  } catch (error) {
+    console.error('Error ensuring welcome notification:', error);
   }
 }
 
@@ -91,16 +125,27 @@ function renderNotifications() {
         <span class="truck-anim-icon${isPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
       </button>
     ` : '';
+    const isWelcomeGuide = notification.type === 'welcome_guide';
+    const itemClick = notification.ingredient_id
+      ? `onclick="openIngredient('${notification.ingredient_id}')"`
+      : isWelcomeGuide
+        ? `onclick="window.location.href='/docs'"`
+        : '';
+    const openLink = notification.ingredient_id
+      ? `<span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>`
+      : isWelcomeGuide
+        ? `<span class="notif-open-link" onclick="window.location.href='/docs'; event.stopPropagation();">View Guide</span>`
+        : '';
     return `
     <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
          data-notification-id="${notification.id}"
          onmouseenter="markAsRead('${notification.id}')"
-         ${notification.ingredient_id ? `onclick="openIngredient('${notification.ingredient_id}')"` : ''}>
+         ${itemClick}>
       <div class="notification-message">${notification.message}</div>
       <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
       <div class="notification-actions">
         ${truckBtn}
-        ${notification.ingredient_id ? `<span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>` : ''}
+        ${openLink}
         <span class="notif-delete-link" onclick="deleteNotification('${notification.id}'); event.stopPropagation();">Delete</span>
       </div>
     </div>
