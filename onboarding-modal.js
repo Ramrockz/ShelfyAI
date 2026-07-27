@@ -39,9 +39,12 @@ function showScreen(screenId) {
   if (targetScreen) {
     targetScreen.style.display = 'block';
   }
-  
+
   // Update progress dots based on which question we're on
   updateProgressDots(screenId);
+
+  // Render any icons set via data-lucide on the newly-shown screen
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Update progress dots
@@ -103,13 +106,13 @@ function selectStoreCount(count) {
   if (responseText) {
     if (count === '1') {
       responseText.textContent = 'that sounds about right';
-      if (responseEmoji) responseEmoji.textContent = '👌';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="store"></i>';
     } else if (count === '2-5') {
       responseText.textContent = 'You sure about being lazy, anyways..';
-      if (responseEmoji) responseEmoji.textContent = '😏';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     } else if (count === 'more-than-5') {
       responseText.textContent = "No one said you can't be lazy and busy";
-      if (responseEmoji) responseEmoji.textContent = '🚀';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="rocket"></i>';
     }
   }
   
@@ -173,7 +176,7 @@ function submitCategories() {
   if (responseText) {
     if (selectedCategories.includes('Whatever')) {
       responseText.textContent = 'I feel you, whatever sells';
-      if (responseEmoji) responseEmoji.textContent = '🤷';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="shuffle"></i>';
     } else if (selectedCategories.length === 1) {
       const category = selectedCategories[0];
       const funnyComments = {
@@ -189,24 +192,24 @@ function submitCategories() {
         'Electronics & Gadgets': 'Tech savvy. I like it.',
         'Tools & Supplies': 'Tools of the trade. Practical and profitable.'
       };
-      const emojiMap = {
-        'Handmade Crafts & Art': '🎨',
-        'Jewelry & Accessories': '💎',
-        'Home Decor': '🏠',
-        'Apparel & Fashion': '👕',
-        'Beauty & Skincare': '💄',
-        'Food & Beverage': '🍰',
-        'Stationery & Paper Goods': '📝',
-        'Toys & Games': '🎮',
-        'Party Supplies & Gifts': '🎁',
-        'Electronics & Gadgets': '⚡',
-        'Tools & Supplies': '🔧'
+      const iconMap = {
+        'Handmade Crafts & Art': 'palette',
+        'Jewelry & Accessories': 'gem',
+        'Home Decor': 'home',
+        'Apparel & Fashion': 'shirt',
+        'Beauty & Skincare': 'sparkles',
+        'Food & Beverage': 'cake',
+        'Stationery & Paper Goods': 'pencil',
+        'Toys & Games': 'gamepad-2',
+        'Party Supplies & Gifts': 'gift',
+        'Electronics & Gadgets': 'cpu',
+        'Tools & Supplies': 'wrench'
       };
       responseText.textContent = `${category}. ${funnyComments[category] || 'Nice choice!'}`;
-      if (responseEmoji) responseEmoji.textContent = emojiMap[category] || '✨';
+      if (responseEmoji) responseEmoji.innerHTML = `<i data-lucide="${iconMap[category] || 'sparkles'}"></i>`;
     } else {
       responseText.textContent = 'busy, busy, busy';
-      if (responseEmoji) responseEmoji.textContent = '🐝';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     }
   }
   
@@ -232,13 +235,13 @@ function selectOrderVolume(volume) {
   if (responseText) {
     if (volume === '1-10') {
       responseText.textContent = 'Every business starts small. Stick with it, the breakthrough is closer than you think.';
-      if (responseEmoji) responseEmoji.textContent = '🌱';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="sprout"></i>';
     } else if (volume === '11-50') {
       responseText.textContent = "You're finding your rhythm! Keep that momentum going.";
-      if (responseEmoji) responseEmoji.textContent = '📈';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="bar-chart-3"></i>';
     } else if (volume === 'more-than-50') {
       responseText.textContent = "Look at you crushing it! That's the kind of hustle that builds empires.";
-      if (responseEmoji) responseEmoji.textContent = '🔥';
+      if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="flame"></i>';
     }
   }
   
@@ -292,9 +295,9 @@ function updateRecommendationUI(plan) {
     if (priceEl) priceEl.textContent = '€0/month';
     if (featuresEl) {
       featuresEl.innerHTML = `
-        <div class="plan-feature">✓ 1 store</div>
-        <div class="plan-feature">✓ 5 AI scans per month</div>
-        <div class="plan-feature">✓ Unlimited ingredients & products</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> 1 store</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> 5 AI scans per month</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Unlimited ingredients & products</div>
       `;
     }
     if (upgradeBtn) upgradeBtn.textContent = 'Start with Free';
@@ -304,9 +307,9 @@ function updateRecommendationUI(plan) {
     if (priceEl) priceEl.textContent = '€9.99/month';
     if (featuresEl) {
       featuresEl.innerHTML = `
-        <div class="plan-feature">✓ Up to 5 stores</div>
-        <div class="plan-feature">✓ 100 AI scans per month</div>
-        <div class="plan-feature">✓ Analytics dashboard</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Up to 5 stores</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> 100 AI scans per month</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Analytics dashboard</div>
       `;
     }
     if (upgradeBtn) upgradeBtn.textContent = 'Upgrade to Starter';
@@ -316,9 +319,9 @@ function updateRecommendationUI(plan) {
     if (priceEl) priceEl.textContent = '€24.99/month';
     if (featuresEl) {
       featuresEl.innerHTML = `
-        <div class="plan-feature">✓ Unlimited stores</div>
-        <div class="plan-feature">✓ 300 AI scans per month</div>
-        <div class="plan-feature">✓ Analytics dashboard</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Unlimited stores</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> 300 AI scans per month</div>
+        <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Analytics dashboard</div>
       `;
     }
     if (upgradeBtn) upgradeBtn.textContent = 'Upgrade to Pro';
