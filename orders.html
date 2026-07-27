@@ -3491,10 +3491,14 @@ async function confirmMappedOrder() {
     const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
     if (error) throw error;
     const updateInventory = document.getElementById('mapped_update_inventory')?.checked !== false;
+    let inventoryChanges = null;
     if (updateInventory && selectedOrderRecipes.length > 0 && data && data[0]) {
-      await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
+      inventoryChanges = await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
     closeRecipeMappingModal();
+    document.getElementById('manualStep1').style.display = 'none';
+    document.getElementById('manualOrderModal').classList.add('active');
+    showOrderSuccessScreen(data[0], updateInventory, inventoryChanges);
     await loadOrders();
     render();
   } catch (error) {
