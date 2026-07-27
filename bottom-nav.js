@@ -28,13 +28,14 @@
 
   const rawPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
 
-  // "pricing" is the one page shown to both logged-out and logged-in users —
-  // give it the app-style bottom nav only when a login is already cached,
+  // "pricing" and "docs" are shown to both logged-out and logged-in users —
+  // give them the app-style bottom nav only when a login is already cached,
   // using the same fast synchronous flag auth.js sets/clears on sign-in/out.
-  const alwaysPublicPages = ['index', 'login', 'docs', 'faq', 'sandbox', 'blog'];
+  const alwaysPublicPages = ['index', 'login', 'faq', 'sandbox', 'blog'];
+  const dualAudiencePages = ['pricing', 'docs'];
   const isLikelyLoggedIn = !!localStorage.getItem('shelfy_user_email');
-  const isPublicPricing = rawPage === 'pricing' && !isLikelyLoggedIn;
-  if (alwaysPublicPages.includes(rawPage) || isPublicPricing || window.location.pathname === '/') return;
+  const isPublicDualAudience = dualAudiencePages.includes(rawPage) && !isLikelyLoggedIn;
+  if (alwaysPublicPages.includes(rawPage) || isPublicDualAudience || window.location.pathname === '/') return;
   const parentMap = {
     'ingredient-detail': 'ingredients',
     'recipe-detail': 'recipes',
@@ -54,7 +55,9 @@
     'expenses': 'Expenses',
     'expense-detail': 'Expense',
     'analytics': 'Analytics',
-    'settings': 'Settings'
+    'settings': 'Settings',
+    'docs': 'Quick Start',
+    'pricing': 'Pricing'
   };
   const pageTitle = pageTitleMap[rawPage] || '';
 
