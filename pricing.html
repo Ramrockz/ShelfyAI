@@ -374,7 +374,7 @@
         <li><span class="cross">✕</span> Analytics Dashboard</li>
       </ul>
 
-      <button class="btn btn-free" id="btn-free" onclick="handlePricingClick('free')" style="cursor: pointer;">Sign Up</button>
+      <button class="btn btn-free" id="btn-free" onclick="handlePricingClick('free')" style="cursor: pointer; visibility: hidden;">Sign Up</button>
     </div>
 
     <div class="card popular">
@@ -397,7 +397,7 @@
         <li><span class="check">✓</span> Analytics Dashboard</li>
       </ul>
 
-      <button class="btn btn-pro" id="btn-starter" onclick="handlePricingClick('starter')" style="cursor: pointer;">Sign Up</button>
+      <button class="btn btn-pro" id="btn-starter" onclick="handlePricingClick('starter')" style="cursor: pointer; visibility: hidden;">Sign Up</button>
     </div>
 
     <div class="card">
@@ -419,7 +419,7 @@
         <li><span class="check">✓</span> Analytics Dashboard</li>
       </ul>
 
-      <button class="btn btn-pro" id="btn-pro" onclick="handlePricingClick('pro')" style="cursor: pointer;">Sign Up</button>
+      <button class="btn btn-pro" id="btn-pro" onclick="handlePricingClick('pro')" style="cursor: pointer; visibility: hidden;">Sign Up</button>
     </div>
 
   </div>
@@ -506,10 +506,26 @@
     }
   })();
 
+  // CTA buttons start hidden (see visibility:hidden inline style) so we never
+  // flash "Sign Up" before swapping to Current Plan/Upgrade/Downgrade for a
+  // logged-in user. This reveals them once we know which state to show.
+  function revealPricingButtons() {
+    ['btn-free', 'btn-starter', 'btn-pro'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.style.visibility = 'visible';
+    });
+  }
+
   // Update auth button and pricing CTAs for logged in users
+  let authUIRetries = 0;
   async function updateAuthUI() {
     if (typeof window.supabaseClient === 'undefined') {
-      console.warn('Supabase client not yet loaded, retrying...');
+      authUIRetries++;
+      if (authUIRetries > 30) {
+        console.warn('Supabase client never loaded; showing logged-out state');
+        revealPricingButtons();
+        return;
+      }
       setTimeout(updateAuthUI, 100);
       return;
     }
@@ -524,9 +540,10 @@
           navLinks.innerHTML = `
             <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
             <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
-            <a href="/recipes" class="nav-link" data-page="recipes">Recipes</a>
+            <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
             <a href="/orders" class="nav-link" data-page="orders">Orders</a>
-            <a href="/pricing" class="nav-link active" data-page="pricing">Pricing</a>
+            <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+            <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
           `;
         }
         
@@ -577,6 +594,8 @@
       }
     } catch (error) {
       console.error('Error updating auth UI:', error);
+    } finally {
+      revealPricingButtons();
     }
   }
 
