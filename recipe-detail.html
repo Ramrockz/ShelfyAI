@@ -1249,6 +1249,10 @@ function renderMobileOverlay() {
   if (titleEl && document.activeElement !== titleEl) titleEl.value = recipe.name || '';
   const cost = parseFloat(recipe.cost) || 0;
   document.getElementById('rdmCostDisplay').textContent = `$${cost.toFixed(2)}`;
+  const rdmPriceInput = document.getElementById('rdmRetailPriceInput');
+  if (rdmPriceInput && document.activeElement !== rdmPriceInput) {
+    rdmPriceInput.value = recipe.retail_price != null ? parseFloat(recipe.retail_price).toFixed(2) : '';
+  }
   _syncFavBtns();
 
   const components = recipe.components || [];
@@ -2024,21 +2028,13 @@ async function saveRecipeName() {
   }
 }
 
-async function updateRetailPrice() {
-  const priceInput = document.getElementById('retailPriceInput');
-  const newPrice = parseFloat(priceInput.value) || 0;
-  
-  if (newPrice < 0) {
-    priceInput.value = (recipe.retail_price || 0).toFixed(2);
-    return;
-  }
-  
+async function persistRetailPrice(newPrice) {
   try {
     const { error } = await window.supabaseClient
       .from('recipes')
       .update({ retail_price: newPrice })
       .eq('id', recipeId);
-    
+
     if (error) throw error;
     recipe.retail_price = newPrice;
     renderRecipe();
@@ -2046,6 +2042,30 @@ async function updateRetailPrice() {
     console.error('Error updating retail price:', error);
     showAlert('Failed to update retail price');
   }
+}
+
+async function updateRetailPrice() {
+  const priceInput = document.getElementById('retailPriceInput');
+  const newPrice = parseFloat(priceInput.value) || 0;
+
+  if (newPrice < 0) {
+    priceInput.value = (recipe.retail_price || 0).toFixed(2);
+    return;
+  }
+
+  await persistRetailPrice(newPrice);
+}
+
+async function updateRdmRetailPrice() {
+  const priceInput = document.getElementById('rdmRetailPriceInput');
+  const newPrice = parseFloat(priceInput.value) || 0;
+
+  if (newPrice < 0) {
+    priceInput.value = (recipe.retail_price || 0).toFixed(2);
+    return;
+  }
+
+  await persistRetailPrice(newPrice);
 }
 
 async function saveRecipe() {
@@ -2914,6 +2934,7 @@ document.addEventListener('keydown', (e) => {
     <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
       <div id="rdmUserAvatar" class="user-avatar" style="width:32px;height:32px;font-size:13px;flex-shrink:0;">U</div>
     </button>
+    <div style="flex:1;text-align:center;font-size:17px;font-weight:700;color:var(--text-main);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;">Product</div>
     <div class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="padding:6px;flex-shrink:0;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:22px;height:22px;display:block;">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
@@ -2924,9 +2945,24 @@ document.addEventListener('keydown', (e) => {
     <div class="rdm-name-section">
       <input type="text" class="rdm-title" id="rdmTitle" value="Product" onblur="saveMobileRecipeName()">
     </div>
+    <div style="display:flex;gap:10px;padding:0 20px 16px;">
+      <div style="flex:1;background:var(--bg-inner);border:2px solid var(--border);border-radius:12px;padding:10px 14px;">
+        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.06em;margin-bottom:4px;">Cost</div>
+        <div id="rdmCostDisplay" style="font-size:18px;font-weight:800;color:var(--text-main);">$0.00</div>
+      </div>
+      <div style="flex:1;background:var(--bg-inner);border:2px solid var(--border);border-radius:12px;padding:10px 14px;">
+        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.06em;margin-bottom:4px;">Sales Price</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-size:18px;font-weight:700;color:var(--text-main);">$</span>
+          <input type="number" id="rdmRetailPriceInput" min="0" step="0.01" placeholder="0.00"
+            style="font-size:18px;font-weight:700;color:var(--text-main);background:transparent;border:none;width:100%;outline:none;padding:0;"
+            onblur="updateRdmRetailPrice()"
+            onkeydown="if(event.key==='Enter')this.blur();" />
+        </div>
+      </div>
+    </div>
     <div id="rdmQtyList" style="padding:0 20px;"></div>
   </div>
-  <div id="rdmCostDisplay" style="display:none;">$0.00</div>
   <div style="display:flex; gap:12px; padding:12px 20px; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); border-top:1px solid #e5e7eb; flex-shrink:0; background:#ffffff;">
     <button onclick="duplicateRecipe()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#06b6d4; color:#ffffff; border:2px solid #06b6d4; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
       <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
