@@ -28,20 +28,29 @@ function hideOnboardingModal() {
   }
 }
 
+// Linear step order the user can navigate back through.
+// Transition screens (t1/t2/t3) auto-advance and aren't part of it.
+const ONBOARDING_STEPS = ['onboarding-greeting', 'onboarding-q1', 'onboarding-q2', 'onboarding-q3', 'onboarding-final'];
+let currentOnboardingScreen = null;
+
 // Show specific screen
 function showScreen(screenId) {
   // Hide all screens
   const screens = document.querySelectorAll('.onboarding-screen');
   screens.forEach(screen => screen.style.display = 'none');
-  
+
   // Show target screen
   const targetScreen = document.getElementById(screenId);
   if (targetScreen) {
     targetScreen.style.display = 'block';
   }
 
-  // Update progress dots based on which question we're on
-  updateProgressDots(screenId);
+  currentOnboardingScreen = screenId;
+
+  // Back button only makes sense on a navigable step that isn't the first
+  const backBtn = document.getElementById('onboardingBackBtn');
+  const stepIndex = ONBOARDING_STEPS.indexOf(screenId);
+  if (backBtn) backBtn.style.display = stepIndex > 0 ? 'flex' : 'none';
 
   // No skipping once we're on the last step — there's nothing left to skip
   const skipBtn = document.querySelector('.onboarding-skip');
@@ -51,31 +60,11 @@ function showScreen(screenId) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Update progress dots
-function updateProgressDots(screenId) {
-  const dots = document.querySelectorAll('.progress-dot');
-  
-  // Remove all active/completed states
-  dots.forEach(dot => {
-    dot.classList.remove('active', 'completed');
-  });
-  
-  // Determine which step we're on
-  if (screenId === 'onboarding-greeting') {
-    // No dots active on greeting
-  } else if (screenId === 'onboarding-q1' || screenId === 'onboarding-t1') {
-    dots[0]?.classList.add('active');
-  } else if (screenId === 'onboarding-q2' || screenId === 'onboarding-t2') {
-    dots[0]?.classList.add('completed');
-    dots[1]?.classList.add('active');
-  } else if (screenId === 'onboarding-q3' || screenId === 'onboarding-t3') {
-    dots[0]?.classList.add('completed');
-    dots[1]?.classList.add('completed');
-    dots[2]?.classList.add('active');
-  } else if (screenId === 'onboarding-final') {
-    dots[0]?.classList.add('completed');
-    dots[1]?.classList.add('completed');
-    dots[2]?.classList.add('completed');
+// Go back to the previous step
+function goToPreviousStep() {
+  const stepIndex = ONBOARDING_STEPS.indexOf(currentOnboardingScreen);
+  if (stepIndex > 0) {
+    showScreen(ONBOARDING_STEPS[stepIndex - 1]);
   }
 }
 
@@ -87,7 +76,7 @@ function animateGreeting() {
     setTimeout(() => {
       continueBtn.style.transition = 'opacity 0.5s ease';
       continueBtn.style.opacity = '1';
-    }, 2400);
+    }, 1300);
   }
 }
 
@@ -109,23 +98,23 @@ function selectStoreCount(count) {
   
   if (responseText) {
     if (count === '1') {
-      responseText.textContent = 'that sounds about right';
+      responseText.textContent = 'That sounds about right.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="store"></i>';
     } else if (count === '2-5') {
-      responseText.textContent = 'You sure about being lazy, anyways..';
+      responseText.textContent = 'You sure about being lazy, anyways...';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     } else if (count === 'more-than-5') {
-      responseText.textContent = "No one said you can't be lazy and busy";
+      responseText.textContent = "No one said you can't be lazy and busy.";
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="rocket"></i>';
     }
   }
-  
+
   showScreen('onboarding-t1');
-  
-  // Auto-advance after 3 seconds
+
+  // Auto-advance after a short pause
   setTimeout(() => {
     showScreen('onboarding-q2');
-  }, 3000);
+  }, 1800);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -179,7 +168,7 @@ function submitCategories() {
   
   if (responseText) {
     if (selectedCategories.includes('Whatever')) {
-      responseText.textContent = 'I feel you, whatever sells';
+      responseText.textContent = 'I feel you, whatever sells.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="shuffle"></i>';
     } else if (selectedCategories.length === 1) {
       const category = selectedCategories[0];
@@ -212,17 +201,17 @@ function submitCategories() {
       responseText.textContent = `${category}. ${funnyComments[category] || 'Nice choice!'}`;
       if (responseEmoji) responseEmoji.innerHTML = `<i data-lucide="${iconMap[category] || 'sparkles'}"></i>`;
     } else {
-      responseText.textContent = 'busy, busy, busy';
+      responseText.textContent = 'Busy, busy, busy.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     }
   }
-  
+
   showScreen('onboarding-t2');
-  
-  // Auto-advance after 3 seconds
+
+  // Auto-advance after a short pause
   setTimeout(() => {
     showScreen('onboarding-q3');
-  }, 3000);
+  }, 1800);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -250,12 +239,12 @@ function selectOrderVolume(volume) {
   }
   
   showScreen('onboarding-t3');
-  
-  // Auto-advance after 3 seconds and calculate recommendation
+
+  // Auto-advance after a short pause and calculate recommendation
   setTimeout(() => {
     calculateRecommendation();
     showScreen('onboarding-final');
-  }, 3000);
+  }, 1800);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -292,8 +281,10 @@ function updateRecommendationUI(plan) {
   const priceEl = document.getElementById('recommendedPlanPrice');
   const featuresEl = document.getElementById('recommendedPlanFeatures');
   const upgradeBtn = document.getElementById('upgradeButtonText');
+  const upgradeArrow = document.getElementById('upgradeButtonArrow');
   const maybeLaterBtn = document.getElementById('maybeLaterBtn');
   if (maybeLaterBtn) maybeLaterBtn.style.display = '';
+  if (upgradeArrow) upgradeArrow.style.display = '';
 
   if (plan === 'free') {
     if (badgeEl) badgeEl.textContent = 'FREE';
@@ -309,6 +300,7 @@ function updateRecommendationUI(plan) {
     if (upgradeBtn) upgradeBtn.textContent = 'Stay Free for Now';
     // Everyone starts on Free, so "Maybe later" doesn't apply here
     if (maybeLaterBtn) maybeLaterBtn.style.display = 'none';
+    if (upgradeArrow) upgradeArrow.style.display = 'none';
   } else if (plan === 'starter') {
     if (badgeEl) badgeEl.textContent = 'STARTER';
     if (nameEl) nameEl.textContent = 'Starter Plan';

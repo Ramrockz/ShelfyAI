@@ -37,10 +37,27 @@
   margin-bottom: 32px;
 }
 
-.progress-dots {
+.onboarding-back {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
   display: flex;
-  gap: 12px;
   align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.onboarding-back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.onboarding-back:hover {
+  color: var(--text-main);
+  background: var(--bg-inner);
 }
 
 .onboarding-skip {
@@ -58,24 +75,6 @@
 .onboarding-skip:hover {
   color: var(--text-main);
   background: var(--bg-inner);
-}
-
-.progress-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.progress-dot.active {
-  background: var(--accent);
-  transform: scale(1.4);
-}
-
-.progress-dot.completed {
-  background: var(--success);
 }
 
 /* Screen Container */
@@ -523,7 +522,7 @@
 
 @media (max-width: 768px) {
   .onboarding-modal {
-    padding: 32px 24px;
+    padding: 32px 24px calc(40px + env(safe-area-inset-bottom));
     width: 95%;
     max-height: 90vh;
   }
@@ -596,7 +595,7 @@
 
 @media (max-width: 480px) {
   .onboarding-modal {
-    padding: 24px 20px;
+    padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
     border-radius: 16px;
   }
 

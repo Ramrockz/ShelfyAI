@@ -2678,11 +2678,9 @@ window.handleSubscribe = async function() {
 
     <!-- Progress Bar -->
     <div class="onboarding-progress" id="onboardingProgress">
-      <div class="progress-dots">
-        <div class="progress-dot active" data-step="1"></div>
-        <div class="progress-dot" data-step="2"></div>
-        <div class="progress-dot" data-step="3"></div>
-      </div>
+      <button class="onboarding-back" id="onboardingBackBtn" onclick="goToPreviousStep()" title="Back" style="display: none;">
+        <i data-lucide="arrow-left"></i>
+      </button>
       <button class="onboarding-skip" onclick="completeOnboarding()" title="Skip onboarding">
         Skip →
       </button>
@@ -2694,13 +2692,13 @@ window.handleSubscribe = async function() {
         <div class="onboarding-icon"><i data-lucide="hand"></i></div>
         <div class="greeting-text">
           <div class="greeting-line" data-delay="0">Hello there,</div>
-          <div class="greeting-line" data-delay="400"></div>
-          <div class="greeting-line" data-delay="800">let's stay lazy together.</div>
-          <div class="greeting-line" data-delay="1200">I just need to know a few things</div>
-          <div class="greeting-line" data-delay="1600">to find the sweet spot for the two of us</div>
+          <div class="greeting-line" data-delay="200"></div>
+          <div class="greeting-line" data-delay="400">let's stay lazy together.</div>
+          <div class="greeting-line" data-delay="600">I just need to know a few things</div>
+          <div class="greeting-line" data-delay="800">to find the sweet spot for the two of us.</div>
         </div>
         <button class="onboarding-btn onboarding-primary" onclick="nextOnboardingStep()" style="opacity: 0;" id="greetingContinue">
-          Let's go →
+          Let's go
         </button>
       </div>
     </div>
@@ -2745,7 +2743,7 @@ window.handleSubscribe = async function() {
         <div class="onboarding-question">
           <div class="question-number">Question 2 of 3</div>
           <div class="question-text">What kind of products do you sell in your store(s)?</div>
-          <div class="question-hint">Select all that apply</div>
+          <div class="question-hint">Select all that apply.</div>
         </div>
         <div class="onboarding-categories">
           <button class="category-pill" data-category="Handmade Crafts & Art" onclick="toggleCategory(this)">
@@ -2786,7 +2784,7 @@ window.handleSubscribe = async function() {
           </button>
         </div>
         <button class="onboarding-btn onboarding-primary" onclick="submitCategories()">
-          Continue →
+          Continue
         </button>
       </div>
     </div>
@@ -2837,7 +2835,7 @@ window.handleSubscribe = async function() {
       <div class="onboarding-content">
         <div class="celebration-icon"><i data-lucide="party-popper"></i></div>
         <div class="recommendation-content">
-          <div class="recommendation-title">Perfect! Here's what we recommend</div>
+          <div class="recommendation-title">Perfect! Here's what we recommend.</div>
           <div class="recommendation-plan">
             <div class="plan-badge" id="recommendedPlanBadge">STARTER</div>
             <div class="plan-name" id="recommendedPlanName">Starter Plan</div>
@@ -2850,7 +2848,7 @@ window.handleSubscribe = async function() {
           </div>
           <div class="recommendation-actions">
             <button class="onboarding-btn onboarding-primary" onclick="upgradeToPlan()">
-              <span id="upgradeButtonText">Upgrade to Starter</span> →
+              <span id="upgradeButtonText">Upgrade to Starter</span><span id="upgradeButtonArrow"> →</span>
             </button>
             <button class="onboarding-btn onboarding-secondary" id="maybeLaterBtn" onclick="completeOnboarding()">
               Maybe later
