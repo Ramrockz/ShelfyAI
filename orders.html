@@ -1445,13 +1445,13 @@ function renderRecent(filtered) {
 
   container.innerHTML = displayData.map(order => {
     const date = new Date(order.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const orderRef = order.order_reference || `#${order.id.substring(0, 8)}`;
-    const source = order.source || 'N/A';
-    
+    const channel = _realChannel(order.source);
+    const metaParts = [date, order.order_reference, channel].filter(Boolean);
+
     return `
       <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
         <h4>${order.customer || 'Unknown Customer'}</h4>
-        <div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${date} &bull; ${orderRef} &bull; ${source}</div>
+        <div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${metaParts.join(' &bull; ')}</div>
         <div style="display: flex; justify-content: center; margin: 12px 0;">
           <div style="text-align: center;">
             <div style="font-size: 32px; font-weight: 800; color: var(--text-main);">$${parseFloat(order.revenue || 0).toFixed(2)}</div>
@@ -1581,7 +1581,7 @@ function renderList(filtered) {
         <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
         <td>${date}</td>
         <td>${order.customer || 'Unknown'}</td>
-        <td>${order.source || 'N/A'}</td>
+        <td>${_realChannel(order.source) || '-'}</td>
         <td><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></td>
         <td>${order.order_reference || '-'}</td>
         <td>${trackingDisplay}</td>
@@ -2392,7 +2392,7 @@ async function _getLastUsedRecipes() {
 }
 
 function _renderRecipeCard(recipe) {
-  const price = parseFloat(recipe.cost) || 0;
+  const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
   const status = _recipeStockStatus(recipe);
   const badge = _stockBadge(status);
   const isFav = orderFavoriteIds.has(recipe.id);
@@ -2572,9 +2572,14 @@ function proceedToOrderDetails() {
   document.getElementById('manualStep2').style.display = 'flex';
   updateOrderTotal();
   _updateStatusRestriction();
-  // Default date to today
+  // Default date to today -- go through flatpickr's own API (not a direct
+  // .value assignment) so its internal selected-date state doesn't desync
+  // from what's actually displayed, which otherwise forces a second click
+  // before a new date picked in the calendar actually takes effect.
   const dateEl = document.getElementById('new_order_date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl && !dateEl.value && window._orderDatePicker) {
+    window._orderDatePicker.setDate(new Date(), true);
+  }
   // Recipe summary rows
   document.getElementById('step2RecipeSummary').innerHTML =
     orderRecipes.map((r, i) => `<div style="display:flex;align-items:center;padding:11px 16px;${i < orderRecipes.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
@@ -2646,6 +2651,14 @@ function closeManualOrderModal() {
 
 function _escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// order.source doubles as both "how the order was created" (Image Upload,
+// Manual Entry) and "sales channel" (Etsy, Shopify, ...) once the user picks
+// one on the detail page. Only the latter is meaningful to display.
+const ORDER_CHANNELS = ['Etsy', 'Shopify', 'Website', 'Local', 'Other'];
+function _realChannel(source) {
+  return ORDER_CHANNELS.includes(source) ? source : null;
 }
 
 function _updateStatusRestriction() {
@@ -3456,9 +3469,9 @@ async function confirmMappedOrder() {
     const items = [], selectedOrderRecipes = [];
     mappedRecipes.forEach((mapping, idx) => {
       if (mapping.selectedRecipe) {
-        const recipeCostPrice = parseFloat(mapping.selectedRecipe.cost) || 0;
-        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
-        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipeCostPrice });
+        const recipePrice = parseFloat(mapping.selectedRecipe.retail_price) || parseFloat(mapping.selectedRecipe.cost) || 0;
+        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
+        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
       } else {
         // Use whatever the user typed in the search box, fall back to itemData name
         const typedName = document.getElementById(`recipeSearchInput_${idx}`)?.value?.trim();
