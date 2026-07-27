@@ -23,10 +23,6 @@
     {
       href: '/analytics', page: 'analytics', label: 'Analytics',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`
-    },
-    {
-      href: '/docs', page: 'docs', label: 'Guide',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`
     }
   ];
 
@@ -35,7 +31,7 @@
   // "pricing" and "docs" are shown to both logged-out and logged-in users —
   // give them the app-style bottom nav only when a login is already cached,
   // using the same fast synchronous flag auth.js sets/clears on sign-in/out.
-  const alwaysPublicPages = ['index', 'login', 'faq', 'sandbox', 'blog'];
+  const alwaysPublicPages = ['index', 'login', 'sandbox', 'blog'];
   const dualAudiencePages = ['pricing', 'docs'];
   const isLikelyLoggedIn = !!localStorage.getItem('shelfy_user_email');
   const isPublicDualAudience = dualAudiencePages.includes(rawPage) && !isLikelyLoggedIn;
