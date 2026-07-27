@@ -391,28 +391,23 @@ async function checkAndShowOnboarding() {
     // Skip auto-show on settings page (user can retake manually)
     if (window.location.pathname.includes('settings')) return;
     
-    // For testing: always show onboarding
-    // In production, check onboarding_completed flag
-    showOnboardingModal();
-    
-    /* Production version:
     const { data, error } = await _supabase
       .from('user_settings')
       .select('onboarding_completed')
       .eq('user_id', userId)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') {
+      .maybeSingle();
+
+    if (error) {
       console.error('Error checking onboarding status:', error);
       return;
     }
-    
-    // Show onboarding if not completed
+
+    // Show onboarding only if the user has never completed or skipped it.
+    // completeOnboarding() sets onboarding_completed on both paths, so
+    // once this is true it never shows again.
     if (!data || !data.onboarding_completed) {
       showOnboardingModal();
     }
-    */
-    
   } catch (err) {
     console.error('Error checking onboarding:', err);
   }
