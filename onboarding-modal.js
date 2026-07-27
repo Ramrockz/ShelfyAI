@@ -98,13 +98,13 @@ function selectStoreCount(count) {
   
   if (responseText) {
     if (count === '1') {
-      responseText.textContent = 'That sounds about right.';
+      responseText.textContent = 'Nice, one store to master.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="store"></i>';
     } else if (count === '2-5') {
-      responseText.textContent = 'You sure about being lazy, anyways...';
+      responseText.textContent = 'Multitasking, we see you.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     } else if (count === 'more-than-5') {
-      responseText.textContent = "No one said you can't be lazy and busy.";
+      responseText.textContent = "Big moves. Let's go.";
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="rocket"></i>';
     }
   }
@@ -168,23 +168,10 @@ function submitCategories() {
   
   if (responseText) {
     if (selectedCategories.includes('Whatever')) {
-      responseText.textContent = 'I feel you, whatever sells.';
+      responseText.textContent = 'Anything goes. Got it.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="shuffle"></i>';
     } else if (selectedCategories.length === 1) {
       const category = selectedCategories[0];
-      const funnyComments = {
-        'Handmade Crafts & Art': 'Nice! Arts and crafts, the original hustle.',
-        'Jewelry & Accessories': 'Shiny things that make people happy. Smart.',
-        'Home Decor': 'Making houses feel like homes, one piece at a time.',
-        'Apparel & Fashion': 'Looking good is good business!',
-        'Beauty & Skincare': 'Beauty is big business. You know what\'s up.',
-        'Food & Beverage': 'Everyone needs to eat. Solid choice.',
-        'Stationery & Paper Goods': 'Paper products never go out of style.',
-        'Toys & Games': 'Fun and profit. The best combo.',
-        'Party Supplies & Gifts': 'You\'re in the happiness business!',
-        'Electronics & Gadgets': 'Tech savvy. I like it.',
-        'Tools & Supplies': 'Tools of the trade. Practical and profitable.'
-      };
       const iconMap = {
         'Handmade Crafts & Art': 'palette',
         'Jewelry & Accessories': 'gem',
@@ -198,10 +185,10 @@ function submitCategories() {
         'Electronics & Gadgets': 'cpu',
         'Tools & Supplies': 'wrench'
       };
-      responseText.textContent = `${category}. ${funnyComments[category] || 'Nice choice!'}`;
+      responseText.textContent = `${category}. Good pick.`;
       if (responseEmoji) responseEmoji.innerHTML = `<i data-lucide="${iconMap[category] || 'sparkles'}"></i>`;
     } else {
-      responseText.textContent = 'Busy, busy, busy.';
+      responseText.textContent = 'Nice mix. Noted.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="layers"></i>';
     }
   }
@@ -227,13 +214,13 @@ function selectOrderVolume(volume) {
   
   if (responseText) {
     if (volume === '1-10') {
-      responseText.textContent = 'Every business starts small. Stick with it, the breakthrough is closer than you think.';
+      responseText.textContent = 'Every empire starts small.';
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="sprout"></i>';
     } else if (volume === '11-50') {
-      responseText.textContent = "You're finding your rhythm! Keep that momentum going.";
+      responseText.textContent = "Solid rhythm you've got there.";
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="bar-chart-3"></i>';
     } else if (volume === 'more-than-50') {
-      responseText.textContent = "Look at you crushing it! That's the kind of hustle that builds empires.";
+      responseText.textContent = "Okay, you're not lazy at all.";
       if (responseEmoji) responseEmoji.innerHTML = '<i data-lucide="flame"></i>';
     }
   }
@@ -281,10 +268,8 @@ function updateRecommendationUI(plan) {
   const priceEl = document.getElementById('recommendedPlanPrice');
   const featuresEl = document.getElementById('recommendedPlanFeatures');
   const upgradeBtn = document.getElementById('upgradeButtonText');
-  const upgradeArrow = document.getElementById('upgradeButtonArrow');
   const maybeLaterBtn = document.getElementById('maybeLaterBtn');
   if (maybeLaterBtn) maybeLaterBtn.style.display = '';
-  if (upgradeArrow) upgradeArrow.style.display = '';
 
   if (plan === 'free') {
     if (badgeEl) badgeEl.textContent = 'FREE';
@@ -300,7 +285,6 @@ function updateRecommendationUI(plan) {
     if (upgradeBtn) upgradeBtn.textContent = 'Stay Free for Now';
     // Everyone starts on Free, so "Maybe later" doesn't apply here
     if (maybeLaterBtn) maybeLaterBtn.style.display = 'none';
-    if (upgradeArrow) upgradeArrow.style.display = 'none';
   } else if (plan === 'starter') {
     if (badgeEl) badgeEl.textContent = 'STARTER';
     if (nameEl) nameEl.textContent = 'Starter Plan';
@@ -385,7 +369,7 @@ function upgradeToPlan() {
     return;
   }
   // Redirect to pricing page
-  window.location.href = '/pricing.html';
+  window.location.href = '/pricing';
 }
 
 // ─────────────────────────────────────────────────────────────
