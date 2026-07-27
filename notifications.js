@@ -161,16 +161,14 @@ function renderNotifications() {
 // Update notification badge count
 function updateNotificationBadge() {
   const unreadCount = notificationsCache.filter(n => !n.is_read).length;
-  const badge = document.getElementById('notificationBadge');
-  
-  if (badge) {
+  document.querySelectorAll('.notification-badge').forEach(badge => {
     if (unreadCount > 0) {
       badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
       badge.style.display = 'block';
     } else {
       badge.style.display = 'none';
     }
-  }
+  });
 }
 
 // Format notification time (e.g., "2 minutes ago", "1 hour ago")
