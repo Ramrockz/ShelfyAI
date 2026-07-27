@@ -1281,7 +1281,7 @@
 
       <div style="display: flex; gap: 12px; margin-top: 24px;">
         <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeManualModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Item</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Create</button>
       </div>
     </form>
   </div>
@@ -4228,7 +4228,7 @@ async function saveIngredient(event) {
       grid.classList.add('input-invalid');
       setTimeout(() => grid.classList.remove('input-invalid'), 1500);
     }
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Item'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create'; }
     return;
   }
   if (invalidFields.length > 0) {
@@ -4347,7 +4347,7 @@ async function saveIngredient(event) {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Item';
+      submitBtn.textContent = 'Create';
     }
   }
 }
@@ -4437,7 +4437,7 @@ async function saveIngredientOld() {
     const submitBtn = document.querySelector('#manualModal button[onclick="saveIngredient()"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Item';
+      submitBtn.textContent = 'Create';
     }
   }
 }
