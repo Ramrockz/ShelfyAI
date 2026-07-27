@@ -488,8 +488,13 @@
     if (!event.persisted) return;
     const scanBtn = document.getElementById('scanPackBtn');
     if (scanBtn) { scanBtn.disabled = false; scanBtn.textContent = 'Buy 50 Scans'; }
-    const subscribeBtn = document.getElementById('subscribeButton');
-    if (subscribeBtn) { subscribeBtn.disabled = false; subscribeBtn.textContent = 'Continue to Checkout'; }
+    ['btn-starter', 'btn-pro'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn && btn.disabled) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || 'Sign Up';
+      }
+    });
   });
 
   // Auto-highlight active page in navigation
@@ -587,21 +592,56 @@
 <script src="https://js.stripe.com/v3/"></script>
 
 <script>
-window.handlePricingClick = function(tier) {
+window.handlePricingClick = async function(tier) {
   if (typeof window.supabaseClient === 'undefined') {
     window.location.href = '/login';
     return;
   }
 
-  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (!session) {
-      window.location.href = '/login?redirect=pricing';
-    } else if (tier === 'free') {
-      window.location.href = '/operations';
-    } else {
-      openSubscriptionModal(tier);
+  const { data: { session } } = await window.supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = '/login?redirect=pricing';
+    return;
+  }
+
+  if (tier === 'free') {
+    window.location.href = '/operations';
+    return;
+  }
+
+  const btn = document.getElementById(tier === 'starter' ? 'btn-starter' : 'btn-pro');
+  const originalText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.dataset.originalText = originalText;
+    btn.textContent = 'Loading…';
+  }
+
+  try {
+    const interval = document.getElementById('price-switch').checked ? 'year' : 'month';
+    const response = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ tier, interval })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+
+    const stripe = Stripe(data.publishableKey);
+    const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+    if (error) throw error;
+  } catch (error) {
+    console.error('Subscription error:', error);
+    alert('Failed to start checkout: ' + error.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
-  });
+  }
 };
 </script>
 
@@ -641,205 +681,6 @@ window.handlePricingClick = function(tier) {
     </div>
   </div>
 </footer>
-
-<!-- Subscription Modal -->
-<div class="modal-overlay" id="subscriptionModal" onclick="if(event.target === this) closeSubscriptionModal()" style="z-index: 10000;">
-  <div class="modal-content" style="max-width: 500px;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Complete Your Subscription</h3>
-    <p id="modal-plan-name" style="font-size: 28px; font-weight: 800; margin: 0 0 8px 0; color: var(--accent);"></p>
-    <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 32px 0;">Choose your billing interval</p>
-    
-    <div style="margin-bottom: 32px;">
-      <!-- Billing Toggle -->
-      <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 32px;">
-        <span class="toggle-label" id="modal-label-monthly" style="font-size: 14px; font-weight: 600; color: var(--text-main);">Monthly</span>
-        <input type="checkbox" id="modal-price-switch" onchange="toggleModalPricing()" style="display: none;" />
-        <label for="modal-price-switch" class="switch" style="position: relative; display: inline-block; width: 48px; height: 24px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 99px; cursor: pointer;"></label>
-        <span class="toggle-label" id="modal-label-yearly" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Yearly</span>
-        <span style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;">Save 20%</span>
-      </div>
-
-      <!-- Price Display -->
-      <div style="text-align: center; background: linear-gradient(180deg, var(--bg-panel) 0%, rgba(59, 130, 246, 0.05) 100%); border: 2px solid var(--accent); border-radius: 16px; padding: 32px; margin-bottom: 24px;">
-        <div id="modal-price-display" style="font-size: 48px; font-weight: 900; color: var(--text-main); margin-bottom: 8px;">€9.99<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/mo</span></div>
-        <div id="modal-plan-features" style="font-size: 14px; color: var(--text-muted);"></div>
-      </div>
-
-      <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 0;">Prices plus applicable VAT. Cancel anytime.</p>
-    </div>
-
-    <div style="display: flex; gap: 12px;">
-      <button onclick="closeSubscriptionModal()" style="flex: 1; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-weight: 600; cursor: pointer;">Cancel</button>
-      <button id="subscribeButton" onclick="handleSubscribe()" style="flex: 1; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;">Continue to Checkout</button>
-    </div>
-  </div>
-</div>
-
-<style>
-  .modal-content {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease;
-  }
-  
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .switch::after {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--text-main);
-    top: 2px;
-    left: 2px;
-    transition: 0.3s;
-  }
-  
-  input:checked + .switch::after {
-    transform: translateX(24px);
-    background: var(--accent);
-  }
-</style>
-
-<script>
-let selectedPlan = 'pro';
-let selectedInterval = 'month';
-
-const planDetails = {
-  starter: {
-    name: 'Starter Plan',
-    features: '100 AI scans/month (orders & expenses) • Unlimited ingredient imports • Full Dashboard',
-    monthlyPrice: '€9.99',
-    yearlyPrice: '€99'
-  },
-  pro: {
-    name: 'Pro Plan',
-    features: '300 AI scans/month (orders & expenses) • Unlimited ingredient imports • Full Dashboard',
-    monthlyPrice: '€19.99',
-    yearlyPrice: '€199'
-  }
-};
-
-window.openSubscriptionModal = function(defaultPlan = 'pro') {
-  try {
-    selectedPlan = defaultPlan;
-    selectedInterval = 'month';
-    
-    const modal = document.getElementById('subscriptionModal');
-    if (!modal) {
-      console.error('Modal not found!');
-      return;
-    }
-    
-    // Update plan name and features
-    document.getElementById('modal-plan-name').textContent = planDetails[selectedPlan].name;
-    document.getElementById('modal-plan-features').textContent = planDetails[selectedPlan].features;
-    
-    // Reset to monthly
-    document.getElementById('modal-price-switch').checked = false;
-    
-    // Show modal
-    modal.classList.add('active');
-
-    // Update price display
-    updateModalPrice();
-  } catch (error) {
-    console.error('Error opening modal:', error);
-  }
-}
-
-window.closeSubscriptionModal = function() {
-  const modal = document.getElementById('subscriptionModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-window.toggleModalPricing = function() {
-  const isYearly = document.getElementById('modal-price-switch').checked;
-  selectedInterval = isYearly ? 'year' : 'month';
-  updateModalPrice();
-}
-
-function updateModalPrice() {
-  const isYearly = selectedInterval === 'year';
-  const priceDisplay = document.getElementById('modal-price-display');
-  const labelMonthly = document.getElementById('modal-label-monthly');
-  const labelYearly = document.getElementById('modal-label-yearly');
-  
-  if (isYearly) {
-    priceDisplay.innerHTML = planDetails[selectedPlan].yearlyPrice + '<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/year</span>';
-    labelYearly.style.color = 'var(--text-main)';
-    labelMonthly.style.color = 'var(--text-muted)';
-  } else {
-    priceDisplay.innerHTML = planDetails[selectedPlan].monthlyPrice + '<span style="font-size: 18px; font-weight: 400; color: var(--text-muted);">/mo</span>';
-    labelMonthly.style.color = 'var(--text-main)';
-    labelYearly.style.color = 'var(--text-muted)';
-  }
-}
-
-window.handleSubscribe = async function() {
-  const button = document.getElementById('subscribeButton');
-  button.disabled = true;
-  button.textContent = 'Creating checkout...';
-  
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) {
-      window.location.href = '/login?redirect=pricing';
-      return;
-    }
-
-    const response = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        tier: selectedPlan,
-        interval: selectedInterval
-      })
-    });
-
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    const stripe = Stripe(data.publishableKey);
-    const { error } = await stripe.redirectToCheckout({
-      sessionId: data.sessionId
-    });
-
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Subscription error:', error);
-    alert('Failed to start checkout: ' + error.message);
-    button.disabled = false;
-    button.textContent = 'Continue to Checkout';
-  }
-}
-</script>
 
 </body>
 </html>
