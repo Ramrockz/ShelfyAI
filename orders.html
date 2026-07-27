@@ -2130,7 +2130,7 @@ document.addEventListener('keydown', (e) => {
             <select id="new_order_status">
               <option value="processed" selected>Processed</option>
             </select>
-            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">âš  Some items are out of stock</div>
+            <div id="statusOosNote" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;font-weight:600;">⚠ Some items are out of stock</div>
           </div>
         </div>
 
@@ -2685,19 +2685,18 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
   document.getElementById('manualStep2').style.display = 'none';
   const step3 = document.getElementById('manualStep3');
   step3.style.display = 'flex';
-  const ref = order.order_reference || ('Order #' + order.id);
   // Wire up View button
   const viewBtn = step3.querySelector('.btn-primary');
   if (viewBtn) viewBtn.onclick = () => { window.location.href = '/order-detail?id=' + order.id; };
-  document.getElementById('successOrderTitle').textContent = 'Order ' + ref + ' Created!';
+  document.getElementById('successOrderTitle').textContent = 'Order from ' + (order.customer || 'Customer') + ' Created!';
   const badgesRow = document.getElementById('successBadgesRow');
   let badgesHtml = '';
-  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">âœ“ Inventory Updated</span>';
+  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">✓ Inventory Updated</span>';
   if (inventoryUpdated && inventoryChanges && inventoryChanges.length > 0) {
     const oosCount = inventoryChanges.filter(i => i.status === 'out_of_stock').length;
     const lowCount = inventoryChanges.filter(i => i.status === 'low_stock').length;
-    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">âš  ${oosCount} Out of Stock</span>`;
-    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">â†“ ${lowCount} Running Low</span>`;
+    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">⚠ ${oosCount} Out of Stock</span>`;
+    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">↓ ${lowCount} Running Low</span>`;
   }
   badgesRow.innerHTML = badgesHtml;
   const sectionEl = document.getElementById('successInvSection');
@@ -2709,14 +2708,14 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
     const s = item.status === 'out_of_stock' ? 'oos' : item.status === 'low_stock' ? 'low' : 'ok';
     const fmt = v => v % 1 === 0 ? String(v) : v.toFixed(2);
     const pillHtml = s === 'oos' ? '<span class="inv-change-pill oos">OUT OF STOCK</span>' : s === 'low' ? '<span class="inv-change-pill low">LOW</span>' : '';
-    const detailUrl = item.id ? `ingredient-detail.html?id=${encodeURIComponent(item.id)}` : null;
+    const detailUrl = item.id ? `/ingredient-detail?id=${encodeURIComponent(item.id)}` : null;
     const nameEl = detailUrl
       ? `<a class="inv-change-name" href="${detailUrl}" target="_blank" rel="noopener" onclick="event.ctrlKey||event.metaKey||event.button===1?null:window.open('${detailUrl}','_blank');event.preventDefault();">${_escapeHtml(item.name)}</a>`
       : `<span class="inv-change-name">${_escapeHtml(item.name)}</span>`;
     return `<div class="inv-change-row" style="animation-delay:${idx * 0.04}s">
       <div class="inv-change-dot ${s}"></div>
       ${nameEl}
-      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">â†’</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
+      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">→</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
       ${pillHtml}
     </div>`;
   }).join('');
