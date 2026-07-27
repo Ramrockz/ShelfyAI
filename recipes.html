@@ -1921,6 +1921,7 @@ async function openBuilder() {
   const isMobile = window.innerWidth <= 768;
   const btn = document.getElementById('saveRecipeBtn');
   if (btn) btn.textContent = isMobile ? 'Create Product' : 'Create';
+  updateCreateButtonState();
 
   if (isMobile) {
     goToMobileStep1();
@@ -2602,6 +2603,7 @@ function adjustMobileQty(id, delta) {
 
 function updateMobileCreateBtn() {
   const count = Object.keys(currentRecipe).length;
+  updateCreateButtonState();
   const btn = document.getElementById('saveRecipeBtn');
   if (!btn || window.innerWidth > 768) return;
   const label = currentEditingRecipeId ? 'Save Changes' : 'Create Product';
@@ -2626,7 +2628,6 @@ async function saveMobileRecipe() {
     }
   }
   if (Object.keys(currentRecipe).length === 0) {
-    alert('Please add at least one item');
     return;
   }
   await _doSaveRecipe(name);
@@ -2634,6 +2635,12 @@ async function saveMobileRecipe() {
 
 function updateDisabledState() {
   renderIngredientList();
+  updateCreateButtonState();
+}
+
+function updateCreateButtonState() {
+  const btn = document.getElementById('saveRecipeBtn');
+  if (btn) btn.disabled = Object.keys(currentRecipe).length === 0;
 }
 
 function updateCost() {
@@ -2750,7 +2757,6 @@ async function saveRecipe() {
     return;
   }
   if (Object.keys(currentRecipe).length === 0) {
-    alert('Please add at least one item');
     return;
   }
   await _doSaveRecipe(name);

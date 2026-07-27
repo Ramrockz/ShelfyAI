@@ -5130,7 +5130,13 @@ function toggleRecipeCatFilter(cat) {
   renderRecipeIngredientList();
 }
 
+function updateRecipeCreateButtonState() {
+  const btn = document.getElementById('saveRecipeBtn');
+  if (btn) btn.disabled = Object.keys(currentRecipeComponents).length === 0;
+}
+
 function renderRecipeIngredientList() {
+  updateRecipeCreateButtonState();
   const ingredientList = document.getElementById('recipeIngredientList');
   const searchQuery = document.getElementById('recipeSearchIng').value.toLowerCase();
   
