@@ -280,6 +280,12 @@
   }
 
   @media (max-width: 768px) {
+    /* Hide the desktop layout outright at mobile widths -- previously it
+       relied on #mobileViewOverlay (JS-shown only once the recipe finishes
+       loading) to cover it, so it flashed visible on every refresh until
+       the overlay caught up. */
+    .container { display: none; }
+
     /* Keep bottom nav above the mobile overlay */
     #bottom-nav { z-index: 10005 !important; }
     /* Alert / confirm modals must sit above everything */
