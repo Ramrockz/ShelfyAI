@@ -126,16 +126,21 @@ function renderNotifications() {
       </button>
     ` : '';
     const isWelcomeGuide = notification.type === 'welcome_guide';
+    const isAiLimitReached = notification.type === 'ai_limit_reached';
     const itemClick = notification.ingredient_id
       ? `onclick="openIngredient('${notification.ingredient_id}')"`
       : isWelcomeGuide
         ? `onclick="window.location.href='/docs'"`
-        : '';
+        : isAiLimitReached
+          ? `onclick="window.location.href='/pricing#scan-pack'"`
+          : '';
     const openLink = notification.ingredient_id
       ? `<span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>`
       : isWelcomeGuide
         ? `<span class="notif-open-link" onclick="window.location.href='/docs'; event.stopPropagation();">View Guide</span>`
-        : '';
+        : isAiLimitReached
+          ? `<span class="notif-open-link" onclick="window.location.href='/pricing#scan-pack'; event.stopPropagation();">Buy Scans</span>`
+          : '';
     return `
     <div class="notification-item ${!notification.is_read ? 'unread' : ''}"
          data-notification-id="${notification.id}"
