@@ -1488,13 +1488,11 @@ function renderList(filtered) {
     if (!document.getElementById('emptyStateList')) {
       const emptyDiv = document.createElement('div');
       emptyDiv.id = 'emptyStateList';
-      emptyDiv.style.cssText = 'text-align: center; padding: 60px 20px;';
+      emptyDiv.style.cssText = 'display: flex; flex-direction: column; align-items: center; text-align: center; padding: 60px 20px;';
       emptyDiv.innerHTML = isFirstTime ? `
         <img src="/cat_no_orders.png" alt="No orders" style="width:180px;height:auto;margin-bottom:16px;opacity:0.9;" />
         <h3 style="margin-top:0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: var(--text-main);">No orders yet</h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Track customer orders and auto-update your inventory
-
-</p>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px; max-width: 260px;">Track customer orders and auto-update your inventory</p>
         <button onclick="openAddOrderModal()" style="padding: 14px 28px; font-size: 14px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer;">+ New Order</button>
       ` : `
         <img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" />
