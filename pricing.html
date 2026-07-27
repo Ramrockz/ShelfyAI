@@ -431,7 +431,7 @@
       <h3 style="margin: 0 0 4px; font-size: 20px;">Scan Pack</h3>
       <p style="color: var(--text-muted); font-size: 14px; margin: 4px 0 16px;">+50 AI scans, never expire. Stack as many as you need.</p>
       <div style="font-size: 28px; font-weight: 800; margin-bottom: 16px;">€4.99 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">one-time</span></div>
-      <button class="btn btn-pro" onclick="handleScanPackCheckout()" style="cursor: pointer; width: 100%;">Buy 50 Scans</button>
+      <button class="btn btn-pro" id="scanPackBtn" onclick="handleScanPackCheckout()" style="cursor: pointer; width: 100%;">Buy 50 Scans</button>
     </div>
   </div>
 </div>
@@ -458,12 +458,12 @@
   }
 
   async function handleScanPackCheckout() {
-    const btn = event.currentTarget;
+    const btn = document.getElementById('scanPackBtn');
     btn.disabled = true;
     btn.textContent = 'Loading…';
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) { window.location.href = '/login.html?redirect=pricing'; return; }
+      if (!session) { window.location.href = '/login?redirect=pricing'; return; }
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
@@ -479,6 +479,18 @@
       btn.textContent = 'Buy 50 Scans';
     }
   }
+
+  // Stripe checkout navigates away; if the user cancels and comes back via
+  // the browser's back button, the page can be restored from bfcache with
+  // whatever "Loading…" state was frozen right before navigating away.
+  // Reset it so the buttons aren't stuck.
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    const scanBtn = document.getElementById('scanPackBtn');
+    if (scanBtn) { scanBtn.disabled = false; scanBtn.textContent = 'Buy 50 Scans'; }
+    const subscribeBtn = document.getElementById('subscribeButton');
+    if (subscribeBtn) { subscribeBtn.disabled = false; subscribeBtn.textContent = 'Continue to Checkout'; }
+  });
 
   // Auto-highlight active page in navigation
   (function() {
@@ -577,15 +589,15 @@
 <script>
 window.handlePricingClick = function(tier) {
   if (typeof window.supabaseClient === 'undefined') {
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return;
   }
 
   window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) {
-      window.location.href = '/login.html?redirect=pricing';
+      window.location.href = '/login?redirect=pricing';
     } else if (tier === 'free') {
-      window.location.href = '/operations.html';
+      window.location.href = '/operations';
     } else {
       openSubscriptionModal(tier);
     }
@@ -631,7 +643,7 @@ window.handlePricingClick = function(tier) {
 </footer>
 
 <!-- Subscription Modal -->
-<div class="modal-overlay" id="subscriptionModal" onclick="if(event.target === this) closeSubscriptionModal()" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; z-index: 10000;">
+<div class="modal-overlay" id="subscriptionModal" onclick="if(event.target === this) closeSubscriptionModal()" style="z-index: 10000;">
   <div class="modal-content" style="max-width: 500px;">
     <h3 style="margin-top:0; margin-bottom: 8px;">Complete Your Subscription</h3>
     <p id="modal-plan-name" style="font-size: 28px; font-weight: 800; margin: 0 0 8px 0; color: var(--accent);"></p>
@@ -743,8 +755,8 @@ window.openSubscriptionModal = function(defaultPlan = 'pro') {
     document.getElementById('modal-price-switch').checked = false;
     
     // Show modal
-    modal.style.display = 'flex';
-    
+    modal.classList.add('active');
+
     // Update price display
     updateModalPrice();
   } catch (error) {
@@ -755,7 +767,7 @@ window.openSubscriptionModal = function(defaultPlan = 'pro') {
 window.closeSubscriptionModal = function() {
   const modal = document.getElementById('subscriptionModal');
   if (modal) {
-    modal.style.display = 'none';
+    modal.classList.remove('active');
   }
 }
 
@@ -790,7 +802,7 @@ window.handleSubscribe = async function() {
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
-      window.location.href = '/login.html?redirect=pricing';
+      window.location.href = '/login?redirect=pricing';
       return;
     }
 
