@@ -43,6 +43,10 @@ function showScreen(screenId) {
   // Update progress dots based on which question we're on
   updateProgressDots(screenId);
 
+  // No skipping once we're on the last step — there's nothing left to skip
+  const skipBtn = document.querySelector('.onboarding-skip');
+  if (skipBtn) skipBtn.style.display = screenId === 'onboarding-final' ? 'none' : '';
+
   // Render any icons set via data-lucide on the newly-shown screen
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -288,7 +292,9 @@ function updateRecommendationUI(plan) {
   const priceEl = document.getElementById('recommendedPlanPrice');
   const featuresEl = document.getElementById('recommendedPlanFeatures');
   const upgradeBtn = document.getElementById('upgradeButtonText');
-  
+  const maybeLaterBtn = document.getElementById('maybeLaterBtn');
+  if (maybeLaterBtn) maybeLaterBtn.style.display = '';
+
   if (plan === 'free') {
     if (badgeEl) badgeEl.textContent = 'FREE';
     if (nameEl) nameEl.textContent = 'Free Plan';
@@ -300,7 +306,9 @@ function updateRecommendationUI(plan) {
         <div class="plan-feature"><i data-lucide="check" class="plan-feature-icon"></i> Unlimited ingredients & products</div>
       `;
     }
-    if (upgradeBtn) upgradeBtn.textContent = 'Start with Free';
+    if (upgradeBtn) upgradeBtn.textContent = 'Stay Free for Now';
+    // Everyone starts on Free, so "Maybe later" doesn't apply here
+    if (maybeLaterBtn) maybeLaterBtn.style.display = 'none';
   } else if (plan === 'starter') {
     if (badgeEl) badgeEl.textContent = 'STARTER';
     if (nameEl) nameEl.textContent = 'Starter Plan';
@@ -379,6 +387,11 @@ async function completeOnboarding() {
 
 // Upgrade to recommended plan
 function upgradeToPlan() {
+  // Free has nothing to upgrade to yet — just finish onboarding
+  if (onboardingState.recommendedPlan === 'free') {
+    completeOnboarding();
+    return;
+  }
   // Redirect to pricing page
   window.location.href = '/pricing.html';
 }
