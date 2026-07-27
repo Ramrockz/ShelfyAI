@@ -1039,31 +1039,11 @@ tr:hover td {
     height: 32px;
   }
 
-  /* Logged-in: hide logo, stretch nav-actions full-width, avatar far left */
-  .navbar:has(.user-menu) .logo {
-    display: none;
-  }
-  .navbar:has(.user-menu) .nav-actions {
-    flex: 1;
-    margin-left: 0;
-  }
-  .navbar:has(.user-menu) .user-menu {
-    order: -1;
-  }
-
-  /* Mobile nav-actions (logged-out): sit on the right, no stretch */
-  .nav-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  /* Notification bell → far right (before hamburger) */
-  .notification-bell {
-    margin-left: auto;
-    order: 2;
-  }
-
+  /* Authenticated mobile header layout (title left, actions right) now
+     lives in bottom-nav.js, which only injects on pages that have the
+     app-style bottom nav — see the mobile-page-title / nav-actions rules
+     it adds. This file just keeps the notification icon sized correctly
+     wherever it appears. */
   .notification-bell svg {
     width: 26px !important;
     height: 26px !important;
@@ -1108,12 +1088,6 @@ tr:hover td {
 
   .user-menu-arrow {
     display: none;
-  }
-
-  /* Dropdown anchors left so it stays in the viewport */
-  .user-menu-dropdown {
-    left: 0;
-    right: auto;
   }
 
   /* Show hamburger menu */
@@ -1277,12 +1251,12 @@ tr:hover td {
   }
 
   /* Ensure dropdowns appear above full-screen overlays (e.g. recipe-detail mobile view, z-index 10002).
-     Anchor left so the panel opens near the avatar (which sits at the left of the nav). */
+     Anchor right so the panel opens near the avatar (which sits at the right of the nav). */
   .user-menu-dropdown {
     position: fixed !important;
     top: 60px !important;
-    left: 8px !important;
-    right: auto !important;
+    right: 8px !important;
+    left: auto !important;
     z-index: 20000 !important;
   }
 }
@@ -1338,81 +1312,13 @@ tr:hover td {
   100% { opacity: 0;   transform: translateX(-16px) scaleX(0.3); }
 }
 
-/* Nav inline search — hidden on desktop, shown between avatar and bell on mobile */
+/* Nav inline search — hidden by default; bottom-nav.js reveals it on mobile
+   when the search icon it injects is tapped (see .mobile-search-active). */
 .nav-search-input { display: none; }
 
 /* Hide the search wrapper in navbar on desktop */
 .nav-actions .search-wrapper {
   display: none;
-}
-
-@media (max-width: 640px) {
-  /* Show search wrapper on mobile and make it take available flex space */
-  .nav-actions .search-wrapper {
-    display: block;
-    flex: 1 1 0;
-    min-width: 0;
-    order: 1;
-    position: relative;
-  }
-  
-  .nav-search-input {
-    display: block;
-    width: 100%;
-    margin: 0;
-    background: var(--bg-inner);
-    border: none;
-    border-radius: 8px;
-    padding: 7px 32px 7px 32px !important;
-    font-size: 14px;
-    color: var(--text-main);
-    font-family: inherit;
-    outline: none;
-    box-sizing: border-box;
-  }
-  
-  /* Position icons inside the navbar search */
-  .nav-actions .search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    color: var(--text-muted);
-    pointer-events: none;
-    z-index: 10;
-  }
-  
-  .nav-actions .search-clear {
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    line-height: 1;
-    padding: 0;
-    z-index: 10;
-  }
-  
-  .nav-actions .search-clear.visible {
-    display: flex;
-  }
-  
-  /* Hide theme toggle to make room for the search */
-  .navbar:has(.nav-search-input) .theme-toggle-wrapper {
-    display: none;
-  }
 }
 
 .truck-anim-icon { display: inline-flex; align-items: center; justify-content: center; }
