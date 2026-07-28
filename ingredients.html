@@ -3097,12 +3097,18 @@ function _groupInStock(items) {
   return { groups: out, loose };
 }
 
+// Persisted across re-renders so duplicating/deleting an item inside an
+// expanded group (which rebuilds the whole list) doesn't collapse it back.
+let expandedIngGroups = new Set();
+
 function toggleIngGroup(rowEl) {
   const body = rowEl.nextElementSibling;
   if (!body?.classList.contains('ing-group-body')) return;
+  const cat = rowEl.dataset.cat;
   const open = body.hidden;
   body.hidden = !open;
   rowEl.classList.toggle('open', open);
+  if (open) expandedIngGroups.add(cat); else expandedIngGroups.delete(cat);
 }
 
 function render() {
@@ -3724,8 +3730,9 @@ function renderRecent(data) {
     otherShown.forEach(entry => {
       if (entry.type === 'item') { container.innerHTML += buildIngCard(entry.i); return; }
       const g = entry.g;
+      const isOpen = expandedIngGroups.has(g.cat);
       container.innerHTML += `
-        <div class="ing-group" data-cat="${_escAttr(g.cat)}" onclick="toggleIngGroup(this)">
+        <div class="ing-group${isOpen ? ' open' : ''}" data-cat="${_escAttr(g.cat)}" onclick="toggleIngGroup(this)">
           <span class="ing-row-bar" data-state="ok"></span>
           <span class="ing-row-main">
             <span class="ing-row-name">${escapeHtml(g.cat)}</span>
@@ -3735,7 +3742,7 @@ function renderRecent(data) {
             <svg class="ing-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
           </span>
         </div>
-        <div class="ing-group-body" hidden>${g.members.map(buildIngCard).join('')}</div>
+        <div class="ing-group-body"${isOpen ? '' : ' hidden'}>${g.members.map(buildIngCard).join('')}</div>
       `;
     });
   }

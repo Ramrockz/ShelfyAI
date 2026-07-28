@@ -1756,12 +1756,18 @@ function _groupFamiliesByCategory(groups) {
   return { catGroups, loose };
 }
 
+// Persisted across re-renders so duplicating/deleting a product inside an
+// expanded folder (which rebuilds the whole list) doesn't collapse it back.
+let expandedProdCatGroups = new Set();
+
 function toggleProdCatGroup(rowEl) {
   const body = rowEl.nextElementSibling;
   if (!body?.classList.contains('prod-cat-group-body')) return;
+  const cat = rowEl.dataset.cat;
   const open = body.hidden;
   body.hidden = !open;
   rowEl.classList.toggle('open', open);
+  if (open) expandedProdCatGroups.add(cat); else expandedProdCatGroups.delete(cat);
 }
 
 function openProductFamily(id) {
@@ -1885,7 +1891,8 @@ function render() {
             html += shown.map(entry => {
               if (entry.type === 'fam') return groupRow(entry.g);
               const cg = entry.cg;
-              return `<div class="prod-cat-group" data-cat="${_escHtml(cg.cat)}" onclick="toggleProdCatGroup(this)">
+              const isOpen = expandedProdCatGroups.has(cg.cat);
+              return `<div class="prod-cat-group${isOpen ? ' open' : ''}" data-cat="${_escHtml(cg.cat)}" onclick="toggleProdCatGroup(this)">
                   <span class="prod-group-main">
                     <span class="prod-group-name">${_escHtml(cg.cat)}</span>
                   </span>
@@ -1894,7 +1901,7 @@ function render() {
                     <svg class="prod-cat-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
                   </span>
                 </div>
-                <div class="prod-cat-group-body" hidden>${cg.members.map(groupRow).join('')}</div>`;
+                <div class="prod-cat-group-body"${isOpen ? '' : ' hidden'}>${cg.members.map(groupRow).join('')}</div>`;
             }).join('');
             container.innerHTML = html;
 
