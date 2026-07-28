@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI – Operations Hub</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -325,6 +325,9 @@
     position: relative;
   }
 
+  .status-card.out-of-stock { border-left: 3px solid var(--danger); }
+  .status-card.low-stock   { border-left: 3px solid var(--warning); }
+
   .status-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -332,12 +335,14 @@
   }
 
   .status-card-label {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-main);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.25;
   }
 
   .status-card-count {
@@ -882,7 +887,7 @@
     }
     
     .status-card {
-      padding: 20px;
+      padding: 14px 16px;
     }
     
     .status-card-count {
@@ -1749,14 +1754,14 @@
     <div class="status-cards-grid">
       <div class="status-card out-of-stock" onclick="filterInventory('out-of-stock')">
         <div class="status-card-label">
-          <span class="status-card-count" id="outOfStockCount" style="color: var(--accent);">-</span>
+          <span class="status-card-count" id="outOfStockCount" style="color: var(--danger);">-</span>
           Out of Stock
         </div>
       </div>
 
       <div class="status-card low-stock" onclick="filterInventory('low-stock')">
         <div class="status-card-label">
-          <span class="status-card-count" id="lowStockCount" style="color: var(--accent);">-</span>
+          <span class="status-card-count" id="lowStockCount" style="color: var(--warning);">-</span>
           Low on Stock
         </div>
       </div>
