@@ -1750,7 +1750,6 @@ function _groupFamiliesByCategory(groups) {
   });
   const catGroups = [];
   byCat.forEach((members, cat) => {
-    if (members.length < 3) { loose.push(...members); return; }  // not worth a folder
     catGroups.push({ cat, members, count: members.length });
   });
   catGroups.sort((a, b) => b.count - a.count);

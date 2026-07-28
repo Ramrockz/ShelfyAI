@@ -3092,7 +3092,6 @@ function _groupInStock(items) {
   });
   const out = [];
   groups.forEach((members, cat) => {
-    if (members.length < 3) { loose.push(...members); return; }  // not worth a group
     const keys = [...new Set(members.flatMap(m => Object.keys(_parseAttrs(m))))];
     const nVals = k => new Set(members.map(m => _parseAttrs(m)[k]).filter(Boolean)).size;
     const sub = keys.length >= 2
