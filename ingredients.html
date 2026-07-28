@@ -3586,6 +3586,33 @@ function renderRecent(data) {
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
     attributesText = attributesText ? categoryBadge + ' &bull; ' + attributesText : categoryBadge;
     const truckHtml = i.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" onclick="event.stopPropagation(); openRestockModal('${i.id}')" title="Delivery pending" style="cursor:pointer; color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : '';
+    // Desktop keeps the original spacious grid card; the swipeable row
+    // layout (Step 4/5b) is a mobile-only optimization -- desktop mouse
+    // users don't have the same fat-finger/FAB-collision problems it
+    // was solving, and already has the List view for density.
+    if (window.innerWidth > 768) {
+      return `<div class="card-small">
+          <h4>
+            <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
+          </h4>
+          ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
+          <div style="display: flex; justify-content: center; margin: 12px 0;">
+            <div class="qty-display-container">
+              <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
+              <span class="qty-number" style="color: ${qtyColor};">${i.qty}</span>
+              <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', 1)">+</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="card-actions">
+            <span class="edit-link" onclick="editIngredient('${i.id}')">Edit</span>
+            <span class="edit-link" onclick="openDuplicateModal('${i.id}')">Duplicate</span>
+            <span class="delete-link" onclick="deleteIng('${i.id}')">Delete</span>
+          </div>
+        </div>`;
+    }
+
     return `<div class="ing-swipe">
         <div class="ing-actions">
           <button class="ing-act ing-act-edit" onclick="editIngredient('${i.id}')">
