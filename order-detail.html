@@ -290,6 +290,34 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   }
 
+  .revenue-edit-input {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--success);
+    font-size: 48px;
+    font-weight: 800;
+    text-align: center;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .revenue-edit-input:focus {
+    outline: none;
+  }
+
+  /* Hide the spinner arrows -- distracting at 48px next to a currency value */
+  .revenue-edit-input::-webkit-inner-spin-button,
+  .revenue-edit-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .revenue-edit-input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
   .info-value {
     min-height: 42px;
     display: flex;
@@ -2195,14 +2223,26 @@ async function makeEditable(elementId, fieldName) {
     input.value = currentValue === '-' || currentValue === 'N/A' || currentValue === 'Unknown' ? '' : currentValue;
   }
   
-  input.className = 'form-input';
-  input.style.padding = '8px 12px';
-  input.style.fontSize = '14px';
-  
+  if (fieldName === 'revenue') {
+    // Distinct class -- avoid .form-input's border/background/focus-ring
+    // styling, which clashes with matching the large centered display.
+    input.className = 'revenue-edit-input';
+  } else {
+    input.className = 'form-input';
+    input.style.padding = '8px 12px';
+    input.style.fontSize = '14px';
+  }
+
   element.innerHTML = '';
   element.appendChild(input);
   input.focus();
   if (input.type !== 'date') input.select();
+  if (input.type === 'date' && typeof input.showPicker === 'function') {
+    // Chromium doesn't open the native date picker on focus alone -- without
+    // this, the first click just focuses the input and a second click is
+    // needed to actually open the calendar.
+    try { input.showPicker(); } catch (e) {}
+  }
   
   const save = async () => {
     let newValue = input.value.trim();
@@ -2220,6 +2260,11 @@ async function makeEditable(elementId, fieldName) {
 
         const updateData = {};
         updateData[fieldName] = fieldName === 'revenue' ? (parseFloat(newValue) || 0) : newValue;
+        // The orders list only re-renders when a row's id+updated_at
+        // fingerprint changes -- set it explicitly so edits here (which
+        // don't otherwise touch a column that fingerprint compares) don't
+        // get silently skipped and require a hard refresh to show up.
+        updateData.updated_at = new Date().toISOString();
 
         const { error } = await window.supabaseClient
           .from('sales')

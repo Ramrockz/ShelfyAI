@@ -1299,6 +1299,14 @@ window.addEventListener('shelfy:synced', (e) => {
   }
 });
 
+// Navigating back from order-detail (e.g. after editing revenue) can
+// restore this page from bfcache without re-running loadOrders(), showing
+// whatever was rendered before you left. Force a fresh fetch in that case.
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  loadOrders().catch(() => {});
+});
+
 async function loadOrders() {
   const _lsCached = localStorage.getItem('shelfy_cache_orders');
   if (_lsCached) {
