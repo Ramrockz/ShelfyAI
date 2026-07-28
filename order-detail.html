@@ -1264,7 +1264,7 @@
     <div id="revenuePanel" class="panel" style="padding: 24px;">
       <div style="text-align: center; margin-bottom: 8px;">
         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 8px;">Total Revenue</div>
-        <div id="totalRevenue" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1;">-</div>
+        <div id="totalRevenue" class="editable-field" onclick="makeEditable('totalRevenue', 'revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer;">-</div>
       </div>
     </div>
 
@@ -2167,9 +2167,12 @@ async function makeEditable(elementId, fieldName) {
     // Extract just the text, not the logo
     currentValue = orderData[fieldName] || '';
   }
-  
+  if (fieldName === 'revenue') {
+    currentValue = String(parseFloat(orderData.revenue) || 0);
+  }
+
   const input = document.createElement('input');
-  
+
   // Special handling for date fields
   if (fieldName === 'sale_date') {
     input.type = 'date';
@@ -2182,6 +2185,11 @@ async function makeEditable(elementId, fieldName) {
       const day = String(date.getDate()).padStart(2, '0');
       input.value = `${year}-${month}-${day}`;
     }
+  } else if (fieldName === 'revenue') {
+    input.type = 'number';
+    input.step = '0.01';
+    input.min = '0';
+    input.value = currentValue;
   } else {
     input.type = 'text';
     input.value = currentValue === '-' || currentValue === 'N/A' || currentValue === 'Unknown' ? '' : currentValue;
@@ -2198,31 +2206,31 @@ async function makeEditable(elementId, fieldName) {
   
   const save = async () => {
     let newValue = input.value.trim();
-    
+
     // For date fields, convert to ISO format
     if (fieldName === 'sale_date' && newValue) {
       // Input is already in YYYY-MM-DD format
       newValue = newValue + 'T00:00:00.000Z';
     }
-    
+
     if (newValue && newValue !== currentValue) {
       try {
         const { data: { user } } = await window.supabaseClient.auth.getUser();
         if (!user) return;
-        
+
         const updateData = {};
-        updateData[fieldName] = newValue;
-        
+        updateData[fieldName] = fieldName === 'revenue' ? (parseFloat(newValue) || 0) : newValue;
+
         const { error } = await window.supabaseClient
           .from('sales')
           .update(updateData)
           .eq('id', orderId)
           .eq('profile_id', user.id);
-        
+
         if (error) throw error;
-        
-        orderData[fieldName] = newValue;
-        
+
+        orderData[fieldName] = updateData[fieldName];
+
         // Update display
         if (fieldName === 'source') {
           const channel = newValue.toLowerCase();
@@ -2235,19 +2243,23 @@ async function makeEditable(elementId, fieldName) {
         } else if (fieldName === 'sale_date') {
           const date = new Date(newValue);
           element.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else if (fieldName === 'revenue') {
+          element.textContent = `$${(parseFloat(newValue) || 0).toFixed(2)}`;
         } else {
           element.textContent = newValue;
         }
-        
+
         showNotification('Field updated successfully', 'success');
       } catch (error) {
         console.error('Error updating field:', error);
-        element.textContent = currentValue;
+        element.textContent = fieldName === 'revenue' ? `$${(parseFloat(currentValue) || 0).toFixed(2)}` : currentValue;
         showNotification('Failed to update field', 'error');
       }
     } else {
       if (fieldName === 'source' && currentValue.includes('channel-logo')) {
         element.innerHTML = currentValue;
+      } else if (fieldName === 'revenue') {
+        element.textContent = `$${(parseFloat(currentValue) || 0).toFixed(2)}`;
       } else {
         element.textContent = currentValue;
       }

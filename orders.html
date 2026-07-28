@@ -1446,7 +1446,7 @@ function renderRecent(filtered) {
   container.innerHTML = displayData.map(order => {
     const date = new Date(order.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const channel = _realChannel(order.source);
-    const metaParts = [date, order.order_reference, channel].filter(Boolean);
+    const metaParts = [date, channel, _statusBadge(order.status)].filter(Boolean);
 
     return `
       <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
@@ -1554,15 +1554,8 @@ function renderList(filtered) {
     const actualIndex = startIndex + index + 1;
     const date = new Date(order.sale_date).toLocaleDateString();
     const status = order.status || 'processed';
-    const statusColors = {
-      'processed': { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
-      'fulfilled': { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' },
-      'shipped': { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981' },
-      'refunded': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }
-    };
-    const statusStyle = statusColors[status] || statusColors.processed;
-    const statusBadge = `<span style="display: inline-block; padding: 4px 10px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
-    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">ðŸ"¦ ${order.tracking_number}</span>` : '-';
+    const statusBadge = _statusBadge(status);
+    const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">📦 ${order.tracking_number}</span>` : '-';
     
     // Show buttons based on status
     let actionButtons = '';
@@ -2659,6 +2652,18 @@ function _escapeHtml(str) {
 const ORDER_CHANNELS = ['Etsy', 'Shopify', 'Website', 'Local', 'Other'];
 function _realChannel(source) {
   return ORDER_CHANNELS.includes(source) ? source : null;
+}
+
+const ORDER_STATUS_COLORS = {
+  processed: { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
+  fulfilled: { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' },
+  shipped: { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981' },
+  refunded: { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }
+};
+function _statusBadge(status) {
+  status = status || 'processed';
+  const style = ORDER_STATUS_COLORS[status] || ORDER_STATUS_COLORS.processed;
+  return `<span style="display: inline-block; padding: 2px 10px; background: ${style.bg}; color: ${style.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
 }
 
 function _updateStatusRestriction() {

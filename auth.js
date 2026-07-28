@@ -55,7 +55,8 @@ const protectedPages = [
   'orders',
   'order-detail',
   'analytics',
-  'settings'
+  'settings',
+  'change-log'
 ];
 
 // Get current page (handle both clean URLs and .html URLs)

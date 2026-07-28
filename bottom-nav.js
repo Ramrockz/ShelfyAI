@@ -56,6 +56,7 @@
     'expense-detail': 'Expense',
     'analytics': 'Analytics',
     'settings': 'Settings',
+    'change-log': 'Change Logs',
     'docs': 'Quick Start',
     'pricing': 'Pricing'
   };

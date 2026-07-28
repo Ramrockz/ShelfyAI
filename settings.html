@@ -1045,24 +1045,12 @@
       </svg>
       Change Logs
     </h2>
-    <p style="color: var(--text-muted); font-size: 13px; margin: -8px 0 16px;">A history of every inventory quantity change — manual edits, orders, expenses, and restocks.</p>
-    <div class="table-container" style="overflow-x: auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Item</th>
-            <th>Old Value</th>
-            <th>New Value</th>
-          </tr>
-        </thead>
-        <tbody id="changeLogsTableBody">
-          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="text-align: center; margin-top: 16px;">
-      <button class="btn btn-secondary" id="changeLogsLoadMoreBtn" onclick="loadMoreChangeLogs()" style="display: none;">Load More</button>
+    <div class="settings-row">
+      <div class="settings-label">
+        <h3>Inventory Change History</h3>
+        <p>View every quantity change — manual edits, orders, expenses, and restocks.</p>
+      </div>
+      <button class="btn btn-secondary" onclick="window.location.href='/change-log'">View</button>
     </div>
   </div>
 
@@ -1373,9 +1361,6 @@ async function loadSettings() {
 
     // Load tier information
     loadTierInformation(settings);
-
-    // Load change logs
-    loadChangeLogs();
 
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -2121,12 +2106,6 @@ async function downloadExpenses(e) {
 }
 
 // --- Change Logs (ingredient_history) ---
-function _escapeHtmlSettings(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-let changeLogsOffset = 0;
-const CHANGE_LOGS_PAGE_SIZE = 50;
 const changeLogsIngredientNames = {};
 
 async function _resolveChangeLogNames(historyRows) {
@@ -2136,70 +2115,6 @@ async function _resolveChangeLogNames(historyRows) {
   if (missingIds.length === 0) return;
   const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name').in('id', missingIds);
   (ingredients || []).forEach(ing => { changeLogsIngredientNames[ing.id] = ing.name; });
-}
-
-async function loadChangeLogs(reset = true) {
-  const tbody = document.getElementById('changeLogsTableBody');
-  const loadMoreBtn = document.getElementById('changeLogsLoadMoreBtn');
-  if (!tbody) return;
-
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-
-    if (reset) {
-      changeLogsOffset = 0;
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>';
-    }
-
-    const { data: history, error } = await supabaseClient
-      .from('ingredient_history')
-      .select('ingredient_id, old_value, new_value, created_at')
-      .eq('profile_id', user.id)
-      .order('created_at', { ascending: false })
-      .range(changeLogsOffset, changeLogsOffset + CHANGE_LOGS_PAGE_SIZE - 1);
-
-    if (error) throw error;
-
-    if (reset && (!history || history.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No changes recorded yet</td></tr>';
-      if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-      return;
-    }
-
-    await _resolveChangeLogNames(history);
-
-    const rowsHtml = (history || []).map(h => {
-      const date = h.created_at
-        ? new Date(h.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-        : '-';
-      const itemName = changeLogsIngredientNames[h.ingredient_id] || 'Deleted item';
-      return `<tr>
-        <td>${date}</td>
-        <td>${_escapeHtmlSettings(itemName)}</td>
-        <td>${_escapeHtmlSettings(h.old_value ?? '')}</td>
-        <td>${_escapeHtmlSettings(h.new_value ?? '')}</td>
-      </tr>`;
-    }).join('');
-
-    if (reset) {
-      tbody.innerHTML = rowsHtml;
-    } else {
-      tbody.insertAdjacentHTML('beforeend', rowsHtml);
-    }
-
-    changeLogsOffset += (history || []).length;
-    if (loadMoreBtn) {
-      loadMoreBtn.style.display = (history && history.length === CHANGE_LOGS_PAGE_SIZE) ? 'inline-block' : 'none';
-    }
-  } catch (error) {
-    console.error('Error loading change logs:', error);
-    if (reset) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Failed to load change logs</td></tr>';
-  }
-}
-
-function loadMoreChangeLogs() {
-  loadChangeLogs(false);
 }
 
 async function downloadChangeLogs(e) {
@@ -2223,9 +2138,9 @@ async function downloadChangeLogs(e) {
     while (true) {
       const { data, error } = await supabaseClient
         .from('ingredient_history')
-        .select('ingredient_id, old_value, new_value, created_at')
+        .select('ingredient_id, old_value, new_value, changed_at')
         .eq('profile_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('changed_at', { ascending: false })
         .range(from, from + pageSize - 1);
       if (error) throw error;
       allHistory = allHistory.concat(data || []);
@@ -2243,7 +2158,7 @@ async function downloadChangeLogs(e) {
     await _resolveChangeLogNames(allHistory);
 
     const rows = allHistory.map(h => ({
-      date: h.created_at ? new Date(h.created_at).toISOString() : '',
+      date: h.changed_at ? new Date(h.changed_at).toISOString() : '',
       item: changeLogsIngredientNames[h.ingredient_id] || 'Deleted item',
       old_value: h.old_value ?? '',
       new_value: h.new_value ?? ''

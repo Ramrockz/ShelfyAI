@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>ShelfyAI – Change Logs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+<!-- Prevent search engine indexing -->
+<meta name="robots" content="noindex, nofollow" />
+<meta name="description" content="A history of every inventory quantity change in your ShelfyAI account." />
+
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="chat-styles.css" />
+<link rel="stylesheet" href="notifications.css" />
+<script>
+  // Hide page immediately
+  document.documentElement.style.visibility = 'hidden';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+<script src="mobile-menu.js"></script>
+<script src="bottom-nav.js"></script>
+<script src="notifications.js"></script>
+<script src="chat-bot.js"></script>
+
+<style>
+  .settings-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px 120px;
+  }
+
+  .settings-header {
+    display: none;
+  }
+
+  .settings-section {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .settings-section h2 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 20px 8px;
+  }
+
+  .settings-section h2 svg {
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
+  }
+
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .settings-row:last-child {
+    border-bottom: none;
+  }
+
+  .settings-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .settings-label h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .settings-label p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+</style>
+
+</head>
+
+<body>
+
+<nav class="navbar">
+  <a href="/operations" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
+
+  <div class="nav-links" id="navLinks">
+    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
+    <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
+    <a href="/orders" class="nav-link" data-page="orders">Orders</a>
+    <a href="/expenses" class="nav-link" data-page="expenses">Expenses</a>
+    <a href="/analytics" class="nav-link" data-page="analytics">Analytics</a>
+  </div>
+
+  <div class="nav-actions">
+    <div class="theme-toggle-wrapper">
+      <span class="theme-toggle-label">
+        <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
+      </span>
+      <input type="checkbox" id="theme-checkbox" onchange="toggleTheme()" />
+      <label for="theme-checkbox" class="theme-toggle-switch"></label>
+      <span class="theme-toggle-label">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
+        </svg>
+      </span>
+    </div>
+
+    <!-- Notification Bell -->
+    <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+      </svg>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+
+      <!-- Notification Dropdown -->
+      <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
+        <div class="notification-header">
+          <h4>Notifications</h4>
+          <span class="mark-all-read" onclick="markAllAsRead()">Mark all as read</span>
+        </div>
+        <div class="notification-list" id="notificationList">
+          <div class="notification-empty">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+            </svg>
+            <p>No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Menu -->
+    <div class="user-menu">
+      <button class="user-menu-button" id="userMenuButton" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <svg class="user-menu-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+
+      <div class="user-menu-dropdown" id="userMenuDropdown" onclick="event.stopPropagation()">
+        <div class="user-menu-header">
+          <div class="user-menu-email" id="userMenuEmail">Loading...</div>
+          <div class="user-menu-role">Free Plan</div>
+        </div>
+        <div class="user-menu-list">
+          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Update Plan</span>
+          </div>
+          <div class="user-menu-item" onclick="window.location.href='/settings'">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </div>
+          <div class="user-menu-item" onclick="switchAccount()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            <span>Switch Account</span>
+          </div>
+          <div class="user-menu-item logout" onclick="logout()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+<script>
+  // Load cached user data immediately (inline for instant load before auth.js)
+  (function() {
+    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
+    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+
+    if (cachedEmail) {
+      const emailEl = document.getElementById('userMenuEmail');
+      const avatarEl = document.getElementById('userAvatar');
+
+      if (emailEl) emailEl.textContent = cachedEmail;
+
+      if (avatarEl) {
+        if (cachedAvatar && cachedAvatar !== 'null') {
+          avatarEl.style.backgroundImage = `url(${cachedAvatar})`;
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.style.backgroundColor = '#ffffff';
+          avatarEl.textContent = '';
+        } else {
+          avatarEl.style.backgroundImage = 'url(/default_avatar.png)';
+          avatarEl.style.backgroundSize = 'cover';
+          avatarEl.style.backgroundPosition = 'center';
+          avatarEl.textContent = '';
+        }
+      }
+    }
+    if (cachedTier) {
+      const roleEl = document.querySelector('.user-menu-role');
+      if (roleEl) roleEl.textContent = cachedTier;
+    }
+  })();
+</script>
+
+<div class="settings-container">
+
+  <div class="settings-header">
+    <h1>Change Logs</h1>
+    <p>A history of every inventory quantity change</p>
+  </div>
+
+  <div class="settings-section">
+    <h2>
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      Change Logs
+    </h2>
+    <div class="settings-row">
+      <div class="settings-label">
+        <p>A history of every inventory quantity change — manual edits, orders, expenses, and restocks.</p>
+      </div>
+      <button class="btn btn-secondary" onclick="downloadChangeLogs(event)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        Download CSV
+      </button>
+    </div>
+    <div class="table-container" style="overflow-x: auto; padding: 0 20px 20px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Old Value</th>
+            <th>New Value</th>
+          </tr>
+        </thead>
+        <tbody id="changeLogsTableBody">
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="text-align: center; padding: 0 20px 20px;">
+      <button class="btn btn-secondary" id="changeLogsLoadMoreBtn" onclick="loadMoreChangeLogs()" style="display: none;">Load More</button>
+    </div>
+  </div>
+
+</div>
+
+<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Company</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Home</a>
+          <a href="/pricing" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Pricing</a>
+          <a href="/docs" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Quick Guide</a>
+          <a href="/imprint" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Imprint</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Platform</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/ingredients" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Items</a>
+          <a href="/recipes" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Products</a>
+          <a href="/expenses" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Expenses</a>
+          <a href="/orders" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Orders</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--text-main);">Resources</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <a href="/blog" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Blog</a>
+
+          <a href="/privacy" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Privacy Policy</a>
+          <a href="/terms" style="color: var(--text-muted); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px;">
+      © 2026 ShelfyAI. All rights reserved.
+    </div>
+  </div>
+</footer>
+
+<script>
+// Auto-highlight active page in navigation
+(function() {
+  const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+  const activeLink = document.querySelector(`[data-page="${currentPage}"]`);
+  if (activeLink) activeLink.classList.add('active');
+})();
+
+function convertToCSV(data, headers) {
+  if (!data || data.length === 0) {
+    return headers.join(',') + '\n';
+  }
+  const csvRows = [];
+  csvRows.push(headers.join(','));
+  for (const row of data) {
+    const values = headers.map(header => {
+      const value = row[header] || '';
+      const escaped = String(value).replace(/"/g, '""');
+      return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')
+        ? `"${escaped}"`
+        : escaped;
+    });
+    csvRows.push(values.join(','));
+  }
+  return csvRows.join('\n');
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function _escapeHtmlChangeLog(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let changeLogsOffset = 0;
+const CHANGE_LOGS_PAGE_SIZE = 50;
+const changeLogsIngredientNames = {};
+
+async function _resolveChangeLogNames(historyRows) {
+  const missingIds = [...new Set(
+    (historyRows || []).map(h => h.ingredient_id).filter(id => id && !changeLogsIngredientNames[id])
+  )];
+  if (missingIds.length === 0) return;
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name').in('id', missingIds);
+  (ingredients || []).forEach(ing => { changeLogsIngredientNames[ing.id] = ing.name; });
+}
+
+async function loadChangeLogs(reset = true) {
+  const tbody = document.getElementById('changeLogsTableBody');
+  const loadMoreBtn = document.getElementById('changeLogsLoadMoreBtn');
+  if (!tbody) return;
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    if (reset) {
+      changeLogsOffset = 0;
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading change logs...</td></tr>';
+    }
+
+    const { data: history, error } = await supabaseClient
+      .from('ingredient_history')
+      .select('ingredient_id, old_value, new_value, changed_at')
+      .eq('profile_id', user.id)
+      .order('changed_at', { ascending: false })
+      .range(changeLogsOffset, changeLogsOffset + CHANGE_LOGS_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    if (reset && (!history || history.length === 0)) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No changes recorded yet</td></tr>';
+      if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+      return;
+    }
+
+    await _resolveChangeLogNames(history);
+
+    const rowsHtml = (history || []).map(h => {
+      const date = h.changed_at
+        ? new Date(h.changed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '-';
+      const itemName = changeLogsIngredientNames[h.ingredient_id] || 'Deleted item';
+      return `<tr>
+        <td>${date}</td>
+        <td>${_escapeHtmlChangeLog(itemName)}</td>
+        <td>${_escapeHtmlChangeLog(h.old_value ?? '')}</td>
+        <td>${_escapeHtmlChangeLog(h.new_value ?? '')}</td>
+      </tr>`;
+    }).join('');
+
+    if (reset) {
+      tbody.innerHTML = rowsHtml;
+    } else {
+      tbody.insertAdjacentHTML('beforeend', rowsHtml);
+    }
+
+    changeLogsOffset += (history || []).length;
+    if (loadMoreBtn) {
+      loadMoreBtn.style.display = (history && history.length === CHANGE_LOGS_PAGE_SIZE) ? 'inline-block' : 'none';
+    }
+  } catch (error) {
+    console.error('Error loading change logs:', error);
+    if (reset) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Failed to load change logs</td></tr>';
+  }
+}
+
+function loadMoreChangeLogs() {
+  loadChangeLogs(false);
+}
+
+async function downloadChangeLogs(e) {
+  const btn = e.target.closest('button');
+  let originalText = btn.innerHTML;
+
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in to download data');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = 'Downloading...';
+
+    // Fetch every row (paginated to avoid Supabase's default row cap)
+    let allHistory = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('ingredient_history')
+        .select('ingredient_id, old_value, new_value, changed_at')
+        .eq('profile_id', user.id)
+        .order('changed_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      allHistory = allHistory.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+
+    if (allHistory.length === 0) {
+      alert('No change logs found to export');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+
+    await _resolveChangeLogNames(allHistory);
+
+    const rows = allHistory.map(h => ({
+      date: h.changed_at ? new Date(h.changed_at).toISOString() : '',
+      item: changeLogsIngredientNames[h.ingredient_id] || 'Deleted item',
+      old_value: h.old_value ?? '',
+      new_value: h.new_value ?? ''
+    }));
+
+    const headers = ['date', 'item', 'old_value', 'new_value'];
+    const csv = convertToCSV(rows, headers);
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadCSV(csv, `change_logs_${timestamp}.csv`);
+
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    alert('Change logs exported successfully!');
+  } catch (error) {
+    console.error('Error downloading change logs:', error);
+    alert('Failed to download change logs: ' + error.message);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+loadChangeLogs();
+</script>
+
+</body>
+</html>
