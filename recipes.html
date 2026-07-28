@@ -1294,6 +1294,13 @@
           <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:16px; font-weight:600; pointer-events:none;">$</span>
           <input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" class="recipe-name-input" style="padding-left:32px; box-sizing:border-box;" />
         </div>
+
+        <div style="margin-top:20px;">
+          <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Category</label>
+          <select id="recipeCategoryInput" class="recipe-name-input" style="box-sizing:border-box;">
+            <option value="">No category</option>
+          </select>
+        </div>
       </div>
 
       <!-- Mobile Ingredient Picker (visible only on mobile) -->
@@ -1518,7 +1525,8 @@ async function loadRecipes() {
       is_favorite: r.is_favorite || false,
       store_id: r.store_id || null,
       parent_id: r.parent_id || null,
-      attributes: r.attributes || {}
+      attributes: r.attributes || {},
+      category: r.category || null
     }));
 
     localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
@@ -1671,9 +1679,11 @@ function _groupProducts(list) {
   return groups;
 }
 
-// Products have no category of their own — derive one from whichever
+// Prefer the product's own category (set on the create-product form).
+// Products saved before that field existed fall back to whichever
 // ingredient category shows up most often across the head's components.
 function _productCategoryFor(r) {
+  if (r.category) return r.category;
   const cats = (r.components || [])
     .map(c => ingredientData.find(i => i.id === (c.ingredient_id || c.id))?.category)
     .filter(Boolean);
@@ -2221,6 +2231,8 @@ async function openBuilder() {
   if (_spd) _spd.value = '';
   const _spm = document.getElementById('mobileRecipeSalesPriceInput');
   if (_spm) _spm.value = '';
+  const _catd = document.getElementById('recipeCategoryInput');
+  if (_catd) _catd.value = '';
   
   // Wait for overlay to be visible before loading ingredients
   await new Promise(resolve => requestAnimationFrame(() => {
@@ -2464,6 +2476,25 @@ const _recipeCategIconMap = {
   'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
   'Packaging': 'package', 'Food': 'wheat'
 };
+
+// A product is a finished good, not a raw material — the category picker
+// on the create-product form hides categories that only make sense for
+// the ingredients that go INTO a product (packaging, tools, dye, thread
+// spools, ...). This is just a filter over the same list above; adjust
+// the excluded set freely.
+const PRODUCT_EXCLUDED_CATEGORIES = new Set([
+  'Wood', 'Boxes', 'Rope', 'Paper', 'Spool', 'Colors', 'Tools', 'Packaging',
+  'Electronics', 'Office Supplies', 'Printing Supplies', 'Party Supplies'
+]);
+const PRODUCT_CATEGORIES = _recipeCategories.filter(c => !PRODUCT_EXCLUDED_CATEGORIES.has(c));
+
+(function populateProductCategorySelect() {
+  const sel = document.getElementById('recipeCategoryInput');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">No category</option>' +
+    PRODUCT_CATEGORIES.map(c => `<option value="${_escHtml(c)}">${_escHtml(c)}</option>`).join('');
+})();
+
 let recipeActiveCategoryFilter = null;
 let recipeActiveAttrValueFilters = new Map();
 
@@ -3028,23 +3059,24 @@ async function _doSaveRecipe(name) {
 
     const _spS = document.getElementById('recipeSalesPriceInput') || document.getElementById('mobileRecipeSalesPriceInput');
     const retailPriceS = parseFloat(_spS?.value) || 0;
+    const category = document.getElementById('recipeCategoryInput')?.value || null;
     if (currentEditingRecipeId) {
       const editId = currentEditingRecipeId;
       const returnUrl = currentEditReturnUrl;
-      const { error } = await offlineWrite('recipes', 'update', { name, components, cost: totalCost, retail_price: retailPriceS || null }, 'id', editId);
+      const { error } = await offlineWrite('recipes', 'update', { name, components, cost: totalCost, retail_price: retailPriceS || null, category }, 'id', editId);
       if (error) throw error;
       const r = recipes.find(r => r.id === editId);
-      if (r) { r.name = name; r.components = components; r.cost = totalCost; r.retail_price = retailPriceS; r.count = components.length; }
+      if (r) { r.name = name; r.components = components; r.cost = totalCost; r.retail_price = retailPriceS; r.count = components.length; r.category = category; }
       localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
       closeRecipeBuilder();
       if (returnUrl) { window.location.href = returnUrl; return; }
       try { render(); } catch (e) {}
       return;
     } else {
-      const payload = { name, components, cost: totalCost, retail_price: retailPriceS || null, status: 'ready', profile_id: user.id, store_id: storeId };
+      const payload = { name, components, cost: totalCost, retail_price: retailPriceS || null, category, status: 'ready', profile_id: user.id, store_id: storeId };
       const { data, error } = await offlineWrite('recipes', 'insert', payload);
       if (error) throw error;
-      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPriceS, status: 'ready', components, is_favorite: false });
+      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPriceS, category, status: 'ready', components, is_favorite: false });
       localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
     }
 
@@ -3385,6 +3417,8 @@ async function openBuilderForRecipe(recipeId) {
     if (_spEdit) _spEdit.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
     const _spEditM = document.getElementById('mobileRecipeSalesPriceInput');
     if (_spEditM) _spEditM.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
+    const _catEdit = document.getElementById('recipeCategoryInput');
+    if (_catEdit) _catEdit.value = fullRecipe.category || '';
 
     document.getElementById('recipeBuilderOverlay').classList.add('active');
     
