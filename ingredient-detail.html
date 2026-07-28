@@ -68,8 +68,10 @@
     gap: 24px;
     margin-bottom: 32px;
   }
-  .detail-header > div:first-child { min-width: 0; flex: 1; }
-  .detail-header > div:last-child { flex-shrink: 0; }
+  .detail-header-title { min-width: 0; flex: 1; }
+  .detail-header-actions { flex-shrink: 0; }
+
+  .detail-back-btn { display: none; }
 
   .detail-title-input {
     font-size: 26px;
@@ -91,7 +93,10 @@
   @media (max-width: 768px) {
     #name-mobile { display: block; }
     #name-desktop-group { display: none; }
-    .ingredient-details-h3 { display: none; }
+    .ingredient-details-h3 {
+      font-size: 11px !important; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted); margin: 0 0 4px !important;
+    }
     .detail-header { margin-bottom: 12px; }
     .detail-rows { display: block; margin: 0 -20px -20px; }
     .panel > .form-section { display: none; }
@@ -346,6 +351,31 @@
                 color: var(--text-muted); }
   .qty-status[data-state="out"] { color: var(--danger); }
   .qty-status[data-state="low"] { color: var(--warning); }
+
+  .restock-row { display: none; }
+  @media (max-width: 768px) {
+    .restock-row {
+      display: flex; align-items: center; gap: 12px; margin: 0 -16px 16px; padding: 14px 16px;
+      background: var(--bg-panel); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      cursor: pointer; box-sizing: border-box;
+    }
+    .restock-icon { color: var(--accent); flex-shrink: 0; }
+    .restock-main { flex: 1; min-width: 0; }
+    .restock-title { display: block; font-size: 14.5px; font-weight: 700; color: var(--accent);
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .restock-sub { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-muted); }
+
+    .used-in-h3 {
+      font-size: 11px !important; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .recipe-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .recipe-pill {
+      display: inline-flex; align-items: center; height: 30px; padding: 0 12px;
+      border-radius: 99px; background: var(--bg-inner); border: 1px solid var(--border);
+      color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+  }
 
   .cat-grid {
     display: flex;
@@ -794,16 +824,14 @@
       display: none !important;
     }
 
-    /* Hide favorite star on mobile */
-    #starIcon {
-      display: none !important;
+    .detail-back-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border: none; border-radius: 50%;
+      background: transparent; color: var(--text-main); cursor: pointer; flex-shrink: 0;
     }
 
-    /* Reorder button on mobile */
-    #reorderBtn {
-      padding: 9px 10px !important;
-      min-width: 36px;
-    }
+    /* Reorder button replaced by the richer restock row below the stepper */
+    #reorderBtn { display: none !important; }
 
     .qty-panel { margin: 0 -16px 12px; border-radius: 0; border-left: none; border-right: none; }
     .qty-adjust-btn { width: 56px; height: 56px; border-radius: 16px; font-size: 28px; }
@@ -886,10 +914,19 @@
       flex-direction: column;
     }
 
-    /* Stock Status panel appears first in main-grid */
+    /* Stock Status panel appears first in main-grid, and its own children
+       reorder to match the mockup: stepper+restock, used-in-products,
+       then custom attributes (redundant with the Attributes detail row,
+       so it's de-emphasized to the bottom rather than removed). */
     .main-grid > div:last-child {
       order: -1;
+      display: flex;
+      flex-direction: column;
     }
+    .main-grid > div:last-child .qty-panel      { order: 1; }
+    .main-grid > div:last-child .restock-row    { order: 2; }
+    .main-grid > div:last-child #usedInProductsPanel   { order: 3; }
+    .main-grid > div:last-child #customAttributesPanel { order: 4; }
 
     /* Ingredient Details panel appears second */
     .main-grid > div:first-child {
@@ -1191,10 +1228,13 @@
   
 
   <div class="detail-header">
-    <div>
+    <button class="detail-back-btn" id="detailBackBtn" onclick="goBackToList()" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="detail-header-title">
       <input type="text" id="name-mobile" class="detail-title-input" placeholder="Item name&hellip;" required oninput="document.getElementById('name').value=this.value" onblur="document.getElementById('name').value=this.value;autoSave()">
     </div>
-    <div style="display:flex; gap:12px; align-items:center;">
+    <div class="detail-header-actions" style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn" title="Mark as Reordered">
         <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
@@ -1214,9 +1254,6 @@
   </div>
 
   <div class="detail-more-menu" id="detailMoreMenu">
-    <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); toggleFavorite()">
-      <span id="detailMoreFavIcon">☆</span><span id="detailMoreFavLabel">Add to favorites</span>
-    </button>
     <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); openDetailDuplicateModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
       <span>Duplicate</span>
@@ -1330,6 +1367,17 @@
         <div class="qty-status" id="qtyStatus"></div>
       </div>
 
+      <div class="restock-row" id="restockRow" style="display:none;">
+        <span class="restock-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+        </span>
+        <span class="restock-main">
+          <span class="restock-title" id="restockTitle">Restock</span>
+          <span class="restock-sub" id="restockSub"></span>
+        </span>
+        <svg class="drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+      </div>
+
       <div class="panel" id="customAttributesPanel" style="margin-top: 16px; padding: 20px;">
         <h3 style="font-size: 14px; margin-bottom: 16px;">Custom Attributes</h3>
         <div id="customAttributes" style="margin-bottom: 12px;">
@@ -1338,8 +1386,8 @@
         <button type="button" class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 8px;" onclick="addCustomAttribute()">+ Add Attribute</button>
       </div>
 
-      <div class="panel" style="margin-top: 16px; padding: 20px;">
-        <h3 style="font-size: 14px; margin-bottom: 12px;">Used in Products</h3>
+      <div class="panel" id="usedInProductsPanel" style="margin-top: 16px; padding: 20px;">
+        <h3 class="used-in-h3" id="usedInProductsH3" style="font-size: 14px; margin-bottom: 12px;">Used in Products</h3>
         <div id="recipesList" style="color: var(--text-muted); font-size: 12px;">
           <p>Loading...</p>
         </div>
@@ -1571,6 +1619,7 @@
     // Update stats
     updateStatsDisplay();
     renderDetailRows();
+    renderRestockRow();
     renderLastChange();
 
     // Load related data
@@ -1678,8 +1727,20 @@
         });
       });
 
+      const h3 = document.getElementById('usedInProductsH3');
+      if (h3) h3.textContent = recipesWithIngredient.length
+        ? `Used in ${recipesWithIngredient.length} Product${recipesWithIngredient.length !== 1 ? 's' : ''}`
+        : 'Used in Products';
+
       if (recipesWithIngredient.length === 0) {
         container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Not used in any products yet</p>';
+        return;
+      }
+
+      if (window.innerWidth <= 768) {
+        container.innerHTML = `<div class="recipe-pills">${recipesWithIngredient.map(recipe =>
+          `<span class="recipe-pill" onclick="window.location.href='/recipe-detail?id=${recipe.id}'">${escapeHtml(recipe.name)}</span>`
+        ).join('')}</div>`;
         return;
       }
 
@@ -1689,11 +1750,11 @@
           const compIngId = comp.ingredient_id || comp.id;
           return compIngId === ingredientId;
         });
-        
+
         const quantity = component ? `${component.quantity}` : '';
-        
+
         return `
-          <div style="padding: 12px; background: var(--bg-inner); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" 
+          <div style="padding: 12px; background: var(--bg-inner); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;"
                onclick="window.location.href='/recipe-detail?id=${recipe.id}'"
                onmouseover="this.style.background='var(--bg-panel)'"
                onmouseout="this.style.background='var(--bg-inner)'">
@@ -2072,10 +2133,11 @@
       reorderBtn.title = 'Confirm Delivery';
       reorderBtn.onclick = openDeliveryModal;
       reorderBtn.classList.add('truck-moving');
-      
+      renderRestockRow();
+
       // Close modal
       closeReorderModal();
-      
+
     } catch (error) {
       console.error('Error marking as reordered:', error);
       showAlert('Failed to mark as reordered');
@@ -2107,6 +2169,7 @@
       reorderBtn.title = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
       reorderBtn.classList.remove('truck-moving');
+      renderRestockRow();
 
       const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
       if (upload) openExpenseModal();
@@ -2132,6 +2195,7 @@
       reorderBtn.title = 'Mark as Reordered';
       reorderBtn.onclick = handleReorderClick;
       reorderBtn.classList.remove('truck-moving');
+      renderRestockRow();
 
       updateStatsDisplay();
     } catch (err) {
@@ -2376,18 +2440,53 @@
     const q = parseFloat(currentIngredient.quantity) || 0;
     const min = parseFloat(currentIngredient.min_stock) || 0;
     const state = q === 0 ? 'out' : (min && q < min ? 'low' : 'ok');
-    el.textContent = `${state === 'out' ? 'Out of stock' : state === 'low' ? 'Running low' : 'In stock'}${min ? ` · min ${min}` : ''}`;
+    el.textContent = `${state === 'out' ? 'Out of stock' : state === 'low' ? 'Running low' : 'in stock'}${min ? ` · min ${min}` : ''}`;
     el.dataset.state = state;
+  }
+
+  // ---------- Restock row (mobile) ----------
+  function _vendorNameFromUrl(url) {
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      const label = host.split('.')[0];
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderRestockRow() {
+    const row = document.getElementById('restockRow');
+    if (!row || !currentIngredient) return;
+    const url = currentIngredient.source_url;
+    if (!url || !url.trim()) { row.style.display = 'none'; return; }
+
+    const vendor = _vendorNameFromUrl(url) || 'supplier';
+    const days = currentIngredient.estimated_delivery;
+    const cost = parseFloat(currentIngredient.cost_per_unit) || 0;
+    const sub = [days ? `~${days} days` : null, cost ? `$${cost.toFixed(2)} each` : null].filter(Boolean).join(' · ');
+
+    row.style.display = 'flex';
+    const titleEl = document.getElementById('restockTitle');
+    const subEl = document.getElementById('restockSub');
+
+    if (currentIngredient.reorder_pending) {
+      titleEl.textContent = `Delivery from ${vendor}`;
+      subEl.textContent = sub ? `${sub} · On the way` : 'On the way';
+      row.onclick = openDeliveryModal;
+    } else {
+      titleEl.textContent = `Restock from ${vendor}`;
+      subEl.textContent = sub;
+      row.onclick = handleReorderClick;
+    }
   }
 
   // ---------- Mobile detail rows (Step 11c) ----------
   const DETAIL_ROWS = [
-    { id: 'cost_per_unit',      label: 'Cost each',   fmt: v => v ? `$${parseFloat(v).toFixed(2)}` : '' },
-    { id: 'min_stock',          label: 'Alert below', fmt: v => v || '' },
-    { id: 'estimated_delivery', label: 'Delivery',    fmt: v => v ? `~${v} days` : '' },
-    { id: 'sku',                label: 'SKU',         fmt: v => v || '' },
-    { id: 'source_url',         label: 'Source URL',  fmt: v => v || '' },
-    { id: 'notes',              label: 'Notes',       fmt: v => v || '' }
+    { ids: ['cost_per_unit'], label: 'Cost each',   fmt: v => v.cost_per_unit ? `$${parseFloat(v.cost_per_unit).toFixed(2)}` : '' },
+    { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' },
+    { ids: ['source_url'],    label: 'Source URL',  fmt: v => v.source_url || '' },
+    { ids: ['sku', 'notes'],  label: 'SKU · Notes', fmt: v => [v.sku, v.notes].filter(Boolean).join(' · ') }
   ];
 
   const _drowChev = `<svg class="drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>`;
@@ -2396,8 +2495,10 @@
     const el = document.getElementById('detailRows');
     if (!el) return;
     const rows = DETAIL_ROWS.map(r => {
-      const shown = r.fmt(document.getElementById(r.id)?.value);
-      return `<div class="drow" onclick="editField('${r.id}', '${escapeHtml(r.label)}')">
+      const values = {};
+      r.ids.forEach(id => { values[id] = document.getElementById(id)?.value; });
+      const shown = r.fmt(values);
+      return `<div class="drow" onclick='editField(${JSON.stringify(r.ids)}, ${JSON.stringify(r.label)})'>
           <span class="drow-label">${r.label}</span>
           <span class="drow-value${shown ? '' : ' empty'}">${shown ? escapeHtml(shown) : 'Not set'}</span>${_drowChev}
         </div>`;
@@ -2435,36 +2536,41 @@
       </div>`;
   }
 
-  // Single-field editor sheet — writes through the real input so autoSave()
-  // (and its debounce) keeps working exactly as it does for every other field.
-  let _editId = null;
+  // Field editor sheet — one row can hold 1 or 2 real inputs (SKU · Notes),
+  // writes through the real inputs so autoSave() keeps working untouched.
+  const _fieldPlaceholders = { sku: 'SKU', notes: 'Notes' };
 
-  function editField(id, label) {
-    _editId = id;
-    const src = document.getElementById(id);
-    if (!src) return;
+  function editField(ids, label) {
     document.getElementById('fieldSheetLabel').textContent = label;
-    const input = document.getElementById('fieldSheetInput');
-    input.type = src.type === 'textarea' ? 'text' : (src.type || 'text');
-    input.inputMode = ['cost_per_unit', 'min_stock', 'estimated_delivery'].includes(id) ? 'decimal' : 'text';
-    input.value = src.value;
+    const body = document.getElementById('fieldSheetInputs');
+    body.innerHTML = ids.map((id, i) => {
+      const src = document.getElementById(id);
+      if (!src) return '';
+      const type = src.type === 'textarea' ? 'text' : (src.type || 'text');
+      const inputMode = ['cost_per_unit', 'min_stock', 'estimated_delivery'].includes(id) ? 'decimal' : 'text';
+      const placeholder = ids.length > 1 ? (_fieldPlaceholders[id] || '') : '';
+      return `<input class="form-input fieldSheetInput" style="font-size:16px;${i > 0 ? 'margin-top:10px;' : ''}"
+                data-field="${id}" type="${type}" inputmode="${inputMode}"
+                placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(src.value || '')}">`;
+    }).join('');
     document.getElementById('fieldSheet').classList.add('active');
-    setTimeout(() => input.focus(), 120); // after the sheet transition, or iOS drops focus
+    setTimeout(() => body.querySelector('input')?.focus(), 120); // after the sheet transition, or iOS drops focus
   }
 
   function closeFieldSheet() {
     document.getElementById('fieldSheet').classList.remove('active');
-    _editId = null;
   }
 
   function saveField() {
-    if (!_editId) return;
-    const src = document.getElementById(_editId);
-    src.value = document.getElementById('fieldSheetInput').value;
+    document.querySelectorAll('#fieldSheetInputs .fieldSheetInput').forEach(input => {
+      const src = document.getElementById(input.dataset.field);
+      if (src) src.value = input.value;
+    });
     document.getElementById('fieldSheet').classList.remove('active');
     autoSave();
     renderDetailRows();
-    renderQtyStatus(); // min_stock may have changed the state
+    renderQtyStatus();   // min_stock may have changed the state
+    renderRestockRow();  // source_url may have changed
   }
 
   // ---------- Category sheet (Step 11d) ----------
@@ -2560,22 +2666,12 @@
     renderCustomAttributes();
   }
 
-  // ---------- Mobile "⋯" menu (Favorite / Duplicate / Delete) ----------
-  function renderDetailMoreMenu() {
-    const icon = document.getElementById('detailMoreFavIcon');
-    const label = document.getElementById('detailMoreFavLabel');
-    if (!icon || !label) return;
-    const isFav = !!currentIngredient?.is_favorite;
-    icon.textContent = isFav ? '★' : '☆';
-    label.textContent = isFav ? 'Remove from favorites' : 'Add to favorites';
-  }
-
+  // ---------- Mobile "⋯" menu (Duplicate / Delete — favorite stays in the header) ----------
   function toggleDetailMoreMenu() {
     const menu = document.getElementById('detailMoreMenu');
     const btn = document.getElementById('detailMoreBtn');
     if (!menu || !btn) return;
     if (menu.classList.contains('open')) { closeDetailMoreMenu(); return; }
-    renderDetailMoreMenu();
     menu.classList.add('open');
     btn.setAttribute('aria-expanded', 'true');
   }
@@ -2617,7 +2713,6 @@
         starIcon.textContent = '☆';
         starIcon.classList.remove('favorited');
       }
-      renderDetailMoreMenu();
 
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -2660,6 +2755,7 @@
       initialFormState = getCurrentFormState();
       updateStatsDisplay();
       renderDetailRows();
+      renderRestockRow();
 
     } catch (err) {
       showAlert('Failed to save changes: ' + err.message);
@@ -3137,11 +3233,11 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-<!-- Single-field editor sheet (mobile detail rows) -->
+<!-- Field editor sheet (mobile detail rows) — one row, one or two inputs -->
 <div class="modal-overlay modal-sheet" id="fieldSheet" onclick="if(event.target===this)closeFieldSheet()">
   <div class="modal-content">
     <label class="drow-edit-label" id="fieldSheetLabel"></label>
-    <input id="fieldSheetInput" class="form-input" style="font-size:16px">
+    <div id="fieldSheetInputs"></div>
     <button class="drow-edit-save" onclick="saveField()">Save</button>
   </div>
 </div>
