@@ -3128,7 +3128,7 @@ async function finalizeRecipe() {
     
   } catch (error) {
     console.error('Error saving recipe:', error);
-    alert('Failed to save product. Please try again.');
+    alert('Failed to save product: ' + (error?.message || 'please try again.'));
   }
 }
 
@@ -3176,7 +3176,7 @@ async function _doSaveRecipe(name) {
     try { render(); } catch (e) {}
   } catch (error) {
     console.error('Error saving recipe:', error);
-    alert('Failed to save product. Please try again.');
+    alert('Failed to save product: ' + (error?.message || 'please try again.'));
   }
 }
 
