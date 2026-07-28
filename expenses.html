@@ -370,6 +370,8 @@
     opacity: 0.5;
   }
 
+  .nav-add-btn { display: none; }
+
   /* Floating Action Button (hidden by default, shown on mobile) */
   .fab {
     display: none;
@@ -531,6 +533,12 @@
       margin: 0 -16px;
     }
 
+    .nav-add-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: none; border-radius: 50%;
+      background: transparent; color: var(--text-main); cursor: pointer;
+    }
+
     /* Show FAB button on mobile */
     .fab {
       display: flex;
@@ -678,6 +686,11 @@
       <input class="nav-search-input" id="navSearchInput" placeholder="Search expenses…" oninput="render(); toggleSearchClear('navSearchInput')">
       <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; render(); this.classList.remove('visible');" title="Clear search">×</button>
     </div>
+
+    <!-- Create expense (mobile) — opens the full method menu; the FAB pill is the scan-first shortcut -->
+    <button class="nav-add-btn" onclick="openMethodSelectionModal()" aria-label="Create expense">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="21" height="21"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+    </button>
 
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
