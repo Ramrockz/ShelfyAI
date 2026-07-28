@@ -3591,7 +3591,7 @@ function renderRecent(data) {
     // users don't have the same fat-finger/FAB-collision problems it
     // was solving, and already has the List view for density.
     if (window.innerWidth > 768) {
-      return `<div class="card-small">
+      return `<div class="card-small" data-id="${i.id}">
           <h4>
             <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
             <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
@@ -3608,7 +3608,7 @@ function renderRecent(data) {
           <div class="card-actions">
             <span class="edit-link" onclick="editIngredient('${i.id}')">Edit</span>
             <span class="edit-link" onclick="openDuplicateModal('${i.id}')">Duplicate</span>
-            <span class="delete-link" onclick="deleteIng('${i.id}')">Delete</span>
+            <span class="delete-link" onclick="softDeleteIng('${i.id}')">Delete</span>
           </div>
         </div>`;
     }
@@ -4730,7 +4730,8 @@ window.onclick = (e) => {
 let _pendingDelete = null;
 
 function softDeleteIng(id) {
-  const shell = document.querySelector(`.ing-row[data-id="${id}"]`)?.closest('.ing-swipe');
+  const shell = document.querySelector(`.ing-row[data-id="${id}"]`)?.closest('.ing-swipe')
+             || document.querySelector(`.card-small[data-id="${id}"]`);
   const item  = ingredients.find(i => i.id === id);
   if (!shell || !item) return;
 
