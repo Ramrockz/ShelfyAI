@@ -104,7 +104,17 @@
     .schip-low i { background: var(--warning); }
     .schip-out.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
     .schip-low.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
+    .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; }
+    .schip-icon.active { background: rgba(6,182,212,.11); color: #0e7490; border-color: rgba(6,182,212,.4); }
   }
+
+  .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
+             border-radius: 12px; cursor: pointer; }
+  .cat-row.active { background: rgba(6,182,212,.1); color: #0e7490; }
+  .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
   /* ---------- Grouped product list (mobile) ---------- */
   .prod-group-caption { grid-column: 1/-1; padding: 14px 16px 6px; font-size: 11px;
@@ -526,6 +536,8 @@
     line-height: 1;
   }
 
+  .nav-add-btn { display: none; }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
     /* Keep bottom nav above all builder overlays */
@@ -606,7 +618,13 @@
       align-items: center;
       justify-content: center;
     }
-    
+
+    .nav-add-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: none; border-radius: 50%;
+      background: transparent; color: var(--text-main); cursor: pointer;
+    }
+
     /* Hide view switcher on mobile - only show Cards view */
     .view-switcher {
       display: none;
@@ -1050,6 +1068,11 @@
       <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">×</button>
     </div>
 
+    <!-- Create product (mobile — replaces the FAB, which collided with the bottom nav / last row) -->
+    <button class="nav-add-btn" onclick="openBuilder()" aria-label="Create new product">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="21" height="21"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+    </button>
+
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1186,16 +1209,29 @@
   </aside>
 
   <main class="main">
-    <!-- Mobile availability chips -->
+    <!-- Mobile availability chips + category sheet trigger -->
     <div class="status-chips">
       <button class="schip active" data-avail="all" onclick="filterByAvailability('all')">All <span id="chipAllN">0</span></button>
       <button class="schip schip-out" data-avail="red" onclick="filterByAvailability('red')"><i></i>Can't make <span id="chipRedN">0</span></button>
       <button class="schip schip-low" data-avail="orange" onclick="filterByAvailability('orange')"><i></i>Low <span id="chipOrangeN">0</span></button>
+      <span style="flex:1"></span>
+      <button class="schip schip-icon" id="prodCatSheetBtn" onclick="openProdCatSheet()" aria-label="Filter by category">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+      </button>
     </div>
 
-    <!-- Mobile category filter row -->
+    <div class="modal-overlay modal-sheet" id="prodCatSheet" onclick="if(event.target===this)closeProdCatSheet()">
+      <div class="modal-content" style="max-width:520px">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+          <h3 style="margin:0;font-size:16px;flex:1">Filter by category</h3>
+          <span onclick="pickProdCat(null)" style="font-size:13px;font-weight:600;color:var(--accent);cursor:pointer">Clear</span>
+        </div>
+        <div id="prodCatSheetList"></div>
+      </div>
+    </div>
+
+    <!-- Mobile category attribute subfilter — shown after a category is picked from the sheet -->
     <div class="prod-mobile-filter-row" id="prodMobileFilterRow">
-      <div class="prod-mobile-cats-scroll" id="productMobileCatChips"></div>
       <div id="productMobileAttrSubfilter" class="prod-attr-subfilter"></div>
     </div>
 
@@ -1234,9 +1270,6 @@
 
   </main>
 </div>
-
-<!-- Floating Action Button (Mobile) -->
-<button class="fab" onclick="openBuilder()" aria-label="Create new product"></button>
 
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay">
@@ -1908,15 +1941,44 @@ function renderProductCatChips() {
     return `<button type="button" class="prod-cat-chip${sel ? ' selected' : ''}" onclick="toggleProductCatFilter('${_escHtml(cat)}')" title="${_escHtml(cat)}"><i data-lucide="${icon}"></i></button>`;
   }).join('');
 
-  ['productCatChips', 'productMobileCatChips'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = chips;
-  });
+  const el = document.getElementById('productCatChips');
+  if (el) el.innerHTML = chips;
 
   const filterSection = document.getElementById('productFilterSection');
   if (filterSection) filterSection.style.display = presentCats.length > 0 ? '' : 'none';
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderProdCatSheet() {
+  const row = (label, icon, value, count) => {
+    const on = productCategoryFilter === value;
+    const arg = value === null ? 'null' : `'${value.replace(/'/g, "\\'")}'`;
+    return `<div class="cat-row${on ? ' active' : ''}" onclick="pickProdCat(${arg})">
+        <i data-lucide="${icon}"></i>
+        <span class="cat-row-label">${label}</span>
+        <span class="cat-row-count">${count}</span>
+      </div>`;
+  };
+  const counts = cat => recipes.filter(r => (r.components || []).some(c => {
+    const ing = ingredientData.find(i => i.id === (c.ingredient_id || c.id));
+    return ing && ing.category && ing.category.toLowerCase() === cat.toLowerCase();
+  })).length;
+  const sortedCats = [..._recipeCategories].sort((a, b) => counts(b) - counts(a));
+  document.getElementById('prodCatSheetList').innerHTML =
+    row('All categories', 'layers', null, recipes.length) +
+    sortedCats.map(cat => row(cat, _recipeCategIconMap[cat] || 'tag', cat, counts(cat))).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openProdCatSheet()  { renderProdCatSheet(); document.getElementById('prodCatSheet').classList.add('active'); }
+function closeProdCatSheet() { document.getElementById('prodCatSheet').classList.remove('active'); }
+
+function pickProdCat(value) {
+  toggleProductCatFilter(value);
+  closeProdCatSheet();
+  const btn = document.getElementById('prodCatSheetBtn');
+  if (btn) btn.classList.toggle('active', !!productCategoryFilter);
 }
 
 function toggleProductCatFilter(cat) {
