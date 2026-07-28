@@ -400,7 +400,56 @@
     left: 50%;
     transform: translate(-50%, -50%);
   }
-  
+
+  .fab-pill {
+    position: fixed; right: 16px; z-index: 900;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+    height: 52px; padding: 0 20px; display: flex; align-items: center; gap: 8px;
+    border: none; border-radius: 99px; background: var(--accent); color: #fff;
+    font: 800 14.5px inherit; font-family: inherit; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(6,182,212,0.4);
+  }
+  .fab-pill:active { transform: scale(0.96); }
+  @media (min-width: 769px) { .fab-pill { bottom: 24px; } }
+
+  .exp-summary { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
+  .exp-summary-main { flex: 1; }
+  .exp-summary-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+                       text-transform: uppercase; color: var(--text-muted); }
+  .exp-summary-value { display: block; margin-top: 4px; font-size: 30px; font-weight: 800;
+                       letter-spacing: -0.02em; line-height: 1.1;
+                       font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .exp-trend { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px;
+               border-radius: 8px; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+  .exp-trend.down { background: rgba(16,185,129,0.12); color: #047857; }
+  .exp-trend.up   { background: rgba(245,158,11,0.14); color: #b45309; }
+  .exp-trend.flat { background: var(--bg-inner); color: var(--text-muted); }
+
+  /* ---------- Month-grouped ledger rows (mobile) ---------- */
+  .exp-head { grid-column: 1/-1; display: flex; align-items: baseline; justify-content: space-between;
+              padding: 14px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+              text-transform: uppercase; color: var(--text-muted); }
+  .exp-head-later { padding-top: 18px; }
+  .exp-head-total { text-transform: none; letter-spacing: 0; font-size: 12.5px;
+                    font-weight: 800; color: var(--text-main); }
+  .exp-head-later .exp-head-total { color: var(--text-muted); }
+  .exp-row { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; height: 64px;
+             padding: 0 14px 0 16px; background: var(--bg-panel);
+             border-top: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
+  .exp-main { flex: 1; min-width: 0; }
+  .exp-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exp-clip { color: var(--text-muted); flex-shrink: 0; }
+  .exp-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px;
+              font-size: 12px; color: var(--text-muted);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exp-flag { flex-shrink: 0; height: 17px; padding: 0 6px; display: inline-flex; align-items: center;
+              border-radius: 5px; background: rgba(245,158,11,0.14); color: #b45309;
+              font-size: 10px; font-weight: 800; }
+  .exp-amount { font-size: 16px; font-weight: 800; flex-shrink: 0;
+                font-variant-numeric: tabular-nums; }
+
+
   /* Method selection cards */
   .method-card {
     background: var(--bg-panel);
@@ -475,6 +524,11 @@
     /* Force Cards view */
     #recentView {
       display: grid !important;
+    }
+
+    #recentView.exp-staged {
+      display: block !important;
+      margin: 0 -16px;
     }
 
     /* Show FAB button on mobile */
@@ -756,6 +810,14 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
+    <div class="exp-summary">
+      <span class="exp-summary-main">
+        <span class="exp-summary-label">Spent in <span id="expMonthName">this month</span></span>
+        <span class="exp-summary-value" id="expMonthTotal">$0.00</span>
+      </span>
+      <span class="exp-trend" id="expTrend" hidden></span>
+    </div>
+
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px;">
         <div class="view-switcher">
@@ -790,8 +852,12 @@
 
   </main>
 
-  <!-- Floating Action Button (visible only on mobile) -->
-  <button class="fab" onclick="openMethodSelectionModal()" aria-label="Create expense"></button>
+  <!-- Scan-first primary action — the sidebar "+ New Expense" button and the
+       empty-state CTAs still open the full method-selection menu. -->
+  <button class="fab-pill" onclick="startReceiptScan()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Scan receipt
+  </button>
 </div>
 
 <!-- Method Selection Modal -->
@@ -1269,14 +1335,46 @@ function switchView(view) {
   render();
 }
 
+function renderExpenseSummary() {
+  const el = document.getElementById('expTrend');
+  const nameEl = document.getElementById('expMonthName');
+  const totalEl = document.getElementById('expMonthTotal');
+  if (!el || !nameEl || !totalEl) return;
+
+  const now = new Date();
+  const key = d => `${d.getFullYear()}-${d.getMonth()}`;
+  const thisKey = key(now);
+  const prevKey = key(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+
+  const sumFor = k => expenses
+    .filter(e => key(new Date(e.expense_date)) === k)
+    .reduce((n, e) => n + parseFloat(e.amount || 0), 0);
+
+  const cur = sumFor(thisKey), prev = sumFor(prevKey);
+  nameEl.textContent = now.toLocaleDateString('en-US', { month: 'long' });
+  totalEl.textContent = `$${cur.toFixed(2)}`;
+
+  if (!prev) { el.hidden = true; return; }          // no baseline, no claim
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  const up = pct > 0;
+  el.hidden = false;
+  // Spending more is not good news — green is reserved for a decrease.
+  el.className = 'exp-trend ' + (pct === 0 ? 'flat' : up ? 'up' : 'down');
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="13" height="13">
+      <polyline points="${up ? '6 15 12 9 18 15' : '6 9 12 15 18 9'}"/></svg>${Math.abs(pct)}%`;
+  el.title = `${up ? 'Up' : 'Down'} from $${prev.toFixed(2)} last month`;
+}
+
 function render() {
+  renderExpenseSummary();
+
   const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
 
   // Reset pagination when search changes
   if (currentView === 'list') {
     listCurrentPage = 1;
   }
-  
+
   let filtered = expenses.filter(expense => {
     const searchString = `${expense.description || ''} ${expense.vendor || ''} ${expense.category || ''}`.toLowerCase();
     return searchString.includes(searchTerm);
@@ -1319,19 +1417,25 @@ function renderRecent(filtered) {
   const displayData = filtered.slice(0, cardsToShow);
   const hasMore = filtered.length > cardsToShow;
 
+  if (window.innerWidth <= 768) {
+    renderRecentLedger(filtered, displayData, hasMore, container);
+    return;
+  }
+  container.classList.remove('exp-staged');
+
   container.innerHTML = displayData.map(expense => {
     const date = new Date(expense.expense_date).toLocaleDateString();
-    const hasReceipt = expense.receipt_url ? '📎' : '';
-    
+    const hasReceipt = expense.receipt_url ? ' <span class="exp-clip" title="Has receipt">📎</span>' : '';
+
     // Determine display name
-    let displayName = expense.description || 'Expense Purchase';
-    
+    let displayName = _escHtml(expense.description || 'Expense Purchase');
+
     // Date and vendor formatting
-    const dateVendorText = expense.vendor ? `${date} • ${expense.vendor}` : date;
-    
+    const dateVendorText = expense.vendor ? `${date} • ${_escHtml(expense.vendor)}` : date;
+
     return `
       <div class="card-small" style="cursor: default;">
-        <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: color 0.2s;" onclick="window.location.href='/expense-detail?id=${expense.id}'" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">${displayName}</h4>
+        <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: color 0.2s;" onclick="window.location.href='/expense-detail?id=${expense.id}'" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">${displayName}${hasReceipt}</h4>
         <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
           ${dateVendorText}
         </div>
@@ -1348,7 +1452,7 @@ function renderRecent(filtered) {
       </div>
     `;
   }).join('');
-  
+
   if (hasMore) {
     container.innerHTML += `
       <div style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
@@ -1356,8 +1460,79 @@ function renderRecent(filtered) {
       </div>
     `;
   }
-  
+
   // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Mobile: month-grouped ledger rows. Month totals are computed from the full
+// `filtered` set, not the paginated `displayData` — otherwise the header for
+// an older month would read low until "Show More" pulls the rest of it in.
+function renderRecentLedger(filtered, displayData, hasMore, container) {
+  container.classList.add('exp-staged');
+
+  const money = n => `$${parseFloat(n || 0).toFixed(2)}`;
+  const itemCount = e => (e.ingredients || []).length;
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthTotals = new Map();
+  filtered.forEach(e => {
+    const key = monthKey(new Date(e.expense_date));
+    monthTotals.set(key, (monthTotals.get(key) || 0) + parseFloat(e.amount || 0));
+  });
+
+  const expenseRow = e => {
+    const d = new Date(e.expense_date);
+    const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const n = itemCount(e);
+    const meta = [day, e.vendor ? _escHtml(e.vendor) : null, n ? `${n} item${n !== 1 ? 's' : ''}` : null].filter(Boolean).join(' · ');
+    return `<div class="exp-row" onclick="window.location.href='/expense-detail?id=${e.id}'">
+        <span class="exp-main">
+          <span class="exp-name">
+            ${_escHtml(e.description || 'Expense Purchase')}
+            ${e.receipt_url ? `<svg class="exp-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>` : ''}
+          </span>
+          <span class="exp-meta">
+            ${meta}${n ? '' : '<span class="exp-flag">NO ITEMS</span>'}
+          </span>
+        </span>
+        <span class="exp-amount">${money(e.amount)}</span>
+      </div>`;
+  };
+
+  // group the currently-shown page by calendar month, newest first —
+  // displayData is already newest-first
+  const months = new Map();
+  displayData.forEach(e => {
+    const d = new Date(e.expense_date);
+    const key = monthKey(d);
+    if (!months.has(key)) months.set(key, { label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), items: [] });
+    months.get(key).items.push(e);
+  });
+
+  let html = '';
+  let first = true;
+  months.forEach((m, key) => {
+    html += `<div class="exp-head${first ? '' : ' exp-head-later'}">
+        <span>${m.label}</span><span class="exp-head-total">${money(monthTotals.get(key))}</span>
+      </div>`;
+    html += m.items.map(expenseRow).join('');
+    first = false;
+  });
+  container.innerHTML = html;
+
+  if (hasMore) {
+    container.innerHTML += `
+      <div style="display: flex; justify-content: center; margin-top: 20px;">
+        <button onclick="showMoreExpenses()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${filtered.length - displayData.length} remaining)</button>
+      </div>
+    `;
+  }
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -1522,6 +1697,13 @@ async function selectMethod(method) {
   } else if (method === 'upload') {
     openImageUploadModal();
   }
+}
+
+// Primary FAB action — skips the method menu and goes straight to the
+// camera capture the "upload" method already uses.
+function startReceiptScan() {
+  openImageUploadModal();
+  captureScreenshot();
 }
 
 // Selected ingredients storage
