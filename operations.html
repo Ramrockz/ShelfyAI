@@ -4899,18 +4899,22 @@ async function confirmMappedOrder() {
       .select();
     
     if (error) throw error;
-    
+
     // Update inventory if recipes were selected
+    let inventoryChanges = null;
     if (orderRecipes.length > 0 && data && data[0]) {
-      await updateInventoryForOrder(orderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
+      inventoryChanges = await updateInventoryForOrder(orderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
-    
+
     closeRecipeMappingModal();
     closeImageUploadModal();
-    
-    // Redirect to orders page
-    window.location.href = '/orders';
-    
+
+    // Show the same success screen as manual order entry, confirming the inventory update
+    document.getElementById('manualStep1').style.display = 'none';
+    document.getElementById('manualStep2').style.display = 'none';
+    document.getElementById('manualOrderModal').classList.add('active');
+    showOrderSuccessScreen(data[0], orderRecipes.length > 0, inventoryChanges);
+
   } catch (error) {
     console.error('Error creating order:', error);
     showNotification('Failed to create order: ' + error.message, 'error');

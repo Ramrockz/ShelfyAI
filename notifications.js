@@ -371,15 +371,18 @@ async function createAILimitNotification(userId, tier) {
       .single();
     
     console.log('User settings:', settings, 'Error:', settingsError);
-    
-    // If ai_limit_notifications column doesn't exist, default to notifications_enabled
-    const aiLimitEnabled = settings?.ai_limit_notifications !== undefined 
-      ? settings.ai_limit_notifications 
-      : settings?.notifications_enabled;
-    
-    // Don't create notification if disabled
-    if (!settings || !settings.notifications_enabled || !aiLimitEnabled) {
-      console.log('Notifications disabled for AI limits. notifications_enabled:', settings?.notifications_enabled, 'ai_limit_notifications:', aiLimitEnabled);
+
+    // No settings row yet (e.g. user has never opened Settings) — the table's
+    // column defaults are true, so treat a missing row as enabled rather than
+    // silently skipping the notification.
+    const notificationsEnabled = settings ? settings.notifications_enabled : true;
+    const aiLimitEnabled = settings
+      ? (settings.ai_limit_notifications !== undefined ? settings.ai_limit_notifications : settings.notifications_enabled)
+      : true;
+
+    // Don't create notification if explicitly disabled
+    if (!notificationsEnabled || !aiLimitEnabled) {
+      console.log('Notifications disabled for AI limits. notifications_enabled:', notificationsEnabled, 'ai_limit_notifications:', aiLimitEnabled);
       return;
     }
 
