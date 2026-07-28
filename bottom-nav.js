@@ -17,12 +17,8 @@
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`
     },
     {
-      href: '/expenses', page: 'expenses', label: 'Expenses',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`
-    },
-    {
-      href: '/analytics', page: 'analytics', label: 'Analytics',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`
+      href: '/settings', page: 'more', label: 'More',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>`
     }
   ];
 
@@ -40,7 +36,11 @@
     'ingredient-detail': 'ingredients',
     'recipe-detail': 'recipes',
     'order-detail': 'orders',
-    'expense-detail': 'expenses'
+    'expense-detail': 'more',
+    'expenses': 'more',
+    'analytics': 'more',
+    'settings': 'more',
+    'change-log': 'more'
   };
   const activePage = parentMap[rawPage] || rawPage;
 
