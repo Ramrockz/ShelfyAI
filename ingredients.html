@@ -2471,9 +2471,12 @@ function renderCatSheet() {
       </div>`;
   };
   const counts = c => ingredients.filter(i => i.category === c).length;
+  // Most-populated categories first -- with 23 of them, scrolling to find
+  // the one you actually use is worse than a fixed alphabetical/definition order.
+  const sortedCats = [...CAT_META].sort((a, b) => counts(b.label) - counts(a.label));
   document.getElementById('catSheetList').innerHTML =
     row('All categories', 'layers', null, ingredients.length) +
-    CAT_META.map(m => row(m.label, m.icon, m.label, counts(m.label))).join('');
+    sortedCats.map(m => row(m.label, m.icon, m.label, counts(m.label))).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -2504,6 +2507,13 @@ let activeStockFilter = 'all'; // 'all' | 'out' | 'low'
 
 function filterByStock(kind) {
   activeStockFilter = kind;
+  // These chips supersede the older operations.html "Out of
+  // Stock"/"Low Stock" dashboard-card redirect, which narrows the base
+  // list via window.inventoryFilteredList independently of this filter.
+  // Without clearing it, picking "All" here would still be constrained
+  // to whatever that redirect narrowed it to instead of showing everything.
+  window.inventoryFilteredList = null;
+  window.inventoryFilterType = null;
   document.querySelectorAll('.schip[data-stock]').forEach(chip => {
     chip.classList.toggle('active', chip.dataset.stock === kind);
   });
