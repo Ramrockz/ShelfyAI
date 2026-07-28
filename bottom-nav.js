@@ -17,8 +17,23 @@
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`
     },
     {
-      href: '/settings', page: 'more', label: 'More',
+      page: 'more', label: 'More', isMore: true,
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>`
+    }
+  ];
+
+  const moreMenuItems = [
+    {
+      href: '/expenses', label: 'Expenses',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`
+    },
+    {
+      href: '/analytics', label: 'Analytics',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`
+    },
+    {
+      href: '/settings', label: 'Settings',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`
     }
   ];
 
@@ -64,10 +79,24 @@
 
   const nav = document.createElement('nav');
   nav.id = 'bottom-nav';
-  nav.innerHTML = pages.map(p => `
+  nav.innerHTML = pages.map(p => p.isMore ? `
+    <button type="button" id="bn-more-btn" class="bn-item${activePage === p.page ? ' active' : ''}" aria-haspopup="true" aria-expanded="false">
+      ${p.icon}
+      <span>${p.label}</span>
+    </button>
+  ` : `
     <a href="${p.href}" class="bn-item${activePage === p.page ? ' active' : ''}">
       ${p.icon}
       <span>${p.label}</span>
+    </a>
+  `).join('');
+
+  const moreMenu = document.createElement('div');
+  moreMenu.id = 'bn-more-menu';
+  moreMenu.innerHTML = moreMenuItems.map(item => `
+    <a href="${item.href}" class="bn-more-item">
+      ${item.icon}
+      <span>${item.label}</span>
     </a>
   `).join('');
 
@@ -139,6 +168,48 @@
       }
       .bn-item.active {
         color: var(--accent, #06b6d4);
+      }
+      button.bn-item {
+        background: none;
+        border: none;
+        padding: 0;
+        font-family: inherit;
+      }
+      #bn-more-menu {
+        display: none;
+        position: fixed;
+        bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 8px);
+        right: 8px;
+        background: var(--bg-panel, #1e1e2e);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        padding: 6px;
+        min-width: 168px;
+        z-index: 9100;
+      }
+      #bn-more-menu.open {
+        display: block;
+      }
+      .bn-more-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        color: var(--text-main, #f1f5f9);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .bn-more-item:active {
+        background: var(--bg-inner, rgba(255,255,255,0.06));
+      }
+      .bn-more-item svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        color: var(--text-muted, #6b7280);
       }
       body {
         padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
@@ -292,7 +363,23 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(nav);
+    document.body.appendChild(moreMenu);
     document.body.appendChild(overlay);
+
+    const moreBtn = document.getElementById('bn-more-btn');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = moreMenu.classList.toggle('open');
+        moreBtn.setAttribute('aria-expanded', String(isOpen));
+      });
+      document.addEventListener('click', (e) => {
+        if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
+          moreMenu.classList.remove('open');
+          moreBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
 
     // Mobile page title — replaces the logo, which is hidden on mobile
     const navbar = document.querySelector('.navbar');
