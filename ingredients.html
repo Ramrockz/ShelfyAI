@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>ShelfyAI &ndash; Items Master</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <!-- Prevent search engine indexing -->
 <meta name="robots" content="noindex, nofollow" />
@@ -82,6 +82,35 @@
   /* ---------- CARDS (SMALL CARDS) ---------- */
   .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
   .card-small { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: all 0.3s ease; }
+
+  /* ---------- INVENTORY ROWS (mobile) ---------- */
+  .ing-row-bar { width: 3px; height: 34px; border-radius: 2px; flex-shrink: 0; margin-left: -8px; }
+  .ing-row-bar[data-state="out"] { background: var(--danger); }
+  .ing-row-bar[data-state="low"] { background: var(--warning); }
+  .ing-row-bar[data-state="ok"]  { background: var(--success); }
+  .ing-row-main { flex: 1; min-width: 0; cursor: pointer; }
+  .ing-row-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ing-row-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ing-row-qty { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .ing-step { width: 38px; height: 38px; border: none; border-radius: 10px; background: var(--bg-inner);
+              color: var(--text-main); font-size: 20px; font-weight: 600; cursor: pointer; }
+  .ing-step-add { background: rgba(6,182,212,0.1); color: var(--accent); }
+  .ing-num { min-width: 34px; text-align: center; font-size: 19px; font-weight: 800; }
+
+  /* Swipe shell (Edit/Delete reveal) */
+  .ing-swipe { position: relative; height: 64px; overflow: hidden;
+               border-top: 1px solid var(--border); background: var(--bg-inner); }
+  .ing-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+  .ing-act { width: 48px; border: none; cursor: pointer; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; gap: 3px;
+             font-family: inherit; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; }
+  .ing-act-edit { background: #cbd5e1; color: #334155; }
+  .ing-act-del  { background: var(--danger); color: #fff; }
+  .ing-row { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px;
+             padding: 0 12px 0 16px; background: var(--bg-panel); box-sizing: border-box;
+             touch-action: pan-y; will-change: transform; }
   
   @keyframes slideIn {
     from {
@@ -552,35 +581,37 @@
     transform: translate(-50%, -50%);
   }
 
-  /* Mobile Category Filters */
-  .mobile-type-filters {
-    display: none;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-  }
+  .nav-add-btn { display: none; }
 
-  .mobile-type-filter {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 9px;
-    background: var(--bg-panel);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex: 1 1 40px;
-    max-width: 50px;
-    color: var(--text-muted);
+  /* Mobile status chips + category sheet */
+  .status-chips { display: none; }
+  @media (max-width: 768px) {
+    .status-chips { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
+    .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
+             border-radius: 99px; border: 1px solid var(--border); background: var(--bg-panel);
+             color: var(--text-muted); font: 700 12.5px inherit; font-family: inherit;
+             cursor: pointer; flex-shrink: 0; }
+    .schip.active { background: var(--text-main); color: var(--bg-panel); border-color: var(--text-main); }
+    .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; }
+    .schip-icon.active { background: rgba(6,182,212,.11); color: #0e7490; border-color: rgba(6,182,212,.4); }
+    .schip-out i, .schip-low i { width: 6px; height: 6px; border-radius: 50%; }
+    .schip-out i { background: var(--danger); }
+    .schip-low i { background: var(--warning); }
+    .schip-out.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
+    .schip-low.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
+    .cat-chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 12px;
+                border-radius: 99px; background: rgba(6,182,212,.11); border: 1px solid rgba(6,182,212,.4);
+                color: #0e7490; font-size: 12.5px; font-weight: 700; margin-bottom: 10px; }
+    .cat-chip > span { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+                       justify-content: center; background: rgba(6,182,212,.16); cursor: pointer; font-size: 15px; }
   }
-  .mobile-type-filter svg { width: 20px; height: 20px; stroke-width: 1.75; }
-
-  .mobile-type-filter.active {
-    border-color: var(--accent);
-    background: rgba(6,182,212,0.13);
-    color: var(--accent);
-  }
+  .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
+             border-radius: 12px; cursor: pointer; }
+  .cat-row.active { background: rgba(6,182,212,.1); color: #0e7490; }
+  .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
   /* Attribute subfilter chips */
   .mobile-attr-subfilter {
@@ -661,24 +692,15 @@
       display: grid !important;
     }
 
-    /* Show FAB button on mobile */
-    .fab {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Show mobile type filters */
-    .mobile-type-filters {
-      display: flex;
+    .nav-add-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: none; border-radius: 50%;
+      background: transparent; color: var(--text-main); cursor: pointer;
     }
 
     /* Single column card grid */
-    .recent-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    
+    .recent-grid { grid-template-columns: 1fr; gap: 0; margin: 0 -16px; }
+
     /* Card adjustments */
     .card-small {
       padding: 20px;
@@ -928,13 +950,18 @@
       <button type="button" class="search-clear" id="navSearchInput_clear" onclick="document.getElementById('navSearchInput').value = ''; cardsToShow = 15; render(); this.classList.remove('visible');" title="Clear search">&times;</button>
     </div>
 
+    <!-- Create item (mobile — replaces the FAB, which collided with the bottom nav / last row) -->
+    <button class="nav-add-btn" onclick="openModal()" aria-label="Create item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="21" height="21"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+    </button>
+
     <!-- Notification Bell -->
     <div id="notificationBell" class="notification-bell" onclick="toggleNotifications()" style="display: none;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
       </svg>
       <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-      
+
       <!-- Notification Dropdown -->
       <div id="notificationDropdown" class="notification-dropdown" onclick="event.stopPropagation()">
         <div class="notification-header">
@@ -1069,33 +1096,28 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
-    <!-- Mobile Category Filters -->
-    <div class="mobile-type-filters">
-      <div class="mobile-type-filter" data-cat="Apparel"          onclick="filterByCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></div>
-      <div class="mobile-type-filter" data-cat="Wood"             onclick="filterByCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></div>
-      <div class="mobile-type-filter" data-cat="Boxes"            onclick="filterByCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></div>
-      <div class="mobile-type-filter" data-cat="Cards"            onclick="filterByCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></div>
-      <div class="mobile-type-filter" data-cat="Plants"           onclick="filterByCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></div>
-      <div class="mobile-type-filter" data-cat="Candy"            onclick="filterByCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></div>
-      <div class="mobile-type-filter" data-cat="Beverage"         onclick="filterByCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></div>
-      <div class="mobile-type-filter" data-cat="Jewelry"          onclick="filterByCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></div>
-      <div class="mobile-type-filter" data-cat="Party Supplies"   onclick="filterByCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></div>
-      <div class="mobile-type-filter" data-cat="Gaming"           onclick="filterByCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></div>
-      <div class="mobile-type-filter" data-cat="Toys"             onclick="filterByCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></div>
-      <div class="mobile-type-filter" data-cat="Office Supplies"  onclick="filterByCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></div>
-      <div class="mobile-type-filter" data-cat="Colors"           onclick="filterByCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></div>
-      <div class="mobile-type-filter" data-cat="Rope"             onclick="filterByCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></div>
-      <div class="mobile-type-filter" data-cat="Paper"            onclick="filterByCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></div>
-      <div class="mobile-type-filter" data-cat="Spool"            onclick="filterByCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></div>
-      <div class="mobile-type-filter" data-cat="Letter"           onclick="filterByCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></div>
-      <div class="mobile-type-filter" data-cat="Giveaway"         onclick="filterByCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></div>
-      <div class="mobile-type-filter" data-cat="Electronics"      onclick="filterByCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></div>
-      <div class="mobile-type-filter" data-cat="Printing Supplies" onclick="filterByCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></div>
-      <div class="mobile-type-filter" data-cat="Tools"            onclick="filterByCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></div>
-      <div class="mobile-type-filter" data-cat="Packaging"        onclick="filterByCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></div>
-      <div class="mobile-type-filter" data-cat="Food"             onclick="filterByCategory('Food')"             title="Food"><i data-lucide="wheat"></i></div>
+    <!-- Mobile status chips + category sheet trigger -->
+    <div class="status-chips">
+      <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
+      <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
+      <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
+      <span style="flex:1"></span>
+      <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+      </button>
     </div>
+    <div id="activeCatChip" style="display:none"></div>
     <div class="mobile-attr-subfilter" id="mobileAttrSubfilter"></div>
+
+    <div class="modal-overlay modal-sheet" id="catSheet" onclick="if(event.target===this)closeCatSheet()">
+      <div class="modal-content" style="max-width:520px">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+          <h3 style="margin:0;font-size:16px;flex:1">Filter by category</h3>
+          <span onclick="pickCat(null)" style="font-size:13px;font-weight:600;color:var(--accent);cursor:pointer">Clear</span>
+        </div>
+        <div id="catSheetList"></div>
+      </div>
+    </div>
 
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px; flex: 1; min-width: 0;">
@@ -1133,9 +1155,6 @@
     </div>
 
   </main>
-
-  <!-- Floating Action Button (visible only on mobile) -->
-  <button class="fab" onclick="openModal()" aria-label="Create item"></button>
 </div>
 
 <div class="drawer" id="drawer">
@@ -2409,13 +2428,99 @@ function filterByCategory(cat) {
     _renderAttrSubfilters(cat);
   }
 
-  document.querySelectorAll('.mobile-type-filter').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.cat === activeCategoryFilter);
-  });
-
   listCurrentPage = 1;
   cardsToShow = 15;
   render();
+}
+
+// ---------- Category filter sheet (replaces the old icon-only chip row) ----------
+const CAT_META = [
+  { label: 'Apparel',           icon: 'shirt' },
+  { label: 'Wood',              icon: 'tree-pine' },
+  { label: 'Boxes',             icon: 'archive' },
+  { label: 'Cards',             icon: 'tickets' },
+  { label: 'Plants',            icon: 'sprout' },
+  { label: 'Candy',             icon: 'lollipop' },
+  { label: 'Beverage',          icon: 'amphora' },
+  { label: 'Jewelry',           icon: 'gem' },
+  { label: 'Party Supplies',    icon: 'party-popper' },
+  { label: 'Gaming',            icon: 'gamepad-2' },
+  { label: 'Toys',              icon: 'drum' },
+  { label: 'Office Supplies',   icon: 'paperclip' },
+  { label: 'Colors',            icon: 'palette' },
+  { label: 'Rope',              icon: 'lasso' },
+  { label: 'Paper',             icon: 'origami' },
+  { label: 'Spool',             icon: 'spool' },
+  { label: 'Letter',            icon: 'mail' },
+  { label: 'Giveaway',          icon: 'gift' },
+  { label: 'Electronics',       icon: 'plug' },
+  { label: 'Printing Supplies', icon: 'printer' },
+  { label: 'Tools',             icon: 'wrench' },
+  { label: 'Packaging',         icon: 'package' },
+  { label: 'Food',              icon: 'wheat' }
+];
+
+function renderCatSheet() {
+  const row = (label, icon, value, count) => {
+    const on = activeCategoryFilter === value;
+    const arg = value === null ? 'null' : `'${value.replace(/'/g, "\\'")}'`;
+    return `<div class="cat-row${on ? ' active' : ''}" onclick="pickCat(${arg})">
+        <i data-lucide="${icon}"></i>
+        <span class="cat-row-label">${label}</span>
+        <span class="cat-row-count">${count}</span>
+      </div>`;
+  };
+  const counts = c => ingredients.filter(i => i.category === c).length;
+  document.getElementById('catSheetList').innerHTML =
+    row('All categories', 'layers', null, ingredients.length) +
+    CAT_META.map(m => row(m.label, m.icon, m.label, counts(m.label))).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openCatSheet()  { renderCatSheet(); document.getElementById('catSheet').classList.add('active'); }
+function closeCatSheet() { document.getElementById('catSheet').classList.remove('active'); }
+
+function pickCat(value) {
+  // filterByCategory already owns activeCategoryFilter, the attribute
+  // subfilter row, and re-rendering -- reuse it instead of duplicating
+  // that logic here.
+  filterByCategory(value);
+  closeCatSheet();
+
+  const chip = document.getElementById('activeCatChip');
+  const btn = document.getElementById('catSheetBtn');
+  if (activeCategoryFilter) {
+    chip.style.display = 'flex';
+    chip.innerHTML = `<span class="cat-chip">${escapeHtml(activeCategoryFilter)}<span onclick="pickCat(null)">&times;</span></span>`;
+    btn.classList.add('active');
+  } else {
+    chip.style.display = 'none';
+    btn.classList.remove('active');
+  }
+}
+
+// ---------- Status chips (All / Out / Low) ----------
+let activeStockFilter = 'all'; // 'all' | 'out' | 'low'
+
+function filterByStock(kind) {
+  activeStockFilter = kind;
+  document.querySelectorAll('.schip[data-stock]').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.stock === kind);
+  });
+  cardsToShow = 15;
+  render();
+}
+
+function updateStockChipCounts() {
+  const q = i => i.qty ?? i.quantity;
+  const out = ingredients.filter(i => q(i) === 0).length;
+  const low = ingredients.filter(i => { const v = q(i); return v > 0 && i.min_stock > 0 && v < i.min_stock; }).length;
+  const allEl = document.getElementById('chipAllN');
+  const outEl = document.getElementById('chipOutN');
+  const lowEl = document.getElementById('chipLowN');
+  if (allEl) allEl.textContent = ingredients.length;
+  if (outEl) outEl.textContent = out;
+  if (lowEl) lowEl.textContent = low;
 }
 
 function _renderAttrSubfilters(cat) {
@@ -2939,7 +3044,8 @@ function applyInventoryFilter(filterType) {
 
 function render() {
   const searchQ = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
-  
+  updateStockChipCounts();
+
   // Start with ingredients or filtered list from inventory status
   let baseIngredients = window.inventoryFilteredList || ingredients;
   
@@ -2992,6 +3098,13 @@ function render() {
     // Apply category filter (case-insensitive)
     if (activeCategoryFilter && (!i.category || i.category.toLowerCase() !== activeCategoryFilter.toLowerCase())) {
       return false;
+    }
+
+    // Apply stock-status chip (All / Out / Low)
+    if (activeStockFilter === 'out' || activeStockFilter === 'low') {
+      const q = i.qty ?? i.quantity;
+      if (activeStockFilter === 'out' && q !== 0) return false;
+      if (activeStockFilter === 'low' && !(q > 0 && i.min_stock > 0 && q < i.min_stock)) return false;
     }
 
     // Apply mobile attribute value subfilters — OR within the same key, AND between keys.
@@ -3456,24 +3569,28 @@ function renderRecent(data) {
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
     attributesText = attributesText ? categoryBadge + ' &bull; ' + attributesText : categoryBadge;
     const truckHtml = i.reorder_pending ? `<span class="truck-anim-icon truck-anim-active" onclick="event.stopPropagation(); openRestockModal('${i.id}')" title="Delivery pending" style="cursor:pointer; color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>` : '';
-    return `<div class="card-small">
-        <h4>
-          <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
-        </h4>
-        ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
-        <div style="display: flex; justify-content: center; margin: 12px 0;">
-          <div class="qty-display-container">
-            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
-            <span class="qty-number" style="color: ${qtyColor};">${i.qty}</span>
-            <button class="qty-hover-btn" onclick="event.stopPropagation(); updateQty('${i.id}', 1)">+</button>
-          </div>
+    return `<div class="ing-swipe">
+        <div class="ing-actions">
+          <button class="ing-act ing-act-edit" onclick="editIngredient('${i.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+            <span>EDIT</span>
+          </button>
+          <button class="ing-act ing-act-del" onclick="softDeleteIng('${i.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            <span>DELETE</span>
+          </button>
         </div>
-        <div class="divider"></div>
-        <div class="card-actions">
-          <span class="edit-link" onclick="editIngredient('${i.id}')">Edit</span>
-          <span class="edit-link" onclick="openDuplicateModal('${i.id}')">Duplicate</span>
-          <span class="delete-link" onclick="deleteIng('${i.id}')">Delete</span>
+        <div class="ing-row" data-id="${i.id}">
+          <span class="ing-row-bar" data-state="${i.qty === 0 ? 'out' : (i.min_stock && i.qty < i.min_stock ? 'low' : 'ok')}"></span>
+          <span class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView">
+            <span class="ing-row-name">${safeName}${truckHtml}</span>
+            <span class="ing-row-meta">${attributesText}</span>
+          </span>
+          <span class="ing-row-qty">
+            <button class="ing-step" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
+            <span class="ing-num" style="color:${qtyColor}">${i.qty}</span>
+            <button class="ing-step ing-step-add" onclick="event.stopPropagation(); updateQty('${i.id}', 1)">+</button>
+          </span>
         </div>
       </div>`;
   };
@@ -3906,10 +4023,13 @@ function editIngredient(id) {
   window.location.href = `/ingredient-detail?id=${id}&from=${currentView}`;
 }
 
-async function deleteIng(id) { 
-  const confirmed = await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Delete', true);
-  if (!confirmed) return;
-  
+async function deleteIng(id, options = {}) {
+  if (!options.skipConfirm) {
+    const confirmed = await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Delete', true);
+    if (!confirmed) return;
+  }
+
+
   try {
     const { error } = await offlineWrite('ingredients', 'delete', null, 'id', id);
 
@@ -4482,6 +4602,146 @@ window.onclick = (e) => {
     activeLink.classList.add('active');
   }
 })();
+
+// ---------- Inventory row swipe-to-reveal (Edit/Delete) ----------
+(function initSwipe() {
+  const REVEAL    = 96;   // total action width — must equal 2 × .ing-act width
+  const THRESHOLD = 40;   // px of travel that commits the open/close
+  const RUBBER    = 0.24; // 0 = hard stop at both ends, 1 = no resistance
+  const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
+
+  const list = document.getElementById('recentView');
+  if (!list) return;
+
+  let open = null;      // the .ing-row currently revealed
+  let drag = null;
+  let noClickUntil = 0; // swallow the click that follows a real drag
+
+  const setX = (row, x, animate) => {
+    row.style.transition = animate ? EASE : 'none';
+    row.style.transform  = 'translateX(' + x + 'px)';
+  };
+
+  const close = (animate = true) => {
+    if (!open) return;
+    setX(open, 0, animate);
+    open = null;
+  };
+
+  list.addEventListener('pointerdown', e => {
+    const row = e.target.closest('.ing-row');
+    if (!row || e.target.closest('.ing-step')) return;      // steppers never drag
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    drag = { row, x: e.clientX, y: e.clientY, id: e.pointerId,
+             base: open === row ? -REVEAL : 0, axis: null, cur: null };
+    try { row.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  list.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.axis) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;     // still a tap
+      drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (drag.axis === 'y') { drag = null; return; }       // hand it to the scroller
+    }
+    let x = drag.base + dx;
+    if (x > 0)       x = x * RUBBER;
+    if (x < -REVEAL) x = -REVEAL - (-REVEAL - x) * RUBBER;
+    drag.cur = x;
+    setX(drag.row, x, false);
+  });
+
+  const end = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const d = drag;
+    drag = null;
+    if (!d.axis) return;                                    // a tap: let click handle it
+    noClickUntil = Date.now() + 300;
+    const x = d.cur === null ? d.base : d.cur;
+    const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
+    if (open && open !== d.row) close();
+    if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+    else        { setX(d.row, 0, true); if (open === d.row) open = null; }
+  };
+  list.addEventListener('pointerup', end);
+  list.addEventListener('pointercancel', end);
+
+  // Tapping an open row closes it instead of navigating
+  list.addEventListener('click', e => {
+    if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
+    if (!open || e.target.closest('.ing-actions')) return;
+    if (e.target.closest('.ing-row') === open) {
+      e.stopPropagation(); e.preventDefault();
+      close();
+    }
+  }, true);
+
+  // Any scroll closes the open row
+  window.addEventListener('scroll', () => close(), { passive: true });
+  list.addEventListener('scroll',   () => close(), { passive: true });
+})();
+
+// ---------- Soft delete with undo ----------
+let _pendingDelete = null;
+
+function softDeleteIng(id) {
+  const shell = document.querySelector(`.ing-row[data-id="${id}"]`)?.closest('.ing-swipe');
+  const item  = ingredients.find(i => i.id === id);
+  if (!shell || !item) return;
+
+  clearTimeout(_pendingDelete?.timer);
+  _pendingDelete?.commit();               // a second delete commits the first, don't lose it
+  shell.style.display = 'none';
+
+  const commit = () => {
+    _pendingDelete = null;
+    deleteIng(id, { skipConfirm: true });
+  };
+
+  _pendingDelete = { id, shell, timer: setTimeout(commit, 5000), commit };
+  showUndoToast(`Deleted ${item.name}`, () => {
+    clearTimeout(_pendingDelete.timer);
+    shell.style.display = '';
+    _pendingDelete = null;
+  });
+}
+
+// Don't lose a pending delete if the user leaves the page
+window.addEventListener('pagehide', () => _pendingDelete?.commit());
+
+// ---------- Undo toast ----------
+let _toastTimer = null;
+
+function showUndoToast(message, onUndo, ms = 5000) {
+  let el = document.getElementById('undoToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'undoToast';
+    el.innerHTML = '<span class="undo-msg"></span><button class="undo-btn" type="button">Undo</button>';
+    document.body.appendChild(el);
+  }
+
+  clearTimeout(_toastTimer);
+  el.querySelector('.undo-msg').textContent = message;
+
+  // Replace the button so the previous toast's handler can't fire
+  const oldBtn = el.querySelector('.undo-btn');
+  const btn = oldBtn.cloneNode(true);
+  oldBtn.replaceWith(btn);
+  btn.addEventListener('click', () => {
+    clearTimeout(_toastTimer);
+    hideUndoToast();
+    onUndo();
+  });
+
+  requestAnimationFrame(() => el.classList.add('visible'));
+  _toastTimer = setTimeout(hideUndoToast, ms);
+}
+
+function hideUndoToast() {
+  document.getElementById('undoToast')?.classList.remove('visible');
+}
 </script>
 
 <!-- Feedback Widget -->
