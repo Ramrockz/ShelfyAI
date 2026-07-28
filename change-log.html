@@ -47,11 +47,6 @@
     padding: 20px 24px 120px;
   }
 
-  @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(100px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
   .settings-header {
     display: none;
   }
@@ -84,38 +79,78 @@
     color: var(--text-muted);
   }
 
-  .settings-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
-  }
+  @media (max-width: 768px) {
+    .settings-container {
+      padding: 8px 0 140px;
+    }
 
-  .settings-row:last-child {
-    border-bottom: none;
-  }
+    .settings-section {
+      margin: 0 12px 16px;
+    }
 
-  .settings-label {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-  }
+    .settings-section h2 {
+      padding: 18px 16px 8px;
+    }
 
-  .settings-label h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-main);
-  }
+    /* Card-style rows instead of a horizontally-scrolling table */
+    .table-container table,
+    .table-container thead,
+    .table-container tbody,
+    .table-container th,
+    .table-container td,
+    .table-container tr {
+      display: block;
+    }
 
-  .settings-label p {
-    margin: 0;
-    font-size: 13px;
-    color: var(--text-muted);
+    .table-container thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .table-container {
+      padding: 0 16px 16px !important;
+    }
+
+    .table-container tr {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .table-container td {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 6px 0;
+      border: none;
+      text-align: right;
+    }
+
+    .table-container td::before {
+      content: attr(data-label);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      text-align: left;
+      flex-shrink: 0;
+    }
+
+    /* Loading/empty/error status rows have no data-label -- lay them out
+       as a plain centered line instead of the name/value flex row. */
+    .table-container td:not([data-label]) {
+      display: block;
+    }
+
+    .table-container td:not([data-label])::before {
+      content: none;
+    }
   }
 </style>
 
@@ -274,17 +309,6 @@
       </svg>
       Change Logs
     </h2>
-    <div class="settings-row">
-      <div class="settings-label">
-        <p>A history of every inventory quantity change — manual edits, orders, expenses, and restocks.</p>
-      </div>
-      <button class="btn btn-secondary" onclick="downloadChangeLogs(event)">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        Download CSV
-      </button>
-    </div>
     <div class="table-container" style="overflow-x: auto; padding: 0 20px 20px;">
       <table>
         <thead>
@@ -352,48 +376,6 @@
   if (activeLink) activeLink.classList.add('active');
 })();
 
-function convertToCSV(data, headers) {
-  if (!data || data.length === 0) {
-    return headers.join(',') + '\n';
-  }
-  const csvRows = [];
-  csvRows.push(headers.join(','));
-  for (const row of data) {
-    const values = headers.map(header => {
-      const value = row[header] || '';
-      const escaped = String(value).replace(/"/g, '""');
-      return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')
-        ? `"${escaped}"`
-        : escaped;
-    });
-    csvRows.push(values.join(','));
-  }
-  return csvRows.join('\n');
-}
-
-function downloadCSV(csv, filename) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
-  toast.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'slideInRight 0.3s ease reverse';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
 function _escapeHtmlChangeLog(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -448,10 +430,10 @@ async function loadChangeLogs(reset = true) {
         : '-';
       const itemName = changeLogsIngredientNames[h.ingredient_id] || 'Deleted item';
       return `<tr>
-        <td>${date}</td>
-        <td>${_escapeHtmlChangeLog(itemName)}</td>
-        <td>${_escapeHtmlChangeLog(h.old_value ?? '')}</td>
-        <td>${_escapeHtmlChangeLog(h.new_value ?? '')}</td>
+        <td data-label="Date">${date}</td>
+        <td data-label="Item">${_escapeHtmlChangeLog(itemName)}</td>
+        <td data-label="Old Value">${_escapeHtmlChangeLog(h.old_value ?? '')}</td>
+        <td data-label="New Value">${_escapeHtmlChangeLog(h.new_value ?? '')}</td>
       </tr>`;
     }).join('');
 
@@ -473,69 +455,6 @@ async function loadChangeLogs(reset = true) {
 
 function loadMoreChangeLogs() {
   loadChangeLogs(false);
-}
-
-async function downloadChangeLogs(e) {
-  const btn = e.target.closest('button');
-  let originalText = btn.innerHTML;
-
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      showToast('Please log in to download data', 'error');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = 'Downloading...';
-
-    // Fetch every row (paginated to avoid Supabase's default row cap)
-    let allHistory = [];
-    let from = 0;
-    const pageSize = 1000;
-    while (true) {
-      const { data, error } = await supabaseClient
-        .from('ingredient_history')
-        .select('ingredient_id, old_value, new_value, changed_at')
-        .eq('profile_id', user.id)
-        .order('changed_at', { ascending: false })
-        .range(from, from + pageSize - 1);
-      if (error) throw error;
-      allHistory = allHistory.concat(data || []);
-      if (!data || data.length < pageSize) break;
-      from += pageSize;
-    }
-
-    if (allHistory.length === 0) {
-      showToast('No change logs found to export', 'warning');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-
-    await _resolveChangeLogNames(allHistory);
-
-    const rows = allHistory.map(h => ({
-      date: h.changed_at ? new Date(h.changed_at).toISOString() : '',
-      item: changeLogsIngredientNames[h.ingredient_id] || 'Deleted item',
-      old_value: h.old_value ?? '',
-      new_value: h.new_value ?? ''
-    }));
-
-    const headers = ['date', 'item', 'old_value', 'new_value'];
-    const csv = convertToCSV(rows, headers);
-    const timestamp = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `change_logs_${timestamp}.csv`);
-
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    showToast('Change logs exported successfully!', 'success');
-  } catch (error) {
-    console.error('Error downloading change logs:', error);
-    showToast('Failed to download change logs: ' + error.message, 'error');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
 }
 
 loadChangeLogs();
