@@ -282,18 +282,19 @@
         const { data, error } = await query;
 
         if (error) {
-          // Supabase returned a logical error (constraint, validation) — surface it
-          if (error.status) return { data: null, error, queued: false };
-          // No status = network-level failure — fall through to offline path
-          throw new TypeError('Network failure');
+          // supabase-js never throws for a logical/API-level rejection
+          // (constraint violation, RLS denial, bad input, ...) — it resolves
+          // with {error} instead. Reaching this line means the request DID
+          // reach the server and got a real answer, so this is never a
+          // connectivity problem. Surface it immediately instead of queuing
+          // a write that will just fail the same way again on replay.
+          return { data: null, error, queued: false };
         }
         return { data, error: null, queued: false };
       } catch (err) {
-        if (!(err instanceof TypeError) && !err.message?.includes('fetch')) {
-          // Re-throw non-network errors
-          return { data: null, error: err, queued: false };
-        }
-        // Network error while supposedly online — fall through to queue
+        // await query only throws for a genuine network-level failure (DNS,
+        // CORS, connection refused, timeout, ...) — any real backend error
+        // already returned above without throwing. Fall through to the queue.
       }
     }
 
