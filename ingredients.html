@@ -91,7 +91,7 @@
   .ing-row-main { flex: 1; min-width: 0; cursor: pointer; }
   .ing-row-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ing-row-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+  .ing-row-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 2px;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ing-row-qty { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
   .ing-step { width: 38px; height: 38px; border: none; border-radius: 10px; background: var(--bg-inner);
@@ -111,7 +111,20 @@
   .ing-row { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px;
              padding: 0 12px 0 16px; background: var(--bg-panel); box-sizing: border-box;
              touch-action: pan-y; will-change: transform; }
-  
+
+  /* In-stock tail, grouped by category */
+  .ing-group { display: flex; align-items: center; gap: 12px; height: 68px;
+               padding: 0 14px 0 16px; background: var(--bg-panel);
+               border-top: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
+  .ing-group .ing-row-name { font-size: 15.5px; }
+  .ing-group .ing-row-meta { margin-top: 4px; }
+  .ing-group-tail { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .ing-group-total { font-size: 19px; font-weight: 800; }
+  .ing-group-chev { color: var(--text-muted); transition: transform .2s ease; }
+  .ing-group.open .ing-group-chev { transform: rotate(90deg); }
+  .ing-group-body { background: var(--bg-inner); }
+  .ing-group-body .ing-row-main { padding-left: 8px; }
+
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -3059,6 +3072,77 @@ function applyInventoryFilter(filterType) {
   render();
 }
 
+function _escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+function _parseAttrs(i) {
+  const raw = i.custom_attributes;
+  if (!raw) return {};
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { return {}; }
+}
+
+function _groupInStock(items) {
+  const groups = new Map();
+  const loose = [];
+  items.forEach(i => {
+    const cat = i.category;
+    // 'General' is the CSV-import default — grouping it makes one giant fake family
+    if (!cat || cat === 'General') { loose.push(i); return; }
+    if (!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat).push(i);
+  });
+  const out = [];
+  groups.forEach((members, cat) => {
+    if (members.length < 3) { loose.push(...members); return; }  // not worth a group
+    const keys = [...new Set(members.flatMap(m => Object.keys(_parseAttrs(m))))];
+    const nVals = k => new Set(members.map(m => _parseAttrs(m)[k]).filter(Boolean)).size;
+    const sub = keys.length >= 2
+      ? keys.slice(0, 2).map(k => `${nVals(k)} ${k}${nVals(k) !== 1 ? 's' : ''}`).join(' × ')
+      : `${members.length} item${members.length !== 1 ? 's' : ''}`;
+    out.push({ cat, members, sub, total: members.length });
+  });
+  out.sort((a, b) => b.total - a.total);
+  return { groups: out, loose };
+}
+
+function toggleIngGroup(rowEl) {
+  const body = rowEl.nextElementSibling;
+  if (!body?.classList.contains('ing-group-body')) return;
+  const open = body.hidden;
+  body.hidden = !open;
+  rowEl.classList.toggle('open', open);
+}
+
+// ---------- Colour swatches (apparel-blank palette) ----------
+const COLOR_ALIAS = {
+  heather: 'grey', 'heather grey': 'grey', gray: 'grey', 'heather gray': 'grey',
+  charcoal: 'grey', anthracite: 'grey', silver: 'grey',
+  'royal blue': 'blue', royal: 'blue', 'light blue': 'blue', denim: 'blue',
+  'dark blue': 'navy', midnight: 'navy',
+  maroon: 'burgundy', wine: 'burgundy', bordeaux: 'burgundy', burgund: 'burgundy',
+  cream: 'sand', natural: 'sand', ecru: 'sand', beige: 'sand', khaki: 'sand',
+  offwhite: 'white', 'off white': 'white', 'off-white': 'white',
+  olive: 'green', forest: 'green', mint: 'pistachio', sage: 'pistachio',
+  rose: 'pink', blush: 'pink', fuchsia: 'pink',
+  mustard: 'yellow', gold: 'yellow',
+  lilac: 'purple', lavender: 'purple', violet: 'purple',
+  rust: 'orange', terracotta: 'orange', coral: 'orange',
+  schwarz: 'black', weiss: 'white', 'weiß': 'white', blau: 'blue',
+  rot: 'red', grün: 'green', gruen: 'green', grau: 'grey', gelb: 'yellow'
+};
+const SWATCH_KEYS = new Set(['black','white','grey','navy','blue','red','burgundy','pink',
+                             'green','pistachio','yellow','sand','brown','purple','orange']);
+
+function swatchFor(attrs) {
+  const val = Object.entries(attrs || {})
+    .find(([k]) => /colou?r|farbe|shade/i.test(k))?.[1];
+  if (!val) return '';
+  const n = String(val).trim().toLowerCase();
+  const key = SWATCH_KEYS.has(n) ? n
+            : COLOR_ALIAS[n] ? COLOR_ALIAS[n]
+            : [...SWATCH_KEYS].find(k => n.includes(k));   // "vintage black"
+  return key ? `<span class="swatch" data-c="${key}"></span>` : '';
+}
+
 function render() {
   const searchQ = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
   updateStockChipCounts();
@@ -3628,7 +3712,7 @@ function renderRecent(data) {
           <span class="ing-row-bar" data-state="${i.qty === 0 ? 'out' : (i.min_stock && i.qty < i.min_stock ? 'low' : 'ok')}"></span>
           <span class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView">
             <span class="ing-row-name">${safeName}${truckHtml}</span>
-            <span class="ing-row-meta">${attributesText}</span>
+            <span class="ing-row-meta">${swatchFor(_parseAttrs(i))}${attributesText}</span>
           </span>
           <span class="ing-row-qty">
             <button class="ing-step" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
@@ -3647,8 +3731,18 @@ function renderRecent(data) {
   const lowStock     = nonFavData.filter(i => { const q = i.qty ?? i.quantity; return q > 0 && i.min_stock > 0 && q < i.min_stock; });
   const normalIds    = new Set([...outOfStock, ...lowStock].map(i => i.id));
   const allOtherData = nonFavData.filter(i => !normalIds.has(i.id));
-  const otherData    = allOtherData.slice(0, cardsToShow);
-  const hasMoreCards = allOtherData.length > cardsToShow;
+
+  // Group the in-stock tail by category once the list is unfiltered — a search
+  // or an active category/stock chip means the user knows what they want, and
+  // collapsing would hide it. Desktop keeps the flat grid (Step 4/5b precedent).
+  const searchQ = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').trim();
+  const canGroup = window.innerWidth <= 768 && !searchQ && !activeCategoryFilter && activeStockFilter === 'all';
+  const grouped = canGroup ? _groupInStock(allOtherData) : null;
+  const otherEntries = grouped
+    ? [...grouped.groups.map(g => ({ type: 'group', g })), ...grouped.loose.map(i => ({ type: 'item', i }))]
+    : allOtherData.map(i => ({ type: 'item', i }));
+  const otherShown   = otherEntries.slice(0, cardsToShow);
+  const hasMoreCards = otherEntries.length > cardsToShow;
 
   container.innerHTML = '';
 
@@ -3664,17 +3758,34 @@ function renderRecent(data) {
     container.innerHTML += sectionLbl('Low on Stock', lowStock.length);
     lowStock.forEach(i => { container.innerHTML += buildIngCard(i); });
   }
-  if (otherData.length > 0) {
+  if (otherShown.length > 0) {
     const needsLabel = favData.length > 0 || outOfStock.length > 0 || lowStock.length > 0;
     if (needsLabel) container.innerHTML += sectionLbl('All Items', allOtherData.length);
-    otherData.forEach(i => { container.innerHTML += buildIngCard(i); });
+    otherShown.forEach(entry => {
+      if (entry.type === 'item') { container.innerHTML += buildIngCard(entry.i); return; }
+      const g = entry.g;
+      container.innerHTML += `
+        <div class="ing-group" data-cat="${_escAttr(g.cat)}" onclick="toggleIngGroup(this)">
+          <span class="ing-row-bar" data-state="ok"></span>
+          <span class="ing-row-main">
+            <span class="ing-row-name">${escapeHtml(g.cat)}</span>
+            <span class="ing-row-meta">${escapeHtml(g.sub)}</span>
+          </span>
+          <span class="ing-group-tail">
+            <span class="ing-group-total">${g.total}</span>
+            <svg class="ing-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
+          </span>
+        </div>
+        <div class="ing-group-body" hidden>${g.members.map(buildIngCard).join('')}</div>
+      `;
+    });
   }
-  
+
   // Add "Show More" button if there are more cards to display
   if (hasMoreCards) {
     container.innerHTML += `
       <div class="show-more-btn" style="grid-column: 1/-1; display: flex; justify-content: center; margin-top: 20px;">
-        <button onclick="showMoreCards()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${allOtherData.length - cardsToShow} remaining)</button>
+        <button onclick="showMoreCards()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${otherEntries.length - cardsToShow} remaining)</button>
       </div>
     `;
   }
