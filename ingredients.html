@@ -599,11 +599,6 @@
     .schip-low i { background: var(--warning); }
     .schip-out.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
     .schip-low.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
-    .cat-chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 12px;
-                border-radius: 99px; background: rgba(6,182,212,.11); border: 1px solid rgba(6,182,212,.4);
-                color: #0e7490; font-size: 12.5px; font-weight: 700; margin-bottom: 10px; }
-    .cat-chip > span { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
-                       justify-content: center; background: rgba(6,182,212,.16); cursor: pointer; font-size: 15px; }
   }
   .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
              border-radius: 12px; cursor: pointer; }
@@ -700,6 +695,11 @@
 
     /* Single column card grid */
     .recent-grid { grid-template-columns: 1fr; gap: 0; margin: 0 -16px; }
+
+    /* Section headers (Favorites/Out of Stock/...) span the same
+       edge-to-edge grid as the rows, so they need their own padding
+       back or the text sits flush against the screen edges. */
+    .section-lbl { padding: 0 16px; }
 
     /* Card adjustments */
     .card-small {
@@ -1106,7 +1106,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       </button>
     </div>
-    <div id="activeCatChip" style="display:none"></div>
     <div class="mobile-attr-subfilter" id="mobileAttrSubfilter"></div>
 
     <div class="modal-overlay modal-sheet" id="catSheet" onclick="if(event.target===this)closeCatSheet()">
@@ -2486,20 +2485,14 @@ function closeCatSheet() { document.getElementById('catSheet').classList.remove(
 function pickCat(value) {
   // filterByCategory already owns activeCategoryFilter, the attribute
   // subfilter row, and re-rendering -- reuse it instead of duplicating
-  // that logic here.
+  // that logic here. The active category is already shown as a
+  // removable pill by the existing #filterBadges system (renderFilterBadges),
+  // so this only needs to reflect selection on the sheet-trigger button.
   filterByCategory(value);
   closeCatSheet();
 
-  const chip = document.getElementById('activeCatChip');
   const btn = document.getElementById('catSheetBtn');
-  if (activeCategoryFilter) {
-    chip.style.display = 'flex';
-    chip.innerHTML = `<span class="cat-chip">${escapeHtml(activeCategoryFilter)}<span onclick="pickCat(null)">&times;</span></span>`;
-    btn.classList.add('active');
-  } else {
-    chip.style.display = 'none';
-    btn.classList.remove('active');
-  }
+  if (btn) btn.classList.toggle('active', !!activeCategoryFilter);
 }
 
 // ---------- Status chips (All / Out / Low) ----------
@@ -3047,7 +3040,15 @@ function applyInventoryFilter(filterType) {
   // Temporarily store the filtered list in a global variable
   window.inventoryFilteredList = filteredIngredients;
   window.inventoryFilterType = filterType;
-  
+
+  // Keep the status chips truthful -- without this, "All" stays visually
+  // active while the list is secretly narrowed by this redirect, which
+  // looks exactly like the All filter being broken on first load.
+  activeStockFilter = filterType === 'out-of-stock' ? 'out' : filterType === 'low-stock' ? 'low' : 'all';
+  document.querySelectorAll('.schip[data-stock]').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.stock === activeStockFilter);
+  });
+
   cardsToShow = 15;
   render();
 }
@@ -3605,7 +3606,7 @@ function renderRecent(data) {
       </div>`;
   };
 
-  const sectionLbl = (label, count) => `<div style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}<span style="font-weight:500;letter-spacing:0;">(${count})</span></div>`;
+  const sectionLbl = (label, count) => `<div class="section-lbl" style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:20px 0 6px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted);">${label}<span style="font-weight:500;letter-spacing:0;">(${count})</span></div>`;
 
   const favData      = data.filter(i => i.is_favorite);
   const nonFavData   = data.filter(i => !i.is_favorite);
