@@ -91,7 +91,7 @@
   .ing-row-main { flex: 1; min-width: 0; cursor: pointer; }
   .ing-row-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ing-row-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+  .ing-row-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ing-row-qty { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
   .ing-step { width: 38px; height: 38px; border: none; border-radius: 10px; background: var(--bg-inner);
@@ -3112,37 +3112,6 @@ function toggleIngGroup(rowEl) {
   rowEl.classList.toggle('open', open);
 }
 
-// ---------- Colour swatches (apparel-blank palette) ----------
-const COLOR_ALIAS = {
-  heather: 'grey', 'heather grey': 'grey', gray: 'grey', 'heather gray': 'grey',
-  charcoal: 'grey', anthracite: 'grey', silver: 'grey',
-  'royal blue': 'blue', royal: 'blue', 'light blue': 'blue', denim: 'blue',
-  'dark blue': 'navy', midnight: 'navy',
-  maroon: 'burgundy', wine: 'burgundy', bordeaux: 'burgundy', burgund: 'burgundy',
-  cream: 'sand', natural: 'sand', ecru: 'sand', beige: 'sand', khaki: 'sand',
-  offwhite: 'white', 'off white': 'white', 'off-white': 'white',
-  olive: 'green', forest: 'green', mint: 'pistachio', sage: 'pistachio',
-  rose: 'pink', blush: 'pink', fuchsia: 'pink',
-  mustard: 'yellow', gold: 'yellow',
-  lilac: 'purple', lavender: 'purple', violet: 'purple',
-  rust: 'orange', terracotta: 'orange', coral: 'orange',
-  schwarz: 'black', weiss: 'white', 'weiß': 'white', blau: 'blue',
-  rot: 'red', grün: 'green', gruen: 'green', grau: 'grey', gelb: 'yellow'
-};
-const SWATCH_KEYS = new Set(['black','white','grey','navy','blue','red','burgundy','pink',
-                             'green','pistachio','yellow','sand','brown','purple','orange']);
-
-function swatchFor(attrs) {
-  const val = Object.entries(attrs || {})
-    .find(([k]) => /colou?r|farbe|shade/i.test(k))?.[1];
-  if (!val) return '';
-  const n = String(val).trim().toLowerCase();
-  const key = SWATCH_KEYS.has(n) ? n
-            : COLOR_ALIAS[n] ? COLOR_ALIAS[n]
-            : [...SWATCH_KEYS].find(k => n.includes(k));   // "vintage black"
-  return key ? `<span class="swatch" data-c="${key}"></span>` : '';
-}
-
 function render() {
   const searchQ = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
   updateStockChipCounts();
@@ -3712,7 +3681,7 @@ function renderRecent(data) {
           <span class="ing-row-bar" data-state="${i.qty === 0 ? 'out' : (i.min_stock && i.qty < i.min_stock ? 'low' : 'ok')}"></span>
           <span class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView">
             <span class="ing-row-name">${safeName}${truckHtml}</span>
-            <span class="ing-row-meta">${swatchFor(_parseAttrs(i))}${attributesText}</span>
+            <span class="ing-row-meta">${attributesText}</span>
           </span>
           <span class="ing-row-qty">
             <button class="ing-step" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>
