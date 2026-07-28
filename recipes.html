@@ -320,7 +320,16 @@
     10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
     20%, 40%, 60%, 80% { transform: translateX(5px); }
   }
-  
+
+  .recipe-cat-icon-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cat-icon-btn { display: flex; flex-direction: column; align-items: center; gap: 6px;
+                  padding: 10px 4px; border: 1.5px solid var(--border); border-radius: 12px;
+                  background: var(--bg-inner); color: var(--text-muted); cursor: pointer;
+                  font-family: inherit; font-size: 10.5px; font-weight: 700; text-align: center; }
+  .cat-icon-btn i, .cat-icon-btn svg { width: 19px; height: 19px; }
+  .cat-icon-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .cat-icon-btn.selected { background: rgba(6,182,212,0.12); border-color: var(--accent); color: var(--accent); }
+
   .recipe-name-input::placeholder {
     color: var(--text-muted);
     font-weight: 500;
@@ -470,6 +479,13 @@
   
   /* Mobile ingredient swiper - hidden by default, shown on mobile */
   .mobile-ingredient-swiper {
+    display: none;
+  }
+
+  /* 2-step create flow is mobile-only — desktop shows name/price/category
+     and the item library side by side with no stepping. */
+  .mobile-step1-actions,
+  .mobile-step2-header {
     display: none;
   }
 
@@ -856,6 +872,27 @@
       background: rgba(6, 182, 212, 0.08);
     }
     .mob-ing-row.selected .mob-ing-name { color: var(--accent); font-weight: 700; }
+
+    /* 2-step create flow (mobile only) */
+    .recipe-name-section.step-hidden,
+    .mobile-ingredient-swiper.step-hidden,
+    .mobile-recipe-actions.step-hidden {
+      display: none !important;
+    }
+    .mobile-step2-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .mobile-step2-back {
+      border: none;
+      background: none;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 0;
+      cursor: pointer;
+    }
 
     /* Step 2: full-screen overlay */
     #mobileStep2Screen {
@@ -1286,7 +1323,9 @@
 <div class="recipe-overlay" id="recipeBuilderOverlay">
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
-      <div class="recipe-name-section">
+      <!-- Step 1 (mobile): name, price, category. Desktop shows this alongside
+           the item library at all times — no stepping there. -->
+      <div class="recipe-name-section" id="recipeStep1Section">
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required />
 
@@ -1297,14 +1336,21 @@
 
         <div style="margin-top:20px;">
           <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Category</label>
-          <select id="recipeCategoryInput" class="recipe-name-input" style="box-sizing:border-box;">
-            <option value="">No category</option>
-          </select>
+          <div id="recipeCategoryIconPicker" class="recipe-cat-icon-picker"></div>
+          <input type="hidden" id="recipeCategoryInput" value="">
         </div>
       </div>
 
-      <!-- Mobile Ingredient Picker (visible only on mobile) -->
-      <div class="mobile-ingredient-swiper">
+      <!-- Mobile-only: advance to item picking (step 2) -->
+      <div class="mobile-recipe-actions mobile-step1-actions" id="mobileStep1Actions">
+        <button type="button" class="btn btn-primary" style="flex:1;" onclick="goToItemStep()">Next</button>
+      </div>
+
+      <!-- Step 2 (mobile): choosing items. Visible at all times on desktop. -->
+      <div class="mobile-ingredient-swiper" id="recipeStep2Section">
+        <div class="mobile-step2-header" id="mobileStep2Header">
+          <button type="button" class="mobile-step2-back" onclick="backToNameStep()">&larr; Back</button>
+        </div>
         <div class="search-wrapper" style="width: 100%; margin-bottom: 12px;">
           <i data-lucide="search" class="search-icon"></i>
           <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
@@ -1317,7 +1363,7 @@
 
       <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
 
-      <!-- Step 1 action -->
+      <!-- Step 2 action -->
       <div class="mobile-recipe-actions" id="mobileActions1">
         <button class="btn btn-primary" id="saveRecipeBtn" onclick="mobilePrimaryAction()" style="flex:1;">Create</button>
       </div>
@@ -2233,7 +2279,8 @@ async function openBuilder() {
   if (_spm) _spm.value = '';
   const _catd = document.getElementById('recipeCategoryInput');
   if (_catd) _catd.value = '';
-  
+  renderProductCategoryIconPicker();
+
   // Wait for overlay to be visible before loading ingredients
   await new Promise(resolve => requestAnimationFrame(() => {
     requestAnimationFrame(resolve);
@@ -2488,12 +2535,29 @@ const PRODUCT_EXCLUDED_CATEGORIES = new Set([
 ]);
 const PRODUCT_CATEGORIES = _recipeCategories.filter(c => !PRODUCT_EXCLUDED_CATEGORIES.has(c));
 
-(function populateProductCategorySelect() {
-  const sel = document.getElementById('recipeCategoryInput');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">No category</option>' +
-    PRODUCT_CATEGORIES.map(c => `<option value="${_escHtml(c)}">${_escHtml(c)}</option>`).join('');
-})();
+function renderProductCategoryIconPicker() {
+  const el = document.getElementById('recipeCategoryIconPicker');
+  if (!el) return;
+  const current = document.getElementById('recipeCategoryInput')?.value || '';
+  el.innerHTML = PRODUCT_CATEGORIES.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    const sel = current === cat;
+    return `<button type="button" class="cat-icon-btn${sel ? ' selected' : ''}" onclick="selectProductCategory('${_escHtml(cat)}')" title="${_escHtml(cat)}">
+        <i data-lucide="${icon}"></i>
+        <span>${_escHtml(cat)}</span>
+      </button>`;
+  }).join('');
+  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+}
+
+function selectProductCategory(cat) {
+  const input = document.getElementById('recipeCategoryInput');
+  if (!input) return;
+  input.value = input.value === cat ? '' : cat; // tap the selected one again to clear
+  renderProductCategoryIconPicker();
+}
+
+renderProductCategoryIconPicker();
 
 let recipeActiveCategoryFilter = null;
 let recipeActiveAttrValueFilters = new Map();
@@ -2910,6 +2974,35 @@ function goToMobileStep2() {
 
 function goToMobileStep1() {
   document.getElementById('mobileStep2Screen').classList.remove('active');
+  // Entry point for both create and edit — always land on the name/price/
+  // category step first.
+  document.getElementById('recipeStep1Section')?.classList.remove('step-hidden');
+  document.getElementById('mobileStep1Actions')?.classList.remove('step-hidden');
+  document.getElementById('recipeStep2Section')?.classList.add('step-hidden');
+  document.getElementById('mobileActions1')?.classList.add('step-hidden');
+}
+
+// Mobile-only 2-step create flow: name/price/category, then item picking.
+function goToItemStep() {
+  const nameInput = document.getElementById('recipeNameInput');
+  const name = nameInput?.value?.trim();
+  if (!name) {
+    nameInput?.classList.add('shake');
+    nameInput?.focus();
+    setTimeout(() => nameInput?.classList.remove('shake'), 500);
+    return;
+  }
+  document.getElementById('recipeStep1Section')?.classList.add('step-hidden');
+  document.getElementById('mobileStep1Actions')?.classList.add('step-hidden');
+  document.getElementById('recipeStep2Section')?.classList.remove('step-hidden');
+  document.getElementById('mobileActions1')?.classList.remove('step-hidden');
+}
+
+function backToNameStep() {
+  document.getElementById('recipeStep2Section')?.classList.add('step-hidden');
+  document.getElementById('mobileActions1')?.classList.add('step-hidden');
+  document.getElementById('recipeStep1Section')?.classList.remove('step-hidden');
+  document.getElementById('mobileStep1Actions')?.classList.remove('step-hidden');
 }
 
 function renderMobileQtyList() {
@@ -3419,6 +3512,7 @@ async function openBuilderForRecipe(recipeId) {
     if (_spEditM) _spEditM.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
     const _catEdit = document.getElementById('recipeCategoryInput');
     if (_catEdit) _catEdit.value = fullRecipe.category || '';
+    renderProductCategoryIconPicker();
 
     document.getElementById('recipeBuilderOverlay').classList.add('active');
     
