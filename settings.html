@@ -50,6 +50,11 @@
     padding: 20px 24px 120px;
   }
 
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
   /* Page header hidden everywhere — bottom nav / page title handles it */
   .settings-header {
     display: none;
@@ -1940,6 +1945,17 @@ function downloadCSV(csv, filename) {
   document.body.removeChild(link);
 }
 
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
+  toast.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'slideInRight 0.3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 async function downloadIngredients(e) {
   const btn = e.target;
   let originalText = btn.innerHTML;
@@ -1947,7 +1963,7 @@ async function downloadIngredients(e) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      alert('Please log in to download data');
+      showToast('Please log in to download data', 'error');
       return;
     }
 
@@ -1964,7 +1980,7 @@ async function downloadIngredients(e) {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      alert('No items found to export');
+      showToast('No items found to export', 'warning');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
@@ -1984,10 +2000,10 @@ async function downloadIngredients(e) {
 
     btn.disabled = false;
     btn.innerHTML = originalText;
-    alert('Ingredients exported successfully!');
+    showToast('Ingredients exported successfully!', 'success');
   } catch (error) {
     console.error('Error downloading ingredients:', error);
-    alert('Failed to download ingredients: ' + error.message);
+    showToast('Failed to download ingredients: ' + error.message, 'error');
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -2000,7 +2016,7 @@ async function downloadOrders(e) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      alert('Please log in to download data');
+      showToast('Please log in to download data', 'error');
       return;
     }
 
@@ -2021,7 +2037,7 @@ async function downloadOrders(e) {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      alert('No orders found to export');
+      showToast('No orders found to export', 'warning');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
@@ -2040,10 +2056,10 @@ async function downloadOrders(e) {
 
     btn.disabled = false;
     btn.innerHTML = originalText;
-    alert('Orders exported successfully!');
+    showToast('Orders exported successfully!', 'success');
   } catch (error) {
     console.error('Error downloading orders:', error);
-    alert('Failed to download orders: ' + error.message);
+    showToast('Failed to download orders: ' + error.message, 'error');
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -2056,7 +2072,7 @@ async function downloadExpenses(e) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      alert('Please log in to download data');
+      showToast('Please log in to download data', 'error');
       return;
     }
 
@@ -2077,7 +2093,7 @@ async function downloadExpenses(e) {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      alert('No expenses found to export');
+      showToast('No expenses found to export', 'warning');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
@@ -2096,10 +2112,10 @@ async function downloadExpenses(e) {
 
     btn.disabled = false;
     btn.innerHTML = originalText;
-    alert('Expenses exported successfully!');
+    showToast('Expenses exported successfully!', 'success');
   } catch (error) {
     console.error('Error downloading expenses:', error);
-    alert('Failed to download expenses: ' + error.message);
+    showToast('Failed to download expenses: ' + error.message, 'error');
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -2124,7 +2140,7 @@ async function downloadChangeLogs(e) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
-      alert('Please log in to download data');
+      showToast('Please log in to download data', 'error');
       return;
     }
 
@@ -2149,7 +2165,7 @@ async function downloadChangeLogs(e) {
     }
 
     if (allHistory.length === 0) {
-      alert('No change logs found to export');
+      showToast('No change logs found to export', 'warning');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
@@ -2171,10 +2187,10 @@ async function downloadChangeLogs(e) {
 
     btn.disabled = false;
     btn.innerHTML = originalText;
-    alert('Change logs exported successfully!');
+    showToast('Change logs exported successfully!', 'success');
   } catch (error) {
     console.error('Error downloading change logs:', error);
-    alert('Failed to download change logs: ' + error.message);
+    showToast('Failed to download change logs: ' + error.message, 'error');
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
