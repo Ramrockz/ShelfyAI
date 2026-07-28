@@ -146,6 +146,17 @@
   [data-theme="dark"] .prod-pip.amber { background: rgba(245,158,11,0.16); color: #fbbf24; }
   [data-theme="dark"] .prod-pip.green { background: rgba(16,185,129,0.16); color: #34d399; }
 
+  /* Category folders in the un-favorited tail */
+  .prod-cat-group { grid-column: 1/-1; display: flex; align-items: center; gap: 12px;
+                     min-height: 68px; padding: 0 14px 0 16px; background: var(--bg-panel);
+                     border-bottom: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
+  .prod-cat-group:first-of-type { border-top: 1px solid var(--border); }
+  .prod-cat-group-total { font-size: 19px; font-weight: 800; }
+  .prod-cat-group-chev { color: var(--text-muted); transition: transform .2s ease; }
+  .prod-cat-group.open .prod-cat-group-chev { transform: rotate(90deg); }
+  .prod-cat-group-body { grid-column: 1/-1; background: var(--bg-inner); }
+  .prod-cat-group-body .prod-group-row:first-of-type { border-top: none; }
+
   @media (max-width: 768px) {
     .recent-grid.prod-grouped { display: block; margin: 0 -16px; }
   }
@@ -1660,6 +1671,44 @@ function _groupProducts(list) {
   return groups;
 }
 
+// Products have no category of their own — derive one from whichever
+// ingredient category shows up most often across the head's components.
+function _productCategoryFor(r) {
+  const cats = (r.components || [])
+    .map(c => ingredientData.find(i => i.id === (c.ingredient_id || c.id))?.category)
+    .filter(Boolean);
+  if (!cats.length) return null;
+  const counts = {};
+  cats.forEach(c => { counts[c] = (counts[c] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function _groupFamiliesByCategory(groups) {
+  const byCat = new Map();
+  const loose = [];
+  groups.forEach(g => {
+    const cat = _productCategoryFor(g.head);
+    if (!cat) { loose.push(g); return; }
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(g);
+  });
+  const catGroups = [];
+  byCat.forEach((members, cat) => {
+    if (members.length < 3) { loose.push(...members); return; }  // not worth a folder
+    catGroups.push({ cat, members, count: members.length });
+  });
+  catGroups.sort((a, b) => b.count - a.count);
+  return { catGroups, loose };
+}
+
+function toggleProdCatGroup(rowEl) {
+  const body = rowEl.nextElementSibling;
+  if (!body?.classList.contains('prod-cat-group-body')) return;
+  const open = body.hidden;
+  body.hidden = !open;
+  rowEl.classList.toggle('open', open);
+}
+
 function openProductFamily(id) {
   window.location.href = '/recipe-detail?id=' + id + '&from=' + currentView;
 }
@@ -1724,9 +1773,8 @@ function render() {
             const visibleGroups = activeAvailFilter === 'all'
               ? groups
               : groups.filter(g => g.tally[activeAvailFilter] > 0 || (g.orphan && g.worst === activeAvailFilter));
-            const favFirst = [...visibleGroups.filter(g => g.head.is_favorite),
-                              ...visibleGroups.filter(g => !g.head.is_favorite)];
-            const shown = favFirst.slice(0, cardsToShow);
+            const favGroups = visibleGroups.filter(g => g.head.is_favorite);
+            const otherGroups = visibleGroups.filter(g => !g.head.is_favorite);
 
             const pip = (n, kind) => n
               ? `<span class="prod-pip ${kind}">${n}</span>` : '';
@@ -1763,16 +1811,45 @@ function render() {
               </div>`;
             };
 
+            // Group the un-favorited tail by category once the list isn't already
+            // narrowed by search or an active category/availability filter — a
+            // filter means the user knows what they want, so collapsing would hide it.
+            const canCatGroup = !q && !productCategoryFilter && activeAvailFilter === 'all';
+            const catGrouped = canCatGroup ? _groupFamiliesByCategory(otherGroups) : null;
+
+            const entries = [
+              ...favGroups.map(g => ({ type: 'fam', g })),
+              ...(catGrouped
+                ? [...catGrouped.catGroups.map(cg => ({ type: 'cat', cg })),
+                   ...catGrouped.loose.map(g => ({ type: 'fam', g }))]
+                : otherGroups.map(g => ({ type: 'fam', g })))
+            ];
+            const shown = entries.slice(0, cardsToShow);
+
             const totalVariants = visibleGroups.reduce((n, g) => n + g.members.length, 0);
             let html = `<div class="prod-group-caption">${visibleGroups.length} product${
               visibleGroups.length !== 1 ? 's' : ''} · ${totalVariants} variants</div>`;
-            html += shown.map(groupRow).join('');
+            html += shown.map(entry => {
+              if (entry.type === 'fam') return groupRow(entry.g);
+              const cg = entry.cg;
+              return `<div class="prod-cat-group" data-cat="${_escHtml(cg.cat)}" onclick="toggleProdCatGroup(this)">
+                  <span class="prod-group-main">
+                    <span class="prod-group-name">${_escHtml(cg.cat)}</span>
+                    <span class="prod-group-sub">${cg.count} product${cg.count !== 1 ? 's' : ''}</span>
+                  </span>
+                  <span class="prod-group-tail">
+                    <span class="prod-cat-group-total">${cg.count}</span>
+                    <svg class="prod-cat-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
+                  </span>
+                </div>
+                <div class="prod-cat-group-body" hidden>${cg.members.map(groupRow).join('')}</div>`;
+            }).join('');
             container.innerHTML = html;
 
-            const hasMore = favFirst.length > cardsToShow;
+            const hasMore = entries.length > cardsToShow;
             if (hasMore) {
                 container.innerHTML += `<div style="grid-column:1/-1; display:flex; justify-content:center; margin-top:20px;">
-                    <button onclick="showMoreRecipes()" style="padding:12px 32px; background:var(--bg-panel); color:var(--text-main); border:2px solid var(--border); border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${favFirst.length - cardsToShow} remaining)</button>
+                    <button onclick="showMoreRecipes()" style="padding:12px 32px; background:var(--bg-panel); color:var(--text-main); border:2px solid var(--border); border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${entries.length - cardsToShow} remaining)</button>
                 </div>`;
             }
         } else {
