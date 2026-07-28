@@ -2550,22 +2550,12 @@ function resolveConfirm(result) {
     const h = panel ? panel.querySelector('h2') : null;
 
     if (!pendingOrders || pendingOrders.length === 0) {
-      // Mobile: collapse the panel entirely rather than show a 24px-padded
-      // panel whose whole content is a 160px "nothing to do" illustration --
-      // it was the single largest thing on the mobile dashboard precisely
-      // when there was nothing to do. Desktop keeps the illustration; it
-      // has the room.
-      if (window.innerWidth <= 768) {
-        if (panel) panel.style.display = 'none';
-        container.innerHTML = '';
-      } else {
-        if (panel) panel.style.display = '';
-        container.innerHTML = `
-          <div class="delivery-empty">
-            <img src="/no_pending_deliveries.png" alt="No pending deliveries" />
-            <span>No pending deliveries</span>
-          </div>`;
-      }
+      if (panel) panel.style.display = '';
+      container.innerHTML = `
+        <div class="delivery-empty">
+          <img src="/no_pending_deliveries.png" alt="No pending deliveries" />
+          <span>No pending deliveries</span>
+        </div>`;
       if (h) h.textContent = 'Pending Deliveries';
       return;
     }
