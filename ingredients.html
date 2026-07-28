@@ -1629,6 +1629,12 @@ loadIngredients().then(() => {
   if (inventoryFilter) {
     applyInventoryFilter(inventoryFilter);
     sessionStorage.removeItem('inventoryFilter'); // Clear after applying
+  } else {
+    // No redirect filter — explicitly (re)apply "All" instead of just
+    // trusting the hardcoded default state, so a stale
+    // window.inventoryFilteredList from earlier in the session can't
+    // leave the page looking like nothing loaded.
+    filterByStock('all');
   }
 });
 
