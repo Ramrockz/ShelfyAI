@@ -2235,6 +2235,10 @@ async function makeEditable(elementId, fieldName) {
 
   element.innerHTML = '';
   element.appendChild(input);
+  // .editable-field:hover paints a grey background on the parent; the
+  // revenue input is intentionally transparent to match the big display,
+  // so that grey shows through around it while the mouse is still over it.
+  element.style.background = 'transparent';
   input.focus();
   if (input.type !== 'date') input.select();
   if (input.type === 'date' && typeof input.showPicker === 'function') {
@@ -2253,6 +2257,7 @@ async function makeEditable(elementId, fieldName) {
       newValue = newValue + 'T00:00:00.000Z';
     }
 
+    try {
     if (newValue && newValue !== currentValue) {
       try {
         const { data: { user } } = await window.supabaseClient.auth.getUser();
@@ -2309,6 +2314,9 @@ async function makeEditable(elementId, fieldName) {
         element.textContent = currentValue;
       }
     }
+    } finally {
+      element.style.background = '';
+    }
   };
   
   input.addEventListener('blur', save);
@@ -2317,7 +2325,8 @@ async function makeEditable(elementId, fieldName) {
       e.preventDefault();
       save();
     } else if (e.key === 'Escape') {
-      element.textContent = currentValue;
+      element.style.background = '';
+      element.textContent = fieldName === 'revenue' ? `$${(parseFloat(currentValue) || 0).toFixed(2)}` : currentValue;
     }
   });
 }
