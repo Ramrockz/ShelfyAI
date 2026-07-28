@@ -7,6 +7,22 @@ const FormData = require('form-data');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 
+// AgentQL returns attribute keys verbatim from the source document, so a German
+// or Spanish receipt/screenshot produces keys like "Größe"/"Talla" instead of
+// "size" — normalize known synonyms to the canonical English key so variant
+// grouping and the color/size lookups downstream keep working regardless of
+// the document's language.
+const ATTRIBUTE_KEY_SYNONYMS = {
+  size: 'size', größe: 'size', groesse: 'size', grosse: 'size', grösse: 'size',
+  talla: 'size', tamaño: 'size', tamano: 'size',
+  color: 'color', colour: 'color', farbe: 'color'
+};
+
+function normalizeAttributeKey(key) {
+  const clean = String(key || '').trim();
+  return ATTRIBUTE_KEY_SYNONYMS[clean.toLowerCase()] || clean;
+}
+
 module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -224,7 +240,7 @@ module.exports = async (req, res) => {
           if (typeof attr === 'string' && attr.includes(':')) {
             const [key, ...valueParts] = attr.split(':');
             const value = valueParts.join(':').trim();
-            result[key.trim()] = value;
+            result[normalizeAttributeKey(key)] = value;
           }
         });
         return result;
@@ -267,7 +283,7 @@ module.exports = async (req, res) => {
           if (typeof attr === 'string' && attr.includes(':')) {
             const [key, ...valueParts] = attr.split(':');
             const value = valueParts.join(':').trim();
-            result[key.trim()] = value;
+            result[normalizeAttributeKey(key)] = value;
           }
         });
         return result;
