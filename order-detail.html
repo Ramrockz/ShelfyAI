@@ -28,11 +28,13 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <script>
   document.documentElement.style.visibility = 'hidden';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
@@ -45,6 +47,19 @@
     margin: 0 auto;
     padding: 40px 24px;
   }
+
+  .flatpickr-calendar { background: var(--bg-panel) !important; border: 1px solid var(--border) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important; font-family: inherit !important; }
+  .flatpickr-months .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday { background: var(--bg-panel) !important; color: var(--text-muted) !important; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; background: transparent !important; }
+  .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
+  .flatpickr-day:hover { background: var(--bg-main) !important; border-color: var(--accent) !important; }
+  .flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+  .flatpickr-day.today { border-color: var(--accent) !important; }
+  .flatpickr-day.today:hover { background: rgba(6,182,212,0.12) !important; }
+  .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: var(--text-muted) !important; opacity: 0.35; }
+  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--text-main) !important; }
+  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
+  .flatpickr-input { cursor: pointer !important; }
 
   .breadcrumb { 
     font-size: 12px; 
@@ -2188,7 +2203,12 @@ async function confirmDelete() {
 async function makeEditable(elementId, fieldName) {
   const element = document.getElementById(elementId);
   if (!element || element.querySelector('input')) return;
-  
+
+  if (fieldName === 'sale_date') {
+    makeDateEditable(element, fieldName);
+    return;
+  }
+
   // Get text content, stripping out any HTML (like channel logos)
   let currentValue = element.textContent.trim();
   if (fieldName === 'source' && element.querySelector('.channel-logo')) {
@@ -2201,19 +2221,7 @@ async function makeEditable(elementId, fieldName) {
 
   const input = document.createElement('input');
 
-  // Special handling for date fields
-  if (fieldName === 'sale_date') {
-    input.type = 'date';
-    // Convert display date back to YYYY-MM-DD format
-    const dateValue = orderData[fieldName];
-    if (dateValue) {
-      const date = new Date(dateValue);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      input.value = `${year}-${month}-${day}`;
-    }
-  } else if (fieldName === 'revenue') {
+  if (fieldName === 'revenue') {
     input.type = 'number';
     input.step = '0.01';
     input.min = '0';
@@ -2222,7 +2230,7 @@ async function makeEditable(elementId, fieldName) {
     input.type = 'text';
     input.value = currentValue === '-' || currentValue === 'N/A' || currentValue === 'Unknown' ? '' : currentValue;
   }
-  
+
   if (fieldName === 'revenue') {
     // Distinct class -- avoid .form-input's border/background/focus-ring
     // styling, which clashes with matching the large centered display.
@@ -2240,22 +2248,10 @@ async function makeEditable(elementId, fieldName) {
   // so that grey shows through around it while the mouse is still over it.
   element.style.background = 'transparent';
   input.focus();
-  if (input.type !== 'date') input.select();
-  if (input.type === 'date' && typeof input.showPicker === 'function') {
-    // Chromium doesn't open the native date picker on focus alone -- without
-    // this, the first click just focuses the input and a second click is
-    // needed to actually open the calendar.
-    try { input.showPicker(); } catch (e) {}
-  }
-  
+  input.select();
+
   const save = async () => {
     let newValue = input.value.trim();
-
-    // For date fields, convert to ISO format
-    if (fieldName === 'sale_date' && newValue) {
-      // Input is already in YYYY-MM-DD format
-      newValue = newValue + 'T00:00:00.000Z';
-    }
 
     try {
     if (newValue && newValue !== currentValue) {
@@ -2290,9 +2286,6 @@ async function makeEditable(elementId, fieldName) {
           else if (channel.includes('woo')) logoClass = 'channel-woocommerce';
           else if (channel.includes('local')) logoClass = 'channel-local';
           element.innerHTML = `<span class="channel-logo ${logoClass}"></span>${newValue}`;
-        } else if (fieldName === 'sale_date') {
-          const date = new Date(newValue);
-          element.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         } else if (fieldName === 'revenue') {
           element.textContent = `$${(parseFloat(newValue) || 0).toFixed(2)}`;
         } else {
@@ -2318,7 +2311,7 @@ async function makeEditable(elementId, fieldName) {
       element.style.background = '';
     }
   };
-  
+
   input.addEventListener('blur', save);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -2329,6 +2322,70 @@ async function makeEditable(elementId, fieldName) {
       element.textContent = fieldName === 'revenue' ? `$${(parseFloat(currentValue) || 0).toFixed(2)}` : currentValue;
     }
   });
+}
+
+// Order Date uses flatpickr instead of a bare native <input type="date">,
+// matching the calendar already used for order creation elsewhere in the
+// app instead of the browser's inconsistent native date UI.
+function makeDateEditable(element, fieldName) {
+  const currentIso = orderData[fieldName] || '';
+  const currentDateStr = currentIso ? new Date(currentIso).toISOString().split('T')[0] : '';
+
+  const renderDate = (iso) => {
+    element.textContent = iso
+      ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '-';
+  };
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-input';
+  input.style.padding = '8px 12px';
+  input.style.fontSize = '14px';
+
+  element.innerHTML = '';
+  element.appendChild(input);
+  element.style.background = 'transparent';
+
+  const fp = flatpickr(input, {
+    dateFormat: 'Y-m-d',
+    defaultDate: currentIso ? new Date(currentIso) : new Date(),
+    allowInput: false,
+    disableMobile: true,
+    onClose: async (selectedDates, dateStr) => {
+      element.style.background = '';
+
+      if (!dateStr || dateStr === currentDateStr) {
+        renderDate(currentIso);
+        fp.destroy();
+        return;
+      }
+
+      const newValue = dateStr + 'T00:00:00.000Z';
+      try {
+        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        if (!user) return;
+
+        const { error } = await window.supabaseClient
+          .from('sales')
+          .update({ sale_date: newValue, updated_at: new Date().toISOString() })
+          .eq('id', orderId)
+          .eq('profile_id', user.id);
+
+        if (error) throw error;
+
+        orderData[fieldName] = newValue;
+        renderDate(newValue);
+        showNotification('Field updated successfully', 'success');
+      } catch (error) {
+        console.error('Error updating field:', error);
+        renderDate(currentIso);
+        showNotification('Failed to update field', 'error');
+      }
+      fp.destroy();
+    }
+  });
+  fp.open();
 }
 
 // Recipe Modal
