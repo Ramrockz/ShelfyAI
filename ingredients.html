@@ -117,7 +117,6 @@
                padding: 0 14px 0 16px; background: var(--bg-panel);
                border-top: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
   .ing-group .ing-row-name { font-size: 15.5px; }
-  .ing-group .ing-row-meta { margin-top: 4px; }
   .ing-group-tail { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .ing-group-total { font-size: 19px; font-weight: 800; }
   .ing-group-chev { color: var(--text-muted); transition: transform .2s ease; }
@@ -3092,12 +3091,7 @@ function _groupInStock(items) {
   });
   const out = [];
   groups.forEach((members, cat) => {
-    const keys = [...new Set(members.flatMap(m => Object.keys(_parseAttrs(m))))];
-    const nVals = k => new Set(members.map(m => _parseAttrs(m)[k]).filter(Boolean)).size;
-    const sub = keys.length >= 2
-      ? keys.slice(0, 2).map(k => `${nVals(k)} ${k}${nVals(k) !== 1 ? 's' : ''}`).join(' × ')
-      : `${members.length} item${members.length !== 1 ? 's' : ''}`;
-    out.push({ cat, members, sub, total: members.length });
+    out.push({ cat, members, total: members.length });
   });
   out.sort((a, b) => b.total - a.total);
   return { groups: out, loose };
@@ -3737,7 +3731,6 @@ function renderRecent(data) {
           <span class="ing-row-bar" data-state="ok"></span>
           <span class="ing-row-main">
             <span class="ing-row-name">${escapeHtml(g.cat)}</span>
-            <span class="ing-row-meta">${escapeHtml(g.sub)}</span>
           </span>
           <span class="ing-group-tail">
             <span class="ing-group-total">${g.total}</span>
