@@ -94,6 +94,11 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* Exit animation for showNotification()'s toast */
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(10px); }
+  }
 
   #recentView.no-anim .card-small { animation: none; }
 
@@ -2333,6 +2338,38 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// expenses.html called this in two catch blocks (saveExpense,
+// confirmIngredientMapping) but never defined it — every failed save threw
+// a second, unhandled ReferenceError from inside the catch itself, which
+// swallowed the "Failed to save" message and made errors look like nothing
+// happened at all. Other pages in this app each carry their own local copy
+// of this same toast pattern (expense-detail.html, order-detail.html,
+// operations.html); this reuses the existing @keyframes slideIn already
+// defined above rather than adding a duplicate.
+function showNotification(message, type = 'success') {
+  console.log(`[${type.toUpperCase()}] ${message}`);
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    background: ${type === 'error' ? '#ef4444' : '#10b981'};
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+    z-index: 99999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease;
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
 async function editExpense(expenseId) {
   // Load ingredients first
   await loadIngredientsForExpense();
@@ -2349,7 +2386,8 @@ async function editExpense(expenseId) {
   document.getElementById('expense_id').value = expense.id;
   document.getElementById('expense_amount').value = expense.amount || 0;
   document.getElementById('expense_date').value = expense.expense_date || '';
-  document.getElementById('expense_vendor').value = expense.vendor || '';
+  const vendorEl = document.getElementById('expense_vendor');
+  if (vendorEl) vendorEl.value = expense.vendor || '';
   
   // Load linked ingredients if any
   if (expense.ingredients && Array.isArray(expense.ingredients)) {
@@ -2387,8 +2425,11 @@ async function saveExpense(event) {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    // Generate description from vendor name or default
-    const vendor = document.getElementById('expense_vendor').value?.trim();
+    // Generate description from vendor name or default. There's no
+    // #expense_vendor field in this form today (removed at some point
+    // without the reads below being cleaned up, which threw and aborted
+    // this whole function) — reads default to '' / null until one exists.
+    const vendor = document.getElementById('expense_vendor')?.value?.trim();
     const description = vendor ? `${vendor} Purchase` : 'Expense Purchase';
 
     const expenseData = {
@@ -2397,7 +2438,7 @@ async function saveExpense(event) {
       description: description,
       amount: parseFloat(document.getElementById('expense_amount').value) || 0,
       expense_date: document.getElementById('expense_date').value,
-      vendor: document.getElementById('expense_vendor').value || null,
+      vendor: document.getElementById('expense_vendor')?.value || null,
       category: null,
       receipt_url: null,
       ingredients: selectedExpenseIngredients
