@@ -509,40 +509,15 @@
     margin-bottom: 16px;
   }
 
-  /* Mobile Bottom CTAs */
-  .mobile-bottom-ctas {
+  /* Mobile-only elements — hidden by default; the <=768px media query
+     turns each on. A bare element defaults to visible, so without this
+     these would render on desktop too, not just fail to hide there. */
+  .exp-more-btn,
+  #reconcileLine,
+  .exp-meta,
+  .msec,
+  .affected-mobile-list {
     display: none;
-  }
-
-  .mobile-cta-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-panel);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .mobile-cta-btn svg,
-  .mobile-cta-btn i {
-    width: 20px;
-    height: 20px;
-    stroke-width: 2;
-  }
-
-  .mobile-cta-btn.delete {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
-  }
-
-  .mobile-cta-btn:active {
-    transform: scale(0.95);
   }
 
   /* Receipt Section */
@@ -594,20 +569,9 @@
     }
 
     .container {
-      padding: 16px 12px 180px 12px; /* Extra bottom padding for CTAs */
-    }
-
-    .mobile-bottom-ctas {
-      display: flex !important;
-      gap: 8px;
-      padding: 12px;
-      position: fixed;
-      bottom: 60px;
-      left: 0;
-      right: 0;
-      background: var(--bg-main);
-      border-top: 1px solid var(--border);
-      z-index: 9999;
+      /* No persistent bottom action bar for expenses (no lifecycle status
+         like orders have) — just clearance for the fixed bottom nav. */
+      padding: 16px 12px calc(76px + env(safe-area-inset-bottom, 0px)) 12px;
     }
 
     /* Detail header: stack on mobile */
@@ -615,6 +579,7 @@
       flex-direction: column;
       align-items: stretch;
       gap: 16px;
+      position: relative;
     }
 
     .header-title {
@@ -627,20 +592,111 @@
       font-size: 24px;
     }
 
-    /* Hide desktop actions */
+    /* Hide desktop actions — Copy/Delete move into the ⋯ menu */
     .header-actions {
       display: none;
     }
-    
-    /* Hide desktop delete button - use mobile CTA instead */
+
+    /* Hide desktop delete button - use the ⋯ menu instead */
     .detail-del-btn {
       display: none !important;
     }
 
-    /* Show mobile CTAs */
-    .mobile-bottom-ctas {
-      display: flex;
+    .exp-more-btn {
+      display: flex; align-items: center; justify-content: center;
+      position: absolute; top: 0; right: 0;
+      width: 36px; height: 36px; border: none; border-radius: 50%; padding: 0;
+      background: transparent; color: var(--text-main); cursor: pointer;
     }
+
+    #reconcileLine {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin: 14px auto 0; max-width: 340px;
+      padding: 9px 12px; border-radius: 10px;
+      background: var(--bg-inner); border: 1px solid var(--border);
+      font-size: 12.5px; color: var(--text-main); text-align: left;
+    }
+    #reconcileLine[data-state="off"] {
+      background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.3);
+    }
+    #reconcileLine svg { flex-shrink: 0; }
+    #reconcileLine strong { font-weight: 700; }
+
+    .exp-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+
+    /* Section headings (Pack list-style pattern, reused from the other
+       detail pages this session) */
+    .msec { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+    .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+    .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
+    #itemsSectionHeader, #affectedSectionTitle { display: none !important; }
+
+    /* Items bought — read-only row, tap opens the item sheet */
+    .exp-item-row {
+      display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%;
+      padding: 9px 14px 9px 16px; text-align: left; background: var(--bg-panel);
+      border: none; border-top: 1px solid var(--border); box-sizing: border-box;
+      border-radius: 0; margin: 0 -16px; width: calc(100% + 32px);
+    }
+    .ingredients-mobile-list .exp-item-row:first-child { border-top: none; }
+    .ingredients-mobile-list .exp-item-row:last-child { border-bottom: 1px solid var(--border); }
+    .exp-item-main { flex: 1; min-width: 0; }
+    .exp-item-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .exp-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .exp-item-total { font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--text-main); flex-shrink: 0; }
+    .exp-chev { color: var(--border); flex-shrink: 0; }
+
+    /* Stock it added — from → to per ingredient, no horizontal scroll */
+    #affectedIngredientsSection table { display: none !important; }
+    .stock-row {
+      display: flex; align-items: center; gap: 11px; height: 50px;
+      padding: 0 14px 0 16px; background: var(--bg-panel);
+      border-top: 1px solid var(--border); box-sizing: border-box;
+      margin: 0 -16px; width: calc(100% + 32px);
+    }
+    .affected-mobile-list .stock-row:first-child { border-top: none; }
+    .affected-mobile-list .stock-row:last-child { border-bottom: 1px solid var(--border); }
+    .stock-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stock-from { font-size: 13.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .stock-to { font-size: 15px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
+
+    /* Item / field sheets */
+    .sheet-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; }
+    .sheet-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
+    .sheet-qty { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; }
+    .sheet-qty button {
+      width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--border);
+      background: var(--bg-inner); font-size: 26px; line-height: 1; color: var(--text-main); font-family: inherit;
+    }
+    .sheet-qty input {
+      flex: 1; height: 52px; text-align: center; font-size: 22px; font-weight: 800;
+      min-width: 0; border: 1px solid var(--border); border-radius: 14px;
+      background: var(--bg-inner); color: var(--text-main); outline: none;
+      -webkit-appearance: none; appearance: none; font-family: inherit;
+    }
+    .sheet-qty input::-webkit-inner-spin-button,
+    .sheet-qty input::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
+    .sheet-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--text-muted); margin: 8px 0 0;
+    }
+    .sheet-act {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; height: 50px; margin-top: 8px; padding: 0 14px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--bg-inner);
+      font-size: 15px; font-weight: 700; text-align: left; color: var(--text-main); cursor: pointer; font-family: inherit;
+    }
+    .sheet-act .val { font-weight: 600; color: var(--text-muted); }
+    .sheet-act.danger { color: var(--danger); border-color: rgba(239,68,68,.35); }
+    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); }
 
     /* Info grid: single column on mobile */
     .info-grid {
@@ -726,7 +782,7 @@
 
   @media (max-width: 480px) {
     .container {
-      padding: 12px 8px 180px 8px;
+      padding: 12px 8px calc(76px + env(safe-area-inset-bottom, 0px)) 8px;
     }
 
     .section {
@@ -862,22 +918,35 @@
       <button class="detail-cta-btn" onclick="copyExpense()">Copy</button>
       <button class="detail-cta-btn" style="color: var(--danger);" onclick="showDeleteModal()">Delete</button>
     </div>
+    <!-- Mobile-only: Copy/Delete/Amount/Date move into this menu -->
+    <button class="exp-more-btn" id="expMoreBtn" onclick="openExpenseMenu()" aria-label="More actions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </button>
   </div>
 
   <!-- Cost Display -->
   <div style="text-align: center; margin-bottom: 32px;">
-    <div id="expenseCost" style="font-size: 64px; font-weight: 900; color: #ef4444; line-height: 1; margin-bottom: 4px;">-</div>
+    <div id="expenseCost" onclick="editField('amount','Amount')" style="font-size: 64px; font-weight: 900; color: #ef4444; line-height: 1; margin-bottom: 4px; cursor: pointer;">-</div>
     <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600;">Total Cost</div>
+    <!-- Mobile-only: line-sum vs. receipt-total reconciliation (14a) -->
+    <div id="reconcileLine"></div>
+    <!-- Mobile-only: item/unit counts (date is already shown above near the title) -->
+    <div class="exp-meta" id="expMeta"></div>
   </div>
 
   <!-- Ingredients Section -->
   <div class="section">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h3 class="section-title" style="margin: 0;">Involved Items</h3>
       <button onclick="openIngredientModal()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
         <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
         Add
       </button>
+    </div>
+    <!-- Mobile-only: replaces itemsSectionHeader above -->
+    <div class="msec" id="expItemsMsec">
+      <span class="msec-title">Items bought</span>
+      <button type="button" class="msec-aside" onclick="openIngredientModal()">Add item</button>
     </div>
     <!-- Desktop table -->
     <table class="ingredients-desktop-table">
@@ -898,7 +967,9 @@
   </div>
 
   <div class="section" id="affectedIngredientsSection" style="display: none;">
-    <h3 class="section-title">📊 Affected Items</h3>
+    <h3 class="section-title" id="affectedSectionTitle">📊 Affected Items</h3>
+    <!-- Mobile-only: replaces affectedSectionTitle above -->
+    <div class="msec" id="expStockMsec"><span class="msec-title">Stock it added</span></div>
     <table>
       <thead>
         <tr>
@@ -911,6 +982,8 @@
       </thead>
       <tbody id="affectedIngredientsBody"></tbody>
     </table>
+    <!-- Mobile-only: replaces the table above (500px-min, no visible scrollbar) -->
+    <div id="affectedMobileList" class="affected-mobile-list"></div>
   </div>
 
   <!-- Receipt Section -->
@@ -922,10 +995,49 @@
   </div>
 </div>
 
-<!-- Mobile Bottom CTAs -->
-<div class="mobile-bottom-ctas">
-  <button class="mobile-cta-btn" onclick="copyExpense()" style="flex: 1;">Copy</button>
-  <button class="mobile-cta-btn delete" onclick="showDeleteModal()" style="flex: 1;">Delete</button>
+<!-- Item sheet (mobile) — stepper + remove for one line item -->
+<div class="modal-overlay modal-sheet" id="itemSheet" onclick="if(event.target===this)closeItemSheet()">
+  <div class="modal-content">
+    <h2 class="sheet-title" id="itemSheetName"></h2>
+    <p class="sheet-sub" id="itemSheetSub"></p>
+    <div class="sheet-qty">
+      <button type="button" onclick="sheetQty(-1)" aria-label="Decrease">&minus;</button>
+      <input id="itemSheetQty" type="number" inputmode="numeric" min="1" onchange="sheetQtySet(this.value)">
+      <button type="button" onclick="sheetQty(1)" aria-label="Increase">+</button>
+    </div>
+    <p class="sheet-label">Quantity bought</p>
+    <button type="button" class="sheet-act" id="itemSheetOpenBtn">Open item</button>
+    <button type="button" class="sheet-act danger" onclick="sheetRemove()">Remove from expense</button>
+  </div>
+</div>
+
+<!-- Expense menu (mobile) — Amount/Date edit + Duplicate/Delete -->
+<div class="modal-overlay modal-sheet" id="expenseMenu" onclick="if(event.target===this)closeExpenseMenu()">
+  <div class="modal-content">
+    <h2 class="sheet-title" id="menuTitle">Expense</h2>
+    <p class="sheet-sub">Edit what the receipt says</p>
+    <button type="button" class="sheet-act" onclick="editField('amount','Amount')">
+      <span>Amount</span><span class="val" id="menuAmount"></span>
+    </button>
+    <button type="button" class="sheet-act" onclick="editField('expense_date','Date')">
+      <span>Date</span><span class="val" id="menuDate"></span>
+    </button>
+    <button type="button" class="sheet-act" onclick="closeExpenseMenu(); copyExpense();">
+      <span>Duplicate expense</span>
+    </button>
+    <button type="button" class="sheet-act danger" onclick="closeExpenseMenu(); showDeleteModal();">
+      <span>Delete expense</span>
+    </button>
+  </div>
+</div>
+
+<!-- One-field sheet (mobile) — Amount / Date -->
+<div class="modal-overlay modal-sheet" id="fieldSheet" onclick="if(event.target===this)closeFieldSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label" id="fieldSheetLabel"></label>
+    <input id="fieldSheetInput" class="form-input" style="font-size:16px">
+    <button class="drow-edit-save" onclick="saveField()">Save</button>
+  </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
@@ -1186,10 +1298,8 @@ function displayIngredients() {
 
   if (expenseIngredients.length === 0) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No items added yet</td></tr>';
-    if (mobileList) mobileList.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px 0;font-size:14px;">No items added yet</p>';
-    return;
-  }
-
+    if (mobileList) mobileList.innerHTML = '<div class="exp-note">No items added yet</div>';
+  } else {
   const rows = expenseIngredients.map((item, index) => {
     const _itemId = item.ingredient_id || item.id;
     const _matched = ingredients.find(i => i.id === _itemId);
@@ -1212,14 +1322,14 @@ function displayIngredients() {
     const unitCost = parseFloat(item.cost_per_unit || item.price || _matched?.cost_per_unit || 0);
     const lineTotal = (quantityValue * unitCost).toFixed(2);
 
-    return { index, _itemName, attributesDisplay, quantityValue, lineTotal };
+    return { index, _itemName, attributesDisplay, quantityValue, unitCost, lineTotal };
   });
 
   if (tbody) {
     tbody.innerHTML = rows.map(({ index, _itemName, attributesDisplay, quantityValue }) => `
       <tr>
-        <td>${_itemName}</td>
-        <td style="font-size: 12px; color: var(--text-muted);">${attributesDisplay || '-'}</td>
+        <td>${_escHtml(_itemName)}</td>
+        <td style="font-size: 12px; color: var(--text-muted);">${_escHtml(attributesDisplay) || '-'}</td>
         <td>
           <div style="display: flex; align-items: center; gap: 6px;">
             <button onclick="changeQuantity(${index}, -1)" style="padding: 4px 8px; background: var(--bg-inner); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-weight: 600;">-</button>
@@ -1236,29 +1346,204 @@ function displayIngredients() {
     `).join('');
   }
 
+  // Mobile: read-only row (name, attributes, qty × unit cost, line total) —
+  // tap opens the item sheet for the stepper/remove actions, instead of
+  // cramming both into a card that also had to fit a line-total readout.
   if (mobileList) {
-    mobileList.innerHTML = rows.map(({ index, _itemName, attributesDisplay, quantityValue, lineTotal }) => `
-      <div style="background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-          <div style="font-weight: 700; font-size: 15px; color: var(--text-main); flex: 1; margin-right: 8px;">${_itemName}</div>
-          <button onclick="removeIngredientItem(${index})" style="padding: 4px; background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0;" title="Remove">
-            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-          </button>
-        </div>
-        ${attributesDisplay ? `<div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">${attributesDisplay}</div>` : ''}
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button onclick="changeQuantity(${index}, -1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">-</button>
-            <span id="qty-m-${index}" style="min-width: 36px; text-align: center; font-weight: 700; font-size: 16px;">${quantityValue}</span>
-            <button onclick="changeQuantity(${index}, 1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">+</button>
-          </div>
-          <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">$${lineTotal}</div>
-        </div>
-      </div>
-    `).join('');
+    mobileList.innerHTML = rows.map(({ index, _itemName, attributesDisplay, quantityValue, unitCost, lineTotal }) => {
+      const sub = [`${quantityValue} × $${unitCost.toFixed(2)}`, attributesDisplay].filter(Boolean).join(' · ');
+      return `
+      <button type="button" class="exp-item-row" onclick="openItemSheet(${index})">
+        <span class="exp-item-main">
+          <span class="exp-item-name">${_escHtml(_itemName)}</span>
+          <span class="exp-item-sub">${_escHtml(sub)}</span>
+        </span>
+        <span class="exp-item-total">$${lineTotal}</span>
+        <svg class="exp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>`;
+    }).join('');
   }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  renderReconcile();
+  renderExpMeta();
+}
+
+// ============================================================
+// Mobile-only: reconciliation, meta line, item sheet, expense menu,
+// one-field sheet. Every write routes through a function that already
+// exists (changeQuantity, removeIngredientItem, copyExpense,
+// showDeleteModal) except the new field-sheet writer (saveField), which
+// targets the same `expenses` table/columns the dead makeEditable()
+// already knew how to write to.
+// ============================================================
+
+function _escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const _checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+const _warnIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+
+// 14a — the line sum, stated against the entered receipt total. Only
+// meaningful now that recalculateExpenseCost() no longer force-syncs
+// `amount` to match it (see that function's comment).
+function renderReconcile() {
+  const el = document.getElementById('reconcileLine');
+  if (!el || !expenseData) return;
+  const amount = parseFloat(expenseData.amount || 0);
+  const lines = recalculateExpenseCost(expenseData.ingredients || []);
+  const diff = +(amount - lines).toFixed(2);
+  const match = Math.abs(diff) < 0.005;
+  el.dataset.state = match ? 'ok' : 'off';
+  el.innerHTML = match
+    ? `${_checkIcon}<span>Lines add up to <strong>$${lines.toFixed(2)}</strong> — matches the total</span>`
+    : `${_warnIcon}<span>Lines add up to <strong>$${lines.toFixed(2)}</strong> — <strong>$${Math.abs(diff).toFixed(2)}</strong> ${diff > 0 ? 'unaccounted for' : 'over the total'}</span>`;
+}
+
+function renderExpMeta() {
+  const el = document.getElementById('expMeta');
+  if (!el || !expenseData) return;
+  const items = expenseData.ingredients || [];
+  const units = items.reduce((s, i) => s + Math.round(parseFloat(i.quantity_added || i.quantity || 0)), 0);
+  el.textContent = `${items.length} item${items.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''} in`;
+}
+
+// ---- Item sheet — stepper/remove for one line item ----
+let _sheetIndex = null;
+
+function openItemSheet(index) {
+  _sheetIndex = index;
+  const item = expenseData?.ingredients?.[index];
+  if (!item) return;
+  const ingId = item.ingredient_id || item.id;
+  const _matched = ingredients.find(i => i.id === ingId);
+  const name = item.ingredient_name || item.name || _matched?.name || 'Item';
+  const qty = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
+  const unit = parseFloat(item.cost_per_unit || item.price || _matched?.cost_per_unit || 0);
+  document.getElementById('itemSheetName').textContent = name;
+  document.getElementById('itemSheetSub').textContent = `$${unit.toFixed(2)} each · $${(qty * unit).toFixed(2)} line total`;
+  document.getElementById('itemSheetQty').value = qty;
+  const openBtn = document.getElementById('itemSheetOpenBtn');
+  if (ingId) {
+    openBtn.style.display = 'flex';
+    openBtn.onclick = () => { window.location.href = `/ingredient-detail?id=${ingId}`; };
+  } else {
+    openBtn.style.display = 'none'; // no resolvable ingredient id (e.g. a hand-typed line item)
+  }
+  document.getElementById('itemSheet').classList.add('active');
+}
+
+function closeItemSheet() {
+  document.getElementById('itemSheet')?.classList.remove('active');
+  _sheetIndex = null;
+}
+
+// Re-reads the persisted state after changeQuantity()'s write resolves,
+// rather than computing the next value locally, so the sheet can't drift
+// from the DB if the write ever fails.
+function _refreshItemSheetQty() {
+  const item = expenseData?.ingredients?.[_sheetIndex];
+  if (!item) return;
+  const qty = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
+  const unit = parseFloat(item.cost_per_unit || item.price || 0);
+  document.getElementById('itemSheetQty').value = qty;
+  document.getElementById('itemSheetSub').textContent = `$${unit.toFixed(2)} each · $${(qty * unit).toFixed(2)} line total`;
+}
+
+async function sheetQty(delta) {
+  if (_sheetIndex === null) return;
+  await changeQuantity(_sheetIndex, delta);
+  _refreshItemSheetQty();
+}
+
+async function sheetQtySet(v) {
+  if (_sheetIndex === null) return;
+  const item = expenseData.ingredients[_sheetIndex];
+  if (!item) return;
+  const current = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
+  const next = Math.max(1, Math.round(parseFloat(v)) || 1);
+  if (next === current) { _refreshItemSheetQty(); return; }
+  await changeQuantity(_sheetIndex, next - current);
+  _refreshItemSheetQty();
+}
+
+function sheetRemove() {
+  const index = _sheetIndex;
+  closeItemSheet();
+  removeIngredientItem(index); // opens the existing confirm-before-delete modal
+}
+
+// ---- Expense menu — Amount/Date edit + Duplicate/Delete ----
+function openExpenseMenu() {
+  document.getElementById('menuTitle').textContent = document.getElementById('expenseNumber')?.textContent || 'Expense';
+  document.getElementById('menuAmount').textContent = `$${parseFloat(expenseData?.amount || 0).toFixed(2)}`;
+  const raw = expenseData?.expense_date || expenseData?.created_at;
+  document.getElementById('menuDate').textContent = raw
+    ? new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+  document.getElementById('expenseMenu').classList.add('active');
+}
+function closeExpenseMenu() {
+  document.getElementById('expenseMenu')?.classList.remove('active');
+}
+
+// ---- One-field sheet — Amount / Date ----
+let _editingExpField = null;
+
+function editField(field, label) {
+  _editingExpField = field;
+  closeExpenseMenu();
+  document.getElementById('fieldSheetLabel').textContent = label;
+  const input = document.getElementById('fieldSheetInput');
+  if (field === 'expense_date') {
+    input.type = 'date';
+    const raw = expenseData?.expense_date || expenseData?.created_at;
+    input.value = raw ? new Date(raw).toISOString().slice(0, 10) : '';
+  } else {
+    input.type = 'number';
+    input.step = '0.01';
+    input.value = parseFloat(expenseData?.amount || 0);
+  }
+  document.getElementById('fieldSheet').classList.add('active');
+  setTimeout(() => input.focus(), 120);
+}
+function closeFieldSheet() {
+  document.getElementById('fieldSheet').classList.remove('active');
+  _editingExpField = null;
+}
+async function saveField() {
+  const field = _editingExpField;
+  if (!field) return;
+  const raw = document.getElementById('fieldSheetInput').value;
+  let value;
+  if (field === 'amount') {
+    value = parseFloat(raw) || 0;
+  } else if (field === 'expense_date') {
+    if (!raw) { closeFieldSheet(); return; }
+    value = raw + 'T00:00:00.000Z';
+  } else {
+    value = raw;
+  }
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let query = window.supabaseClient.from('expenses').update({ [field]: value }).eq('id', expenseId).eq('profile_id', user.id);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { error } = await query;
+    if (error) throw error;
+    expenseData[field] = value;
+    showNotification('Field updated', 'success');
+  } catch (error) {
+    console.error('Error updating field:', error);
+    showNotification('Failed to update field', 'error');
+  }
+  closeFieldSheet();
+  displayExpense();
+  renderReconcile();
+  renderExpMeta();
 }
 
 async function loadAffectedIngredients() {
@@ -1305,7 +1590,7 @@ async function loadAffectedIngredients() {
 
         return `
           <tr>
-            <td><a href="/ingredient-detail?id=${ingredientId}" class="recipe-link">${ingredientName}</a></td>
+            <td><a href="/ingredient-detail?id=${ingredientId}" class="recipe-link">${_escHtml(ingredientName)}</a></td>
             <td>${oldQty.toFixed(2)}</td>
             <td>${newQty.toFixed(2)}</td>
             <td style="color: ${changeColor}; font-weight: 600;">${changeSign}${change.toFixed(2)}</td>
@@ -1313,6 +1598,26 @@ async function loadAffectedIngredients() {
           </tr>
         `;
       }).join('');
+
+      // Mobile: the same rows as a horizontal-scroll-free from→to list —
+      // .items-table-wrapper-style 500px-min table with no visible
+      // scrollbar (hidden by the page-wide scrollbar-hiding rule) had no
+      // affordance that it scrolled at all.
+      const mobileList = document.getElementById('affectedMobileList');
+      if (mobileList) {
+        mobileList.innerHTML = historyEntries.map(entry => {
+          const ingredientName = entry.ingredients?.name || 'Unknown';
+          const oldQty = parseFloat(entry.old_value || 0);
+          const newQty = parseFloat(entry.new_value || 0);
+          return `
+            <div class="stock-row">
+              <span class="stock-name">${_escHtml(ingredientName)}</span>
+              <span class="stock-from">${oldQty.toFixed(0)}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="14" height="14" style="flex-shrink:0;color:var(--text-muted)"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+              <span class="stock-to">${newQty.toFixed(0)}</span>
+            </div>`;
+        }).join('');
+      }
     }
   } catch (error) {
     console.error('Error loading affected ingredients:', error);
@@ -1809,8 +2114,6 @@ async function confirmAddIngredient() {
       custom_attributes: ingredient.custom_attributes
     });
 
-    const newTotal = recalculateExpenseCost(expenseIngredients);
-
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) {
       showNotification('You must be logged in', 'error');
@@ -1821,21 +2124,21 @@ async function confirmAddIngredient() {
 
     let query = window.supabaseClient
       .from('expenses')
-      .update({ ingredients: expenseIngredients, amount: newTotal })
+      .update({ ingredients: expenseIngredients })
       .eq('id', expenseId)
       .eq('profile_id', user.id);
-    
+
     if (storeId) {
       query = query.eq('store_id', storeId);
     }
-    
+
     const { error } = await query;
-    
+
     if (error) {
       console.error('Supabase update error:', error);
       throw error;
     }
-    
+
     console.log('Ingredient added successfully');
     expenseData.ingredients = expenseIngredients;
 
@@ -1865,6 +2168,13 @@ async function confirmAddIngredient() {
   }
 }
 
+// `amount` is the receipt total — independently editable (see editField()/
+// openAmountEditor()) — and this is the *line* sum, compared against it by
+// renderReconcile() rather than force-synced into it. This function used to
+// overwrite expenseData.amount and #expenseCost directly on every item
+// change, which made a "does the receipt total match the line sum" check
+// meaningless: they'd always match by construction. Callers now use the
+// returned line sum only for the reconcile check and per-item line totals.
 function recalculateExpenseCost(expenseIngredients) {
   let total = 0;
   for (const item of expenseIngredients) {
@@ -1875,9 +2185,6 @@ function recalculateExpenseCost(expenseIngredients) {
     const unitCost = parseFloat(item.cost_per_unit || item.price || _matched?.cost_per_unit || 0);
     total += qty * unitCost;
   }
-  expenseData.amount = total;
-  const costEl = document.getElementById('expenseCost');
-  if (costEl) costEl.textContent = `$${total.toFixed(2)}`;
   return total;
 }
 
@@ -1892,8 +2199,6 @@ async function changeQuantity(index, delta) {
     expenseIngredients[index].quantity_added = newQuantity;
     expenseIngredients[index].quantity = newQuantity;
 
-    const newTotal = recalculateExpenseCost(expenseIngredients);
-
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) {
       showNotification('You must be logged in', 'error');
@@ -1904,7 +2209,7 @@ async function changeQuantity(index, delta) {
 
     let query = window.supabaseClient
       .from('expenses')
-      .update({ ingredients: expenseIngredients, amount: newTotal })
+      .update({ ingredients: expenseIngredients })
       .eq('id', expenseId)
       .eq('profile_id', user.id);
 
@@ -1953,8 +2258,6 @@ async function makeQuantityEditable(index, currentQuantity) {
       expenseIngredients[index].quantity_added = newQuantity;
       expenseIngredients[index].quantity = newQuantity;
 
-      const newTotal = recalculateExpenseCost(expenseIngredients);
-
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) {
         showNotification('You must be logged in', 'error');
@@ -1965,7 +2268,7 @@ async function makeQuantityEditable(index, currentQuantity) {
 
       let query = window.supabaseClient
         .from('expenses')
-        .update({ ingredients: expenseIngredients, amount: newTotal })
+        .update({ ingredients: expenseIngredients })
         .eq('id', expenseId)
         .eq('profile_id', user.id);
 
@@ -2043,8 +2346,6 @@ async function confirmRemoveIngredient() {
     }
     
     expenseData.ingredients = expenseIngredients;
-    const newTotal = recalculateExpenseCost(expenseIngredients);
-    await window.supabaseClient.from('expenses').update({ amount: newTotal }).eq('id', expenseId).eq('profile_id', user.id);
     displayIngredients();
     closeRemoveIngredientModal();
   } catch (error) {
