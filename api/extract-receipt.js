@@ -334,11 +334,15 @@ module.exports = async (req, res) => {
       console.error(`Error incrementing ${usageType} usage:`, rpcError);
     }
 
-    // Consume a bonus scan if this scan went past the plan limit
-    if (usageType !== 'ingredient' && bonusScans > 0 && totalScansUsed >= scanLimit) {
-      await supabase.from('user_settings')
-        .update({ bonus_scans: bonusScans - 1 })
-        .eq('user_id', user.id);
+    // Consume a bonus scan if this scan went past the plan limit — applies
+    // regardless of context, since ingredient/order/expense scans all draw
+    // from the same shared pool. Atomic RPC (adjust_bonus_scans) instead of
+    // a read-then-write to avoid a race double-spending or losing a credit.
+    if (bonusScans > 0 && totalScansUsed >= scanLimit) {
+      const { error: bonusError } = await supabase.rpc('adjust_bonus_scans', { p_user_id: user.id, p_delta: -1 });
+      if (bonusError) {
+        console.error('Error consuming bonus scan:', bonusError);
+      }
     }
 
     return res.status(200).json(result);

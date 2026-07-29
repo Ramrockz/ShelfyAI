@@ -41,6 +41,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
+<script src="create-modal.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
@@ -558,28 +559,6 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-  }
-
-  /* ---------- METHOD CARD (for order creation modal) ---------- */
-  .method-card {
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .method-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-4px);
-  }
-  .method-card img {
-    filter: brightness(0) saturate(100%);
-  }
-  [data-theme="dark"] .method-card img {
-    filter: brightness(0) invert(1);
   }
 
   /* Loader animation for AI processing */
@@ -2505,26 +2484,6 @@ document.addEventListener('keydown', (e) => {
 
 </script>
 
-<!-- Order Method Selection Modal -->
-<div class="modal-overlay" id="orderMethodModal">
-  <div class="modal-content" style="max-width: 500px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">How would you like to add an order?</h3>
-    <div style="display: grid; gap: 16px;">
-      <div class="method-card" onclick="selectOrderMethod('manual')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for product" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Search for product</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add products to order</p>
-      </div>
-      <div class="method-card" onclick="selectOrderMethod('upload')">
-        <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">PDF / Image Upload</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Scan an order screenshot with AI</p>
-      </div>
-    </div>
-    <button type="button" class="btn" style="width: 100%; margin-top: 24px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderMethodModal()">Cancel</button>
-  </div>
-</div>
-
 <!-- Manual Order Creation Modal (2-step recipe picker) -->
 <div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
 
@@ -2767,75 +2726,26 @@ let mappedRecipes = [];
 let orderAIUsageStatus = null;
 
 // --- Method Modal ---
+// Thin wrapper over the shared create-modal.js sheet.
 async function checkOrderAIUsage() {
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) return null;
-    const { data: settings } = await supabaseClient
-      .from('user_settings').select('tier, bonus_scans').eq('user_id', session.user.id).single();
-    const tier = settings?.tier || 'free';
-    const bonusScans = settings?.bonus_scans || 0;
-    const scanLimits = { free: 5, starter: 100, pro: 300 };
-    const limit = (scanLimits[tier] ?? 5) + bonusScans;
-
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const { data: usageRecords } = await supabaseClient
-      .from('ai_usage_tracking')
-      .select('ingredient_count, order_count, expense_count')
-      .eq('user_id', session.user.id)
-      .gte('date', `${yearMonth}-01`)
-      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-    const used = usageRecords
-      ? usageRecords.reduce((sum, r) => sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0)
-      : 0;
-
-    orderAIUsageStatus = { used, limit, tier, limitReached: used >= limit };
-    return orderAIUsageStatus;
-  } catch (e) {
-    console.error('Error checking AI usage:', e);
-    return null;
-  }
-}
-
-function _orderLimitReachedAlert() {
-  alert(`Monthly AI scan limit reached: you've used all ${orderAIUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
+  orderAIUsageStatus = await window.ShelfyCreateModal.checkUsage();
+  return orderAIUsageStatus;
 }
 
 async function openOrderMethodModal() {
-  document.getElementById('orderMethodModal').classList.add('active');
-  await checkOrderAIUsage();
-  const card = document.querySelector('#orderMethodModal .method-card img[alt="Upload File"]')?.closest('.method-card');
-  if (!card) return;
-  if (orderAIUsageStatus && orderAIUsageStatus.limitReached) {
-    card.style.opacity = '0.6'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
-    if (!card.querySelector('.limit-badge')) {
-      const badge = document.createElement('div');
-      badge.className = 'limit-badge';
-      badge.style.cssText = 'position:absolute;top:8px;right:8px;background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;';
-      badge.textContent = 'LIMIT REACHED';
-      card.appendChild(badge);
+  await window.ShelfyCreateModal.open('order', {
+    onUsage: (status) => { orderAIUsageStatus = status; },
+    onSelect: (method) => {
+      if (method === 'manual') {
+        openManualOrderModal();
+      } else if (method === 'upload') {
+        openOrderImageUploadModal();
+      }
     }
-  } else {
-    card.style.opacity = ''; card.style.cursor = ''; card.style.pointerEvents = '';
-    card.querySelector('.limit-badge')?.remove();
-  }
+  });
 }
 function closeOrderMethodModal() {
-  document.getElementById('orderMethodModal').classList.remove('active');
-}
-function selectOrderMethod(method) {
-  if (method === 'upload' && orderAIUsageStatus && orderAIUsageStatus.limitReached) {
-    _orderLimitReachedAlert();
-    return;
-  }
-  closeOrderMethodModal();
-  if (method === 'manual') {
-    openManualOrderModal();
-  } else if (method === 'upload') {
-    openOrderImageUploadModal();
-  }
+  window.ShelfyCreateModal.close();
 }
 
 // --- Manual Order Modal ---

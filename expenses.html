@@ -39,6 +39,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
+<script src="create-modal.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -457,44 +458,6 @@
                 font-variant-numeric: tabular-nums; }
 
 
-  /* Method selection cards */
-  .method-card {
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .method-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-4px);
-  }
-  .method-card img {
-    filter: brightness(0) saturate(100%);
-  }
-  [data-theme="dark"] .method-card img {
-    filter: brightness(0) invert(1);
-  }
-  .method-card img {
-    margin-bottom: 16px;
-  }
-  .method-card h4 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
-  }
-  .method-card p {
-    font-size: 14px;
-    color: var(--text-muted);
-    margin: 0;
-  }
-  .method-grid {
-    display: grid;
-    gap: 16px;
-  }
-
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
     /* Hide sidebar on mobile */
@@ -876,30 +839,6 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     Scan receipt
   </button>
-</div>
-
-<!-- Method Selection Modal -->
-<div class="modal-overlay" id="methodSelectionModal">
-  <div class="modal-content" style="max-width: 500px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add Expense</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
-    
-    <div class="method-grid">
-      <div class="method-card" onclick="selectMethod('manual')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="48" height="48">
-        <h4>Manual Entry</h4>
-        <p>Fill out the form yourself</p>
-      </div>
-
-      <div class="method-card" onclick="selectMethod('upload')">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48">
-        <h4>PDF / Image Upload</h4>
-        <p>Scan receipts or invoices</p>
-      </div>
-    </div>
-
-    <button type="button" class="btn" style="width: 100%; margin-top: 24px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeMethodSelectionModal()">Cancel</button>
-  </div>
 </div>
 
 <!-- Add/Edit Expense Modal -->
@@ -1709,78 +1648,33 @@ function sortTable(column) {
 // the user goes through a whole capture only to hit a 429 at the end.
 let aiUsageStatus = null;
 
+// Thin wrapper over the shared create-modal.js sheet — kept because
+// startReceiptScan() below (and possibly other code) reads the bare
+// aiUsageStatus variable directly.
 async function checkAIUsage() {
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) return null;
-    const { data: settings } = await supabaseClient
-      .from('user_settings').select('tier, bonus_scans').eq('user_id', session.user.id).single();
-    const tier = settings?.tier || 'free';
-    const bonusScans = settings?.bonus_scans || 0;
-    const scanLimits = { free: 5, starter: 100, pro: 300 };
-    const limit = (scanLimits[tier] ?? 5) + bonusScans;
-
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const { data: usageRecords } = await supabaseClient
-      .from('ai_usage_tracking')
-      .select('ingredient_count, order_count, expense_count')
-      .eq('user_id', session.user.id)
-      .gte('date', `${yearMonth}-01`)
-      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-    const used = usageRecords
-      ? usageRecords.reduce((sum, r) => sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0)
-      : 0;
-
-    aiUsageStatus = { used, limit, tier, limitReached: used >= limit };
-    return aiUsageStatus;
-  } catch (e) {
-    console.error('Error checking AI usage:', e);
-    return null;
-  }
+  aiUsageStatus = await window.ShelfyCreateModal.checkUsage();
+  return aiUsageStatus;
 }
 
 function _limitReachedAlert() {
   alert(`Monthly AI scan limit reached: you've used all ${aiUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
 }
 
-// Method selection modal functions
 async function openMethodSelectionModal() {
-  document.getElementById('methodSelectionModal').classList.add('active');
-  await checkAIUsage();
-  const card = document.querySelector('#methodSelectionModal .method-card img[alt="Upload"]')?.closest('.method-card');
-  if (!card) return;
-  if (aiUsageStatus && aiUsageStatus.limitReached) {
-    card.style.opacity = '0.6'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
-    if (!card.querySelector('.limit-badge')) {
-      const badge = document.createElement('div');
-      badge.className = 'limit-badge';
-      badge.style.cssText = 'position:absolute;top:8px;right:8px;background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;';
-      badge.textContent = 'LIMIT REACHED';
-      card.appendChild(badge);
+  await window.ShelfyCreateModal.open('expense', {
+    onUsage: (status) => { aiUsageStatus = status; },
+    onSelect: async (method) => {
+      if (method === 'manual') {
+        await openAddExpenseModal();
+      } else if (method === 'upload') {
+        openImageUploadModal();
+      }
     }
-  } else {
-    card.style.opacity = ''; card.style.cursor = ''; card.style.pointerEvents = '';
-    card.querySelector('.limit-badge')?.remove();
-  }
+  });
 }
 
 function closeMethodSelectionModal() {
-  document.getElementById('methodSelectionModal').classList.remove('active');
-}
-
-async function selectMethod(method) {
-  if (method === 'upload' && aiUsageStatus && aiUsageStatus.limitReached) {
-    _limitReachedAlert();
-    return;
-  }
-  closeMethodSelectionModal();
-  if (method === 'manual') {
-    await openAddExpenseModal();
-  } else if (method === 'upload') {
-    openImageUploadModal();
-  }
+  window.ShelfyCreateModal.close();
 }
 
 // Primary FAB action — skips the method menu and goes straight to the

@@ -27,6 +27,7 @@ const STATIC_ASSETS = [
   '/mobile-menu.js',
   '/bottom-nav.js',
   '/notifications.js',
+  '/create-modal.js',
   '/chat-bot.js',
   '/store-modal.js',
   '/switch-account-modal.js',

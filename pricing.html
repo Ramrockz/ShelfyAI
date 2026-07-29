@@ -503,8 +503,8 @@
     <div style="display: inline-block; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px 32px; max-width: 420px; width: 100%;">
       <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px;">Add-on</div>
       <h3 style="margin: 0 0 4px; font-size: 20px;">Scan Pack</h3>
-      <p style="color: var(--text-muted); font-size: 14px; margin: 4px 0 16px;">+50 AI scans, never expire. Stack as many as you need.</p>
-      <div style="font-size: 28px; font-weight: 800; margin-bottom: 16px;">€4.99 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">one-time</span></div>
+      <p style="color: var(--text-muted); font-size: 14px; margin: 4px 0 16px;" id="scanPackDesc">+50 AI scans, never expire. Stack as many as you need.</p>
+      <div style="font-size: 28px; font-weight: 800; margin-bottom: 16px;" id="scanPackPriceDisplay">€4.99 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">one-time</span></div>
       <button class="btn btn-pro" id="scanPackBtn" onclick="handleScanPackCheckout()" style="cursor: pointer; width: 100%;">Buy 50 Scans</button>
     </div>
   </div>
@@ -551,6 +551,29 @@
       alert('Failed to start checkout: ' + err.message);
       btn.disabled = false;
       btn.textContent = 'Buy 50 Scans';
+    }
+  }
+
+  // Keep the displayed price/scan-count in sync with the actual Stripe
+  // price instead of a hardcoded string that can silently drift out of
+  // date if the price ever changes.
+  async function loadScanPackPrice() {
+    try {
+      const res = await fetch('/api/scan-pack-price');
+      const data = await res.json();
+      const scanCount = data.scanCount || 50;
+      const descEl = document.getElementById('scanPackDesc');
+      const btnEl = document.getElementById('scanPackBtn');
+      if (descEl) descEl.textContent = `+${scanCount} AI scans, never expire. Stack as many as you need.`;
+      if (btnEl) btnEl.textContent = `Buy ${scanCount} Scans`;
+      if (data.configured && data.priceFormatted) {
+        const priceEl = document.getElementById('scanPackPriceDisplay');
+        if (priceEl) {
+          priceEl.innerHTML = `${data.priceFormatted} <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">one-time</span>`;
+        }
+      }
+    } catch (err) {
+      console.error('Error loading scan pack price:', err);
     }
   }
 
@@ -680,6 +703,8 @@
   } else {
     updateAuthUI();
   }
+
+  loadScanPackPrice();
 </script>
 
 <!-- Stripe & Subscription Integration -->

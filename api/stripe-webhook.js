@@ -205,20 +205,26 @@ async function handleScanPackPurchase(session) {
   const userId = session.metadata?.supabase_user_id;
   if (!userId) { console.error('Scan pack purchase: no user ID in metadata'); return; }
 
-  const { data: settings } = await supabase
-    .from('user_settings').select('bonus_scans').eq('user_id', userId).single();
+  // Pack size travels with the Stripe price's metadata (scan_count) rather
+  // than being hardcoded here, so pricing.html and this handler can't drift.
+  let scanCount = 50;
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ['data.price'] });
+    const metaCount = parseInt(lineItems?.data?.[0]?.price?.metadata?.scan_count, 10);
+    if (Number.isFinite(metaCount) && metaCount > 0) scanCount = metaCount;
+  } catch (err) {
+    console.error('Error reading scan pack price metadata, defaulting to 50:', err);
+  }
 
-  const current = settings?.bonus_scans || 0;
-  const { error } = await supabase
-    .from('user_settings')
-    .update({ bonus_scans: current + 50 })
-    .eq('user_id', userId);
+  // Atomic RPC instead of read-then-write — a retried webhook delivery for
+  // the same session shouldn't be able to race itself into over/under-crediting.
+  const { data: newValue, error } = await supabase.rpc('adjust_bonus_scans', { p_user_id: userId, p_delta: scanCount });
 
   if (error) {
     console.error('Error adding bonus scans:', error);
     throw new Error(`Failed to add bonus scans: ${error.message}`);
   }
-  console.log(`Scan pack purchased: added 50 bonus scans for user ${userId} (total: ${current + 50})`);
+  console.log(`Scan pack purchased: added ${scanCount} bonus scans for user ${userId} (new total: ${newValue})`);
 }
 
 async function handleFailedPayment(invoice) {

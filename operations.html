@@ -45,6 +45,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
+<script src="create-modal.js"></script>
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
@@ -249,29 +250,6 @@
     gap: 16px;
   }
 
-  .method-card {
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-
-  .method-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-4px);
-  }
-
-  .method-card img {
-    filter: brightness(0) saturate(100%);
-  }
-
-  [data-theme="dark"] .method-card img {
-    filter: brightness(0) invert(1);
-  }
 
   /* ---------- PREMIUM STYLING ---------- */
   .action-card.locked {
@@ -951,16 +929,6 @@
     .delivery-info { flex: 1; }
     .delivery-actions { flex: 0 0 100%; display: flex; gap: 8px; padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--border); }
     .delivery-actions .delivery-btn { flex: 1; height: 36px; font-size: 13px; }
-
-    /* Hide CSV import on mobile */
-    #csv-method-card {
-      display: none !important;
-    }
-
-    /* Stack method cards vertically on mobile */
-    .method-grid {
-      grid-template-columns: 1fr !important;
-    }
 
     /* Modal adjustments */
     .modal-content,
@@ -1956,8 +1924,21 @@
 let confirmResolver = null;
 
 // --- EXPENSE MODAL ---
-function openExpenseChoiceModal() {
-  document.getElementById('expenseChoiceModal').classList.add('active');
+let expenseAIUsageStatus = null;
+async function openExpenseChoiceModal() {
+  await window.ShelfyCreateModal.open('expense', {
+    onUsage: (status) => { expenseAIUsageStatus = status; },
+    onSelect: (method) => {
+      if (method === 'manual') {
+        openAddExpenseModal();
+      } else if (method === 'upload') {
+        // Pre-existing behavior: the scan result here maps into the
+        // ingredient form fields (see imageUploadContext === 'ingredient'
+        // branch below), not a dedicated expense form — kept as-is.
+        openImageUploadModal('ingredient');
+      }
+    }
+  });
 }
 
 let opsAllIngredients = [];
@@ -2689,190 +2670,40 @@ function resolveConfirm(result) {
   });
 </script>
 
-<!-- Method Selection Modal -->
-<div class="modal-overlay" id="methodModal">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add Item</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your item</p>
-    
-    <div class="method-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-      <div class="method-card" onclick="selectMethod('manual')">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
-      </div>
-
-      <div class="method-card" onclick="selectMethod('image')">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
-      </div>
-
-      <div id="csv-method-card" class="method-card" onclick="selectMethod('csv')">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/17751/17751513.png" alt="Database" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">CSV Import</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Upload bulk data from Excel</p>
-      </div>
-
-      <div class="method-card" onclick="selectMethod('url')">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/3214/3214746.png" alt="URL" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">URL Import</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Extract from product pages</p>
-      </div>
-    </div>
-
-    <button class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 100%; margin-top: 24px;" onclick="closeMethodModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- Expense Method Choice Modal -->
-<div class="modal-overlay" id="expenseChoiceModal">
-  <div class="modal-content" style="max-width: 480px;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Add Expense</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Choose how you'd like to add your expense</p>
-
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-      <div class="method-card" onclick="document.getElementById('expenseChoiceModal').classList.remove('active'); openAddExpenseModal();">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/1828/1828911.png" alt="Manual" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">Manual Entry</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Fill out the form yourself</p>
-      </div>
-
-      <div class="method-card" onclick="document.getElementById('expenseChoiceModal').classList.remove('active'); openImageUploadModal('ingredient');">
-        <div style="margin-bottom: 12px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="40" height="40" style="display: block; margin: 0 auto;">
-        </div>
-        <h4 style="margin: 0 0 8px 0; font-size: 16px;">PDF / Image Upload</h4>
-        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Scan receipts or invoices</p>
-      </div>
-    </div>
-
-    <button class="btn" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 100%; margin-top: 24px;" onclick="document.getElementById('expenseChoiceModal').classList.remove('active')">Cancel</button>
-  </div>
-</div>
-
 <script>
-let aiUsageStatus = null; // Cache usage status
+let aiUsageStatus = null; // Cache usage status — kept in sync by checkAIUsage()
 
+// Thin wrapper over the shared create-modal.js sheet.
 async function checkAIUsage() {
-  try {
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (!session) return null;
-
-    const { data: settings } = await window.supabaseClient
-      .from('user_settings')
-      .select('tier')
-      .eq('user_id', session.user.id)
-      .single();
-
-    const tier = settings?.tier || 'free';
-    // Unified pool limits (ingredients + orders + expenses combined)
-    const limits = {
-      free: 5,
-      starter: 100,
-      pro: 300
-    };
-
-    // Get current month's usage
-    const now = new Date();
-    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    
-    const { data: usageRecords } = await window.supabaseClient
-      .from('ai_usage_tracking')
-      .select('ingredient_count, order_count, expense_count')
-      .eq('user_id', session.user.id)
-      .gte('date', `${yearMonth}-01`)
-      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-
-    // Count all AI scans from unified pool (ingredients + orders + expenses)
-    const used = usageRecords ? usageRecords.reduce((sum, record) => 
-      sum + (record.ingredient_count || 0) + (record.order_count || 0) + (record.expense_count || 0), 0) : 0;
-    const limit = limits[tier];
-
-    aiUsageStatus = {
-      used,
-      limit,
-      tier,
-      limitReached: used >= limit
-    };
-
-    return aiUsageStatus;
-  } catch (error) {
-    console.error('Error checking AI usage:', error);
-    return null;
-  }
+  aiUsageStatus = await window.ShelfyCreateModal.checkUsage();
+  return aiUsageStatus;
 }
 
 async function openMethodModal() {
-  // Check AI usage before opening
-  await checkAIUsage();
-  document.getElementById('methodModal').classList.add('active');
-  updateMethodCardsUI();
-}
-
-function updateMethodCardsUI() {
-  const cards = document.querySelectorAll('.method-card');
-  cards.forEach(card => {
-    const img = card.querySelector('img');
-    if (!img) return;
-    
-    const isAIMethod = img.alt === 'Upload' || img.alt === 'URL';
-    
-    if (isAIMethod && aiUsageStatus && aiUsageStatus.limitReached) {
-      card.style.position = 'relative';
-      card.style.opacity = '0.6';
-      card.style.cursor = 'not-allowed';
-      card.style.pointerEvents = 'none';
-      
-      if (!card.querySelector('.limit-badge')) {
-        const badge = document.createElement('div');
-        badge.className = 'limit-badge';
-        badge.style.cssText = 'position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;';
-        badge.textContent = 'LIMIT REACHED';
-        card.appendChild(badge);
+  await window.ShelfyCreateModal.open('ingredient', {
+    onUsage: (status) => { aiUsageStatus = status; },
+    onSelect: (method) => {
+      if (method === 'manual') {
+        openManualEntryModal();
+      } else if (method === 'url') {
+        openUrlImportModal();
+      } else if (method === 'image') {
+        openImageUploadModal('ingredient');
+      } else if (method === 'csv') {
+        if (typeof openCSVImport === 'function') openCSVImport('ingredient');
       }
     }
   });
 }
 
 function closeMethodModal() {
-  document.getElementById('methodModal').classList.remove('active');
+  window.ShelfyCreateModal.close();
 }
 
 async function openMethodModalFromRecipe() {
   addingIngredientFromRecipe = true;
   closeRecipeBuilder();
   await openMethodModal();
-}
-
-function selectMethod(method) {
-  // Check if AI method and limit reached
-  if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
-    alert(`Monthly limit reached: You've used all ${aiUsageStatus.limit} AI extractions for this month. Limit resets on the 1st of next month. Upgrade your plan for more extractions.`);
-    return;
-  }
-  
-  closeMethodModal();
-  if (method === 'manual') {
-    openManualEntryModal();
-  } else if (method === 'url') {
-    openUrlImportModal();
-  } else if (method === 'image') {
-    openImageUploadModal('ingredient');
-  } else if (method === 'csv') {
-    if (typeof openCSVImport === 'function') openCSVImport('ingredient');
-  }
 }
 
 async function openManualEntryModal() {
@@ -3471,29 +3302,6 @@ function showImportStatus(message, type) {
         <button type="submit" class="btn btn-primary" style="flex: 1;">Create</button>
       </div>
     </form>
-  </div>
-</div>
-
-<!-- Order Method Selection Modal -->
-<div class="modal-overlay" id="orderMethodModal">
-  <div class="modal-content" style="max-width: 500px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">How would you like to add an order?</h3>
-    
-    <div style="display: grid; gap: 16px;">
-      <div class="method-card" onclick="selectOrderMethod('manual')">
-        <img src="https://cdn-icons-png.flaticon.com/512/1159/1159633.png" alt="Search for product" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">Search for product</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Find and add products to order</p>
-      </div>
-      
-      <div class="method-card" onclick="selectOrderMethod('upload')">
-        <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload File" width="48" height="48" style="margin-bottom: 16px;">
-        <h4 style="margin: 0 0 8px 0;">PDF / Image Upload</h4>
-        <p style="margin: 0; font-size: 14px; color: var(--text-muted);">Scan an order screenshot with AI</p>
-      </div>
-    </div>
-    
-    <button type="button" class="btn" style="width: 100%; margin-top: 24px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderMethodModal()">Cancel</button>
   </div>
 </div>
 
@@ -5826,22 +5634,25 @@ function updateSwipeDots() {
 }
 
 // === Order Method Selection ===
-function openOrderMethodModal() {
-  document.getElementById('orderMethodModal').classList.add('active');
+// Previously had zero AI-usage-limit enforcement at all (no checkAIUsage
+// call, no card dimming, no block on select) — wiring through the shared
+// sheet fixes that gap along with everything else.
+let orderAIUsageStatus = null;
+async function openOrderMethodModal() {
+  await window.ShelfyCreateModal.open('order', {
+    onUsage: (status) => { orderAIUsageStatus = status; },
+    onSelect: (method) => {
+      if (method === 'manual') {
+        openManualOrderModal();
+      } else if (method === 'upload') {
+        openImageUploadModal('order');
+      }
+    }
+  });
 }
 
 function closeOrderMethodModal() {
-  document.getElementById('orderMethodModal').classList.remove('active');
-}
-
-function selectOrderMethod(method) {
-  closeOrderMethodModal();
-  
-  if (method === 'manual') {
-    openManualOrderModal();
-  } else if (method === 'upload') {
-    openImageUploadModal('order');
-  }
+  window.ShelfyCreateModal.close();
 }
 
 // === Manual Order Creation ===
@@ -6789,12 +6600,10 @@ async function confirmDeleteSale() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     // Close modals in order of priority (most specific first)
-    if (document.getElementById('methodModal').classList.contains('active')) {
-      closeMethodModal();
-    } else if (document.getElementById('manualEntryModal').classList.contains('active')) {
+    // The shared create-modal.js sheet (ingredient/expense/order methods)
+    // has its own Escape listener, so it isn't handled here.
+    if (document.getElementById('manualEntryModal').classList.contains('active')) {
       closeManualEntryModal();
-    } else if (document.getElementById('orderMethodModal').classList.contains('active')) {
-      closeOrderMethodModal();
     } else if (document.getElementById('manualOrderModal').classList.contains('active')) {
       closeManualOrderModal();
     } else if (document.getElementById('feedbackModal').classList.contains('active')) {

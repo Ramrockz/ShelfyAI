@@ -80,7 +80,8 @@ module.exports = async (req, res) => {
     const tier = settings?.tier || 'free';
     const bonusScans = settings?.bonus_scans || 0;
     const scanLimits = { free: 5, starter: 100, pro: 300 };
-    const effectiveLimit = (scanLimits[tier] ?? 5) + bonusScans;
+    const scanLimit = scanLimits[tier] ?? 5;
+    const effectiveLimit = scanLimit + bonusScans;
 
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -162,6 +163,15 @@ module.exports = async (req, res) => {
       console.error('Error incrementing usage:', rpcError);
     } else {
       console.log(`Successfully incremented ingredient usage for user ${user.id}`, rpcData);
+    }
+
+    // Consume a bonus scan if this scan went past the plan limit (matches
+    // api/extract-receipt.js — URL imports draw from the same shared pool).
+    if (bonusScans > 0 && totalUsed >= scanLimit) {
+      const { error: bonusError } = await supabase.rpc('adjust_bonus_scans', { p_user_id: user.id, p_delta: -1 });
+      if (bonusError) {
+        console.error('Error consuming bonus scan:', bonusError);
+      }
     }
 
     return res.status(200).json({
