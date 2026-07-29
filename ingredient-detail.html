@@ -398,6 +398,16 @@
       border-radius: 99px; background: var(--bg-inner); border: 1px solid var(--border);
       color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
+
+    /* Matches the mockup: Used in Products is a plain label + pills, no
+       card chrome. Custom Attributes moves entirely into the Attributes
+       row's edit sheet (attrRow()/openAttrSheet()) — the old raw editor
+       panel is desktop-only now. */
+    #usedInProductsPanel {
+      background: none !important; border: none !important; border-radius: 0 !important;
+      padding: 0 !important; margin-top: 20px !important;
+    }
+    #customAttributesPanel { display: none !important; }
   }
 
   .cat-grid {
@@ -1409,7 +1419,7 @@
 
       <div class="panel" id="customAttributesPanel" style="margin-top: 16px; padding: 20px;">
         <h3 style="font-size: 14px; margin-bottom: 16px;">Custom Attributes</h3>
-        <div id="customAttributes" style="margin-bottom: 12px;">
+        <div id="customAttributes" class="custom-attrs-list" style="margin-bottom: 12px;">
           <p style="color: var(--text-muted); font-size: 12px;">No custom attributes</p>
         </div>
         <button type="button" class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 8px;" onclick="addCustomAttribute()">+ Add Attribute</button>
@@ -1838,8 +1848,15 @@
 
   function addSourceUrl() {
     closeNoSourceModal();
-    // Scroll to source URL field
     const sourceUrlField = document.getElementById('source_url');
+    // On mobile the desktop form field is hidden (.panel > .form-section is
+    // display:none there) — there's no Details row for it either, since the
+    // mockup only shows one via the restock card. Fall back to the same
+    // one-field editor sheet the Details rows use.
+    if (sourceUrlField.offsetParent === null) {
+      editField(['source_url'], 'Source URL');
+      return;
+    }
     sourceUrlField.scrollIntoView({ behavior: 'smooth', block: 'center' });
     sourceUrlField.focus();
   }
@@ -2510,29 +2527,36 @@
     }
   }
 
-  // ---------- Mobile detail rows (Step 11c) ----------
-  const DETAIL_ROWS = [
+  // ---------- Mobile detail rows ----------
+  // Order matches the approved mockup: Cost each, Alert below, Category,
+  // Attributes, SKU · Notes. Source URL has no row of its own here — it's
+  // set via the "no source" prompt / restock flow (see addSourceUrl()).
+  const DETAIL_ROWS_TOP = [
     { ids: ['cost_per_unit'], label: 'Cost each',   fmt: v => v.cost_per_unit ? `$${parseFloat(v.cost_per_unit).toFixed(2)}` : '' },
-    { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' },
-    { ids: ['source_url'],    label: 'Source URL',  fmt: v => v.source_url || '' },
+    { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' }
+  ];
+  const DETAIL_ROWS_BOTTOM = [
     { ids: ['sku', 'notes'],  label: 'SKU · Notes', fmt: v => [v.sku, v.notes].filter(Boolean).join(' · ') }
   ];
 
   const _drowChev = `<svg class="drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>`;
 
+  function _renderDetailRow(r) {
+    const values = {};
+    r.ids.forEach(id => { values[id] = document.getElementById(id)?.value; });
+    const shown = r.fmt(values);
+    return `<div class="drow" onclick='editField(${JSON.stringify(r.ids)}, ${JSON.stringify(r.label)})'>
+        <span class="drow-label">${r.label}</span>
+        <span class="drow-value${shown ? '' : ' empty'}">${shown ? escapeHtml(shown) : 'Not set'}</span>${_drowChev}
+      </div>`;
+  }
+
   function renderDetailRows() {
     const el = document.getElementById('detailRows');
     if (!el) return;
-    const rows = DETAIL_ROWS.map(r => {
-      const values = {};
-      r.ids.forEach(id => { values[id] = document.getElementById(id)?.value; });
-      const shown = r.fmt(values);
-      return `<div class="drow" onclick='editField(${JSON.stringify(r.ids)}, ${JSON.stringify(r.label)})'>
-          <span class="drow-label">${r.label}</span>
-          <span class="drow-value${shown ? '' : ' empty'}">${shown ? escapeHtml(shown) : 'Not set'}</span>${_drowChev}
-        </div>`;
-    }).join('');
-    el.innerHTML = catRow() + rows + attrRow();
+    el.innerHTML = DETAIL_ROWS_TOP.map(_renderDetailRow).join('')
+      + catRow() + attrRow()
+      + DETAIL_ROWS_BOTTOM.map(_renderDetailRow).join('');
     if (window.lucide) lucide.createIcons();
   }
 
@@ -2558,11 +2582,19 @@
   function attrRow() {
     const entries = Object.entries(customAttributes || {}).filter(([, v]) => v);
     const chips = entries.slice(0, 2).map(([, v]) => `<span class="drow-chip">${escapeHtml(v)}</span>`).join('');
-    return `<div class="drow" onclick="document.getElementById('customAttributesPanel')?.scrollIntoView({behavior:'smooth', block:'center'})">
+    return `<div class="drow" onclick="openAttrSheet()">
         <span class="drow-label">Attributes</span>
         <span class="drow-value${entries.length ? '' : ' empty'}">${chips || 'None'}</span>
         ${entries.length > 2 ? `<span class="drow-more">+${entries.length - 2}</span>` : ''}${_drowChev}
       </div>`;
+  }
+
+  function openAttrSheet() {
+    document.getElementById('attrSheet')?.classList.add('active');
+  }
+
+  function closeAttrSheet() {
+    document.getElementById('attrSheet')?.classList.remove('active');
   }
 
   // Field editor sheet — one row can hold 1 or 2 real inputs (SKU · Notes),
@@ -2661,18 +2693,26 @@
   }
 
   function renderCustomAttributes() {
-    const container = document.getElementById('customAttributes');
-    container.innerHTML = '';
-    
-    Object.entries(customAttributes).forEach(([key, value]) => {
-      const row = document.createElement('div');
-      row.className = 'custom-attr-row';
-      row.innerHTML = `
-        <input type="text" value="${key}" placeholder="Attribute name" onchange="updateCustomAttribute('${key}', this.value, this.nextElementSibling.value)">
-        <input type="text" value="${value}" placeholder="Value" onchange="updateCustomAttribute('${key}', this.previousElementSibling.value, this.value)">
-        <button onclick="removeCustomAttribute('${key}')">&times;</button>
-      `;
-      container.appendChild(row);
+    // Desktop panel (#customAttributes) and the mobile Attributes sheet
+    // (#customAttributesSheetList) show the same data — keep both in sync
+    // from one render instead of duplicating the row markup.
+    document.querySelectorAll('.custom-attrs-list').forEach(container => {
+      container.innerHTML = '';
+      const entries = Object.entries(customAttributes);
+      if (!entries.length) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">No custom attributes</p>';
+        return;
+      }
+      entries.forEach(([key, value]) => {
+        const row = document.createElement('div');
+        row.className = 'custom-attr-row';
+        row.innerHTML = `
+          <input type="text" value="${key}" placeholder="Attribute name" onchange="updateCustomAttribute('${key}', this.value, this.nextElementSibling.value)">
+          <input type="text" value="${value}" placeholder="Value" onchange="updateCustomAttribute('${key}', this.previousElementSibling.value, this.value)">
+          <button onclick="removeCustomAttribute('${key}')">&times;</button>
+        `;
+        container.appendChild(row);
+      });
     });
   }
 
@@ -2688,11 +2728,14 @@
     }
     customAttributes[newKey] = newValue;
     autoSave();
+    renderDetailRows();
   }
 
   function removeCustomAttribute(key) {
     delete customAttributes[key];
     renderCustomAttributes();
+    autoSave();
+    renderDetailRows();
   }
 
   // ---------- Mobile "⋯" menu (Duplicate / Delete — favorite stays in the header) ----------
@@ -3279,6 +3322,16 @@ document.addEventListener('keydown', (e) => {
       <span onclick="pickCat(null)" style="font-size:13px;font-weight:600;color:var(--accent);cursor:pointer">Clear</span>
     </div>
     <div id="catSheetList"></div>
+  </div>
+</div>
+
+<!-- Attribute editor sheet (mobile detail rows) -->
+<div class="modal-overlay modal-sheet" id="attrSheet" onclick="if(event.target===this)closeAttrSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label">Attributes</label>
+    <div id="customAttributesSheetList" class="custom-attrs-list" style="margin-bottom: 12px;"></div>
+    <button type="button" class="btn btn-outline" style="width: 100%; font-size: 12px; padding: 8px; margin-bottom: 16px;" onclick="addCustomAttribute()">+ Add Attribute</button>
+    <button class="drow-edit-save" onclick="closeAttrSheet()">Done</button>
   </div>
 </div>
 
