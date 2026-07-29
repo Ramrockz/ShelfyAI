@@ -907,7 +907,12 @@
   <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Expense</h3>
     
-    <form id="expenseForm" onsubmit="saveExpense(event)">
+    <!-- novalidate: native required-field validation runs before the submit
+         event even fires, so on some mobile browsers an empty field blocks
+         the form with no visible feedback inside this modal's nested
+         scroll container. saveExpense() does the same checks explicitly,
+         with a visible alert every time. -->
+    <form id="expenseForm" onsubmit="saveExpense(event)" novalidate>
       <input type="hidden" id="expense_id">
       
       <!-- Items Section -->
@@ -2414,6 +2419,23 @@ async function saveExpense(event) {
   // Validate ingredients are linked
   if (selectedExpenseIngredients.length === 0) {
     alert('Please link at least one item to this expense');
+    return;
+  }
+
+  // Explicit checks instead of relying on the inputs' native `required` —
+  // native constraint validation runs BEFORE the submit event fires at all,
+  // so an empty required field blocks the form silently here on some mobile
+  // browsers (the native "please fill this field" callout can fail to
+  // scroll/render correctly inside this modal's nested overflow-y:auto),
+  // and saveExpense() never even gets called. This surfaces the same
+  // problem with a visible alert every time, regardless of platform.
+  const amountVal = document.getElementById('expense_amount').value;
+  if (amountVal === '' || isNaN(parseFloat(amountVal)) || parseFloat(amountVal) <= 0) {
+    alert('Please enter a valid amount');
+    return;
+  }
+  if (!document.getElementById('expense_date').value) {
+    alert('Please choose an expense date');
     return;
   }
 
