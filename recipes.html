@@ -680,7 +680,8 @@
       max-height: none;
       overflow-y: auto;
       padding: 0;
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
       border-radius: 0;
       gap: 0;
     }
@@ -746,12 +747,35 @@
       margin: 0 auto 20px;
     }
     
-    /* Mobile Recipe Name Input */
-    .recipe-name-input {
-      font-size: 18px;
-      padding: 12px 14px;
+    /* Mobile Recipe Name/Price — clean underline typography matching the
+       10b reference (no boxed background, no visible label). */
+    .recipe-name-section > label {
+      display: none;
     }
-    
+    #recipeNameInput,
+    #recipeSalesPriceInput {
+      width: 100%;
+      border: none;
+      border-bottom: 1.5px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+      padding: 0 0 9px;
+      font-size: 22px;
+      font-weight: 700;
+      box-sizing: border-box;
+    }
+    #recipeSalesPriceInput { padding-left: 32px; }
+    #recipeNameInput:focus,
+    #recipeSalesPriceInput:focus {
+      outline: none;
+      border-bottom-color: var(--accent);
+    }
+    #recipeNameInput::placeholder,
+    #recipeSalesPriceInput::placeholder {
+      color: var(--text-ghost, #cbd5e1);
+      font-weight: 600;
+    }
+
     /* Mobile Ingredient Picker */
     .mobile-ingredient-swiper {
       flex: 1 1 0;
@@ -1327,7 +1351,8 @@
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required oninput="updateCreateButtonState()" />
 
-        <div style="position:relative; margin-top:20px;">
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; margin-top: 20px; display: block; letter-spacing: 0.05em; text-align: center;">Sell for</label>
+        <div style="position:relative;">
           <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:16px; font-weight:600; pointer-events:none;">$</span>
           <input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" class="recipe-name-input" style="padding-left:32px; box-sizing:border-box;" oninput="updateCost()" />
         </div>
