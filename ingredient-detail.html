@@ -305,6 +305,29 @@
     color: var(--danger);
   }
 
+  @media (max-width: 768px) {
+    .custom-attr-row {
+      gap: 8px;
+      padding: 8px;
+      background: var(--bg-inner);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .custom-attr-row input {
+      min-height: 40px;
+      font-size: 14px;
+      background: var(--bg-panel);
+    }
+    .custom-attr-row button {
+      flex: 0 0 auto;
+      min-width: 40px;
+      min-height: 40px;
+      border-radius: 50%;
+      padding: 0;
+    }
+  }
+
   .stat-box {
     background: var(--bg-inner);
     border: 1px solid var(--border);
@@ -871,14 +894,18 @@
       margin-bottom: 16px;
     }
 
-    /* Buttons section - fixed to bottom, 3-column icon grid */
+    /* Buttons section - fixed to bottom. Only favorite + ⋯ remain visible by
+       default (dup/delete moved into the ⋯ menu below), with the reorder CTA
+       growing to fill the middle when it's shown — flex instead of a fixed
+       3-column grid so hidden buttons don't leave dead gaps. */
     .detail-header > div:last-child {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      display: grid !important;
-      grid-template-columns: 1fr 1fr 1fr;
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
       gap: 8px;
       padding: 12px;
       background: var(--bg-main);
@@ -889,16 +916,18 @@
 
     .detail-header .btn-reorder {
       display: inline-flex !important;
-      width: 100%;
+      flex: 1;
       justify-content: center;
       padding: 10px !important;
     }
 
-    /* Duplicate, Delete and Favorite move into the ⋯ menu on mobile — three
-       icon buttons in a 390px header is the same mis-tap trap Inventory had. */
+    /* Duplicate and Delete move into the ⋯ menu on mobile — three icon
+       buttons in a 390px header is the same mis-tap trap Inventory had.
+       Favorite stays visible in the footer. */
     .detail-dup-btn, .detail-del-btn {
       display: none !important;
     }
+    #starIcon { flex-shrink: 0; }
     .detail-more-btn {
       display: flex; align-items: center; justify-content: center;
       width: 40px; height: 40px; border: none; border-radius: 50%;
