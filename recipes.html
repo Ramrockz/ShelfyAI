@@ -3940,19 +3940,28 @@ function showIngNotification(message, type) {
   setTimeout(() => { n.style.animation='slideInRight 0.3s ease reverse'; setTimeout(()=>n.remove(),300); }, 3000);
 }
 
+// This had drifted from every other copy of this function (ingredients.html,
+// expenses.html, operations.html, settings.html, api/extract-*.js) — an
+// earlier fix (5ca9d55) unified the pool to the real {free:5, starter:100,
+// pro:300} limits shared across ingredients/orders/expenses, but never
+// touched this file. It was still checking only ingredient_count against
+// ingredient-only limits ~5x too generous, so the "LIMIT REACHED" badge
+// here almost never lit up even once the real, unified pool was exhausted
+// (the server-side check in the API still enforces the real limit
+// regardless — this only affects this page's own pre-emptive UI).
 async function checkAIUsage() {
   try {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     if (!session) return null;
     const { data: settings } = await window.supabaseClient.from('user_settings').select('tier').eq('user_id', session.user.id).single();
     const tier = settings?.tier || 'free';
-    const limits = { free: { ingredients: 25 }, starter: { ingredients: 50 }, pro: { ingredients: 100 } };
+    const scanLimits = { free: 5, starter: 100, pro: 300 };
+    const limit = scanLimits[tier] ?? 5;
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const { data: usageRecords } = await window.supabaseClient.from('ai_usage_tracking').select('ingredient_count').eq('user_id', session.user.id).gte('date', `${yearMonth}-01`).lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
-    const used = usageRecords ? usageRecords.reduce((sum, record) => sum + (record.ingredient_count || 0), 0) : 0;
-    const limit = limits[tier].ingredients;
+    const { data: usageRecords } = await window.supabaseClient.from('ai_usage_tracking').select('ingredient_count, order_count, expense_count').eq('user_id', session.user.id).gte('date', `${yearMonth}-01`).lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
+    const used = usageRecords ? usageRecords.reduce((sum, r) => sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0) : 0;
     aiUsageStatus = { used, limit, tier, limitReached: used >= limit };
     return aiUsageStatus;
   } catch (e) { console.error('Error checking AI usage:', e); return null; }
