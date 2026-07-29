@@ -1746,10 +1746,31 @@ async function openModal() {
   updateMethodCardsUI();
 }
 
+// Matches expenses.html's openMethodSelectionModal()/recipes.html's
+// openMethodModal() — the comment this replaced claimed skipping this was
+// "consistent with orders and expenses," which wasn't true even at the
+// time (expenses.html already dims+badges its Upload card here). Both
+// AI-backed methods (image upload, URL import) get the same treatment.
 function updateMethodCardsUI() {
-  // Don't disable AI methods in the UI - let the API handle limits
-  // This makes ingredients consistent with orders and expenses behavior
-  console.log('[Method Cards UI] Skipping frontend blocking - API will handle limits');
+  const limitReached = !!(aiUsageStatus && aiUsageStatus.limitReached);
+  document.querySelectorAll('.method-card').forEach(card => {
+    const img = card.querySelector('img');
+    const isAI = img && (img.alt === 'Upload' || img.alt === 'URL');
+    if (!isAI) return;
+    if (limitReached) {
+      card.style.opacity = '0.6'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
+      if (!card.querySelector('.limit-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'limit-badge';
+        badge.style.cssText = 'position:absolute;top:8px;right:8px;background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;';
+        badge.textContent = 'LIMIT REACHED';
+        card.appendChild(badge);
+      }
+    } else {
+      card.style.opacity = ''; card.style.cursor = ''; card.style.pointerEvents = '';
+      card.querySelector('.limit-badge')?.remove();
+    }
+  });
 }
 
 function closeMethodModal() {
@@ -1757,9 +1778,11 @@ function closeMethodModal() {
 }
 
 function selectMethod(method) {
-  // Don't block AI methods here - let the API handle limits (consistent with orders/expenses)
-  console.log('[Select Method]', method, aiUsageStatus);
-  
+  if ((method === 'image' || method === 'url') && aiUsageStatus && aiUsageStatus.limitReached) {
+    alert(`Monthly AI scan limit reached: you've used all ${aiUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
+    return;
+  }
+
   closeMethodModal();
   if (method === 'manual') {
     document.getElementById('manualModal').classList.add('active');

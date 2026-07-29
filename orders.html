@@ -2767,13 +2767,69 @@ let mappedRecipes = [];
 let orderAIUsageStatus = null;
 
 // --- Method Modal ---
-function openOrderMethodModal() {
+async function checkOrderAIUsage() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return null;
+    const { data: settings } = await supabaseClient
+      .from('user_settings').select('tier, bonus_scans').eq('user_id', session.user.id).single();
+    const tier = settings?.tier || 'free';
+    const bonusScans = settings?.bonus_scans || 0;
+    const scanLimits = { free: 5, starter: 100, pro: 300 };
+    const limit = (scanLimits[tier] ?? 5) + bonusScans;
+
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const { data: usageRecords } = await supabaseClient
+      .from('ai_usage_tracking')
+      .select('ingredient_count, order_count, expense_count')
+      .eq('user_id', session.user.id)
+      .gte('date', `${yearMonth}-01`)
+      .lte('date', `${yearMonth}-${String(lastDay).padStart(2, '0')}`);
+    const used = usageRecords
+      ? usageRecords.reduce((sum, r) => sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0)
+      : 0;
+
+    orderAIUsageStatus = { used, limit, tier, limitReached: used >= limit };
+    return orderAIUsageStatus;
+  } catch (e) {
+    console.error('Error checking AI usage:', e);
+    return null;
+  }
+}
+
+function _orderLimitReachedAlert() {
+  alert(`Monthly AI scan limit reached: you've used all ${orderAIUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
+}
+
+async function openOrderMethodModal() {
   document.getElementById('orderMethodModal').classList.add('active');
+  await checkOrderAIUsage();
+  const card = document.querySelector('#orderMethodModal .method-card img[alt="Upload File"]')?.closest('.method-card');
+  if (!card) return;
+  if (orderAIUsageStatus && orderAIUsageStatus.limitReached) {
+    card.style.opacity = '0.6'; card.style.cursor = 'not-allowed'; card.style.pointerEvents = 'none';
+    if (!card.querySelector('.limit-badge')) {
+      const badge = document.createElement('div');
+      badge.className = 'limit-badge';
+      badge.style.cssText = 'position:absolute;top:8px;right:8px;background:#ef4444;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;';
+      badge.textContent = 'LIMIT REACHED';
+      card.appendChild(badge);
+    }
+  } else {
+    card.style.opacity = ''; card.style.cursor = ''; card.style.pointerEvents = '';
+    card.querySelector('.limit-badge')?.remove();
+  }
 }
 function closeOrderMethodModal() {
   document.getElementById('orderMethodModal').classList.remove('active');
 }
 function selectOrderMethod(method) {
+  if (method === 'upload' && orderAIUsageStatus && orderAIUsageStatus.limitReached) {
+    _orderLimitReachedAlert();
+    return;
+  }
   closeOrderMethodModal();
   if (method === 'manual') {
     openManualOrderModal();
