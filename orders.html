@@ -79,7 +79,6 @@
   .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
   /* ---------- Mobile staged order rows ---------- */
-  .status-chips { display: none; }
   .ord-head { display: flex; align-items: baseline; justify-content: space-between;
               padding: 14px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
               text-transform: uppercase; color: var(--text-muted); }
@@ -174,19 +173,6 @@
   .card-small .order-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
   .card-small .order-date { font-size: 12px; color: var(--text-muted); }
   
-  .status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-  .status-processed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-  .status-fulfilled { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-  .status-shipped { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-  .status-refunded { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
   .card-small .divider { height: 1px; background: var(--border); margin: auto 0 16px 0; }
   .card-actions { display: flex; gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; }
   .card-actions span { cursor: pointer; text-transform: uppercase; }
@@ -235,38 +221,6 @@
     transition: 0.2s;
   }
   .btn-action:hover { border-color: var(--accent); background: var(--bg-panel); }
-
-  /* ---------- KANBAN VIEW ---------- */
-  .kanban-board {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-  }
-  .kanban-col {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    min-height: 500px;
-  }
-  .kanban-card {
-    background: var(--bg-inner);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    cursor: grab;
-    transition: 0.2s;
-  }
-  .kanban-card:active {
-    cursor: grabbing;
-  }
-  .kanban-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-  }
-  .kanban-card h5 { margin: 0 0 8px 0; font-size: 14px; }
-  .kanban-card p { margin: 4px 0; font-size: 12px; color: var(--text-muted); }
 
   /* ---------- MODALS ---------- */
   .modal-overlay { 
@@ -845,9 +799,8 @@
       display: none !important;
     }
 
-    /* Hide List and Kanban views on mobile */
-    #listView,
-    #kanbanView {
+    /* Hide List view on mobile */
+    #listView {
       display: none !important;
     }
 
@@ -860,12 +813,6 @@
       display: block !important;
       margin: 0 -16px;
     }
-
-    .status-chips { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
-    .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
-             border-radius: 17px; border: 1px solid var(--border); background: var(--bg-panel);
-             color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-    .schip.active { background: var(--text-main); color: var(--bg-panel); border-color: var(--text-main); }
 
     .nav-add-btn {
       display: flex; align-items: center; justify-content: center;
@@ -1154,13 +1101,6 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
-    <!-- Mobile order-stage chips -->
-    <div class="status-chips">
-      <button class="schip active" data-stage="open" onclick="filterByStage('open')">Open</button>
-      <button class="schip" data-stage="shipped" onclick="filterByStage('shipped')">Shipped</button>
-      <button class="schip" data-stage="refunded" onclick="filterByStage('refunded')">Refunded</button>
-    </div>
-
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px;">
         <div class="view-switcher">
@@ -1188,7 +1128,6 @@
             <th class="sortable" onclick="sortTable('revenue')" style="width: 10%;">Revenue</th>
             <th style="width: 15%;">Order Ref</th>
             <th style="width: 15%;">Tracking</th>
-            <th style="width: 10%;">Status</th>
             <th style="width: 8%;">Action</th>
           </tr>
         </thead>
@@ -1197,24 +1136,6 @@
       <div id="paginationContainer" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px;"></div>
     </div>
 
-    <div id="kanbanView" class="kanban-board" style="display:none">
-      <div class="kanban-col">
-        <div style="font-size:10px; color:#3b82f6; font-weight:800; margin-bottom:12px;">PROCESSED</div>
-        <div id="processed"></div>
-      </div>
-      <div class="kanban-col">
-        <div style="font-size:10px; color:#f59e0b; font-weight:800; margin-bottom:12px;">FULFILLED</div>
-        <div id="fulfilled"></div>
-      </div>
-      <div class="kanban-col">
-        <div style="font-size:10px; color:#10b981; font-weight:800; margin-bottom:12px;">SHIPPED</div>
-        <div id="shipped"></div>
-      </div>
-      <div class="kanban-col">
-        <div style="font-size:10px; color:#ef4444; font-weight:800; margin-bottom:12px;">REFUNDED</div>
-        <div id="refunded"></div>
-      </div>
-    </div>
   </main>
 
 </div>
@@ -1551,7 +1472,7 @@ function renderRecent(filtered) {
   if (fab) fab.style.display = '';
 
   if (window.innerWidth <= 768) {
-    renderRecentStaged(filtered, container);
+    renderRecentByMonth(filtered, container);
     return;
   }
   container.classList.remove('ord-staged');
@@ -1562,7 +1483,7 @@ function renderRecent(filtered) {
   container.innerHTML = displayData.map(order => {
     const date = new Date(order.sale_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const channel = _realChannel(order.source);
-    const metaParts = [date, channel, _statusBadge(order.status)].filter(Boolean);
+    const metaParts = [date, channel].filter(Boolean);
 
     return `
       <div class="card-small" onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}">
@@ -1630,75 +1551,55 @@ function orderRow(o) {
     </div>`;
 }
 
-let activeOrderStage = 'open'; // 'open' | 'shipped' | 'refunded'
-
-function filterByStage(stage) {
-  activeOrderStage = stage;
-  document.querySelectorAll('.schip[data-stage]').forEach(chip => {
-    chip.classList.toggle('active', chip.dataset.stage === stage);
-  });
-  cardsToShow = 10;
-  render();
-}
-
-function renderRecentStaged(filtered, container) {
+// Mobile: orders grouped by month with a per-month revenue total, matching
+// expenses.html's ledger — replaces the old status-stage grouping (no more
+// "status" as a first-class concept here; _stage()/orderRow()'s advance
+// button still exist per-row since that's a real action, not a display).
+function renderRecentByMonth(filtered, container) {
   container.classList.add('ord-staged');
 
-  const stageFiltered = filtered.filter(o => {
-    const s = _stage(o).stage;
-    if (activeOrderStage === 'shipped') return s === 'done';
-    if (activeOrderStage === 'refunded') return s === 'refunded';
-    return s === 'pack' || s === 'ship' || s === 'done'; // 'open'
+  const displayData = filtered.slice(0, cardsToShow);
+  const hasMore = filtered.length > cardsToShow;
+
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const monthLabel = d => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Revenue per month is summed over the FULL filtered set, not just the
+  // paginated slice, so a month's total doesn't shrink as more orders load.
+  const monthRevenue = new Map();
+  filtered.forEach(o => {
+    const d = new Date(o.sale_date);
+    if (isNaN(d)) return;
+    const key = monthKey(d);
+    monthRevenue.set(key, (monthRevenue.get(key) || 0) + parseFloat(o.revenue || 0));
   });
 
-  const displayData = stageFiltered.slice(0, cardsToShow);
-  const hasMore = stageFiltered.length > cardsToShow;
+  // orders is already sorted by sale_date desc, so grouping in encounter
+  // order keeps months newest-first without an extra sort.
+  const months = new Map();
+  displayData.forEach(o => {
+    const d = new Date(o.sale_date);
+    const key = isNaN(d) ? 'unknown' : monthKey(d);
+    if (!months.has(key)) months.set(key, { label: isNaN(d) ? 'Unknown date' : monthLabel(d), items: [] });
+    months.get(key).items.push(o);
+  });
 
-  if (activeOrderStage !== 'open') {
-    // Shipped/Refunded tabs: a flat archive, most-recent first (orders is
-    // already loaded sorted by sale_date desc, so no extra sort needed).
-    container.innerHTML = displayData.length ? displayData.map(orderRow).join('') : `
-      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:60px 20px;">
-        <p style="color:var(--text-muted); font-size:15px; margin:0;">No ${activeOrderStage} orders</p>
+  let html = '';
+  months.forEach((group, key) => {
+    html += `<div class="ord-head">
+        <span>${group.label}</span><span class="ord-head-right">$${(monthRevenue.get(key) || 0).toFixed(2)}</span>
       </div>`;
-  } else {
-    const byStage = s => displayData
-      .filter(o => _stage(o).stage === s)
-      .sort((a, b) => new Date(a.sale_date) - new Date(b.sale_date));
-    const toPack = byStage('pack'), toShip = byStage('ship'), done = byStage('done');
-    const sum = list => list.reduce((n, o) => n + parseFloat(o.revenue || 0), 0);
-    const head = (label, count, right) => `<div class="ord-head">
-        <span>${label} · ${count}</span>${right ? `<span class="ord-head-right">${right}</span>` : ''}
-      </div>`;
+    html += group.items.map(orderRow).join('');
+  });
 
-    let html = '';
-    if (toPack.length) {
-      html += head('To pack', toPack.length, `$${sum(toPack).toFixed(2)}`);
-      html += toPack.map(orderRow).join('');
-    }
-    if (toShip.length) {
-      html += head('To ship', toShip.length);
-      html += toShip.map(orderRow).join('');
-    }
-    if (done.length) {
-      html += `<div class="ord-head"><span>Done</span></div>
-        <div class="ord-row ord-row-done" onclick="filterByStage('shipped')">
-          <span class="ord-main">
-            <span class="ord-name">Shipped</span>
-            <span class="ord-meta">${done.length} order${done.length !== 1 ? 's' : ''} · $${sum(done).toFixed(2)}</span>
-          </span>
-          <svg class="ord-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
-        </div>`;
-    }
-    container.innerHTML = html || `
-      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:60px 20px;">
-        <p style="color:var(--text-muted); font-size:15px; margin:0;">Nothing to pack or ship right now</p>
-      </div>`;
-  }
+  container.innerHTML = html || `
+    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:60px 20px;">
+      <p style="color:var(--text-muted); font-size:15px; margin:0;">No orders match your search</p>
+    </div>`;
 
   if (hasMore) {
     container.innerHTML += `<div style="display: flex; justify-content: center; margin-top: 20px;">
-        <button onclick="showMoreOrders()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${stageFiltered.length - cardsToShow} remaining)</button>
+        <button onclick="showMoreOrders()" style="padding: 12px 32px; background: var(--bg-panel); color: var(--text-main); border: 2px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Show More (${filtered.length - cardsToShow} remaining)</button>
       </div>`;
   }
 }
@@ -1781,7 +1682,6 @@ function renderList(filtered) {
     const actualIndex = startIndex + index + 1;
     const date = new Date(order.sale_date).toLocaleDateString();
     const status = order.status || 'processed';
-    const statusBadge = _statusBadge(status);
     const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">📦 ${order.tracking_number}</span>` : '-';
     
     // Show buttons based on status
@@ -1805,7 +1705,6 @@ function renderList(filtered) {
         <td><strong>$${parseFloat(order.revenue || 0).toFixed(2)}</strong></td>
         <td>${order.order_reference || '-'}</td>
         <td>${trackingDisplay}</td>
-        <td>${statusBadge}</td>
         <td>${actionButtons}</td>
       </tr>
     `;
@@ -3089,20 +2988,10 @@ function _realChannel(source) {
   return ORDER_CHANNELS.includes(source) ? source : null;
 }
 
-const ORDER_STATUS_COLORS = {
-  processed: { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
-  fulfilled: { bg: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' },
-  shipped: { bg: 'rgba(16, 185, 129, 0.1)', color: '#10b981' },
-  refunded: { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }
-};
-function _statusBadge(status) {
-  status = status || 'processed';
-  const style = ORDER_STATUS_COLORS[status] || ORDER_STATUS_COLORS.processed;
-  return `<span style="display: inline-block; padding: 2px 10px; background: ${style.bg}; color: ${style.color}; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;">${status}</span>`;
-}
-
-// db value -> what the seller is about to do (mobile staged view only;
-// renderList/order-detail.html still show the raw status via _statusBadge)
+// db value -> what the seller is about to do next; drives orderRow()'s
+// advance button. Status itself is no longer shown anywhere as its own
+// display concept — only used to power this and the fulfill/ship/refund
+// actions.
 const ORDER_STAGE = {
   processed: { stage: 'pack', label: 'To pack', next: 'fulfilled', nextLabel: 'Pack' },
   fulfilled: { stage: 'ship', label: 'To ship', next: 'shipped',   nextLabel: 'Ship' },
