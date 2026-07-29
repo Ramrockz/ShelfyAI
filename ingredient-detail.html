@@ -110,8 +110,10 @@
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
   .drow-value.empty { font-size: 13.5px; font-weight: 400; color: var(--text-muted); }
   .drow-chev { color: var(--border); flex-shrink: 0; }
-  .drow-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px;
+  .drow-chip { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px;
                border-radius: 6px; background: var(--bg-inner); font-size: 12px; font-weight: 600; }
+  .drow-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0;
+                 box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
   .drow-more { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
 
   .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
@@ -392,20 +394,21 @@
       font-size: 11px !important; font-weight: 700; letter-spacing: 0.07em;
       text-transform: uppercase; color: var(--text-muted);
     }
-    .recipe-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .recipe-pills { display: flex; flex-wrap: wrap; gap: 7px; }
     .recipe-pill {
-      display: inline-flex; align-items: center; height: 30px; padding: 0 12px;
-      border-radius: 99px; background: var(--bg-inner); border: 1px solid var(--border);
+      display: inline-flex; align-items: center; height: 34px; padding: 0 12px;
+      border-radius: 99px; background: var(--bg-panel); border: 1px solid var(--border);
       color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
 
     /* Matches the mockup: Used in Products is a plain label + pills, no
-       card chrome. Custom Attributes moves entirely into the Attributes
-       row's edit sheet (attrRow()/openAttrSheet()) — the old raw editor
-       panel is desktop-only now. */
+       card chrome — just the same horizontal inset as everything else.
+       Custom Attributes moves entirely into the Attributes row's edit
+       sheet (attrRow()/openAttrSheet()) — the old raw editor panel is
+       desktop-only now. */
     #usedInProductsPanel {
       background: none !important; border: none !important; border-radius: 0 !important;
-      padding: 0 !important; margin-top: 20px !important;
+      padding: 16px 16px 4px !important; margin-top: 0 !important;
     }
     #customAttributesPanel { display: none !important; }
   }
@@ -2579,9 +2582,18 @@
       </div>`;
   }
 
+  // Known colour names get a small swatch dot in their chip — anything else
+  // (sizes, materials, etc.) is just text. Not the inventory-row swatch
+  // feature that was reverted; this is the item-detail Attributes row only.
+  const _ATTR_SWATCH = { Black: '#0f172a', White: '#ffffff', Teal: '#0e7490', Navy: '#1e3a8a', Grey: '#94a3b8', Gray: '#94a3b8' };
+  function _attrSwatch(v) {
+    const hex = _ATTR_SWATCH[v];
+    return hex ? `<span class="drow-swatch" style="background:${hex}"></span>` : '';
+  }
+
   function attrRow() {
     const entries = Object.entries(customAttributes || {}).filter(([, v]) => v);
-    const chips = entries.slice(0, 2).map(([, v]) => `<span class="drow-chip">${escapeHtml(v)}</span>`).join('');
+    const chips = entries.slice(0, 2).map(([, v]) => `<span class="drow-chip">${_attrSwatch(v)}${escapeHtml(v)}</span>`).join('');
     return `<div class="drow" onclick="openAttrSheet()">
         <span class="drow-label">Attributes</span>
         <span class="drow-value${entries.length ? '' : ' empty'}">${chips || 'None'}</span>

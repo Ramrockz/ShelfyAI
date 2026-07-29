@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v144';
+const CACHE_NAME = 'shelfy-v145';
 
 const STATIC_ASSETS = [
   '/',
@@ -95,10 +95,14 @@ self.addEventListener('fetch', (event) => {
   //     auth.js "controllerchange" listener reloads the page automatically.
   //
   if (isDocument) {
+    // no-store: without it, fetch() can be satisfied by the browser's own
+    // HTTP cache, so "revalidation" silently re-caches the same stale bytes
+    // instead of pulling the latest deploy — bypass it and always hit the
+    // network directly.
     event.respondWith(
       caches.match(event.request).then((cached) => {
         // Revalidate in the background even when serving from cache
-        const networkUpdate = fetch(event.request).then((response) => {
+        const networkUpdate = fetch(event.request, { cache: 'no-store' }).then((response) => {
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
@@ -112,7 +116,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         // No cache yet — wait for the network.
-        return fetch(event.request).then((response) => {
+        return fetch(event.request, { cache: 'no-store' }).then((response) => {
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
