@@ -902,8 +902,9 @@
       order: 2;
     }
 
-    /* Title section */
-    .detail-header > div:first-child {
+    /* Title section — targeted by class, not :first-child, since the back
+       button (added later) is the actual first child of .detail-header now. */
+    .detail-header-title {
       margin-bottom: 16px;
     }
 
@@ -1645,18 +1646,24 @@
 
     updateCatChips();
 
-    // Custom attributes
+    // Custom attributes — render unconditionally, not just when the item has
+    // some already. Desktop's #customAttributes div has "No custom
+    // attributes" hard-coded into its static markup, so skipping the render
+    // there was invisible; the mobile #attrSheet's list has no such fallback
+    // text, so it opened blank for every item that didn't already have one.
     if (ing.custom_attributes) {
       try {
-        customAttributes = typeof ing.custom_attributes === 'string' 
-          ? JSON.parse(ing.custom_attributes) 
+        customAttributes = typeof ing.custom_attributes === 'string'
+          ? JSON.parse(ing.custom_attributes)
           : ing.custom_attributes;
-        renderCustomAttributes();
       } catch (e) {
         console.error('Error parsing custom attributes:', e);
         customAttributes = {};
       }
+    } else {
+      customAttributes = {};
     }
+    renderCustomAttributes();
 
     // Update stats
     updateStatsDisplay();
@@ -2039,11 +2046,6 @@
         showAlert('Failed to capture screenshot: ' + error.message);
       }
     }
-  }
-
-  async function skipExpenseUpload() {
-    document.getElementById('expenseUploadSection').style.display = 'none';
-    await completeReorder();
   }
 
   async function uploadExpenseAndComplete() {
