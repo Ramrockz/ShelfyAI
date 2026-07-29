@@ -763,37 +763,16 @@
   .items-desktop-table { display: table; }
   .items-mobile-list   { display: none; }
 
-  /* Mobile Bottom CTAs */
-  .mobile-bottom-ctas {
+  /* Mobile-only elements — hidden by default; the <=768px media query
+     turns each on. Without this, a bare <div> defaults to display:block
+     and these would render on desktop too, above/alongside the real
+     desktop layout they're meant to replace only at narrow widths. */
+  .ord-mobile-header,
+  .ord-more-menu,
+  .ord-info-rows,
+  .msec,
+  .ord-action-bar {
     display: none;
-  }
-
-  .mobile-cta-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-panel);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .mobile-cta-btn svg,
-  .mobile-cta-btn i {
-    width: 20px;
-    height: 20px;
-    stroke-width: 2;
-  }
-
-  .mobile-cta-btn.delete {
-    color: var(--danger);
-    border-color: rgba(239, 68, 68, 0.3);
-  }
-
-  .mobile-cta-btn:active {
-    transform: scale(0.95);
   }
 
   /* Recipe Cards for Mobile */
@@ -1058,29 +1037,6 @@
       display: none !important;
     }
 
-    .mobile-bottom-ctas {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      padding: 12px;
-      position: fixed;
-      bottom: 60px;
-      left: 0;
-      right: 0;
-      background: var(--bg-main);
-      border-top: 1px solid var(--border);
-      z-index: 999;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    }
-
-    #receiptPanel {
-      margin-bottom: 160px;
-    }
-
-    .mobile-cta-btn:not(.delete) {
-      color: var(--accent);
-      border-color: rgba(6, 182, 212, 0.3);
-    }
 
     .panel {
       padding: 16px;
@@ -1144,6 +1100,142 @@
     *::-webkit-scrollbar {
       display: none; /* Chrome, Safari, Opera */
     }
+
+    /* Old desktop order-info section is replaced by #ordMobileHeader +
+       #ordInfoRows below — hide it here so both don't show at once. */
+    #orderInfoSection { display: none !important; }
+    #revenuePanel { display: none !important; }
+    #itemsSectionHeader { display: none !important; }
+    #ordPackHeader { display: flex !important; }
+
+    /* Mobile header block: customer, total, stage strip, ⋯ menu */
+    .ord-mobile-header {
+      display: block; background: var(--bg-panel); border-radius: 12px;
+      padding: 6px 16px 16px; margin-bottom: 16px; border: 1px solid var(--border);
+    }
+    .ord-head-top { display: flex; justify-content: flex-end; }
+    .ord-more-btn {
+      width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
+      background: transparent; color: var(--text-main); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ord-head { display: flex; align-items: flex-start; gap: 10px; }
+    .ord-head-main { flex: 1; min-width: 0; }
+    .ord-customer {
+      font-size: 18px; font-weight: 800; letter-spacing: -.01em; cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+    .ord-total { font-size: 20px; font-weight: 800; letter-spacing: -.01em; flex-shrink: 0; color: var(--success); }
+
+    .ord-more-menu {
+      display: none; position: fixed; z-index: 10200; right: 16px;
+      top: calc(env(safe-area-inset-top, 0px) + 64px);
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 6px; min-width: 190px;
+    }
+    .ord-more-menu.open { display: block; }
+    .ord-more-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 10px 12px; border: none; background: none; border-radius: 10px;
+      color: var(--text-main); font-family: inherit; font-size: 14px; font-weight: 600;
+      text-align: left; cursor: pointer;
+    }
+    .ord-more-item:active { background: var(--bg-inner); }
+    .ord-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
+    .ord-more-item-danger, .ord-more-item-danger svg { color: var(--danger); }
+
+    /* Stage strip */
+    #ordStageStrip { display: flex; align-items: center; gap: 7px; margin-top: 13px; }
+    .stage-step { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .stage-bar { height: 4px; border-radius: 99px; background: var(--bg-inner); }
+    .stage-step.on .stage-bar { background: var(--accent); }
+    .stage-label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); letter-spacing: .02em; }
+    .stage-step.cur .stage-label { font-weight: 800; color: var(--accent); }
+    .stage-refunded {
+      font-size: 12px; font-weight: 800; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--danger); margin-top: 13px; display: block;
+    }
+
+    /* Info rows: Channel / Reference / Revenue / Tracking */
+    .ord-info-rows { display: block; margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    .ord-drow {
+      display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
+      padding: 0 14px 0 16px; text-align: left; background: var(--bg-panel);
+      border: none; cursor: pointer;
+    }
+    .ord-drow + .ord-drow { border-top: 1px solid var(--border); }
+    .ord-drow-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
+    .ord-drow-value { font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: var(--text-main); }
+    .ord-drow-chev { color: var(--border); flex-shrink: 0; }
+
+    /* Pack list */
+    .msec { display: none; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; }
+    .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+    .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); }
+    .pack-row {
+      display: flex; align-items: center; gap: 13px; min-height: 62px;
+      padding: 10px 14px; background: var(--bg-panel);
+      border-top: 1px solid var(--border); box-sizing: border-box;
+    }
+    .pack-row:first-child { border-top: none; border-radius: 12px 12px 0 0; }
+    .pack-row:last-child { border-radius: 0 0 12px 12px; }
+    .pack-row:only-child { border-radius: 12px; }
+    .pack-check {
+      position: relative; width: 26px; height: 26px; flex-shrink: 0; padding: 0;
+      border: 2px solid var(--border); border-radius: 8px; background: transparent;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .pack-row.packed .pack-check { background: var(--accent); border-color: var(--accent); }
+    .pack-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
+    .pack-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pack-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .pack-qty { font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); flex-shrink: 0; }
+    .pack-row.packed .pack-name, .pack-row.packed .pack-qty { color: var(--text-muted); }
+    .pack-chev { color: var(--border); flex-shrink: 0; }
+
+    /* Single primary action bar — replaces .mobile-bottom-ctas */
+    .ord-action-bar {
+      display: block; position: fixed; bottom: 60px; left: 0; right: 0; z-index: 999;
+      padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg-main); border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    .ord-action-bar:empty { display: none; }
+    .ord-primary {
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      width: 100%; height: 50px; border: none; border-radius: 14px;
+      background: var(--accent); color: #fff; cursor: pointer;
+      font-size: 15px; font-weight: 800; letter-spacing: -.01em;
+    }
+    #receiptPanel { margin-bottom: 220px; }
+
+    /* Item / channel / one-field sheets */
+    .sheet-qty { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; }
+    .sheet-qty button {
+      width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--border);
+      background: var(--bg-inner); font-size: 26px; line-height: 1; cursor: pointer; color: var(--text-main);
+      font-family: inherit;
+    }
+    .sheet-qty output {
+      flex: 1; height: 52px; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; border: 1px solid var(--border);
+      border-radius: 14px; background: var(--bg-inner); color: var(--text-main);
+    }
+    .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 4px;
+               border-radius: 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+               font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text-main); }
+    .cat-row.active { color: var(--accent); }
+    .cat-row img, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); }
   }
 
   @media (max-width: 480px) {
@@ -1300,8 +1392,41 @@
 </script>
 
 <div class="container">
-  
+
   <div class="main-grid">
+
+    <!-- Mobile-only header: customer, total, stage strip, ⋯ menu.
+         Replaces the squeezed desktop form fields below (#orderInfoSection),
+         which are hidden at <=768px so the two don't show simultaneously. -->
+    <div class="ord-mobile-header" id="ordMobileHeader">
+      <div class="ord-head-top">
+        <button class="ord-more-btn" id="ordMoreBtn" onclick="toggleOrdMoreMenu(); event.stopPropagation();" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+        </button>
+      </div>
+      <div class="ord-head">
+        <div class="ord-head-main">
+          <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
+          <div class="ord-meta" id="ordMeta"></div>
+        </div>
+        <div class="ord-total" id="ordTotalDisplay">$0.00</div>
+      </div>
+      <div id="ordStageStrip"></div>
+    </div>
+    <div class="ord-more-menu" id="ordMoreMenu">
+      <button type="button" class="ord-more-item" onclick="closeOrdMoreMenu(); openRecipeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Add item</span>
+      </button>
+      <button type="button" class="ord-more-item" id="ordMenuRefund" onclick="closeOrdMoreMenu(); showStatusModal('refunded')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
+        <span>Refund order</span>
+      </button>
+      <button type="button" class="ord-more-item ord-more-item-danger" onclick="closeOrdMoreMenu(); showDeleteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        <span>Delete order</span>
+      </button>
+    </div>
 
     <!-- Revenue Panel (first in DOM = first on mobile) -->
     <div id="revenuePanel" class="panel" style="padding: 24px;">
@@ -1314,7 +1439,7 @@
     <!-- Left Column: Order Details -->
     <div id="leftColumn">
 
-      <div class="form-section">
+      <div class="form-section" id="orderInfoSection">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Order Details</h2>
@@ -1369,15 +1494,23 @@
         </div>
       </div>
 
+      <!-- Mobile-only: Channel/Reference/Revenue/Tracking as tappable rows -->
+      <div class="ord-info-rows" id="ordInfoRows"></div>
+
       <div class="form-section recipes-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Included Products</h3>
           <button onclick="openRecipeModal()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
             <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
             Add
           </button>
         </div>
-        
+        <!-- Mobile-only: replaces itemsSectionHeader above -->
+        <div class="msec" id="ordPackHeader">
+          <span class="msec-title">Pack list</span>
+          <span class="msec-aside" id="ordPackProgress"></span>
+        </div>
+
         <!-- Desktop Table -->
         <table id="itemsTable" class="items-desktop-table">
           <thead>
@@ -1412,16 +1545,42 @@
   </div>
 </div>
 
-<!-- Mobile Bottom CTAs -->
-<div class="mobile-bottom-ctas">
-  <div class="mobile-cta-btn delete" onclick="showDeleteModal()" title="Delete">
-    <i data-lucide="trash-2"></i>
+<!-- Mobile-only: single primary action (Refund/Delete moved into the ⋯ menu
+     above — three permanently-visible icon buttons regardless of status was
+     the same mis-tap risk already fixed on the other detail pages, and it
+     never hid "Mark as Shipped"/"Refund" once an order was already shipped
+     or refunded, unlike the desktop header buttons it was meant to mirror. -->
+<div class="ord-action-bar" id="ordActionBar"></div>
+
+<!-- Item sheet (mobile pack list) — stepper + remove for one line item -->
+<div class="modal-overlay modal-sheet" id="ordItemSheet" onclick="if(event.target===this)closeItemSheet()">
+  <div class="modal-content">
+    <div class="rdm-sheet-name" id="ordItemSheetName" style="font-size:17px;font-weight:800;letter-spacing:-.01em;"></div>
+    <div class="rdm-sheet-stock" id="ordItemSheetSub" style="font-size:12.5px;color:var(--text-muted);margin-top:4px;"></div>
+    <div class="sheet-qty">
+      <button type="button" onclick="ordItemSheetQty(-1)" aria-label="Decrease">&minus;</button>
+      <output id="ordItemSheetQty">1</output>
+      <button type="button" onclick="ordItemSheetQty(1)" aria-label="Increase">+</button>
+    </div>
+    <p class="ord-drow-label" style="margin:8px 0 0;">Quantity ordered</p>
+    <button type="button" class="rdm-sheet-act" style="display:block;width:100%;height:50px;margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--bg-inner);font-size:15px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:inherit;" onclick="ordItemSheetRemove()">Remove from order</button>
   </div>
-  <div class="mobile-cta-btn" onclick="showStatusModal('refunded')" title="Refund">
-    <i data-lucide="undo-2"></i>
+</div>
+
+<!-- Channel sheet (mobile) — same channels/write as the desktop chip grid -->
+<div class="modal-overlay modal-sheet" id="ordChannelSheet" onclick="if(event.target===this)closeOrdChannelSheet()">
+  <div class="modal-content">
+    <h3 style="margin:0 0 12px;font-size:16px;">Sales Channel</h3>
+    <div id="ordChannelList"></div>
   </div>
-  <div class="mobile-cta-btn" onclick="showTrackingModal()" title="Mark as Shipped">
-    <i data-lucide="package"></i>
+</div>
+
+<!-- One-field sheet (mobile) — Customer / Reference / Revenue / Tracking -->
+<div class="modal-overlay modal-sheet" id="ordFieldSheet" onclick="if(event.target===this)closeOrderFieldSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label" id="ordFieldSheetLabel"></label>
+    <input id="ordFieldSheetInput" class="form-input" style="font-size:16px">
+    <button class="drow-edit-save" onclick="saveOrderField()">Save</button>
   </div>
 </div>
 
@@ -1739,34 +1898,35 @@ function displayOrder() {
       `;
     }).join('');
     
-    // Mobile cards — same style as expense-detail "Involved Items"
+    // Mobile: pack list — a checkable row (packed state is a per-order
+    // localStorage scratchpad, not a DB column) that opens an item sheet
+    // for the stepper/remove actions instead of cramming them into the row.
+    const packedSet = _packedSet();
     cardsContainer.innerHTML = items.map((item, index) => {
       const itemName = item.name || 'Custom item';
       const quantity = item.quantity || 0;
       const price = parseFloat(item.price || 0);
-      const lineTotal = (price * quantity).toFixed(2);
-
+      const packed = packedSet.has(index);
+      const sub = price ? `$${price.toFixed(2)} each` : 'free gift';
       return `
-        <div style="background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <div style="font-weight: 700; font-size: 15px; color: var(--text-main); flex: 1; margin-right: 8px;">${itemName}</div>
-            <button onclick="removeRecipeItem(${index})" style="padding: 4px; background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0;" title="Remove">
-              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-            </button>
-          </div>
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button onclick="changeOrderItemQty(${index},-1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">&minus;</button>
-              <span style="min-width: 36px; text-align: center; font-weight: 700; font-size: 16px;">${quantity}</span>
-              <button onclick="changeOrderItemQty(${index},1)" style="width: 32px; height: 32px; background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center;">+</button>
-            </div>
-            <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">$${lineTotal}</div>
-          </div>
-        </div>
-      `;
+        <div class="pack-row${packed ? ' packed' : ''}">
+          <button class="pack-check" onclick="togglePacked(${index})" aria-pressed="${packed}" aria-label="Packed">${packed ? _packCheckIcon : ''}</button>
+          <button class="pack-main" onclick="openItemSheet(${index})">
+            <span class="pack-name">${_escHtml(itemName)}</span>
+            <span class="pack-sub">${sub}</span>
+          </button>
+          <span class="pack-qty">&times;${quantity}</span>
+          <svg class="pack-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>`;
     }).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+
+  renderOrdMobileHeader();
+  renderOrdStageStrip();
+  renderOrdInfoRows();
+  renderOrdPrimaryAction();
+  renderPackProgress();
 
   // Display notes if present
   if (orderData.notes) {
@@ -1775,6 +1935,240 @@ function displayOrder() {
   }
 
   displayReceiptSection();
+}
+
+// ============================================================
+// Mobile-only: header block, stage strip, info rows, pack list,
+// primary action bar, ⋯ menu. Every write routes through a function
+// that already exists (updateOrderStatus, selectChannel,
+// changeOrderItemQty, removeRecipeItem) — nothing new touches the DB
+// except the one-field sheet writer (saveOrderField), which mirrors
+// makeEditable()'s update+updated_at-stamp pattern for the same reason
+// makeEditable does it: the orders list only re-renders a row when its
+// id+updated_at fingerprint changes.
+// ============================================================
+
+function _escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const _packCheckIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+// Packed state is a per-order scratchpad, not a DB column — there's no
+// per-item column to write it to, and it doesn't need to sync anywhere else.
+const _packKey = () => `shelfy.packed.${orderId}`;
+function _packedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem(_packKey()) || '[]')); }
+  catch { return new Set(); }
+}
+function togglePacked(index) {
+  const set = _packedSet();
+  set.has(index) ? set.delete(index) : set.add(index);
+  localStorage.setItem(_packKey(), JSON.stringify([...set]));
+  displayOrder();
+}
+function renderPackProgress() {
+  const el = document.getElementById('ordPackProgress');
+  if (!el || !orderData) return;
+  const items = Array.isArray(orderData.items) ? orderData.items : [];
+  const done = [..._packedSet()].filter(i => i < items.length).length;
+  el.textContent = items.length ? `${done} of ${items.length} packed` : '';
+}
+
+function renderOrdMobileHeader() {
+  if (!orderData) return;
+  const nameEl = document.getElementById('ordCustomerName');
+  if (nameEl) nameEl.textContent = orderData.customer || 'Unknown';
+  const totalEl = document.getElementById('ordTotalDisplay');
+  if (totalEl) totalEl.textContent = `$${parseFloat(orderData.revenue || 0).toFixed(2)}`;
+  const metaEl = document.getElementById('ordMeta');
+  if (metaEl) {
+    const items = Array.isArray(orderData.items) ? orderData.items : [];
+    const qty = items.reduce((s, i) => s + (i.quantity || 0), 0);
+    const d = orderData.sale_date ? new Date(orderData.sale_date) : null;
+    metaEl.textContent = [
+      orderData.source || 'Website',
+      d && !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
+      `${qty} item${qty !== 1 ? 's' : ''}`
+    ].filter(Boolean).join(' · ');
+  }
+}
+
+// processed/fulfilled/shipped map 1:1 onto 3 milestones, so this shows what's
+// already done, not just "what's next" (orders.html's ORDER_STAGE is the
+// latter — a single current-stage label — which is why its wording doesn't
+// carry over directly here).
+function renderOrdStageStrip() {
+  const el = document.getElementById('ordStageStrip');
+  if (!el || !orderData) return;
+  const status = orderData.status || 'processed';
+  if (status === 'refunded') {
+    el.innerHTML = '<span class="stage-refunded">Refunded</span>';
+    return;
+  }
+  const stages = ['Order placed', 'Packed', 'Shipped'];
+  const active = status === 'shipped' ? 2 : status === 'fulfilled' ? 1 : 0;
+  el.innerHTML = stages.map((s, i) =>
+    `<span class="stage-step${i <= active ? ' on' : ''}${i === active ? ' cur' : ''}">
+       <span class="stage-bar"></span><span class="stage-label">${s}</span>
+     </span>`).join('');
+}
+
+function renderOrdInfoRows() {
+  const el = document.getElementById('ordInfoRows');
+  if (!el || !orderData) return;
+  const rows = [
+    ['Channel', _escHtml(orderData.source || 'Website'), "openOrdChannelSheet()"],
+    ['Reference', _escHtml(orderData.order_reference || 'N/A'), "openOrderFieldSheet('order_reference','Reference')"],
+    ['Revenue', `$${parseFloat(orderData.revenue || 0).toFixed(2)}`, "openOrderFieldSheet('revenue','Revenue')"]
+  ];
+  if (orderData.tracking_number) {
+    rows.push(['Tracking', _escHtml(orderData.tracking_number), "openOrderFieldSheet('tracking_number','Tracking number')"]);
+  }
+  el.innerHTML = rows.map(([label, value, fn]) => `
+    <button type="button" class="ord-drow" onclick="${fn}">
+      <span class="ord-drow-label">${label}</span>
+      <span class="ord-drow-value">${value}</span>
+      <svg class="ord-drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>`).join('');
+}
+
+// The single status gate on mobile — Refund/Delete live in the ⋯ menu now,
+// so this bar only ever needs to show the one action the current status
+// actually implies (mirrors the desktop #btnShipped/#btnRefunded pair, which
+// the old .mobile-bottom-ctas bar didn't: it kept showing "Mark as Shipped"
+// and "Refund" even after an order was already shipped or refunded).
+function renderOrdPrimaryAction() {
+  const bar = document.getElementById('ordActionBar');
+  const menuRefund = document.getElementById('ordMenuRefund');
+  if (!bar || !orderData) return;
+  const status = orderData.status || 'processed';
+  if (status === 'processed' || status === 'fulfilled') {
+    bar.innerHTML = `<button type="button" class="ord-primary" onclick="showTrackingModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Mark as shipped
+    </button>`;
+  } else if (status === 'shipped' && !orderData.tracking_number) {
+    bar.innerHTML = `<button type="button" class="ord-primary" onclick="showTrackingModal()">Add tracking number</button>`;
+  } else {
+    bar.innerHTML = '';
+  }
+  if (menuRefund) menuRefund.style.display = status === 'refunded' ? 'none' : 'flex';
+}
+
+// ⋯ menu
+function toggleOrdMoreMenu() {
+  const menu = document.getElementById('ordMoreMenu');
+  const btn = document.getElementById('ordMoreBtn');
+  if (!menu || !btn) return;
+  if (menu.classList.contains('open')) { closeOrdMoreMenu(); return; }
+  menu.classList.add('open');
+  btn.setAttribute('aria-expanded', 'true');
+}
+function closeOrdMoreMenu() {
+  document.getElementById('ordMoreMenu')?.classList.remove('open');
+  document.getElementById('ordMoreBtn')?.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('ordMoreMenu');
+  const btn = document.getElementById('ordMoreBtn');
+  if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn?.contains(e.target)) {
+    closeOrdMoreMenu();
+  }
+});
+
+// One-field sheet: Customer / Reference / Revenue / Tracking
+let _ordEditingField = null;
+function openOrderFieldSheet(field, label) {
+  _ordEditingField = field;
+  document.getElementById('ordFieldSheetLabel').textContent = label;
+  const input = document.getElementById('ordFieldSheetInput');
+  input.type = field === 'revenue' ? 'number' : 'text';
+  input.value = field === 'revenue' ? String(parseFloat(orderData.revenue) || 0) : (orderData[field] || '');
+  document.getElementById('ordFieldSheet').classList.add('active');
+  setTimeout(() => input.focus(), 120);
+}
+function closeOrderFieldSheet() {
+  document.getElementById('ordFieldSheet').classList.remove('active');
+  _ordEditingField = null;
+}
+async function saveOrderField() {
+  const field = _ordEditingField;
+  if (!field) return;
+  const raw = document.getElementById('ordFieldSheetInput').value.trim();
+  const value = field === 'revenue' ? (parseFloat(raw) || 0) : raw;
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    const updateData = { [field]: value, updated_at: new Date().toISOString() };
+    const { error } = await window.supabaseClient
+      .from('sales').update(updateData).eq('id', orderId).eq('profile_id', user.id);
+    if (error) throw error;
+    orderData[field] = value;
+    showNotification('Field updated successfully', 'success');
+  } catch (error) {
+    console.error('Error updating field:', error);
+    showNotification('Failed to update field', 'error');
+  }
+  closeOrderFieldSheet();
+  displayOrder();
+}
+
+// Channel sheet — same 5 channels and the same selectChannel() write as the
+// desktop chip grid, just presented as a labelled list instead of icon-only
+// chips (same reasoning as the category sheet on Inventory/Item detail).
+const _ORD_CHANNELS = [
+  { value: 'Etsy', label: 'Etsy', icon: '<img src="https://cdn.simpleicons.org/etsy/F56400" alt="" style="width:20px;height:20px;">' },
+  { value: 'Shopify', label: 'Shopify', icon: '<img src="https://cdn.simpleicons.org/shopify/96BF48" alt="" style="width:20px;height:20px;">' },
+  { value: 'Website', label: 'Own Website', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>' },
+  { value: 'Local', label: 'Local / In-person', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>' },
+  { value: 'Other', label: 'Other', icon: '' }
+];
+function openOrdChannelSheet() {
+  const current = orderData?.source || 'Website';
+  document.getElementById('ordChannelList').innerHTML = _ORD_CHANNELS.map(c =>
+    `<button type="button" class="cat-row${c.value === current ? ' active' : ''}" onclick="pickOrdChannel('${c.value}')">
+       ${c.icon}<span>${_escHtml(c.label)}</span>
+     </button>`).join('');
+  document.getElementById('ordChannelSheet').classList.add('active');
+}
+function closeOrdChannelSheet() {
+  document.getElementById('ordChannelSheet').classList.remove('active');
+}
+async function pickOrdChannel(channel) {
+  closeOrdChannelSheet();
+  await selectChannel(channel);
+}
+
+// Item sheet (pack list) — stepper/remove route through the writers the
+// desktop table already uses (changeOrderItemQty, removeRecipeItem), so
+// there's exactly one place each of those actions can go wrong, not two.
+let _ordSheetIndex = null;
+function openItemSheet(index) {
+  _ordSheetIndex = index;
+  const item = orderData?.items?.[index];
+  if (!item) return;
+  const price = parseFloat(item.price || 0);
+  const qty = item.quantity || 0;
+  document.getElementById('ordItemSheetName').textContent = item.name || 'Custom item';
+  document.getElementById('ordItemSheetSub').textContent =
+    `${price ? '$' + price.toFixed(2) + ' each' : 'Free gift'} · $${(price * qty).toFixed(2)} line total`;
+  document.getElementById('ordItemSheetQty').textContent = qty;
+  document.getElementById('ordItemSheet').classList.add('active');
+}
+function closeItemSheet() {
+  document.getElementById('ordItemSheet')?.classList.remove('active');
+  _ordSheetIndex = null;
+}
+async function ordItemSheetQty(delta) {
+  if (_ordSheetIndex === null) return;
+  await changeOrderItemQty(_ordSheetIndex, delta);
+  const item = orderData?.items?.[_ordSheetIndex];
+  if (item) document.getElementById('ordItemSheetQty').textContent = item.quantity;
+}
+function ordItemSheetRemove() {
+  const index = _ordSheetIndex;
+  closeItemSheet();
+  removeRecipeItem(index); // opens the existing confirm-before-delete modal
 }
 
 async function downloadReceipt(url, index) {
@@ -2046,6 +2440,7 @@ async function selectChannel(channel) {
     const selectedChip = document.querySelector(`.cat-chip[data-channel="${channel}"]`);
     if (selectedChip) selectedChip.classList.add('selected');
 
+    displayOrder(); // keeps the mobile Channel row / meta line in sync too
     showNotification('Sales channel updated', 'success');
   } catch (error) {
     console.error('Error updating sales channel:', error);
@@ -2105,16 +2500,14 @@ async function updateOrderStatus(newStatus, trackingNumber = null) {
     if (trackingNumber !== null) {
       orderData.tracking_number = trackingNumber;
     }
-    
-    const statusBadge = document.getElementById('orderStatus');
-    statusBadge.textContent = newStatus;
-    statusBadge.className = `status-badge status-${newStatus}`;
+    if (newStatus === 'shipped') localStorage.removeItem(_packKey()); // the packing scratchpad's life ends here
 
-    // Update tracking display
-    if (trackingNumber) {
-      document.getElementById('trackingCard').style.display = 'block';
-      document.getElementById('trackingNumber').textContent = trackingNumber;
-    }
+    // displayOrder() already sets the status badge and reveals the tracking
+    // field when one's present — this used to hand-patch both here, including
+    // a reference to a #trackingCard id that doesn't exist anywhere in the
+    // page. That threw and aborted the rest of this function, so the success
+    // notification below never fired whenever a tracking number was set.
+    displayOrder();
 
     showNotification(`Order status updated to ${newStatus}!`, 'success');
   } catch (error) {
@@ -2729,7 +3122,8 @@ async function confirmRemoveRecipe() {
     orderData.items = items;
     orderData.total_quantity = totalQuantity;
     orderData.revenue = totalRevenue;
-    
+    localStorage.removeItem(_packKey()); // indices shifted, the packed scratchpad no longer lines up
+
     displayOrder();
     closeRemoveRecipeModal();
     showNotification('Recipe removed', 'success');
