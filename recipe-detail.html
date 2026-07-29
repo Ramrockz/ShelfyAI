@@ -310,6 +310,7 @@
     /* Alert / confirm modals must sit above everything */
     #alertModal, #confirmModal { z-index: 10006 !important; }
     #rdmDeliveryModal { z-index: 10006 !important; }
+    #itemSheet, #rdmRenameSheet { z-index: 10006 !important; }
 
     /* === Full-screen recipe view overlay (ms2-style) ===
        Shown unconditionally via CSS (not gated on the recipe finishing its
@@ -358,30 +359,6 @@
       flex: 1; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
-    .rdm-qty-row {
-      padding: 20px 0; border-bottom: 1px solid var(--border);
-    }
-    .rdm-qty-top {
-      display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px;
-    }
-    .rdm-qty-name { font-size: 16px; font-weight: 700; color: var(--text-main); flex: 1; }
-    .rdm-qty-unit { font-size: 13px; color: var(--text-muted); }
-    .rdm-qty-controls {
-      display: flex; align-items: center; justify-content: center; gap: 20px;
-    }
-    .rdm-qty-btn {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--accent); color: white; border: none;
-      font-size: 22px; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .rdm-qty-val {
-      width: 72px; text-align: center; font-size: 26px; font-weight: 800;
-      background: none; border: none; color: var(--text-main); font-family: inherit;
-      -moz-appearance: textfield; appearance: textfield;
-    }
-    .rdm-qty-val::-webkit-outer-spin-button,
-    .rdm-qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
     .rdm-footer { display: none; }
     .rdm-add-ing-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -391,16 +368,102 @@
       transition: border-color 0.2s, background 0.2s;
     }
     .rdm-add-ing-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
-    .rdm-swap-btn {
-      background: var(--bg-inner); border: 1px solid var(--border);
-      border-radius: 50%; width: 40px; height: 40px; cursor: pointer;
+
+    /* ⋯ menu (Rename / Duplicate / Delete) */
+    .rdm-more-btn {
       display: flex; align-items: center; justify-content: center;
-      color: var(--text-muted); flex-shrink: 0;
+      width: 36px; height: 36px; border: none; border-radius: 50%; padding: 0;
+      background: transparent; color: var(--text-main); cursor: pointer; flex-shrink: 0;
     }
-    .rdm-swap-btn.reordering {
-      color: var(--accent);
-      border-color: var(--accent);
+    .rdm-more-menu {
+      display: none; position: fixed; z-index: 10200; right: 16px;
+      top: calc(env(safe-area-inset-top, 0px) + 64px);
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 6px; min-width: 190px;
     }
+    .rdm-more-menu.open { display: block; }
+    .rdm-more-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 10px 12px; border: none; background: none; border-radius: 10px;
+      color: var(--text-main); font-family: inherit; font-size: 14px; font-weight: 600;
+      text-align: left; cursor: pointer;
+    }
+    .rdm-more-item:active { background: var(--bg-inner); }
+    .rdm-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
+    .rdm-more-item-danger, .rdm-more-item-danger svg { color: var(--danger); }
+
+    /* Headline (replaces the old Cost/Sales-Price boxes) */
+    .rdm-headline { background: #fff; padding: 18px 20px 16px; border-bottom: 1px solid var(--border); }
+    .rdm-hl-top { display: flex; align-items: baseline; gap: 10px; }
+    .rdm-hl-num { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em; }
+    .rdm-hl-num[data-state="ok"]  { color: var(--success); }
+    .rdm-hl-num[data-state="low"] { color: var(--warning); }
+    .rdm-hl-num[data-state="out"] { color: var(--danger); }
+    .rdm-hl-label { font-size: 14px; font-weight: 700; }
+    .rdm-hl-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 7px; }
+    .rdm-stats { display: flex; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .rdm-stats > div { flex: 1; padding: 9px 12px; }
+    .rdm-stats > div + div { border-left: 1px solid var(--border); }
+    .rdm-stats label { display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted);
+                       font-weight: 700; letter-spacing: .06em; margin-bottom: 3px; }
+    .rdm-stats span { font-size: 17px; font-weight: 800; }
+    .rdm-stats input { font: inherit; background: transparent; border: none; outline: none; width: 64px; padding: 0; color: var(--text-main); }
+    #rdmMargin[data-state="ok"]  { color: var(--success); }
+    #rdmMargin[data-state="out"] { color: var(--danger); }
+
+    /* Family/variant matrix, adopted into the overlay from .container */
+    #rdmFamilyHost #variantMatrixSection {
+      margin: 12px 0 0; border-radius: 0; border-left: none; border-right: none;
+      padding: 12px 16px 14px;
+    }
+    #rdmFamilyHost #familyBreadcrumb { padding: 0 20px; }
+
+    /* Items as read rows — tap opens the item sheet (stepper/swap/restock/remove) */
+    .rdm-item-row { display: flex; align-items: center; gap: 12px; min-height: 60px;
+                    padding: 10px 14px 10px 16px; background: var(--bg-panel);
+                    border-top: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
+    .rdm-item-main { flex: 1; min-width: 0; }
+    .rdm-item-top { display: flex; align-items: center; gap: 7px; }
+    .rdm-item-name { font-size: 14.5px; font-weight: 700; overflow: hidden;
+                     text-overflow: ellipsis; white-space: nowrap; }
+    .rdm-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .rdm-chev { color: var(--border); flex-shrink: 0; }
+
+    /* Item sheet */
+    .rdm-sheet-name { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+    .rdm-sheet-stock { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+    .rdm-sheet-qty { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; }
+    .rdm-sheet-qty button { width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--border);
+                            background: var(--bg-inner); font-size: 26px; color: var(--text-main); cursor: pointer; }
+    .rdm-sheet-qty input { flex: 1; height: 52px; text-align: center; font-size: 22px; font-weight: 800;
+                           border: 1px solid var(--border); border-radius: 14px; background: var(--bg-inner);
+                           color: var(--text-main); font-family: inherit; }
+    .rdm-sheet-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+                        color: var(--text-muted); margin-bottom: 8px; }
+    .rdm-sheet-act { display: block; width: 100%; height: 50px; margin-top: 8px; border-radius: 12px;
+                     border: 1px solid var(--border); background: var(--bg-inner); font-size: 15px;
+                     font-weight: 700; color: var(--text-main); cursor: pointer; font-family: inherit; }
+    .rdm-sheet-act.danger { color: var(--danger); border-color: rgba(239,68,68,.35); }
+
+    /* Restock row (mobile footer) — replaces the old always-on Duplicate/Delete bar */
+    .rdm-restock-row {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0; cursor: pointer;
+      padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg-panel); border-top: 1px solid var(--border);
+    }
+    .rdm-restock-row .truck-anim-icon { color: var(--accent); flex-shrink: 0; }
+    .rdm-restock-row #rdmRestockLabel { flex: 1; font-size: 14.5px; font-weight: 700; color: var(--accent); }
+
+    /* Rename sheet */
+    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); }
 
     /* Hide chat and feedback widgets on mobile */
     #chat-widget,
@@ -1208,8 +1271,12 @@ function renderVariantMatrix(stockMap) {
     return `<div class="vmx-row-label">${_escHtml(r)}</div>${cells}`;
   }).join('');
 
+  // On mobile the columns get a fixed width instead of 1fr — 1fr divides the
+  // viewport evenly and shrinks cells below a usable tap size on a 4+ column
+  // family; a fixed width lets .vmx-scroll's overflow-x:auto do the work.
+  const colUnit = window.innerWidth <= 768 ? '74px' : '1fr';
   body.innerHTML = `<div class="vmx-scroll">
-    <div class="vmx-grid" style="grid-template-columns: 78px repeat(${axes.cols.length}, 1fr);">
+    <div class="vmx-grid" style="grid-template-columns: 78px repeat(${axes.cols.length}, ${colUnit});">
       <div class="vmx-col-head vmx-corner"></div>
       ${headerCells}
       ${rowsHtml}
@@ -1379,7 +1446,8 @@ async function renderRecipe() {
     .sort((a, b) => (b.comp.cost || 0) - (a.comp.cost || 0));
   
   let maxRecipeCount = Infinity;
-  
+  let _blockerName = '', _blockerStock = 0, _blockerNeed = 0;
+
   const ingredientsHtml = sortedComponents.map(({ comp, origIndex }) => {
     let attributes = comp.attributes || comp.custom_attributes || '';
     
@@ -1405,7 +1473,11 @@ async function renderRecipe() {
     // Calculate how many times this ingredient allows recipe to be made
     if (requiredQty > 0) {
       const timesForThisIngredient = Math.floor(stock / requiredQty);
-      maxRecipeCount = Math.min(maxRecipeCount, timesForThisIngredient);
+      if (timesForThisIngredient < maxRecipeCount) {
+        maxRecipeCount = timesForThisIngredient;
+        _blockerName = comp.ingredient_name || comp.name || '';
+        _blockerStock = stock; _blockerNeed = requiredQty;
+      }
     }
     
     // Debug logging
@@ -1451,6 +1523,18 @@ async function renderRecipe() {
   if (maxRecipeCount === Infinity || maxRecipeCount < 0) {
     maxRecipeCount = 0;
   }
+
+  // Mobile headline reads this instead of recomputing — renderMobileOverlay()
+  // runs in a separate function, so the count/blocker have to cross via a
+  // global rather than a return value (renderRecipe() itself is void, called
+  // from several places that don't use its result).
+  window._recipeMakeInfo = {
+    count: maxRecipeCount,
+    blocker: _blockerName,
+    blockerStock: _blockerStock,
+    blockerNeed: _blockerNeed,
+    canProduce
+  };
 
   if (statusEl) {
     if (canProduce && maxRecipeCount > 0) {
@@ -1543,12 +1627,16 @@ function renderMobileOverlay() {
 
   const titleEl = document.getElementById('rdmTitle');
   if (titleEl && document.activeElement !== titleEl) titleEl.value = recipe.name || '';
+  const headerTitleEl = document.getElementById('rdmHeaderTitle');
+  if (headerTitleEl) headerTitleEl.textContent = recipe.name || 'Product';
   const cost = parseFloat(recipe.cost) || 0;
   document.getElementById('rdmCostDisplay').textContent = `$${cost.toFixed(2)}`;
   const rdmPriceInput = document.getElementById('rdmRetailPriceInput');
   if (rdmPriceInput && document.activeElement !== rdmPriceInput) {
     rdmPriceInput.value = recipe.retail_price != null ? parseFloat(recipe.retail_price).toFixed(2) : '';
   }
+  rdmRenderHeadline();
+  rdmRenderMargin();
   _syncFavBtns();
 
   const components = recipe.components || [];
@@ -1562,35 +1650,192 @@ function renderMobileOverlay() {
 
   if (components.length === 0) {
     container.innerHTML = `<div style="text-align:center;padding:32px 0 0;color:var(--text-muted);">No items yet.</div>` + addIngBtn;
-    return;
-  }
+  } else {
   container.innerHTML = components.map((comp, index) => {
     const ingId = comp.ingredient_id || comp.id;
     const stock = ingredientStockMap[ingId];
     const qty = stock?.quantity ?? null;
-    const minStock = stock?.min_stock ?? 0;
-    const stockPill2 = qty === null ? '' : qty === 0 ? '<span class="stock-pill out">Out</span>' : qty < minStock ? '<span class="stock-pill low">Low</span>' : '';
+    // "Low" used to mean qty < min_stock (a generic Inventory-level threshold)
+    // while desktop used qty < requiredQty (Short, for this product) — two
+    // different answers on the same row. This page only ever needs the
+    // second one: is there enough for what THIS product needs.
+    const need = parseFloat(comp.quantity) || 0;
+    const stockPill2 = qty === null ? ''
+      : qty === 0 ? '<span class="stock-pill out">Out</span>'
+      : qty < need ? `<span class="stock-pill low">Short ${(need - qty).toFixed(0)}</span>`
+      : '';
+    const cost = parseFloat(comp.cost) || 0;
     return `
-    <div class="rdm-qty-row">
-      <div class="rdm-qty-top">
-        <span class="rdm-qty-name">${comp.ingredient_name || comp.name || 'Unknown'} ${stockPill2}</span>
-      </div>
-      <div class="rdm-qty-controls">
-        <button class="rdm-qty-btn" onclick="decreaseIngredientQuantity(${index})">−</button>
-        <input type="number" class="rdm-qty-val" value="${comp.quantity || 1}"
-          min="0.01" step="0.01" inputmode="decimal"
-          onchange="rdmSetQty(${index}, this.value)">
-        <button class="rdm-qty-btn" onclick="increaseIngredientQuantity(${index})">+</button>
-        <button class="rdm-swap-btn" onclick="openSwapModal(${index})" title="Swap ingredient">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
-        </button>
-        <button class="rdm-swap-btn${(currentReorderIngredient?.id === ingId || ingredientStockMap[ingId]?.reorder_pending) ? ' reordering' : ''}" onclick="reorderIngredient('${ingId}')" title="Restock">
-          <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
-        </button>
-      </div>
-    </div>
-  `;
+    <div class="rdm-item-row" onclick="openItemSheet(${index})">
+      <span class="rdm-item-main">
+        <span class="rdm-item-top">
+          <span class="rdm-item-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown')}</span>
+          ${stockPill2}
+        </span>
+        <span class="rdm-item-sub">${need} per unit · $${cost.toFixed(2)} of cost</span>
+      </span>
+      <svg class="rdm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+    </div>`;
   }).join('') + addIngBtn;
+  }
+
+  rdmRenderRestockRow();
+
+  // Adopt the desktop-only family nodes into the overlay (they live inside
+  // .container, which is display:none on mobile) — appendChild moves the
+  // live node, so renderVariantMatrix() keeps writing to the same
+  // #variantMatrixBody with no second render path.
+  const familyHost = document.getElementById('rdmFamilyHost');
+  ['familyBreadcrumb', 'variantMatrixSection'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && familyHost && el.parentElement !== familyHost) familyHost.appendChild(el);
+  });
+}
+
+function rdmRenderHeadline() {
+  const info = window._recipeMakeInfo;
+  const el = document.getElementById('rdmHeadline');
+  if (!el || !info) return;
+  const n = info.count;
+  el.querySelector('.rdm-hl-num').textContent = n;
+  el.querySelector('.rdm-hl-num').dataset.state = n === 0 ? 'out' : n <= 5 ? 'low' : 'ok';
+  const sub = el.querySelector('.rdm-hl-sub');
+  sub.innerHTML = info.blocker
+    ? `Limited by <strong>${_escHtml(info.blocker)}</strong> — ${info.blockerStock} in stock, ${info.blockerNeed} per unit`
+    : 'No items on this product yet';
+}
+
+// Margin on price, not on cost — that's the number a marketplace fee is
+// quoted against. cost is recalculated from components on every write
+// (updateRecipeInDatabase), so a stored margin would go stale silently —
+// always derive it here instead.
+function rdmRenderMargin() {
+  const el = document.getElementById('rdmMargin');
+  if (!el || !recipe) return;
+  const cost = parseFloat(recipe.cost) || 0;
+  const price = parseFloat(recipe.retail_price) || 0;
+  if (!price) { el.textContent = '—'; el.dataset.state = ''; return; }
+  const pct = Math.round(((price - cost) / price) * 100);
+  el.textContent = `${pct}%`;
+  el.dataset.state = pct < 0 ? 'out' : pct < 20 ? 'low' : 'ok';
+}
+
+// ---- Item edit sheet (mobile) — the row is read-only; every action here
+// routes to a writer that already exists (rdmSetQty, openSwapModal,
+// reorderIngredient, removeIngredientFromRecipe). Nothing new touches the DB. ----
+let _sheetIndex = null;
+
+function openItemSheet(index) {
+  _sheetIndex = index;
+  const comp = recipe.components[index];
+  if (!comp) return;
+  const ingId = comp.ingredient_id || comp.id;
+  const qty = ingredientStockMap[ingId]?.quantity ?? null;
+  document.getElementById('itemSheetName').textContent = comp.ingredient_name || comp.name || 'Item';
+  document.getElementById('itemSheetStock').textContent =
+    qty === null ? '' : `${qty} in stock · $${(parseFloat(comp.cost) || 0).toFixed(2)} each use`;
+  document.getElementById('itemSheetQty').value = comp.quantity || 1;
+  document.getElementById('itemSheet').classList.add('active');
+}
+
+function closeItemSheet() {
+  document.getElementById('itemSheet')?.classList.remove('active');
+  _sheetIndex = null;
+}
+
+async function sheetQty(delta) {
+  const input = document.getElementById('itemSheetQty');
+  const next = Math.max(0.01, (parseFloat(input.value) || 1) + delta);
+  input.value = next;
+  await rdmSetQty(_sheetIndex, next);
+}
+
+function sheetSwap() {
+  const i = _sheetIndex;
+  closeItemSheet();
+  openSwapModal(i);
+}
+
+function sheetRestock() {
+  const c = recipe.components[_sheetIndex];
+  closeItemSheet();
+  reorderIngredient(c.ingredient_id || c.id);
+}
+
+async function sheetRemove() {
+  const i = _sheetIndex;
+  closeItemSheet();
+  await removeIngredientFromRecipe(i);
+}
+
+// ---- Restock row (mobile footer) — one short item reorders directly; two
+// or more opens the first one's sheet as an interim (no multi-select restock
+// flow yet — each ingredient has its own source_url, so a "restock all" batch
+// needs a supplier-grouping rule this doesn't have). ----
+function rdmRenderRestockRow() {
+  const row = document.getElementById('rdmRestockRow');
+  if (!row || !recipe) return;
+  const short = (recipe.components || []).filter(c => {
+    const q = ingredientStockMap[c.ingredient_id || c.id]?.quantity;
+    return q != null && q < (parseFloat(c.quantity) || 0);
+  });
+  if (!short.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  document.getElementById('rdmRestockLabel').textContent =
+    short.length === 1 ? `Restock ${short[0].ingredient_name || short[0].name}`
+                       : `Restock the ${short.length} short items`;
+  row._short = short;
+}
+
+function rdmRestockShort() {
+  const short = document.getElementById('rdmRestockRow')?._short || [];
+  if (!short.length) return;
+  if (short.length === 1) return reorderIngredient(short[0].ingredient_id || short[0].id);
+  openItemSheet(recipe.components.indexOf(short[0]));
+}
+
+// ---- Mobile "⋯" menu (Rename / Duplicate / Delete) ----
+function toggleRdmMoreMenu() {
+  const menu = document.getElementById('rdmMoreMenu');
+  const btn = document.getElementById('rdmMoreBtn');
+  if (!menu || !btn) return;
+  if (menu.classList.contains('open')) { closeRdmMoreMenu(); return; }
+  menu.classList.add('open');
+  btn.setAttribute('aria-expanded', 'true');
+}
+
+function closeRdmMoreMenu() {
+  document.getElementById('rdmMoreMenu')?.classList.remove('open');
+  document.getElementById('rdmMoreBtn')?.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('rdmMoreMenu');
+  const btn = document.getElementById('rdmMoreBtn');
+  if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn?.contains(e.target)) {
+    closeRdmMoreMenu();
+  }
+});
+
+// ---- Rename sheet — writes through #rdmTitle so saveMobileRecipeName()
+// (and renderMobileOverlay(), which keeps #rdmTitle in sync with recipe.name)
+// need no changes; #rdmTitle just stops being the visible heading. ----
+function openRdmRenameSheet() {
+  document.getElementById('rdmRenameInput').value = recipe?.name || '';
+  document.getElementById('rdmRenameSheet').classList.add('active');
+  setTimeout(() => document.getElementById('rdmRenameInput')?.focus(), 120);
+}
+
+function closeRdmRenameSheet() {
+  document.getElementById('rdmRenameSheet').classList.remove('active');
+}
+
+async function saveRdmRename() {
+  const value = document.getElementById('rdmRenameInput').value;
+  document.getElementById('rdmTitle').value = value;
+  await saveMobileRecipeName();
+  closeRdmRenameSheet();
+  renderMobileOverlay();
 }
 
 async function rdmSetQty(index, val) {
@@ -3228,7 +3473,7 @@ document.addEventListener('keydown', (e) => {
 <!-- Mobile view overlay (ms2-style, mobile only) -->
 <div id="mobileViewOverlay">
   <div class="rdm-header">
-    <div style="flex:1;font-size:17px;font-weight:700;color:var(--text-main);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Product</div>
+    <div id="rdmHeaderTitle" style="flex:1;font-size:17px;font-weight:700;color:var(--text-main);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Product</div>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
       <div class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="flex-shrink:0;">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -3239,39 +3484,71 @@ document.addEventListener('keydown', (e) => {
       <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
         <div id="rdmUserAvatar" class="user-avatar" style="width:32px;height:32px;font-size:13px;flex-shrink:0;">U</div>
       </button>
+      <button class="rdm-more-btn" id="rdmMoreBtn" onclick="toggleRdmMoreMenu(); event.stopPropagation();" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+      </button>
     </div>
+  </div>
+  <div class="rdm-more-menu" id="rdmMoreMenu">
+    <button type="button" class="rdm-more-item" onclick="closeRdmMoreMenu(); openRdmRenameSheet()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Rename</span>
+    </button>
+    <button type="button" class="rdm-more-item" onclick="closeRdmMoreMenu(); duplicateRecipe()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      <span>Duplicate</span>
+    </button>
+    <button type="button" class="rdm-more-item rdm-more-item-danger" onclick="closeRdmMoreMenu(); confirmDelete()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      <span>Delete</span>
+    </button>
   </div>
   <div class="rdm-body" id="rdmBodyOuter">
-    <div class="rdm-name-section">
+    <div class="rdm-name-section" style="display:none;">
       <input type="text" class="rdm-title" id="rdmTitle" value="Product" onblur="saveMobileRecipeName()">
     </div>
-    <div style="display:flex;gap:10px;padding:16px 20px;">
-      <div style="flex:1;background:var(--bg-inner);border:2px solid var(--border);border-radius:12px;padding:10px 14px;">
-        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.06em;margin-bottom:4px;">Cost</div>
-        <div id="rdmCostDisplay" style="font-size:18px;font-weight:800;color:var(--text-main);">$0.00</div>
-      </div>
-      <div style="flex:1;background:var(--bg-inner);border:2px solid var(--border);border-radius:12px;padding:10px 14px;">
-        <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.06em;margin-bottom:4px;">Sales Price</div>
-        <div style="display:flex;align-items:center;gap:4px;">
-          <span style="font-size:18px;font-weight:700;color:var(--text-main);">$</span>
-          <input type="number" id="rdmRetailPriceInput" min="0" step="0.01" placeholder="0.00"
-            style="font-size:18px;font-weight:700;color:var(--text-main);background:transparent;border:none;width:100%;outline:none;padding:0;"
-            onblur="updateRdmRetailPrice()"
-            onkeydown="if(event.key==='Enter')this.blur();" />
-        </div>
+    <div class="rdm-headline" id="rdmHeadline">
+      <div class="rdm-hl-top"><span class="rdm-hl-num" data-state="out">0</span><span class="rdm-hl-label">can be made now</span></div>
+      <div class="rdm-hl-sub"></div>
+      <div class="rdm-stats">
+        <div><label>Cost</label><span id="rdmCostDisplay">$0.00</span></div>
+        <div><label>Price</label><span>$<input type="number" id="rdmRetailPriceInput" min="0" step="0.01" placeholder="0.00" inputmode="decimal" onblur="updateRdmRetailPrice()" onkeydown="if(event.key==='Enter')this.blur();"></span></div>
+        <div><label>Margin</label><span id="rdmMargin">—</span></div>
       </div>
     </div>
+    <div id="rdmFamilyHost"></div>
     <div id="rdmQtyList" style="padding:0 20px;"></div>
   </div>
-  <div style="display:flex; gap:12px; padding:12px 20px; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); border-top:1px solid #e5e7eb; flex-shrink:0; background:#ffffff;">
-    <button onclick="duplicateRecipe()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#06b6d4; color:#ffffff; border:2px solid #06b6d4; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      Duplicate
-    </button>
-    <button onclick="confirmDelete()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; border-radius:8px; cursor:pointer; background:#ffffff; color:#ef4444; border:2px solid rgba(239,68,68,0.4); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; min-width:0;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-      Delete
-    </button>
+  <div class="rdm-restock-row" id="rdmRestockRow" style="display:none;" onclick="rdmRestockShort()">
+    <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+    <span id="rdmRestockLabel"></span>
+    <svg class="rdm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+  </div>
+</div>
+
+<!-- Item editor sheet (mobile) — stepper, swap, restock, remove for one item -->
+<div class="modal-overlay modal-sheet" id="itemSheet" onclick="if(event.target===this)closeItemSheet()">
+  <div class="modal-content">
+    <div class="rdm-sheet-name" id="itemSheetName"></div>
+    <div class="rdm-sheet-stock" id="itemSheetStock"></div>
+    <div class="rdm-sheet-qty">
+      <button type="button" onclick="sheetQty(-1)">−</button>
+      <input type="number" id="itemSheetQty" min="0.01" step="0.01" inputmode="decimal">
+      <button type="button" onclick="sheetQty(1)">+</button>
+    </div>
+    <div class="rdm-sheet-label">Quantity used per product</div>
+    <button type="button" class="rdm-sheet-act" onclick="sheetRestock()">Restock this item</button>
+    <button type="button" class="rdm-sheet-act" onclick="sheetSwap()">Swap for another item</button>
+    <button type="button" class="rdm-sheet-act danger" onclick="sheetRemove()">Remove from product</button>
+  </div>
+</div>
+
+<!-- Rename sheet (mobile) — writes through the hidden #rdmTitle input -->
+<div class="modal-overlay modal-sheet" id="rdmRenameSheet" onclick="if(event.target===this)closeRdmRenameSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label" for="rdmRenameInput">Product name</label>
+    <input id="rdmRenameInput" class="form-input" style="font-size:16px" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveRdmRename();}">
+    <button class="drow-edit-save" onclick="saveRdmRename()">Save</button>
   </div>
 </div>
 
