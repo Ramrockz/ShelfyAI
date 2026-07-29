@@ -401,7 +401,6 @@
     padding-right: 8px;
   }
 
-  #mobileStep2Screen { display: none; }
   .recipe-cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .recipe-cat-chip { display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--text-muted); }
   .recipe-cat-chip svg { width: 18px; height: 18px; stroke-width: 1.75; }
@@ -482,10 +481,12 @@
     display: none;
   }
 
-  /* 2-step create flow is mobile-only — desktop shows name/price/category
-     and the item library side by side with no stepping. */
-  .mobile-step1-actions,
-  .mobile-step2-header {
+  /* Mobile-only builder elements — hidden by default; the <=768px media
+     query turns each on. A bare element defaults to visible, so without
+     this these would render on desktop too. */
+  #rbHead,
+  .recipe-cost-strip,
+  .rb-row {
     display: none;
   }
 
@@ -574,7 +575,6 @@
 
     /* Prevent builder content from hiding behind bottom nav */
     .recipe-panel-left { padding-bottom: 76px !important; }
-    #mobileStep2Screen { padding-bottom: 60px; }
 
     /* Hide sidebar on mobile */
     .sidebar {
@@ -666,12 +666,18 @@
     .recipe-overlay {
       padding: 0;
       align-items: stretch;
+      /* #rbHead is now a sibling of .recipe-builder inside this flex
+         container — without column direction they'd sit side by side
+         (row is the flex default) instead of the header stacking above. */
+      flex-direction: column;
     }
-    
+
     .recipe-builder {
       width: 100%;
-      height: 100vh;
-      max-height: 100vh;
+      flex: 1;
+      min-height: 0;
+      height: auto;
+      max-height: none;
       overflow-y: auto;
       padding: 0;
       grid-template-columns: 1fr;
@@ -863,9 +869,6 @@
       transform: scale(0.96);
     }
 
-    /* Hide dropzone on mobile step 1 */
-    #recipeDropzone { display: none !important; }
-
     /* Ingredient selection */
     .mob-ing-row.selected {
       border-color: var(--accent);
@@ -873,95 +876,83 @@
     }
     .mob-ing-row.selected .mob-ing-name { color: var(--accent); font-weight: 700; }
 
-    /* 2-step create flow (mobile only) */
-    .recipe-name-section.step-hidden,
-    .mobile-ingredient-swiper.step-hidden,
-    .mobile-recipe-actions.step-hidden {
-      display: none !important;
+    /* ---------- Fixed header: Cancel / title / Create ---------- */
+    #rbHead {
+      display: flex; align-items: center; height: 52px; flex-shrink: 0;
+      padding: 0 6px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 5;
     }
-    .mobile-step2-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 4px;
+    .rb-cancel, .rb-create {
+      min-width: 70px; height: 44px; padding: 0 10px; background: none; border: none;
+      font-size: 15px; font-family: inherit;
     }
-    .mobile-step2-back {
-      border: none;
-      background: none;
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 700;
-      padding: 6px 0;
-      cursor: pointer;
+    .rb-cancel { color: var(--text-muted); text-align: left; }
+    .rb-create { color: var(--accent); font-weight: 800; text-align: right; }
+    .rb-create:disabled { color: var(--text-ghost, #cbd5e1); cursor: default; }
+    .rb-title { flex: 1; text-align: center; font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main); }
+
+    /* ---------- 15b: cost strip ---------- */
+    .recipe-cost-strip {
+      display: flex; margin-top: 14px;
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    }
+    .recipe-cost-strip > div { flex: 1; min-width: 0; padding: 9px 12px; }
+    .recipe-cost-strip > div + div { border-left: 1px solid var(--border); }
+    .recipe-cost-strip label {
+      display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted);
+      font-weight: 700; letter-spacing: .06em; margin-bottom: 3px;
+    }
+    .recipe-cost-strip span { font-size: 17px; font-weight: 800; color: var(--text-main); }
+    #recipeMarginDisplay[data-state="ok"]  { color: var(--success); }
+    #recipeMarginDisplay[data-state="low"] { color: var(--warning); }
+    #recipeMarginDisplay[data-state="out"] { color: var(--danger); }
+
+    /* Category row (replaces the icon grid on mobile only — desktop keeps it) */
+    #recipeCategoryDesktopGroup { display: none; }
+    .rb-row {
+      display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
+      margin-top: 12px; padding: 0 14px 0 16px; text-align: left;
+      background: var(--bg-panel); border: none; border-radius: 10px;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      font-family: inherit;
+    }
+    .rb-row-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
+    .rb-row-value { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-main); }
+    .rb-row-value.empty { font-weight: 400; color: var(--text-faint, #94a3b8); }
+    .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
+
+    /* ---------- 15d: selected items, pinned ---------- */
+    #recipeDropzone { display: block; margin-top: 12px; padding: 0; background: none; border: none; }
+    .rb-sec { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 16px 6px; }
+    .rb-sec-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .rb-sec-aside { font-size: 12px; color: var(--text-faint, #94a3b8); }
+    .rb-empty { padding: 18px 16px; font-size: 13px; color: var(--text-faint, #94a3b8); }
+    .rb-sel-row {
+      display: flex; align-items: center; gap: 10px; min-height: 56px;
+      padding: 8px 14px 8px 16px; background: var(--bg-panel);
+      border-top: 1px solid var(--border); box-sizing: border-box;
+    }
+    .rb-sel-row:last-child { border-bottom: 1px solid var(--border); }
+    .rb-sel-main { flex: 1; min-width: 0; }
+    .rb-sel-top { display: flex; align-items: center; gap: 7px; }
+    .rb-sel-name {
+      font-size: 14px; font-weight: 700; color: var(--text-main);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rb-sel-sub { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+    .rb-step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .rb-step button {
+      width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg-app, var(--bg-inner)); font-size: 19px; line-height: 1; color: var(--text-main); font-family: inherit;
+    }
+    .rb-step-val {
+      min-width: 30px; text-align: center; font-size: 16px; font-weight: 800;
+      font-variant-numeric: tabular-nums; color: var(--text-main);
     }
 
-    /* Step 2: full-screen overlay */
-    #mobileStep2Screen {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-main);
-      z-index: 10001;
-      flex-direction: column;
-    }
-    #mobileStep2Screen.active { display: flex; }
-    .ms2-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .ms2-back {
-      background: none; border: none;
-      color: var(--accent); font-size: 15px; font-weight: 600;
-      cursor: pointer; padding: 0;
-    }
-    .ms2-title { font-size: 17px; font-weight: 700; color: var(--text-main); }
-    .ms2-body {
-      flex: 1; overflow-y: auto;
-      padding: 0 20px;
-      -webkit-overflow-scrolling: touch;
-    }
-    .ms2-footer {
-      padding: 16px 20px;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .ms2-create-btn { width: 100%; padding: 16px; font-size: 16px; font-weight: 700; }
-
-    .mobile-qty-row {
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .mobile-qty-top {
-      display: flex; align-items: baseline; gap: 6px;
-      margin-bottom: 14px;
-    }
-    .mobile-qty-name {
-      font-size: 16px; font-weight: 700; color: var(--text-main); flex: 1;
-    }
-    .mobile-qty-unit-label { font-size: 13px; color: var(--text-muted); }
-    .mobile-qty-controls {
-      display: flex; align-items: center;
-      justify-content: center; gap: 20px;
-    }
-    .mobile-qty-btn {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--accent); color: white; border: none;
-      font-size: 22px; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .mobile-qty-val {
-      width: 72px; text-align: center;
-      font-size: 26px; font-weight: 800;
-      background: none; border: none;
-      color: var(--text-main); font-family: inherit;
-      -moz-appearance: textfield; appearance: textfield;
-    }
-    .mobile-qty-val::-webkit-outer-spin-button,
-    .mobile-qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
-    
     /* Hide all scrollbars on mobile */
     * {
       scrollbar-width: none; /* Firefox */
@@ -1321,36 +1312,58 @@
 
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay">
+  <!-- Mobile-only: fixed header (Cancel / title / Create). Desktop keeps its
+       own close "×" + bottom Create button (#saveRecipeBtn), untouched. -->
+  <div class="rb-head" id="rbHead">
+    <button type="button" class="rb-cancel" onclick="closeRecipeBuilder()">Cancel</button>
+    <span class="rb-title" id="rbTitle">New product</span>
+    <button type="button" class="rb-create" id="rbCreateBtn" onclick="mobilePrimaryAction()">Create</button>
+  </div>
   <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
-      <!-- Step 1 (mobile): name, price, category. Desktop shows this alongside
-           the item library at all times — no stepping there. -->
+      <!-- Name, price, category. On mobile this is followed inline by the
+           item picker below — one scrolling screen, not a separate step. -->
       <div class="recipe-name-section" id="recipeStep1Section">
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
-        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required />
+        <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required oninput="updateCreateButtonState()" />
 
         <div style="position:relative; margin-top:20px;">
           <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:16px; font-weight:600; pointer-events:none;">$</span>
-          <input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" class="recipe-name-input" style="padding-left:32px; box-sizing:border-box;" />
+          <input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" class="recipe-name-input" style="padding-left:32px; box-sizing:border-box;" oninput="updateCost()" />
         </div>
 
-        <div style="margin-top:20px;">
+        <!-- Mobile-only: 15b — updateCost() finally has somewhere real to render -->
+        <div class="recipe-cost-strip" id="recipeCostStrip">
+          <div>
+            <label>Costs to make</label>
+            <span id="recipeTotalCostDisplay">$0.00</span>
+          </div>
+          <div>
+            <label>Margin</label>
+            <span id="recipeMarginDisplay">—</span>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;" id="recipeCategoryDesktopGroup">
           <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Category</label>
           <div id="recipeCategoryIconPicker" class="recipe-cat-icon-picker"></div>
-          <input type="hidden" id="recipeCategoryInput" value="">
         </div>
+        <input type="hidden" id="recipeCategoryInput" value="">
+        <!-- Mobile-only: labelled row + sheet, same category list/icons as
+             the icon grid above (which stays desktop-only). -->
+        <button type="button" class="rb-row" id="rbCatRow" onclick="openRbCatSheet()">
+          <span class="rb-row-label">Category</span>
+          <span class="rb-row-value" id="rbCatValue"></span>
+          <svg class="rb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
       </div>
 
-      <!-- Mobile-only: advance to item picking (step 2) -->
-      <div class="mobile-recipe-actions mobile-step1-actions" id="mobileStep1Actions">
-        <button type="button" class="btn btn-primary" style="flex:1;" onclick="goToItemStep()">Next</button>
-      </div>
+      <!-- Mobile-only: 15d — selected items, pinned above the search/library
+           below instead of living only in the desktop dropzone. -->
+      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
 
-      <!-- Step 2 (mobile): choosing items. Visible at all times on desktop. -->
       <div class="mobile-ingredient-swiper" id="recipeStep2Section">
-        <div class="mobile-step2-header" id="mobileStep2Header">
-          <button type="button" class="mobile-step2-back" onclick="backToNameStep()">&larr; Back</button>
-        </div>
+        <div class="rb-sec" id="rbAddMoreSec"><span class="rb-sec-title">Add more</span></div>
         <div class="search-wrapper" style="width: 100%; margin-bottom: 12px;">
           <i data-lucide="search" class="search-icon"></i>
           <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
@@ -1361,9 +1374,7 @@
         <div id="mobileRecipeIngList"></div>
       </div>
 
-      <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
-
-      <!-- Step 2 action -->
+      <!-- Desktop-only Create button — mobile uses #rbCreateBtn in the fixed header -->
       <div class="mobile-recipe-actions" id="mobileActions1">
         <button class="btn btn-primary" id="saveRecipeBtn" onclick="mobilePrimaryAction()" style="flex:1;">Create</button>
       </div>
@@ -1386,24 +1397,13 @@
     </div>
   </div>
 
-  <!-- Step 2: Full-screen quantity review (mobile only) -->
-  <div id="mobileStep2Screen">
-    <div class="ms2-header">
-      <button class="ms2-back" onclick="goToMobileStep1()">← Back</button>
-      <span class="ms2-title">Set Quantities</span>
-      <div style="width:60px;"></div>
-    </div>
-    <div class="ms2-body" id="mobileQtyList"></div>
-    <div class="ms2-footer">
-      <input type="text" id="mobileRecipeNameInput" placeholder="Product name…"
-        style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:16px;background:var(--bg-inner);border:1.5px solid var(--border);border-radius:10px;color:var(--text-main);font-family:inherit;outline:none;margin-bottom:8px;"
-        onkeydown="if(event.key==='Enter')saveMobileRecipe()">
-      <div style="position:relative; margin-bottom:10px;">
-        <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:15px;">$</span>
-        <input type="number" id="mobileRecipeSalesPriceInput" step="0.01" min="0" placeholder="Sales price (optional)"
-          style="width:100%;box-sizing:border-box;padding:12px 14px 12px 28px;font-size:15px;background:var(--bg-inner);border:1.5px solid var(--border);border-radius:10px;color:var(--text-main);font-family:inherit;outline:none;" />
-      </div>
-      <button class="btn btn-primary ms2-create-btn" onclick="saveMobileRecipe()">Create Product</button>
+  <!-- Mobile-only: category sheet for #rbCatRow above (same PRODUCT_CATEGORIES
+       list/icons as the desktop icon grid, not #prodCatSheet — that one is
+       wired to the page's own product-list category filter, different state). -->
+  <div class="modal-overlay modal-sheet" id="rbCatSheet" onclick="if(event.target===this)closeRbCatSheet()">
+    <div class="modal-content">
+      <h3 class="sheet-title" style="margin-top:0;">Category</h3>
+      <div id="rbCatList"></div>
     </div>
   </div>
 </div>
@@ -2278,33 +2278,34 @@ async function openBuilder() {
   document.getElementById('recipeNameInput').value = '';
   const _spd = document.getElementById('recipeSalesPriceInput');
   if (_spd) _spd.value = '';
-  const _spm = document.getElementById('mobileRecipeSalesPriceInput');
-  if (_spm) _spm.value = '';
   const _catd = document.getElementById('recipeCategoryInput');
   if (_catd) _catd.value = '';
   renderProductCategoryIconPicker();
+  renderRbCatValue();
+  const _title = document.getElementById('rbTitle');
+  if (_title) _title.textContent = 'New product';
 
   // Wait for overlay to be visible before loading ingredients
   await new Promise(resolve => requestAnimationFrame(() => {
     requestAnimationFrame(resolve);
   }));
-  
+
   await loadIngredients();
 
   const isMobile = window.innerWidth <= 768;
   const btn = document.getElementById('saveRecipeBtn');
   if (btn) btn.textContent = isMobile ? 'Create Product' : 'Create';
   updateCreateButtonState();
+  updateCost();
 
   if (isMobile) {
-    goToMobileStep1();
+    renderMobileSelected();
     setTimeout(() => initMobileIngredientList(), 100);
   }
 }
 
 function closeRecipeBuilder() {
   document.getElementById("recipeBuilderOverlay").classList.remove("active");
-  document.getElementById("mobileStep2Screen").classList.remove("active");
   closeMobileNameModal();
   recipeActiveCategoryFilter = null;
   recipeActiveAttrValueFilters = new Map();
@@ -2922,7 +2923,7 @@ function renderMobileIngredientRow(i) {
     <svg class="mob-favorite-star" data-ingredient-id="${i.id}" width="14" height="14" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink:0;margin-right:8px;cursor:pointer;opacity:0.6;">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
-    <span class="mob-ing-name">${i.name}</span>
+    <span class="mob-ing-name">${_escHtml(i.name)}</span>
     ${pill}
     ${selected ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="16" height="16" style="color:var(--accent);flex-shrink:0;margin-left:auto;"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
   </div>`;
@@ -2937,6 +2938,8 @@ function mobileTapIngredient(id) {
     currentRecipe[id] = { name: item.name, price: item.price, unit: item.unit, quantity: 1 };
   }
   renderMobileIngList();
+  renderMobileSelected();
+  updateCost();
   updateMobileCreateBtn();
 }
 
@@ -2945,107 +2948,104 @@ function mobilePrimaryAction() {
   saveMobileRecipe();
 }
 
-function goToMobileStep2() {
-  const isEditing = !!currentEditingRecipeId;
-  const titleEl = document.querySelector('#mobileStep2Screen .ms2-title');
-  if (titleEl) titleEl.textContent = isEditing ? 'Edit Product' : 'Set Quantities';
-  const ctaBtn = document.querySelector('#mobileStep2Screen .ms2-create-btn');
-  if (ctaBtn) ctaBtn.textContent = isEditing ? 'Save Changes' : 'Create Product';
-  const nameInput = document.getElementById('mobileRecipeNameInput');
-  if (nameInput) {
-    if (isEditing) {
-      nameInput.style.display = 'none';
-    } else {
-      nameInput.style.display = '';
-      nameInput.value = '';
-    }
-  }
-
-  const count = Object.keys(currentRecipe).length;
-  if (count === 0) {
-    const list = document.getElementById('mobileRecipeIngList');
-    if (list) {
-      list.style.outline = '2px solid var(--danger)';
-      list.style.borderRadius = '10px';
-      setTimeout(() => { list.style.outline = ''; list.style.borderRadius = ''; }, 700);
-    }
+// 15d — selected items, pinned above the search/library list instead of
+// living only in the desktop dropzone (which stays desktop-only; this
+// renders into the SAME #recipeDropzone element, but only ever runs from a
+// mobile-only call site, so it can't collide with addIngredientToRecipe's
+// desktop rendering of the same element).
+function renderMobileSelected() {
+  const dz = document.getElementById('recipeDropzone');
+  if (!dz) return;
+  const entries = Object.entries(currentRecipe);
+  if (!entries.length) {
+    dz.innerHTML = '<div class="rb-empty">Pick items below to build this product.</div>';
     return;
   }
-  renderMobileQtyList();
-  document.getElementById('mobileStep2Screen').classList.add('active');
+  const units = entries.reduce((s, [, i]) => s + (parseFloat(i.quantity) || 0), 0);
+  dz.innerHTML = `
+    <div class="rb-sec">
+      <span class="rb-sec-title">Made from</span>
+      <span class="rb-sec-aside">${entries.length} item${entries.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}</span>
+    </div>` + entries.map(([id, item]) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.price) || 0;
+      const src = ingredientData.find(i => i.id === id);
+      const q = src ? (parseFloat(src.quantity) || 0) : null, min = src ? (parseFloat(src.min_stock) || 0) : 0;
+      const pill = q === null ? '' : q === 0 ? '<span class="stock-pill out">Out</span>' : (min > 0 && q < min) ? '<span class="stock-pill low">Low</span>' : '';
+      return `
+      <div class="rb-sel-row">
+        <span class="rb-sel-main">
+          <span class="rb-sel-top">
+            <span class="rb-sel-name">${_escHtml(item.name)}</span>
+            ${pill}
+          </span>
+          <span class="rb-sel-sub">${qty} × $${price.toFixed(2)} = $${(qty * price).toFixed(2)}</span>
+        </span>
+        <span class="rb-step">
+          <button type="button" onclick="adjustMobileQty('${id}', -1)" aria-label="Less">&minus;</button>
+          <span class="rb-step-val">${qty}</span>
+          <button type="button" onclick="adjustMobileQty('${id}', 1)" aria-label="More">+</button>
+        </span>
+      </div>`;
+    }).join('');
 }
 
-function goToMobileStep1() {
-  document.getElementById('mobileStep2Screen').classList.remove('active');
-  // Entry point for both create and edit — always land on the name/price/
-  // category step first.
-  document.getElementById('recipeStep1Section')?.classList.remove('step-hidden');
-  document.getElementById('mobileStep1Actions')?.classList.remove('step-hidden');
-  document.getElementById('recipeStep2Section')?.classList.add('step-hidden');
-  document.getElementById('mobileActions1')?.classList.add('step-hidden');
+// Mobile category sheet — same PRODUCT_CATEGORIES/icon map as the desktop
+// icon grid (renderProductCategoryIconPicker), just a labelled list instead
+// of icon-only chips. Distinct from #prodCatSheet, which drives the page's
+// own product-list category filter, not this modal's recipeCategoryInput.
+function renderRbCatValue() {
+  const v = document.getElementById('recipeCategoryInput')?.value || '';
+  const el = document.getElementById('rbCatValue');
+  if (!el) return;
+  el.className = 'rb-row-value' + (v ? '' : ' empty');
+  const icon = _recipeCategIconMap[v] || 'tag';
+  el.innerHTML = v ? `<i data-lucide="${icon}" style="width:15px;height:15px"></i>${_escHtml(v)}` : 'Not set';
+  if (window.lucide) lucide.createIcons();
 }
-
-// Mobile-only 2-step create flow: name/price/category, then item picking.
-function goToItemStep() {
-  const nameInput = document.getElementById('recipeNameInput');
-  const name = nameInput?.value?.trim();
-  if (!name) {
-    nameInput?.classList.add('shake');
-    nameInput?.focus();
-    setTimeout(() => nameInput?.classList.remove('shake'), 500);
-    return;
-  }
-  document.getElementById('recipeStep1Section')?.classList.add('step-hidden');
-  document.getElementById('mobileStep1Actions')?.classList.add('step-hidden');
-  document.getElementById('recipeStep2Section')?.classList.remove('step-hidden');
-  document.getElementById('mobileActions1')?.classList.remove('step-hidden');
+function openRbCatSheet() {
+  const current = document.getElementById('recipeCategoryInput')?.value || '';
+  document.getElementById('rbCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRbCat('${_escHtml(cat)}')">
+        <i data-lucide="${icon}"></i><span class="cat-row-label">${_escHtml(cat)}</span>
+      </div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+  document.getElementById('rbCatSheet').classList.add('active');
 }
-
-function backToNameStep() {
-  document.getElementById('recipeStep2Section')?.classList.add('step-hidden');
-  document.getElementById('mobileActions1')?.classList.add('step-hidden');
-  document.getElementById('recipeStep1Section')?.classList.remove('step-hidden');
-  document.getElementById('mobileStep1Actions')?.classList.remove('step-hidden');
+function closeRbCatSheet() {
+  document.getElementById('rbCatSheet').classList.remove('active');
 }
-
-function renderMobileQtyList() {
-  const container = document.getElementById('mobileQtyList');
-  if (!container) return;
-  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  container.innerHTML = Object.entries(currentRecipe).map(([id, item]) => `
-    <div class="mobile-qty-row">
-      <div class="mobile-qty-top">
-        <span class="mobile-qty-name">${esc(item.name)}</span>
-      </div>
-      <div class="mobile-qty-controls">
-        <button class="mobile-qty-btn" onclick="adjustMobileQty('${id}', -1)">−</button>
-        <input type="number" class="mobile-qty-val" data-id="${id}" value="${item.quantity}"
-          min="0.01" step="0.01" inputmode="decimal" oninput="updateMobileQty('${id}', this.value)">
-        <button class="mobile-qty-btn" onclick="adjustMobileQty('${id}', 1)">+</button>
-      </div>
-    </div>
-  `).join('');
+function pickRbCat(cat) {
+  const input = document.getElementById('recipeCategoryInput');
+  input.value = input.value === cat ? '' : cat; // tap the selected one again to clear
+  renderProductCategoryIconPicker(); // keeps the desktop icon grid in sync too
+  renderRbCatValue();
+  closeRbCatSheet();
 }
 
 function updateMobileQty(id, val) {
-  if (currentRecipe[id]) currentRecipe[id].quantity = parseFloat(val) || 1;
+  if (!currentRecipe[id]) return;
+  currentRecipe[id].quantity = parseFloat(val) || 1;
+  updateCost();
 }
 
+// Stepping to 0 removes the item — same result as tapping it off in the
+// library below, so there's one way to end up with an item gone, not two.
 function adjustMobileQty(id, delta) {
   if (!currentRecipe[id]) return;
-  const newQty = Math.max(0.01, Math.round(((currentRecipe[id].quantity || 1) + delta) * 100) / 100);
-  currentRecipe[id].quantity = newQty;
-  const input = document.querySelector(`.mobile-qty-val[data-id="${id}"]`);
-  if (input) input.value = newQty;
+  const next = Math.round(((currentRecipe[id].quantity || 1) + delta) * 100) / 100;
+  if (next < 0.01) delete currentRecipe[id];
+  else currentRecipe[id].quantity = next;
+  renderMobileSelected();
+  renderMobileIngList();
+  updateCost();
+  updateMobileCreateBtn();
 }
 
 function updateMobileCreateBtn() {
-  const count = Object.keys(currentRecipe).length;
   updateCreateButtonState();
-  const btn = document.getElementById('saveRecipeBtn');
-  if (!btn || window.innerWidth > 768) return;
-  const label = currentEditingRecipeId ? 'Save Changes' : 'Create Product';
-  btn.textContent = count > 0 ? `${label} (${count})` : label;
 }
 
 function openMobileNameModal() { /* no-op — name input is now in step 2 footer */ }
@@ -3077,8 +3077,11 @@ function updateDisabledState() {
 }
 
 function updateCreateButtonState() {
+  const disabled = Object.keys(currentRecipe).length === 0;
   const btn = document.getElementById('saveRecipeBtn');
-  if (btn) btn.disabled = Object.keys(currentRecipe).length === 0;
+  if (btn) btn.disabled = disabled;
+  const rbBtn = document.getElementById('rbCreateBtn');
+  if (rbBtn) rbBtn.disabled = disabled;
 }
 
 function updateCost() {
@@ -3090,6 +3093,21 @@ function updateCost() {
   const display = document.getElementById('recipeTotalCostDisplay');
   if (display) {
     display.textContent = `$${total.toFixed(2)}`;
+  }
+
+  // Mobile-only cost strip — margin on price, same convention as the
+  // product-detail page's margin stat.
+  const margin = document.getElementById('recipeMarginDisplay');
+  if (margin) {
+    const price = parseFloat(document.getElementById('recipeSalesPriceInput')?.value) || 0;
+    if (!price) {
+      margin.textContent = '—';
+      margin.dataset.state = '';
+    } else {
+      const pct = Math.round(((price - total) / price) * 100);
+      margin.textContent = `${pct}%`;
+      margin.dataset.state = pct < 0 ? 'out' : pct < 20 ? 'low' : 'ok';
+    }
   }
 }
 
@@ -3512,11 +3530,12 @@ async function openBuilderForRecipe(recipeId) {
 
     const _spEdit = document.getElementById('recipeSalesPriceInput');
     if (_spEdit) _spEdit.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
-    const _spEditM = document.getElementById('mobileRecipeSalesPriceInput');
-    if (_spEditM) _spEditM.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
     const _catEdit = document.getElementById('recipeCategoryInput');
     if (_catEdit) _catEdit.value = fullRecipe.category || '';
     renderProductCategoryIconPicker();
+    renderRbCatValue();
+    const _titleEdit = document.getElementById('rbTitle');
+    if (_titleEdit) _titleEdit.textContent = 'Edit product';
 
     document.getElementById('recipeBuilderOverlay').classList.add('active');
     
@@ -3544,8 +3563,9 @@ async function openBuilderForRecipe(recipeId) {
     document.getElementById('recipeNameInput').value = fullRecipe.name || '';
 
     renderMobileIngList();
+    renderMobileSelected();
+    updateCost();
     updateMobileCreateBtn();
-    goToMobileStep1();
     setTimeout(() => initMobileIngredientList(), 100);
   } catch (err) {
     console.error('Error opening builder:', err);
