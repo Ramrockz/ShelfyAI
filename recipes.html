@@ -699,8 +699,6 @@
       gap: 12px;
       display: flex;
       flex-direction: column;
-      height: 100%;
-      overflow-y: auto;
     }
     
     .recipe-grid {
@@ -776,13 +774,13 @@
       font-weight: 600;
     }
 
-    /* Mobile Ingredient Picker */
+    /* Mobile Ingredient Picker — flows naturally in the single scroll
+       region .recipe-builder already provides; no nested flex:1 sizing
+       that depends on the ancestor chain resolving a definite height. */
     .mobile-ingredient-swiper {
-      flex: 1 1 0;
       display: flex !important;
       flex-direction: column;
       gap: 8px;
-      min-height: 0;
     }
 
     #mobileRecipeSearch {
@@ -800,8 +798,6 @@
     #mobileRecipeSearch:focus { border-color: var(--accent); }
 
     #mobileRecipeIngList {
-      flex: 1 1 0;
-      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
