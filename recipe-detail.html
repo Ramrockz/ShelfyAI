@@ -411,13 +411,6 @@
     #rdmMargin[data-state="ok"]  { color: var(--success); }
     #rdmMargin[data-state="out"] { color: var(--danger); }
 
-    /* Family/variant matrix, adopted into the overlay from .container */
-    #rdmFamilyHost #variantMatrixSection {
-      margin: 12px 0 0; border-radius: 0; border-left: none; border-right: none;
-      padding: 12px 16px 14px;
-    }
-    #rdmFamilyHost #familyBreadcrumb { padding: 0 20px; }
-
     /* Items as read rows — tap opens the item sheet (stepper/swap/restock/remove) */
     .rdm-item-row { display: flex; align-items: center; gap: 12px; min-height: 60px;
                     padding: 10px 14px 10px 16px; background: var(--bg-panel);
@@ -1271,12 +1264,8 @@ function renderVariantMatrix(stockMap) {
     return `<div class="vmx-row-label">${_escHtml(r)}</div>${cells}`;
   }).join('');
 
-  // On mobile the columns get a fixed width instead of 1fr — 1fr divides the
-  // viewport evenly and shrinks cells below a usable tap size on a 4+ column
-  // family; a fixed width lets .vmx-scroll's overflow-x:auto do the work.
-  const colUnit = window.innerWidth <= 768 ? '74px' : '1fr';
   body.innerHTML = `<div class="vmx-scroll">
-    <div class="vmx-grid" style="grid-template-columns: 78px repeat(${axes.cols.length}, ${colUnit});">
+    <div class="vmx-grid" style="grid-template-columns: 78px repeat(${axes.cols.length}, 1fr);">
       <div class="vmx-col-head vmx-corner"></div>
       ${headerCells}
       ${rowsHtml}
@@ -1680,16 +1669,6 @@ function renderMobileOverlay() {
   }
 
   rdmRenderRestockRow();
-
-  // Adopt the desktop-only family nodes into the overlay (they live inside
-  // .container, which is display:none on mobile) — appendChild moves the
-  // live node, so renderVariantMatrix() keeps writing to the same
-  // #variantMatrixBody with no second render path.
-  const familyHost = document.getElementById('rdmFamilyHost');
-  ['familyBreadcrumb', 'variantMatrixSection'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && familyHost && el.parentElement !== familyHost) familyHost.appendChild(el);
-  });
 }
 
 function rdmRenderHeadline() {
@@ -3516,7 +3495,6 @@ document.addEventListener('keydown', (e) => {
         <div><label>Margin</label><span id="rdmMargin">—</span></div>
       </div>
     </div>
-    <div id="rdmFamilyHost"></div>
     <div id="rdmQtyList" style="padding:0 20px;"></div>
   </div>
   <div class="rdm-restock-row" id="rdmRestockRow" style="display:none;" onclick="rdmRestockShort()">
