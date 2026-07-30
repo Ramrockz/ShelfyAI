@@ -40,6 +40,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -843,7 +844,7 @@
 
 <!-- Add/Edit Expense Modal -->
 <div class="modal-overlay" id="expenseModal">
-  <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+  <div class="modal-content" id="expenseStep1" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Expense</h3>
     
     <!-- novalidate: native required-field validation runs before the submit
@@ -929,6 +930,15 @@
         </div>
       </div>
     </form>
+  </div>
+
+  <!-- Success screen: what this expense did to inventory (inventory-impact.js) -->
+  <div class="modal-content" id="expenseStep2" style="display:none; flex-direction:column; max-width:520px;">
+    <div id="expenseSuccessBody" style="flex:1; min-height:0; overflow-y:auto; padding:24px 24px 8px; scrollbar-width:thin; scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn ghost" onclick="closeExpenseModal()">Done</button>
+      <button type="button" class="ii-btn primary" id="expenseViewBtn">View expense</button>
+    </div>
   </div>
 </div>
 
@@ -1724,7 +1734,9 @@ async function openAddExpenseModal() {
   // Render category chips and attribute filters
   renderExpenseCategoryChips();
   renderExpenseAttrSubfilter();
-  
+
+  document.getElementById('expenseStep1').style.display = '';
+  document.getElementById('expenseStep2').style.display = 'none';
   document.getElementById('expenseModal').classList.add('active');
 }
 
@@ -2303,7 +2315,9 @@ async function editExpense(expenseId) {
   // Render category chips and attribute filters
   renderExpenseCategoryChips();
   renderExpenseAttrSubfilter();
-  
+
+  document.getElementById('expenseStep1').style.display = '';
+  document.getElementById('expenseStep2').style.display = 'none';
   document.getElementById('expenseModal').classList.add('active');
 }
 
@@ -2380,25 +2394,86 @@ async function saveExpense(event) {
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
     // Update inventory if toggle is on (add purchased qty to stock)
+    const changesSummary = [];
     if (manualExpenseUpdateInventory && !editingExpenseId) {
       for (const item of selectedExpenseIngredients) {
         const ing = allIngredients.find(i => i.id === item.id);
         if (ing && item.quantity > 0) {
           const oldQty = parseFloat(ing.quantity) || 0;
           const newQty = oldQty + item.quantity;
+          const minStock = parseFloat(ing.min_stock) || 0;
           await supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', item.id);
           ing.quantity = newQty;
+          try {
+            await supabaseClient.from('ingredient_history').insert([{
+              ingredient_id: ing.id,
+              profile_id: user.id,
+              field_name: 'quantity',
+              old_value: String(oldQty),
+              new_value: String(newQty),
+              reason: 'expense',
+              reference_id: String(savedData && savedData[0] ? savedData[0].id : ''),
+              reference_text: vendor || null
+            }]);
+          } catch (historyError) { console.error('Error creating history entry:', historyError); }
+          // A purchase can only raise stock, so "low" here means still
+          // below min_stock even after adding this quantity — never "out".
+          const status = (minStock > 0 && newQty <= minStock) ? 'low_stock' : 'ok';
+          changesSummary.push({ id: ing.id, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status });
         }
       }
     }
 
     try { render(); } catch (e2) {}
-    closeExpenseModal();
+
+    if (!editingExpenseId && savedData && savedData[0]) {
+      showExpenseSuccessScreen(savedData[0], manualExpenseUpdateInventory, changesSummary);
+    } else {
+      closeExpenseModal();
+    }
 
   } catch (error) {
     console.error('Error saving expense:', error);
     showNotification('Failed to save expense', 'error');
   }
+}
+
+function showExpenseSuccessScreen(expense, inventoryUpdated, changes) {
+  document.getElementById('expenseStep1').style.display = 'none';
+  const step2 = document.getElementById('expenseStep2');
+  step2.style.display = 'flex';
+  const viewBtn = document.getElementById('expenseViewBtn');
+  if (viewBtn) viewBtn.onclick = () => { window.location.href = '/expense-detail?id=' + expense.id; };
+
+  changes = changes || [];
+  const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.newQty - c.oldQty), 0);
+  const rows = changes.map(c => ({
+    name: c.name,
+    from: c.oldQty,
+    to: c.newQty,
+    unit: c.unit,
+    why: `+${c.qty % 1 === 0 ? c.qty : c.qty.toFixed(2)}${c.unit ? ' ' + c.unit : ''} added`,
+    href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
+    state: c.status === 'low_stock' ? 'low' : ''
+  }));
+
+  ShelfyInventoryImpact.render(document.getElementById('expenseSuccessBody'), {
+    title: 'Expense recorded',
+    sub: [expense.vendor, expense.expense_date].filter(Boolean).join(' · ') || null,
+    figs: [
+      [`$${(parseFloat(expense.amount) || 0).toFixed(2)}`, 'receipt total'],
+      [String((expense.ingredients || []).length), 'items'],
+      ...(changes.length ? [[`+${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'units of stock']] : [])
+    ],
+    secTitle: 'Stock it added',
+    secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
+    rows,
+    emptyText: inventoryUpdated ? 'No inventory items were linked to this expense.' : 'Inventory was not updated for this expense.',
+    note: inventoryUpdated
+      ? 'Stock went up when this expense was saved.'
+      : null,
+    undo: null
+  });
 }
 
 function deleteExpense(expenseId) {

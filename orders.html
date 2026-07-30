@@ -42,6 +42,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
@@ -747,29 +748,9 @@
   .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
   .flatpickr-input { cursor: pointer !important; }
 
-  /* â”€â”€ Order Success Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* Order success screen (styling lives in inventory-impact.js's shared
+     .ii-* classes in styles.css) */
   #manualStep3 { max-width: 520px; }
-  .order-success-icon { width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 38px; color: #fff; line-height: 1; animation: successPop 0.55s cubic-bezier(0.175,0.885,0.32,1.275) both; }
-  @keyframes successPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .order-success-title { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
-  .order-success-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-  .order-success-badge.inv-updated { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
-  .inv-warning-tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
-  .inv-warning-tag.oos { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-  .inv-warning-tag.low { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
-  .inv-changes-list { text-align: left; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 4px; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
-  .inv-change-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--border); animation: fadeSlideIn 0.3s ease both; }
-  .inv-change-row:last-child { border-bottom: none; }
-  @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-  .inv-change-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .inv-change-dot.oos { background: #ef4444; } .inv-change-dot.low { background: #f59e0b; } .inv-change-dot.ok { background: #10b981; }
-  .inv-change-name { flex: 1; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; cursor: pointer; color: inherit; text-decoration: none; }
-  .inv-change-name:hover { color: var(--accent); text-decoration: underline; }
-  .inv-change-qty { font-size: 12px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-  .inv-change-qty .old { color: var(--text-muted); text-decoration: line-through; } .inv-change-qty .arrow { color: var(--text-muted); font-size: 10px; }
-  .inv-change-qty .new-ok { font-weight: 700; color: #10b981; } .inv-change-qty .new-low { font-weight: 700; color: #f59e0b; } .inv-change-qty .new-oos { font-weight: 700; color: #ef4444; }
-  .inv-change-pill { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
-  .inv-change-pill.oos { background: rgba(239,68,68,0.1); color: #ef4444; } .inv-change-pill.low { background: rgba(245,158,11,0.1); color: #f59e0b; }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -2476,19 +2457,12 @@ document.addEventListener('keydown', (e) => {
   </div>
 
   <!-- Step 3: Success Screen -->
-  <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;text-align:center;">
-    <div style="flex:1;min-height:0;overflow-y:auto;padding:32px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
-      <div class="order-success-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:36px;height:36px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-      </div>
-      <h2 class="order-success-title" id="successOrderTitle">Order Created!</h2>
-      <div id="successBadgesRow" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
-      <div id="successInvSection"></div>
-    </div>
-    <div class="recipe-picker-footer" style="padding:14px 24px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button type="button" class="btn btn-primary" style="flex:1;min-width:80px;">View</button>
-      <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="startAnotherOrder()">New</button>
-      <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeManualOrderModal()">Done</button>
+  <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;">
+    <div id="successBody" style="flex:1;min-height:0;overflow-y:auto;padding:24px 24px 8px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn ghost" onclick="startAnotherOrder()">New order</button>
+      <button type="button" class="ii-btn ghost" onclick="closeManualOrderModal()">Done</button>
+      <button type="button" class="ii-btn primary btn-primary">View order</button>
     </div>
   </div>
 
@@ -3033,45 +3007,67 @@ async function _populateCustomerSuggestionsOrders() {
   } catch (e) { /* ignore */ }
 }
 
-function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
+function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmatchedItems) {
   document.getElementById('manualStep2').style.display = 'none';
   const step3 = document.getElementById('manualStep3');
   step3.style.display = 'flex';
   // Wire up View button
   const viewBtn = step3.querySelector('.btn-primary');
   if (viewBtn) viewBtn.onclick = () => { window.location.href = '/order-detail?id=' + order.id; };
-  document.getElementById('successOrderTitle').textContent = 'Order from ' + (order.customer || 'Customer') + ' Created!';
-  const badgesRow = document.getElementById('successBadgesRow');
-  let badgesHtml = '';
-  if (inventoryUpdated) badgesHtml += '<span class="order-success-badge inv-updated">✓ Inventory Updated</span>';
-  if (inventoryUpdated && inventoryChanges && inventoryChanges.length > 0) {
-    const oosCount = inventoryChanges.filter(i => i.status === 'out_of_stock').length;
-    const lowCount = inventoryChanges.filter(i => i.status === 'low_stock').length;
-    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">⚠ ${oosCount} Out of Stock</span>`;
-    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">↓ ${lowCount} Running Low</span>`;
-  }
-  badgesRow.innerHTML = badgesHtml;
-  const sectionEl = document.getElementById('successInvSection');
-  sectionEl.innerHTML = '';
-  if (!inventoryUpdated || !inventoryChanges || inventoryChanges.length === 0) return;
+
+  const changes = (inventoryUpdated && inventoryChanges) ? inventoryChanges : [];
   const priority = { out_of_stock: 0, low_stock: 1, ok: 2 };
-  const sorted = [...inventoryChanges].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
-  const rowsHtml = sorted.map((item, idx) => {
-    const s = item.status === 'out_of_stock' ? 'oos' : item.status === 'low_stock' ? 'low' : 'ok';
-    const fmt = v => v % 1 === 0 ? String(v) : v.toFixed(2);
-    const pillHtml = s === 'oos' ? '<span class="inv-change-pill oos">OUT OF STOCK</span>' : s === 'low' ? '<span class="inv-change-pill low">LOW</span>' : '';
-    const detailUrl = item.id ? `/ingredient-detail?id=${encodeURIComponent(item.id)}` : null;
-    const nameEl = detailUrl
-      ? `<a class="inv-change-name" href="${detailUrl}" target="_blank" rel="noopener" onclick="event.ctrlKey||event.metaKey||event.button===1?null:window.open('${detailUrl}','_blank');event.preventDefault();">${_escapeHtml(item.name)}</a>`
-      : `<span class="inv-change-name">${_escapeHtml(item.name)}</span>`;
-    return `<div class="inv-change-row" style="animation-delay:${idx * 0.04}s">
-      <div class="inv-change-dot ${s}"></div>
-      ${nameEl}
-      <div class="inv-change-qty"><span class="old">${fmt(item.oldQty)}</span><span class="arrow">→</span><span class="new-${s}">${fmt(item.newQty)}</span></div>
-      ${pillHtml}
-    </div>`;
-  }).join('');
-  sectionEl.innerHTML = '<div class="inv-changes-list">' + rowsHtml + '</div>';
+  const sorted = [...changes].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
+  const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.oldQty - c.newQty), 0);
+
+  const rows = sorted.map(c => ({
+    name: c.name,
+    from: c.oldQty,
+    to: c.newQty,
+    unit: c.unit,
+    href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
+    state: c.status === 'out_of_stock' ? 'out' : c.status === 'low_stock' ? 'low' : ''
+  }));
+
+  ShelfyInventoryImpact.render(document.getElementById('successBody'), {
+    title: 'Order from ' + (order.customer || 'Customer') + ' created',
+    sub: [order.source, order.order_reference].filter(Boolean).join(' · ') || null,
+    figs: [
+      [`$${(parseFloat(order.revenue) || 0).toFixed(2)}`, 'order total'],
+      [String(order.total_quantity || 0), 'items'],
+      ...(changes.length ? [[`−${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'units of stock']] : [])
+    ],
+    secTitle: 'Stock it took',
+    secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
+    rows,
+    emptyText: inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.',
+    unmatched: (unmatchedItems || []).map(u => ({ name: u.name, why: u.why })),
+    note: inventoryUpdated
+      ? 'Stock was deducted when this order was created. Editing the order later does not re-run it.'
+      : null,
+    undo: (inventoryUpdated && changes.length) ? {
+      label: 'Put this stock back',
+      onClick: (btn) => undoOrderStock(changes, btn)
+    } : null
+  });
+}
+
+// Reverses exactly the deduction just shown — the change list already has
+// each ingredient's pre-order quantity, so this is a direct restore rather
+// than re-deriving anything from ingredient_history.
+async function undoOrderStock(changes, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Restoring…'; }
+  try {
+    await Promise.all(changes.map(c =>
+      supabaseClient.from('ingredients').update({ quantity: c.oldQty }).eq('id', c.id)
+    ));
+    if (btn) { btn.textContent = 'Stock restored'; }
+    showOrderNotification('Stock put back', 'success');
+  } catch (error) {
+    console.error('Error restoring stock:', error);
+    if (btn) { btn.disabled = false; btn.textContent = 'Put this stock back'; }
+    showOrderNotification('Failed to restore stock: ' + error.message, 'error');
+  }
 }
 
 function startAnotherOrder() {
@@ -3192,13 +3188,14 @@ async function updateInventoryForNewOrder(selectedRecipes, userId, saleId = null
     const ingredientIds = Object.keys(ingredientDeductions);
     if (ingredientIds.length === 0) return;
     const { data: ingredients, error: ingredientsError } = await supabaseClient
-      .from('ingredients').select('id, quantity, name, unit').eq('profile_id', userId).in('id', ingredientIds);
+      .from('ingredients').select('id, quantity, name, unit, min_stock').eq('profile_id', userId).in('id', ingredientIds);
     if (ingredientsError) throw ingredientsError;
     const changesSummary = [];
     const updatePromises = ingredients.map(async ingredient => {
       const deduction = ingredientDeductions[ingredient.id] || 0;
       const oldQuantity = parseFloat(ingredient.quantity) || 0;
       const newQuantity = Math.max(0, oldQuantity - deduction);
+      const minStock = parseFloat(ingredient.min_stock) || 0;
       await supabaseClient.from('ingredients').update({ quantity: newQuantity }).eq('id', ingredient.id);
       try {
         await supabaseClient.from('ingredient_history').insert([{
@@ -3212,14 +3209,19 @@ async function updateInventoryForNewOrder(selectedRecipes, userId, saleId = null
           reference_text: orderReference
         }]);
       } catch (historyError) { console.error('Error creating history entry:', historyError); }
+      // Low/out matches the pre-order picker's definition (_recipeStockStatus):
+      // out at zero, low at/below min_stock, falling back to the old
+      // percentage heuristic for items with no min_stock set.
       let status = 'ok';
       if (newQuantity === 0 && oldQuantity > 0) {
         status = 'out_of_stock';
         await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
+      } else if (minStock > 0 && newQuantity <= minStock) {
+        status = 'low_stock';
       } else if (newQuantity > 0 && oldQuantity > 0 && newQuantity <= oldQuantity * 0.25 && oldQuantity >= 4) {
         status = 'low_stock';
       }
-      changesSummary.push({ id: ingredient.id, name: ingredient.name, oldQty: oldQuantity, newQty: newQuantity, status });
+      changesSummary.push({ id: ingredient.id, name: ingredient.name, unit: ingredient.unit, oldQty: oldQuantity, newQty: newQuantity, status });
     });
     await Promise.all(updatePromises);
     return changesSummary;
@@ -3805,7 +3807,7 @@ async function confirmMappedOrder() {
     if (!user) throw new Error('Not authenticated');
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    const items = [], selectedOrderRecipes = [];
+    const items = [], selectedOrderRecipes = [], unmatchedItems = [];
     mappedRecipes.forEach((mapping, idx) => {
       if (mapping.selectedRecipe) {
         const recipePrice = parseFloat(mapping.selectedRecipe.retail_price) || parseFloat(mapping.selectedRecipe.cost) || 0;
@@ -3816,6 +3818,7 @@ async function confirmMappedOrder() {
         const typedName = document.getElementById(`recipeSearchInput_${idx}`)?.value?.trim();
         const itemName = typedName || mapping.itemData.name || 'Custom item';
         items.push({ name: itemName, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
+        unmatchedItems.push({ name: itemName, why: 'No product matched this line — no stock was affected' });
       }
     });
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -3849,7 +3852,7 @@ async function confirmMappedOrder() {
     closeRecipeMappingModal();
     document.getElementById('manualStep1').style.display = 'none';
     document.getElementById('manualOrderModal').classList.add('active');
-    showOrderSuccessScreen(data[0], updateInventory, inventoryChanges);
+    showOrderSuccessScreen(data[0], updateInventory, inventoryChanges, unmatchedItems);
     await loadOrders();
     render();
   } catch (error) {
