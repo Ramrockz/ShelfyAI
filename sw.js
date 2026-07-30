@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v165';
+const CACHE_NAME = 'shelfy-v166';
 
 const STATIC_ASSETS = [
   '/',
@@ -101,8 +101,17 @@ self.addEventListener('fetch', (event) => {
     // HTTP cache, so "revalidation" silently re-caches the same stale bytes
     // instead of pulling the latest deploy — bypass it and always hit the
     // network directly.
+    //
+    // ignoreSearch: detail pages navigate with a query string
+    // (/ingredient-detail?id=X), and every distinct id was otherwise its
+    // own cache entry — revisiting the SAME item kept serving whatever was
+    // cached the first time it was opened after a deploy, even after
+    // CACHE_NAME bumped, since that specific ?id= was never re-fetched.
+    // The underlying HTML/CSS/JS shell is identical regardless of id, so
+    // matching without the query string lets any one cached copy serve
+    // (and get revalidated for) every id.
     event.respondWith(
-      caches.match(event.request).then((cached) => {
+      caches.match(event.request, { ignoreSearch: true }).then((cached) => {
         // Revalidate in the background even when serving from cache
         const networkUpdate = fetch(event.request, { cache: 'no-store' }).then((response) => {
           if (response && response.status === 200) {
