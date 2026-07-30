@@ -88,11 +88,26 @@
   }
   .detail-title-input:focus { border-bottom-color: var(--accent); }
 
+  /* Static-looking title shown by default on mobile — tapping it swaps in
+     #name-mobile (the real input) for editing, closer to a plain <h1> than
+     an always-live text field. */
+  .detail-title-display {
+    font-size: 26px;
+    font-weight: 500;
+    margin: 0;
+    padding: 2px 0;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: text;
+  }
+
   /* Desktop: hide mobile-only name title; name lives inside the panel */
-  #name-mobile { display: none; }
+  #name-mobile, #name-mobile-display { display: none; }
   .detail-rows { display: none; }
   @media (max-width: 768px) {
-    #name-mobile { display: block; }
+    #name-mobile-display { display: block; }
     #name-desktop-group { display: none; }
     .ingredient-details-h3 {
       font-size: 11px !important; font-weight: 700; letter-spacing: 0.07em;
@@ -370,6 +385,10 @@
   }
   .qty-adjust-btn:hover { background: #0891b2; transform: scale(1.1); }
   .qty-adjust-btn:active { transform: scale(0.95); }
+  /* Only the increase button is accent-colored — decrease stays neutral,
+     matching the reference (one cyan fill per screen, not two). */
+  .qty-adjust-btn--minus { background: var(--bg-inner); color: #475569; }
+  .qty-adjust-btn--minus:hover { background: var(--border); }
   #qtyDisplay:focus { background: var(--bg-inner); }
 
   .qty-status { text-align: center; margin-top: 6px; font-size: 12.5px; font-weight: 600;
@@ -394,11 +413,19 @@
       font-size: 11px !important; font-weight: 700; letter-spacing: 0.07em;
       text-transform: uppercase; color: var(--text-muted);
     }
-    .recipe-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+    /* One swipeable row, not a wrapped grid of pills. */
+    .recipe-pills {
+      display: flex; flex-wrap: nowrap; gap: 7px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; -ms-overflow-style: none;
+      margin: 0 -20px; padding: 0 20px;
+    }
+    .recipe-pills::-webkit-scrollbar { display: none; }
     .recipe-pill {
       display: inline-flex; align-items: center; height: 34px; padding: 0 12px;
       border-radius: 99px; background: var(--bg-panel); border: 1px solid var(--border);
       color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      flex-shrink: 0;
     }
 
     /* Matches the mockup: Used in Products is a plain label + pills, no
@@ -879,7 +906,9 @@
     /* Reorder container elements: Title -> Stock Status -> Details -> Buttons */
     .container {
       padding: 16px 12px;
-      padding-bottom: 180px;
+      /* Actual value is set further down (!important, accounts for the
+         bottom nav + safe area) — this is just a same-ballpark fallback. */
+      padding-bottom: 90px;
       display: flex;
       flex-direction: column;
     }
@@ -908,24 +937,15 @@
       margin-bottom: 16px;
     }
 
-    /* Buttons section - fixed to bottom. Only favorite + ⋯ remain visible by
-       default (dup/delete moved into the ⋯ menu below), with the reorder CTA
-       growing to fill the middle when it's shown — flex instead of a fixed
+    /* Buttons section — stays in the header, next to the name, not pinned to
+       the bottom of the screen. Only favorite + ⋯ remain visible by default
+       (dup/delete moved into the ⋯ menu below) — flex instead of a fixed
        3-column grid so hidden buttons don't leave dead gaps. */
     .detail-header > div:last-child {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
       display: flex !important;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 8px;
-      padding: 12px;
-      background: var(--bg-main);
-      border-top: 1px solid var(--border);
-      z-index: 1000;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
 
     .detail-header .btn-reorder {
@@ -937,7 +957,7 @@
 
     /* Duplicate and Delete move into the ⋯ menu on mobile — three icon
        buttons in a 390px header is the same mis-tap trap Inventory had.
-       Favorite stays visible in the footer. */
+       Favorite stays visible in the header. */
     .detail-dup-btn, .detail-del-btn {
       display: none !important;
     }
@@ -1078,14 +1098,10 @@
   }
 
   @media (max-width: 768px) {
-    /* Fix action buttons above bottom nav */
-    .detail-header > div:last-child {
-      bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-
-    /* Adjust container bottom padding for nav + button bar */
+    /* The action row lives in the header now, not pinned above the bottom
+       nav — only the nav itself needs clearance here. */
     .container {
-      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 80px) !important;
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 20px) !important;
     }
 
     .breadcrumb {
@@ -1275,7 +1291,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="detail-header-title">
-      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Item name&hellip;" required oninput="document.getElementById('name').value=this.value" onblur="document.getElementById('name').value=this.value;autoSave()">
+      <h1 id="name-mobile-display" class="detail-title-display" onclick="startEditName()"></h1>
+      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Item name&hellip;" required
+        style="display:none;"
+        oninput="document.getElementById('name').value=this.value"
+        onblur="document.getElementById('name').value=this.value;autoSave();finishEditName();"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
     </div>
     <div class="detail-header-actions" style="display:flex; gap:12px; align-items:center;">
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
@@ -1399,7 +1420,7 @@
     <div>
       <div class="panel qty-panel" style="padding: 20px;">
         <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-          <button class="qty-adjust-btn" onclick="adjustQty(-1)">&minus;</button>
+          <button class="qty-adjust-btn qty-adjust-btn--minus" onclick="adjustQty(-1)">&minus;</button>
           <span id="qtyDisplay" contenteditable="true" inputmode="decimal" spellcheck="false"
             style="font-size: 40px; font-weight: 800; line-height: 1; color: var(--success); outline: none; min-width: 1ch; cursor: text; border-radius: 8px; padding: 2px 6px;"
             onblur="commitQtyInput(this)"
@@ -1636,6 +1657,8 @@
     document.getElementById('name').value = ing.name || '';
     const mobileNameEl = document.getElementById('name-mobile');
     if (mobileNameEl) mobileNameEl.value = ing.name || '';
+    const mobileNameDisplay = document.getElementById('name-mobile-display');
+    if (mobileNameDisplay) mobileNameDisplay.textContent = ing.name || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
     document.getElementById('category').value = ing.category || '';
     document.getElementById('min_stock').value = ing.min_stock || '';
@@ -2774,6 +2797,26 @@
       closeDetailMoreMenu();
     }
   });
+
+  // Mobile title: tap the static <h1> to reveal the real input, matching
+  // the reference — the name isn't an always-live text field anymore.
+  function startEditName() {
+    const display = document.getElementById('name-mobile-display');
+    const input = document.getElementById('name-mobile');
+    if (!display || !input) return;
+    display.style.display = 'none';
+    input.style.display = 'block';
+    input.focus();
+    input.select();
+  }
+  function finishEditName() {
+    const display = document.getElementById('name-mobile-display');
+    const input = document.getElementById('name-mobile');
+    if (!display || !input) return;
+    display.textContent = input.value || '';
+    input.style.display = 'none';
+    display.style.display = 'block';
+  }
 
   async function toggleFavorite() {
     if (!currentIngredient) return;
