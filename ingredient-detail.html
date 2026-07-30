@@ -923,18 +923,19 @@
       order: 1;
     }
 
-    /* Header with title */
+    /* Header with title — one row (back, name, actions), like a normal
+       mobile app bar. This used to be flex-direction: column, which
+       stacked the back button above the name and pushed the actions
+       row below it instead of sitting inline. */
     .detail-header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
       order: 2;
     }
 
-    /* Title section — targeted by class, not :first-child, since the back
-       button (added later) is the actual first child of .detail-header now. */
     .detail-header-title {
-      margin-bottom: 16px;
+      margin-bottom: 0;
     }
 
     /* Buttons section — stays in the header, next to the name, not pinned to
