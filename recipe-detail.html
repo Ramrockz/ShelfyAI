@@ -1896,12 +1896,17 @@ async function toggleDetailFavorite() {
 
 function _syncFavBtns() {
   const fav = recipe?.is_favorite;
-  [document.getElementById('rdmFavBtn'), document.getElementById('detailFavBtn')].forEach(btn => {
-    if (!btn) return;
-    btn.textContent = fav ? '★' : '☆';
-    btn.style.color = fav ? '#fbbf24' : '';
-    if (btn.id === 'rdmFavBtn') btn.classList.toggle('favorited', !!fav);
-  });
+  const detailBtn = document.getElementById('detailFavBtn');
+  if (detailBtn) {
+    detailBtn.textContent = fav ? '★' : '☆';
+    detailBtn.style.color = fav ? '#fbbf24' : '';
+  }
+  // rdmFavBtn is a ⋯-menu item (icon + label), not a bare star button —
+  // update its two spans instead of the button's whole textContent.
+  const rdmIcon = document.getElementById('rdmFavIcon');
+  const rdmLabel = document.getElementById('rdmFavLabel');
+  if (rdmIcon) rdmIcon.textContent = fav ? '★' : '☆';
+  if (rdmLabel) rdmLabel.textContent = fav ? 'Remove from favorites' : 'Mark as favorite';
 }
 
 // Recipe Builder Variables
@@ -3577,6 +3582,10 @@ document.addEventListener('keydown', (e) => {
     </div>
   </div>
   <div class="rdm-more-menu" id="rdmMoreMenu">
+    <button type="button" class="rdm-more-item" id="rdmFavBtn" onclick="closeRdmMoreMenu(); toggleDetailFavorite()">
+      <span id="rdmFavIcon" style="font-size:18px; line-height:1; width:18px; display:inline-block; text-align:center;">☆</span>
+      <span id="rdmFavLabel">Mark as favorite</span>
+    </button>
     <button type="button" class="rdm-more-item" onclick="closeRdmMoreMenu(); openRdmRenameSheet()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       <span>Rename</span>
