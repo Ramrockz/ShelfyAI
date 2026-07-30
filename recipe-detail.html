@@ -2639,6 +2639,24 @@ async function removeIngredientFromRecipe(index) {
   renderAvailableIngredients();
 }
 
+// Products created before the category picker existed (or duplicated from
+// one) have category === null and are only ever grouped by a live
+// majority-vote over their components' own categories (see recipes.html's
+// _productCategoryFor) — purely for display, nothing persists it. Swapping
+// a single component recomputes that vote over the NEW component list, so
+// a product can silently jump to a different category group the moment
+// any one item changes. addIngredientToRecipe() locks in today's
+// (pre-edit) result via this same vote so future edits stop reshuffling it.
+function _effectiveCategoryFor(components) {
+  const cats = (components || [])
+    .map(c => availableIngredients.find(i => i.id === (c.ingredient_id || c.id))?.category)
+    .filter(Boolean);
+  if (!cats.length) return null;
+  const counts = {};
+  cats.forEach(c => { counts[c] = (counts[c] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
 async function updateRecipeInDatabase() {
   const totalCost = recipe.components.reduce((sum, comp) => sum + (comp.cost || 0), 0);
   recipe.cost = totalCost;
@@ -2648,7 +2666,8 @@ async function updateRecipeInDatabase() {
       .from('recipes')
       .update({
         components: recipe.components,
-        cost: totalCost
+        cost: totalCost,
+        category: recipe.category
       })
       .eq('id', recipeId);
 
@@ -3254,6 +3273,12 @@ async function addIngredientToRecipe(ingredientId) {
   if (!ingredient) return;
 
   recipe.components = recipe.components || [];
+
+  // Lock in today's category (explicit, or inferred from the CURRENT
+  // components) before this edit changes them — see _effectiveCategoryFor.
+  if (!recipe.category) {
+    recipe.category = _effectiveCategoryFor(recipe.components);
+  }
 
   if (swapTargetIndex !== null) {
     // Swap mode: replace the ingredient at swapTargetIndex, preserve quantity

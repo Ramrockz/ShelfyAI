@@ -3554,8 +3554,13 @@ async function openBuilderForRecipe(recipeId) {
 
     const _spEdit = document.getElementById('recipeSalesPriceInput');
     if (_spEdit) _spEdit.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
+    // Pre-fill with whatever category this product is actually grouped
+    // under today — for products saved before the picker existed, that's
+    // the inferred (component-vote) category, not just the raw (null)
+    // column — otherwise saving here with the picker left blank would
+    // silently re-write category back to null.
     const _catEdit = document.getElementById('recipeCategoryInput');
-    if (_catEdit) _catEdit.value = fullRecipe.category || '';
+    if (_catEdit) _catEdit.value = fullRecipe.category || _productCategoryFor(fullRecipe) || '';
     renderProductCategoryIconPicker();
     renderRbCatValue();
     const _titleEdit = document.getElementById('rbTitle');
