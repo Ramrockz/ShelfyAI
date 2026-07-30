@@ -2857,12 +2857,24 @@
     if (window.lucide) lucide.createIcons();
   }
 
-  // Built from the chip grid itself so adding a category there is the only
-  // place you need to touch — no second list to keep in sync.
+  // This used to be built from the chip grid's own data-lucide attributes
+  // ("no second list to keep in sync") — but lucide.createIcons() replaces
+  // each <i data-lucide="..."> with an <svg>, removing that attribute from
+  // the DOM entirely. By the time this ran (after the page's initial
+  // lucide.createIcons() pass), every lookup came back undefined and fell
+  // back to the same generic "tag" icon for every category. Same icon
+  // names as recipes.html's _recipeCategIconMap.
+  const _ING_CAT_ICON_MAP = {
+    'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+    'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
+    'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
+    'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
+    'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
+    'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
+    'Packaging': 'package', 'Food': 'wheat'
+  };
   function _catIconMap() {
-    const map = {};
-    document.querySelectorAll('#catGrid .cat-chip').forEach(b => { map[b.dataset.value] = b.querySelector('i')?.dataset.lucide; });
-    return map;
+    return _ING_CAT_ICON_MAP;
   }
 
   function catRow() {
@@ -2952,7 +2964,7 @@
     };
     const chips = [...document.querySelectorAll('#catGrid .cat-chip')];
     document.getElementById('catSheetList').innerHTML =
-      chips.map(b => row(b.dataset.value, b.querySelector('i')?.dataset.lucide, b.dataset.value)).join('');
+      chips.map(b => row(b.dataset.value, _ING_CAT_ICON_MAP[b.dataset.value], b.dataset.value)).join('');
     if (window.lucide) lucide.createIcons();
   }
 
