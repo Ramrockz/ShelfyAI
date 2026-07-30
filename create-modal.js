@@ -47,10 +47,6 @@
   };
 
   var TIER_LIMITS = { free: 5, starter: 100, pro: 300 };
-  var UPGRADE_NEXT = {
-    free: { name: 'Starter', desc: '100 scans a month, €9.99' },
-    starter: { name: 'Pro', desc: '300 scans a month, €24.99' }
-  };
 
   var sheetEl = null;
   var contentEl = null;
@@ -158,7 +154,6 @@
       }
       if (e.target.id === 'scmCancelBtn') { close(); return; }
       if (e.target.id === 'scmBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
-      if (e.target.id === 'scmUpgradeLink') { window.location.href = '/pricing'; return; }
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && sheetEl.classList.contains('active')) close();
@@ -209,14 +204,9 @@
         '<div class="scm-meter-text">' + usage.used + ' of ' + usage.limit + ' AI scans used this month · shared across items, orders and expenses</div>' +
       '</div>';
     if (usage.limitReached) {
-      var next = UPGRADE_NEXT[usage.tier];
       html +=
         '<div class="scm-upsell">' +
-          '<p class="scm-upsell-headline">All ' + usage.limit + ' AI scans used this month</p>' +
-          '<p class="scm-upsell-sub">Resets on the 1st. Scans are shared across items, orders and expenses.</p>' +
           '<button type="button" class="scm-buy-btn" id="scmBuyBtn">' + buyLabel(scanPackPrice) + '</button>' +
-          "<p class=\"scm-buy-note\">One-off. Yours until you use them — they don't expire.</p>" +
-          (next ? '<button type="button" class="scm-upgrade-link" id="scmUpgradeLink">Or move to ' + next.name + ' — ' + next.desc + '</button>' : '') +
         '</div>';
     }
     return html;
