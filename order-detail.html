@@ -1062,11 +1062,13 @@
        instead of showing separately. */
     .navbar { display: none !important; }
 
+    /* The icon row is a plain top bar, not part of the customer/total
+       card below it — no shared background/border, so it doesn't read as
+       one merged block the way it used to. */
     .ord-mobile-header {
-      display: block; background: var(--bg-panel); border-radius: 12px;
-      padding: 6px 16px 16px; margin-bottom: 16px; border: 1px solid var(--border);
+      display: block; margin-bottom: 16px;
     }
-    .ord-head-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+    .ord-head-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
     .ord-more-btn {
       width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer;
@@ -1077,7 +1079,12 @@
       width: 32px; height: 32px; align-items: center; justify-content: center;
       background: none; border: none; border-radius: 50%; color: var(--text-main); cursor: pointer; padding: 0;
     }
-    .ord-head { display: flex; align-items: flex-start; gap: 10px; }
+    /* Customer/total card — its own visually distinct block */
+    .ord-head {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px;
+    }
     .ord-head-main { flex: 1; min-width: 0; }
     .ord-customer {
       font-size: 18px; font-weight: 800; letter-spacing: -.01em; cursor: pointer;
@@ -1350,10 +1357,10 @@
         <div class="ord-head-main">
           <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
           <div class="ord-meta" id="ordMeta"></div>
+          <div id="ordStageStrip"></div>
         </div>
         <div class="ord-total" id="ordTotalDisplay">$0.00</div>
       </div>
-      <div id="ordStageStrip"></div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
       <button type="button" class="ord-more-item" onclick="closeOrdMoreMenu(); openRecipeModal()">
