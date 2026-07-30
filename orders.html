@@ -524,7 +524,7 @@
     to { opacity: 1; transform: translateX(0); }
   }
 
-  /* ---------- RECIPE PICKER MODAL ---------- */
+  /* ---------- RECIPE PICKER MODAL (shell) ---------- */
   .recipe-picker-modal .modal-content {
     max-width: 880px !important;
     width: calc(100% - 32px) !important;
@@ -535,118 +535,9 @@
     padding: 0 !important;
     overflow: hidden !important;
   }
-  .recipe-picker-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 22px 28px 18px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .recipe-picker-search {
-    padding: 14px 28px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    position: relative;
-  }
-  .recipe-picker-search input {
-    width: 100%;
-    padding: 12px 38px 12px 38px !important;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    background: var(--bg-main);
-    color: var(--text-main);
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-  }
-  .recipe-picker-search input:focus { border-color: var(--accent); }
-  .recipe-picker-search .search-icon {
-    position: absolute;
-    left: 42px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    color: var(--text-muted);
-    pointer-events: none;
-    z-index: 10;
-  }
-  .recipe-picker-search .search-clear {
-    position: absolute;
-    right: 44px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 18px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    padding: 0;
-    transition: all 0.2s;
-    z-index: 10;
-  }
-  .recipe-picker-search .search-clear:hover {
-    background: var(--bg-inner);
-    color: var(--text-main);
-  }
-  .recipe-picker-search .search-clear.visible { display: flex; }
-  .recipe-picker-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px 28px 4px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent) transparent;
-  }
-  .recipe-picker-body::-webkit-scrollbar { width: 6px; }
-  .recipe-picker-body::-webkit-scrollbar-track { background: transparent; }
-  .recipe-picker-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
-  .recipe-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    margin: 0 0 12px 0;
-  }
-  .recipe-picker-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  .recipe-pick-card {
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    user-select: none;
-  }
-  .recipe-pick-card:hover { border-color: var(--accent); }
-  .recipe-pick-card.selected { border-color: #06b6d4; background: rgba(6,182,212,0.07); }
-  .recipe-pick-card .card-name { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; margin: 0; padding-right: 0; }
-  .recipe-pick-card .card-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; margin: 0; flex-shrink: 0; }
-  .recipe-pick-card .card-status { display: none; /* Hidden per user request */ font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
-  .recipe-pick-card .stock-pill { display: none; /* Hidden per user request */ }
-  .picker-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
-  .picker-dot.green  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
-  .picker-dot.orange { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
-  .picker-dot.red    { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+  /* Step 1's new single-column picker (14b) is narrower than the shared
+     shell above, which step 2 still needs the full width of. */
+  #manualStep1 { max-width: 460px !important; }
   /* Step 2 shrinks to content, no blank space */
   #manualStep2 { height: auto !important; }
   /* Inventory toggle switch */
@@ -656,43 +547,101 @@
   .inv-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,0.18); }
   .inv-toggle input:checked + .inv-slider { background:var(--accent); }
   .inv-toggle input:checked + .inv-slider:before { transform:translateX(20px); }
-  .recipe-pick-card .fav-btn {
-    display: none; /* Hidden per user request */
-    font-size: 16px; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
-    color: var(--text-muted); opacity: 0.5; transition: opacity 0.2s, color 0.2s, transform 0.2s;
-  }
-  .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
-  .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
-  .recipe-pick-card.cant-build { cursor: pointer; /* No grey-out per user request */ }
-  .added-recipes-section { margin-bottom: 8px; min-width: 0; overflow: hidden; }
-  .added-recipe-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px;
-    background: rgba(6,182,212,0.07);
-    border: 2px solid #06b6d4;
-    border-radius: 10px;
-    margin-bottom: 6px;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-  }
-  .added-recipe-row .ar-name { flex: 1; font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; word-break: normal !important; overflow-wrap: normal !important; }
-  .added-recipe-row .ar-price { display: none; /* Hidden per user request */ font-size: 13px; color: var(--accent); font-weight: 700; white-space: nowrap; }
-  .added-recipe-row .ar-qty-btn {
-    width: 26px; height: 26px; border-radius: 50%;
-    border: 1px solid rgba(6,182,212,0.4); background: var(--bg-main);
-    cursor: pointer; font-size: 15px; line-height: 1; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; color: var(--text-main);
-  }
-  .added-recipe-row .ar-qty { min-width: 18px; text-align: center; font-weight: 700; font-size: 14px; }
-  .added-recipe-row .ar-remove { opacity: 0.35; font-size: 20px; cursor: pointer; background: none; border: none; color: var(--text-main); padding: 0; line-height: 1; transition: opacity 0.2s; flex-shrink: 0; }
-  .added-recipe-row .ar-remove:hover { opacity: 1; }
-  .recipe-picker-footer {
-    border-top: 1px solid var(--border);
-    padding: 14px 28px;
-    flex-shrink: 0;
-    background: var(--bg-panel);
-  }
+
+  /* ---------- Product picker (#manualStep1) — 14b reference ---------- */
+  .op-modal { border-radius: 20px; overflow: hidden; }
+  .op-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .op-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 20px; }
+  .op-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .op-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .op-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .op-skip { height: 40px; padding: 0 12px; background: none; border: none;
+             color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; }
+
+  .op-find { display: flex; align-items: center; gap: 8px; padding: 0 20px 12px; }
+  .op-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; height: 44px;
+               padding: 0 12px; border-radius: 12px; background: var(--bg-inner); }
+  .op-search input { flex: 1; min-width: 0; border: none; background: none; outline: none;
+                     font-size: 15px; color: var(--text-main); }
+  .op-search input::placeholder { color: var(--text-faint, var(--text-muted)); }
+  .op-clear { width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--text-ghost, #cbd5e1);
+              color: #fff; display: none; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; line-height: 1; }
+  .op-clear[data-on="1"] { display: flex; }
+
+  .op-filter { position: relative; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px;
+               border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);
+               display: flex; align-items: center; justify-content: center; }
+  .op-filter:active { background: var(--bg-inner); }
+  .op-filter[aria-expanded="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+  .op-filter-n { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px;
+                 border-radius: 99px; background: var(--accent-deep, var(--accent)); color: #fff; font-size: 10.5px;
+                 font-weight: 800; display: none; align-items: center; justify-content: center;
+                 border: 2px solid var(--bg-panel); }
+  .op-filter-n[data-on="1"] { display: flex; }
+
+  .op-chips { display: none; gap: 7px; padding: 0 20px 12px; overflow-x: auto;
+              scrollbar-width: none; -ms-overflow-style: none; }
+  .op-chips::-webkit-scrollbar { display: none; }
+  .op-chips[data-open="1"] { display: flex; }
+  .op-chip { flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-app, var(--bg-inner)); color: var(--text-muted);
+             font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .op-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+  .op-chip-clear { flex-shrink: 0; height: 34px; padding: 0 10px; border: none; background: none;
+                   color: var(--accent-deep, var(--accent)); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+
+  .op-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .op-sec-head { display: flex; align-items: baseline; padding: 18px 20px 8px; }
+  .op-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+                  color: var(--text-muted); }
+  .op-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+  .op-list { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             border-bottom: 1px solid var(--border-hair, var(--border)); }
+
+  .op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px 10px 20px;
+            border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
+  .op-list .op-row:first-child { border-top: none; }
+  .op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
+  .op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .op-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .op-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+             font-variant-numeric: tabular-nums; }
+  .op-meta b { font-weight: 700; color: var(--text-main); }
+  .op-meta[data-state="low"] { color: var(--warning, #b45309); }
+  .op-meta[data-state="out"], .op-meta[data-state="short"] { color: var(--danger, #dc2626); }
+
+  .op-add { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--bg-panel);
+            color: var(--accent-ink, var(--accent)); display: flex; align-items: center; justify-content: center; }
+  .op-add:active { background: var(--bg-inner); }
+  .op-step { flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
+  .op-step button { width: 40px; height: 44px; border: none; background: none; color: var(--accent-ink, var(--accent));
+                    display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+  .op-step button:active { background: var(--bg-inner); }
+  .op-qty { min-width: 26px; text-align: center; font-size: 16px; font-weight: 800;
+            font-variant-numeric: tabular-nums; }
+
+  .op-empty { padding: 40px 24px; text-align: center; }
+  .op-empty-t { font-size: 15px; font-weight: 700; }
+  .op-empty-s { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+  .op-empty-b { height: 44px; margin-top: 16px; padding: 0 16px; border-radius: 12px;
+                border: 1px solid var(--border); background: var(--bg-panel);
+                color: var(--accent-ink, var(--accent)); font-size: 13.5px; font-weight: 700; }
+  .op-note { padding: 14px 20px 26px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+
+  .op-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 20px calc(12px + env(safe-area-inset-bottom)); }
+  .op-tally { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .op-tally-l { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .op-tally-r { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -.02em;
+                font-variant-numeric: tabular-nums; }
+  .op-warn { font-size: 12px; font-weight: 700; color: var(--danger, #dc2626); margin-top: 2px; }
+  .op-cont { width: 100%; height: 50px; margin-top: 10px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .op-cont:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
@@ -729,9 +678,6 @@
   .recipe-pill .pill-remove:hover { opacity: 1; }
   @media (max-width: 768px) {
     .recipe-picker-modal .modal-content { height: auto !important; max-height: 95vh !important; }
-    .recipe-picker-header, .recipe-picker-search, .recipe-picker-body, .recipe-picker-footer { padding-left: 16px; padding-right: 16px; }
-    .recipe-picker-search .search-icon { left: 32px; }
-    .recipe-picker-body { flex: 1; min-height: 0; }
   }
 
   /* â”€â”€ Flatpickr theme overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -750,7 +696,7 @@
 
   /* Order success screen (styling lives in inventory-impact.js's shared
      .ii-* classes in styles.css) */
-  #manualStep3 { max-width: 520px; }
+  #manualStep3 { max-width: 520px !important; }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -2367,31 +2313,45 @@ document.addEventListener('keydown', (e) => {
 <!-- Manual Order Creation Modal (2-step recipe picker) -->
 <div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
 
-  <!-- Step 1: Recipe Picker -->
-  <div class="modal-content" id="manualStep1">
-    <div class="recipe-picker-header">
-      <div>
-        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more products to include in this order</p>
+  <!-- Step 1: Product Picker (14b reference) -->
+  <div class="modal-content op-modal" id="manualStep1" style="padding:0; display:flex; flex-direction:column;">
+    <div class="op-head">
+      <div class="op-bar">
+        <span class="op-titles">
+          <span class="op-title">Add products</span>
+          <span class="op-sub">Select one or more products to include in this order</span>
+        </span>
+        <button type="button" class="op-skip" onclick="openProductCreateFromOrder()">New</button>
+        <button type="button" onclick="closeManualOrderModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;padding:8px;">&times;</button>
       </div>
-      <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">&times;</button>
+      <div class="op-find">
+        <label class="op-search">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint,var(--text-muted));flex-shrink:0;"></i>
+          <input id="orderRecipeSearchInput" type="text" placeholder="Search your products"
+                 autocomplete="off"
+                 oninput="renderOrderRecipeSections()"
+                 onkeydown="if(event.key==='Escape'){this.value='';renderOrderRecipeSections()}">
+          <button class="op-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';renderOrderRecipeSections();" aria-label="Clear">&times;</button>
+        </label>
+        <button class="op-filter" id="opFilterBtn" aria-expanded="false" aria-label="Filter products" onclick="toggleOrderPickerFilters()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19" height="19"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+          <span class="op-filter-n" id="opFilterN" data-on="0"></span>
+        </button>
+      </div>
+      <div class="op-chips" id="opChips"></div>
     </div>
 
-    <div class="recipe-picker-search">
-      <i data-lucide="search" class="search-icon"></i>
-      <input id="orderRecipeSearchInput" type="text" placeholder="Search products by name or item..."
-             autocomplete="off"
-             oninput="filterOrderRecipes(this.value); toggleOrderSearchClear()"
-             onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('');document.getElementById('orderSearchClear').classList.remove('visible')}">
-      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');this.classList.remove('visible');" title="Clear search">&times;</button>
-    </div>
-
-    <div class="recipe-picker-body" id="orderRecipePickerBody">
+    <div class="op-scroll" id="orderRecipePickerBody">
       <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
     </div>
 
-    <div class="recipe-picker-footer" style="padding:10px 28px;">
-      <button id="orderContinueBtn" class="btn btn-primary" style="width:100%;padding:10px;opacity:0.4;cursor:not-allowed;" disabled onclick="proceedToOrderDetails()">Continue</button>
+    <div class="op-foot">
+      <div class="op-tally">
+        <span class="op-tally-l" id="opCount">No products yet</span>
+        <span class="op-tally-r" id="opTotal">$0.00</span>
+      </div>
+      <div id="opWarn"></div>
+      <button id="orderContinueBtn" class="op-cont" disabled onclick="proceedToOrderDetails()">Continue</button>
     </div>
   </div>
 
@@ -2627,6 +2587,7 @@ let orderRecipeCache = null;
 let orderFavoriteIds = new Set(); // populated from DB on load
 let orderStockMap = {};
 let orderMinMap = {};
+let orderPickerFilters = { inStock: false, cats: new Set() };
 
 async function loadOrderRecipeData() {
   const { data: { user } } = await supabaseClient.auth.getUser();
@@ -2649,6 +2610,9 @@ async function loadOrderRecipeData() {
   orderFavoriteIds = new Set((recipes || []).filter(r => r.is_favorite).map(r => r.id));
 }
 
+// Current stock as of right now, ignoring anything picked in this order —
+// used only to tag a freshly-added line as already-out (`oos`, read by
+// saveManualOrder/_updateStatusRestriction) and for the "In stock" filter.
 function _recipeStockStatus(recipe) {
   const comps = recipe.components || [];
   if (!comps.length) return 'in';
@@ -2667,10 +2631,39 @@ function _recipeStockStatus(recipe) {
   return 'in';                // green
 }
 
-function _stockBadge(status) {
-  if (status === 'low') return '<span class="stock-pill low">Low</span>';
-  if (status !== 'in')  return '<span class="stock-pill out">Out</span>';
-  return '';
+// A product here is built from N ingredient components, not a single stock
+// number — so "projected" stock (14b's 19d) is the worst-case remaining
+// units across a recipe's components after everything currently picked
+// across the WHOLE order, not just this one row (two products sharing an
+// ingredient must both reflect what the other already committed to).
+function _virtualStockMap() {
+  const virtual = {};
+  orderRecipes.forEach(r => {
+    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
+    if (!recipe || !Array.isArray(recipe.components)) return;
+    recipe.components.forEach(c => {
+      const ingId = c.ingredient_id || c.id;
+      const needed = (parseFloat(c.quantity) || 0) * r.quantity;
+      const base = virtual[ingId] !== undefined ? virtual[ingId] : (orderStockMap[ingId] || 0);
+      virtual[ingId] = base - needed;
+    });
+  });
+  return virtual;
+}
+function _projectedStatus(recipe, virtualMap) {
+  const comps = recipe.components || [];
+  if (!comps.length) return { state: '', remain: null };
+  let state = '', worstRemain = null;
+  for (const c of comps) {
+    const ingId = c.ingredient_id || c.id;
+    const remain = virtualMap[ingId] !== undefined ? virtualMap[ingId] : (orderStockMap[ingId] || 0);
+    const min = orderMinMap[ingId] || 0;
+    if (worstRemain === null || remain < worstRemain) worstRemain = remain;
+    if (remain < 0) state = 'short';
+    else if (remain === 0 && state !== 'short') state = 'out';
+    else if (min > 0 && remain <= min && !state) state = 'low';
+  }
+  return { state, remain: worstRemain };
 }
 
 async function _getLastUsedRecipes() {
@@ -2692,179 +2685,194 @@ async function _getLastUsedRecipes() {
   } catch { return []; }
 }
 
-function _renderRecipeCard(recipe) {
+const ORDER_PICK_ICON_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ORDER_PICK_ICON_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+function _orderRowHtml(recipe, virtualMap) {
+  const picked = orderRecipes.find(r => r.id === recipe.id);
+  const qty = picked ? picked.quantity : 0;
   const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
-  const status = _recipeStockStatus(recipe);
-  const badge = _stockBadge(status);
-  const isFav = orderFavoriteIds.has(recipe.id);
-  const esc = recipe.name.replace(/'/g, "\\'");
-  const cantBuild = status === 'out';
-  return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
-      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price})">
-    <button class="fav-btn${isFav ? ' is-fav' : ''}"
-      onclick="event.stopPropagation();toggleOrderFavorite('${recipe.id}')"
-      style="pointer-events:auto"
-      title="Favorite">${isFav ? '&#9733;' : '&#9734;'}</button>
-    <div class="card-name">${recipe.name}</div>
-    <div class="card-price">$${price.toFixed(2)}</div>
-    ${badge}
-  </div>`;
-}
-
-function _renderAddedSection() {
-  if (!orderRecipes.length) return '';
-  return `<div class="added-recipes-section">
-    <div class="recipe-section-title">Added Products</div>
-    ${orderRecipes.map(r => `
-      <div class="added-recipe-row" id="arr-${r.id}">
-        <span class="ar-name">${r.name}</span>
-        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">&minus;</button>
-        <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
-        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
-        <button class="ar-remove" type="button" onclick="removeOrderRecipe('${r.id}')">&times;</button>
-      </div>`).join('')}
-  </div>`;
-}
-
-async function renderOrderRecipeSections(filtered) {
-  const body = document.getElementById('orderRecipePickerBody');
-  const isSearch = filtered !== null;
-  const addedIds = new Set(orderRecipes.map(r => r.id));
-  const fullList = isSearch ? filtered : (orderRecipeCache || []);
-  const list = fullList.filter(r => !addedIds.has(r.id));
-  let html = _renderAddedSection();
-
-  if (isSearch) {
-    if (list.length) {
-      html += `<div class="recipe-section-title">Search Results</div>
-        <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
-    } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
-    }
-    body.innerHTML = html;
-    return;
+  const nameEsc = _escapeHtml(recipe.name);
+  let metaHtml = `$${price.toFixed(2)}`;
+  let state = '';
+  if ((recipe.components || []).length) {
+    const proj = _projectedStatus(recipe, virtualMap);
+    state = proj.state;
+    metaHtml += qty ? ` · <b>${proj.remain}</b> left` : ` · ${proj.remain} left`;
+    if (state === 'short') metaHtml += ` · short ${Math.abs(proj.remain)}`;
+    else if (state === 'out' && qty) metaHtml += ' · none left';
   }
+  const stepper = qty
+    ? `<span class="op-step" onclick="event.stopPropagation()">
+        <button type="button" onclick="bumpOrderRecipe('${recipe.id}', -1)" aria-label="One fewer">${ORDER_PICK_ICON_MINUS}</button>
+        <span class="op-qty">${qty}</span>
+        <button type="button" onclick="bumpOrderRecipe('${recipe.id}', 1)" aria-label="One more">${ORDER_PICK_ICON_PLUS}</button>
+      </span>`
+    : `<button type="button" class="op-add" aria-label="Add ${nameEsc}">${ORDER_PICK_ICON_PLUS}</button>`;
+  return `
+    <div class="op-row" data-picked="${qty ? 1 : 0}" onclick="bumpOrderRecipe('${recipe.id}', 1)">
+      <span class="op-main">
+        <span class="op-name">${nameEsc}</span>
+        <span class="op-meta"${state ? ` data-state="${state}"` : ''}>${metaHtml}</span>
+      </span>
+      ${stepper}
+    </div>`;
+}
 
-  const favs = list.filter(r => orderFavoriteIds.has(r.id));
-  const favIds = new Set(favs.map(r => r.id));
-  const nonFavList = list.filter(r => !favIds.has(r.id));
+function _orderPickerPasses(recipe) {
+  if (orderPickerFilters.inStock && _recipeStockStatus(recipe) === 'out') return false;
+  if (orderPickerFilters.cats.size && !orderPickerFilters.cats.has(recipe.category)) return false;
+  return true;
+}
 
-  const lastUsed = await _getLastUsedRecipes();
-  const recentList = (lastUsed || []).filter(r => !addedIds.has(r.id) && !favIds.has(r.id));
-  const recentIds = new Set(recentList.map(r => r.id));
-  const allOnly = nonFavList.filter(r => !recentIds.has(r.id));
+function renderOrderPickerChips() {
+  const cats = [...new Set((orderRecipeCache || []).map(r => r.category).filter(Boolean))].sort();
+  const n = (orderPickerFilters.inStock ? 1 : 0) + orderPickerFilters.cats.size;
+  const nEl = document.getElementById('opFilterN');
+  if (nEl) { nEl.dataset.on = n ? '1' : '0'; nEl.textContent = n; }
+  const chipsEl = document.getElementById('opChips');
+  if (!chipsEl) return;
+  chipsEl.innerHTML = `
+    <button type="button" class="op-chip" aria-pressed="${orderPickerFilters.inStock}" onclick="toggleOrderInStockFilter()">In stock</button>
+    ${cats.map(c => `<button type="button" class="op-chip" aria-pressed="${orderPickerFilters.cats.has(c)}" onclick="toggleOrderCatFilter('${_escapeHtml(c)}')">${_escapeHtml(c)}</button>`).join('')}
+    ${n ? `<button type="button" class="op-chip-clear" onclick="clearOrderPickerFilters()">Clear</button>` : ''}`;
+}
 
-  if (favs.length) html += `<div class="recipe-section-title">Favorites</div>
-    <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
-  if (recentList.length) html += `<div class="recipe-section-title">Recently Used</div>
-    <div class="recipe-picker-grid">${recentList.map(_renderRecipeCard).join('')}</div>`;
-  if (allOnly.length) html += `<div class="recipe-section-title">All Products</div>
-    <div class="recipe-picker-grid">${allOnly.map(_renderRecipeCard).join('')}</div>`;
+async function renderOrderRecipeSections() {
+  const body = document.getElementById('orderRecipePickerBody');
+  if (!body) return;
+  const inp = document.getElementById('orderRecipeSearchInput');
+  const q = (inp?.value || '').trim().toLowerCase();
+  const clearBtn = document.getElementById('orderSearchClear');
+  if (clearBtn) clearBtn.dataset.on = q ? '1' : '0';
+  renderOrderPickerChips();
 
-  if (!favs.length && !recentList.length && !allOnly.length && orderRecipes.length) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All products have been added</div>';
+  const virtualMap = _virtualStockMap();
+  const addedIds = new Set(orderRecipes.map(r => r.id));
+  // A picked product is never filtered out — you must be able to un-pick it.
+  const pool = (orderRecipeCache || []).filter(r => _orderPickerPasses(r) || addedIds.has(r.id));
+
+  let html = '';
+  if (q) {
+    const hits = pool.filter(r => {
+      if ((r.name || '').toLowerCase().includes(q)) return true;
+      if (Array.isArray(r.components)) return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(q));
+      return false;
+    });
+    if (hits.length) {
+      html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
+        <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    } else {
+      const activeFilters = orderPickerFilters.inStock || orderPickerFilters.cats.size;
+      html = `<div class="op-empty">
+        <div class="op-empty-t">No product matches "${_escapeHtml(q)}"</div>
+        <div class="op-empty-s">Create it now and it stays in the order.</div>
+        <button type="button" class="op-empty-b" onclick='createProductFromOrderSearch(${JSON.stringify(q)})'>Create "${_escapeHtml(q)}"</button>
+        ${activeFilters ? `<div class="op-empty-s" style="margin-top:14px">Filters active — <a href="#" onclick="clearOrderPickerFilters();return false">clear them</a></div>` : ''}
+      </div>`;
+    }
+  } else {
+    const favs = pool.filter(r => orderFavoriteIds.has(r.id));
+    const favIds = new Set(favs.map(r => r.id));
+    const lastUsed = await _getLastUsedRecipes();
+    const recentList = (lastUsed || []).filter(r => !favIds.has(r.id) && _orderPickerPasses(r));
+    const recentIds = new Set(recentList.map(r => r.id));
+    const rest = pool.filter(r => !favIds.has(r.id) && !recentIds.has(r.id));
+
+    if (favs.length) html += `<div class="op-sec-head"><span class="op-sec-title">Favorites</span><span class="op-sec-note">${favs.length}</span></div>
+      <div class="op-list">${favs.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    if (recentList.length) html += `<div class="op-sec-head"><span class="op-sec-title">Ordered recently</span><span class="op-sec-note">${recentList.length}</span></div>
+      <div class="op-list">${recentList.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    if (rest.length) html += `<div class="op-sec-head"><span class="op-sec-title">All products</span><span class="op-sec-note">${rest.length}</span></div>
+      <div class="op-list">${rest.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+
+    if (!favs.length && !recentList.length && !rest.length) {
+      html += `<div class="op-empty">
+        <div class="op-empty-t">No products yet</div>
+        <div class="op-empty-s">Create your first product to start adding it to orders.</div>
+        <button type="button" class="op-empty-b" onclick="openProductCreateFromOrder()">New product</button>
+      </div>`;
+    }
+    html += `<div class="op-note">Stock isn't deducted until you create the order.</div>`;
   }
 
   body.innerHTML = html;
-}
-
-function toggleOrderSearchClear() {
-  const input = document.getElementById('orderRecipeSearchInput');
-  const clearBtn = document.getElementById('orderSearchClear');
-  if (input && clearBtn) {
-    if (input.value.trim() !== '') {
-      clearBtn.classList.add('visible');
-    } else {
-      clearBtn.classList.remove('visible');
-    }
-  }
-}
-
-function filterOrderRecipes(query) {
-  const clearBtn = document.getElementById('orderSearchClear');
-  if (clearBtn) clearBtn.style.display = (query && query.trim()) ? 'flex' : 'none';
-  if (!query || !query.trim()) { renderOrderRecipeSections(null); return; }
-  const term = query.trim().toLowerCase();
-  const filtered = (orderRecipeCache || []).filter(r => {
-    if ((r.name || '').toLowerCase().includes(term)) return true;
-    if (Array.isArray(r.components)) {
-      return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(term));
-    }
-    return false;
-  });
-  renderOrderRecipeSections(filtered);
-}
-
-function toggleOrderRecipeSelect(id, name, price) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx >= 0) {
-    orderRecipes[idx].quantity += 1;
-  } else {
-    const recipe = (orderRecipeCache || []).find(r => r.id === id);
-    const isOos = recipe ? _recipeStockStatus(recipe) === 'out' : false;
-    orderRecipes.push({ id, name, price: parseFloat(price), quantity: 1, oos: isOos });
-  }
-  const inp = document.getElementById('orderRecipeSearchInput');
-  const query = inp ? inp.value.trim() : '';
-  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
   updatePickerFooter();
 }
 
-function toggleOrderFavorite(id) {
-  const newVal = !orderFavoriteIds.has(id);
-  if (newVal) orderFavoriteIds.add(id);
-  else orderFavoriteIds.delete(id);
-  // Update in cache so re-renders reflect it
-  const cached = (orderRecipeCache || []).find(r => r.id === id);
-  if (cached) cached.is_favorite = newVal;
-  // Persist to DB
-  supabaseClient.from('recipes').update({ is_favorite: newVal }).eq('id', id)
-    .then(({ error }) => { if (error) console.error('Error saving recipe favorite:', error); });
-  // Invalidate recipes.html cache if on same session
-  if (typeof recipes !== 'undefined') {
-    const r = recipes.find(r => r.id === id);
-    if (r) r.is_favorite = newVal;
-  }
-  // Re-render picker (not in search mode check)
-  const inp = document.getElementById('orderRecipeSearchInput');
-  if (!inp || !inp.value.trim()) renderOrderRecipeSections(null);
+function toggleOrderPickerFilters() {
+  const btn = document.getElementById('opFilterBtn');
+  const chips = document.getElementById('opChips');
+  if (!btn || !chips) return;
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', String(open));
+  chips.dataset.open = open ? '1' : '0';
 }
+function toggleOrderInStockFilter() { orderPickerFilters.inStock = !orderPickerFilters.inStock; renderOrderRecipeSections(); }
+function toggleOrderCatFilter(c) {
+  if (orderPickerFilters.cats.has(c)) orderPickerFilters.cats.delete(c); else orderPickerFilters.cats.add(c);
+  renderOrderRecipeSections();
+}
+function clearOrderPickerFilters() { orderPickerFilters.inStock = false; orderPickerFilters.cats.clear(); renderOrderRecipeSections(); }
 
+// Oversell is allowed (backorders happen) but never silent — updatePickerFooter's
+// warning line is the one place that surfaces it.
 function updatePickerFooter() {
+  const countEl = document.getElementById('opCount');
+  const totalEl = document.getElementById('opTotal');
+  const warnEl = document.getElementById('opWarn');
   const btn = document.getElementById('orderContinueBtn');
   if (!btn) return;
-  if (orderRecipes.length) {
-    btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
-  } else {
-    btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
+
+  const units = orderRecipes.reduce((s, r) => s + r.quantity, 0);
+  const total = orderRecipes.reduce((s, r) => s + r.price * r.quantity, 0);
+  const virtualMap = _virtualStockMap();
+  const shortCount = orderRecipes.filter(r => {
+    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
+    return recipe && _projectedStatus(recipe, virtualMap).state === 'short';
+  }).length;
+
+  if (countEl) countEl.textContent = units
+    ? `${orderRecipes.length} product${orderRecipes.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}`
+    : 'No products yet';
+  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+  if (warnEl) warnEl.innerHTML = shortCount
+    ? `<div class="op-warn">${shortCount} product${shortCount !== 1 ? 's go' : ' goes'} below zero — the order will still save</div>`
+    : '';
+  btn.disabled = !units;
+  btn.textContent = units ? `Continue · $${total.toFixed(2)}` : 'Continue';
+}
+
+function bumpOrderRecipe(id, delta) {
+  const idx = orderRecipes.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    const next = orderRecipes[idx].quantity + delta;
+    if (next <= 0) orderRecipes.splice(idx, 1);
+    else orderRecipes[idx].quantity = next;
+  } else if (delta > 0) {
+    const recipe = (orderRecipeCache || []).find(r => r.id === id);
+    if (!recipe) return;
+    const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
+    const isOos = _recipeStockStatus(recipe) === 'out';
+    orderRecipes.push({ id, name: recipe.name, price, quantity: 1, oos: isOos });
   }
+  renderOrderRecipeSections();
 }
 
-function removeOrderRecipe(id) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx < 0) return;
-  orderRecipes.splice(idx, 1);
-  const inp = document.getElementById('orderRecipeSearchInput');
-  const query = inp ? inp.value.trim() : '';
-  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
-  updatePickerFooter();
+// "New" header button / search-miss "Create ..." button both hand off to
+// recipes.html's builder via sessionStorage (separate page/document, same
+// pattern as ingredients.html's seedManualModal for unmatched receipt
+// lines) — warn first since anything already picked here doesn't survive
+// the navigation.
+function openProductCreateFromOrder() {
+  if (orderRecipes.length && !confirm("Creating a new product will leave this order — the products you've already picked won't be saved. Continue?")) return;
+  sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name: '' }));
+  window.location.href = '/recipes';
 }
-
-function adjustPickerQtyById(id, delta) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx < 0) return;
-  orderRecipes[idx].quantity = Math.max(1, orderRecipes[idx].quantity + delta);
-  const qtyEl = document.getElementById('arq-' + id);
-  if (qtyEl) qtyEl.textContent = orderRecipes[idx].quantity;
-  const priceEl = document.getElementById('arp-' + id);
-  if (priceEl) priceEl.textContent = `$${(orderRecipes[idx].price * orderRecipes[idx].quantity).toFixed(2)}`;
-  updatePickerFooter();
-}
-
-function adjustPickerQty(index, delta) {
-  if (!orderRecipes[index]) return;
-  orderRecipes[index].quantity = Math.max(1, orderRecipes[index].quantity + delta);
-  updatePickerFooter();
+function createProductFromOrderSearch(name) {
+  if (orderRecipes.length && !confirm("Creating a new product will leave this order — the products you've already picked won't be saved. Continue?")) return;
+  sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name }));
+  window.location.href = '/recipes';
 }
 
 function proceedToOrderDetails() {
@@ -2909,6 +2917,7 @@ function backToRecipePicker() {
 // â”€â”€â”€ MODAL OPEN / CLOSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openManualOrderModal() {
   orderRecipes = [];
+  orderPickerFilters = { inStock: false, cats: new Set() };
   document.getElementById('manualStep1').style.display = 'flex';
   document.getElementById('manualStep2').style.display = 'none';
   document.getElementById('manualStep3').style.display = 'none';
@@ -3082,6 +3091,7 @@ function startAnotherOrder() {
   const lastCustomer = document.getElementById('new_order_customer')?.value.trim() || '';
   document.getElementById('manualStep3').style.display = 'none';
   orderRecipes = [];
+  orderPickerFilters = { inStock: false, cats: new Set() };
   const custEl = document.getElementById('new_order_customer');
   const refEl  = document.getElementById('new_order_reference');
   if (custEl) custEl.value = lastCustomer;

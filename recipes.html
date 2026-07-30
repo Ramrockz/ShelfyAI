@@ -3611,7 +3611,23 @@ window.addEventListener('shelfy:synced', (e) => {
   await loadIngredients();
   await loadRecipes();
   const editId = new URLSearchParams(window.location.search).get('edit');
-  if (editId) openBuilderForRecipe(editId);
+  if (editId) { openBuilderForRecipe(editId); return; }
+
+  // A product search miss on orders.html's picker (14b) hands off here via
+  // sessionStorage, same pattern as ingredients.html's seedManualModal.
+  const seedRaw = sessionStorage.getItem('shelfy_seed_product');
+  if (seedRaw) {
+    sessionStorage.removeItem('shelfy_seed_product');
+    try {
+      const seed = JSON.parse(seedRaw);
+      await openBuilder();
+      if (seed.name) {
+        const nameEl = document.getElementById('recipeNameInput');
+        if (nameEl) nameEl.value = seed.name;
+        if (typeof updateCreateButtonState === 'function') updateCreateButtonState();
+      }
+    } catch (e) { console.error('Error applying seeded product:', e); }
+  }
 })();
 
 // Auto-highlight active page in navigation
