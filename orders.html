@@ -3041,7 +3041,15 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
     secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
     rows,
     emptyText: inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.',
-    unmatched: (unmatchedItems || []).map(u => ({ name: u.name, why: u.why })),
+    unmatched: (unmatchedItems || []).map(u => ({
+      name: u.name,
+      why: u.why,
+      action: 'Add item',
+      onAdd: (btn) => {
+        sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({ name: u.name, text: `From "${u.name}" on this order — check the details before saving.` }));
+        window.location.href = '/ingredients';
+      }
+    })),
     note: inventoryUpdated
       ? 'Stock was deducted when this order was created. Editing the order later does not re-run it.'
       : null,

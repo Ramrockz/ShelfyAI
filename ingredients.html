@@ -405,6 +405,77 @@
   .ing-cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
   .ing-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
 
+  /* ---------- New-item form (#manualModal) — 15b reference ---------- */
+  .ic-modal { border-radius: 20px; overflow: hidden; }
+  .ic-head { flex-shrink: 0; min-height: 52px; display: flex; align-items: center; gap: 8px;
+             padding: 0 8px 0 20px; border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ic-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 10px 0; }
+  .ic-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .ic-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ic-close { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+              background: none; border: none; color: var(--text-muted); font-size: 22px; line-height: 1; }
+  .ic-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px; }
+
+  .ic-seed { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 11px 13px;
+             border-radius: 12px; background: var(--bg-inner); }
+  .ic-seed svg { color: var(--text-muted); flex-shrink: 0; margin-top: 1px; }
+  .ic-seed-t { font-size: 12.5px; color: var(--text-muted); }
+  .ic-seed-t b { color: var(--text-main); font-weight: 700; }
+
+  .ic-glabel { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+               color: var(--text-muted); padding: 0 0 8px; }
+  .ic-group { margin-top: 18px; background: var(--bg-panel);
+              border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ic-field { padding: 12px 2px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .ic-group .ic-field:first-child { border-top: none; }
+  .ic-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .ic-input { width: 100%; height: 34px; margin-top: 2px; border: none; background: none; outline: none;
+              font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main); }
+  .ic-input::placeholder { color: var(--text-ghost, #cbd5e1); font-weight: 400; }
+  .ic-hint { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 3px; }
+  .ic-row2 { display: flex; }
+  .ic-row2 .ic-field { flex: 1; }
+  .ic-row2 .ic-field + .ic-field { border-left: 1px solid var(--border-hair, var(--border)); border-top: none; padding-left: 14px; }
+  .ic-prefix { display: flex; align-items: baseline; gap: 5px; }
+  .ic-prefix span { font-size: 15px; font-weight: 600; color: var(--text-faint, var(--text-muted)); }
+
+  .ic-units { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto;
+              scrollbar-width: none; -ms-overflow-style: none; }
+  .ic-units::-webkit-scrollbar { display: none; }
+  .ic-unit { flex-shrink: 0; height: 34px; min-width: 44px; padding: 0 11px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-inner); color: var(--text-muted);
+             font-size: 13px; font-weight: 700; }
+  .ic-unit[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+
+  .ic-more { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px;
+             padding: 0 2px; background: var(--bg-panel); border: none; text-align: left;
+             border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border));
+             margin-top: 18px; }
+  .ic-more-t { flex: 1; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+  .ic-more-n { font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+  .ic-more-c { color: var(--text-ghost, #cbd5e1); transition: transform .18s; }
+  .ic-more[aria-expanded="true"] { border-bottom: none; margin-bottom: 0; }
+  .ic-more[aria-expanded="true"] .ic-more-c { transform: rotate(90deg); }
+  .ic-optional { display: none; }
+  .ic-optional[data-open="1"] { display: block; }
+  .ic-optional .ic-group { margin-top: 0; border-top: none; }
+
+  .ic-note { padding: 14px 0 20px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+
+  .ic-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); }
+  .ic-value { min-height: 20px; font-size: 12.5px; color: var(--text-muted);
+              font-variant-numeric: tabular-nums; }
+  .ic-value b { color: var(--text-main); font-weight: 700; }
+  .ic-save { width: 100%; height: 50px; margin-top: 8px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .ic-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+  .ic-again { display: block; width: 100%; height: 42px; background: none; border: none;
+              color: var(--accent-deep, var(--accent)); font-size: 13px; font-weight: 700; cursor: pointer; }
+  .ic-again:disabled { color: var(--text-ghost, #cbd5e1); cursor: default; }
+
   #dropZone img {
     filter: brightness(0) saturate(100%) opacity(0.5);
   }
@@ -1150,90 +1221,116 @@
 </div>
 
 <div class="modal-overlay" id="manualModal">
-  <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 24px;">Add New Item</h3>
+  <div class="modal-content ic-modal" style="max-width: 460px; padding: 0; display: flex; flex-direction: column; max-height: 90vh;">
+    <div class="ic-head">
+      <span class="ic-titles">
+        <span class="ic-title">New item</span>
+        <span class="ic-sub" id="icSub">Something you buy and keep in stock</span>
+      </span>
+      <button type="button" class="ic-close" onclick="closeManualModal()" aria-label="Cancel">&times;</button>
+    </div>
 
-    <form id="ingredientForm" onsubmit="saveIngredient(event)" novalidate>
-      <div class="form-group">
-        <label for="ing_name">Item Name *</label>
-        <input type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
-      </div>
+    <form id="ingredientForm" onsubmit="saveIngredient(event)" novalidate style="flex:1; min-height:0; display:flex; flex-direction:column;">
+      <div class="ic-scroll">
+        <div id="icSeed"></div>
 
-      <div class="form-group">
-        <label for="ing_quantity">Quantity *</label>
-        <input type="number" id="ing_quantity" step="0.01" required placeholder="0">
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="ing_cost">Cost per Unit *</label>
-          <input type="number" id="ing_cost" step="0.01" required placeholder="0.00">
+        <div class="ic-glabel" style="margin-top:16px">The item</div>
+        <div class="ic-group" style="margin-top:0">
+          <div class="ic-field">
+            <label class="ic-label" for="ing_name">Name</label>
+            <input class="ic-input" type="text" id="ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil" oninput="onIngredientEdit()" autocomplete="off">
+          </div>
+          <div class="ic-row2">
+            <div class="ic-field">
+              <label class="ic-label" for="ing_quantity">Stock on hand</label>
+              <input class="ic-input" type="number" id="ing_quantity" step="0.01" required placeholder="0" oninput="onIngredientEdit()">
+            </div>
+            <div class="ic-field">
+              <label class="ic-label" for="ing_cost">Cost each</label>
+              <span class="ic-prefix"><span>$</span><input class="ic-input" type="number" id="ing_cost" step="0.01" required placeholder="0.00" oninput="onIngredientEdit()"></span>
+            </div>
+          </div>
+          <div class="ic-field">
+            <span class="ic-label">Unit</span>
+            <input type="hidden" id="ing_unit" value="pcs">
+            <div class="ic-units" id="icUnits"></div>
+          </div>
+          <div class="ic-field">
+            <label class="ic-label" for="ing_min_stock">Alert below</label>
+            <input class="ic-input" type="number" id="ing_min_stock" step="0.01" placeholder="Off" oninput="onIngredientEdit()">
+            <div class="ic-hint">Flags it on the dashboard once stock drops under this.</div>
+          </div>
+          <div class="ic-field">
+            <label class="ic-label">Category <span style="color: var(--danger);">*</span></label>
+            <input type="hidden" id="ing_category">
+            <div class="ing-cat-grid">
+              <button type="button" class="ing-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Wood"             onclick="selectIngCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Boxes"            onclick="selectIngCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Cards"            onclick="selectIngCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Plants"           onclick="selectIngCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Candy"            onclick="selectIngCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Beverage"         onclick="selectIngCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Jewelry"          onclick="selectIngCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Party Supplies"   onclick="selectIngCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Gaming"           onclick="selectIngCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Toys"             onclick="selectIngCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Office Supplies"  onclick="selectIngCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Colors"           onclick="selectIngCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Rope"             onclick="selectIngCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Paper"            onclick="selectIngCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Spool"            onclick="selectIngCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Letter"           onclick="selectIngCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Giveaway"         onclick="selectIngCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Electronics"      onclick="selectIngCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Printing Supplies" onclick="selectIngCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Tools"            onclick="selectIngCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Packaging"        onclick="selectIngCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
+              <button type="button" class="ing-cat-chip" data-value="Food"             onclick="selectIngCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="ing_sku">SKU</label>
-          <input type="text" id="ing_sku" placeholder="Stock Keeping Unit">
+        <button type="button" class="ic-more" id="icMoreBtn" aria-expanded="false" onclick="toggleIcMore()">
+          <span class="ic-more-t">Source &amp; codes</span>
+          <span class="ic-more-n" id="icMoreN">Optional</span>
+          <span class="ic-more-c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg></span>
+        </button>
+        <div class="ic-optional" id="icOptional" data-open="0">
+          <div class="ic-group">
+            <div class="ic-row2">
+              <div class="ic-field">
+                <label class="ic-label" for="ing_sku">SKU</label>
+                <input class="ic-input" type="text" id="ing_sku" placeholder="—" oninput="onIngredientEdit()" autocomplete="off">
+              </div>
+              <div class="ic-field">
+                <label class="ic-label" for="ing_estimated_delivery">Delivery days</label>
+                <input class="ic-input" type="number" id="ing_estimated_delivery" placeholder="—" oninput="onIngredientEdit()">
+              </div>
+            </div>
+            <div class="ic-field">
+              <label class="ic-label" for="ing_source_url">Source URL</label>
+              <input class="ic-input" type="url" id="ing_source_url" placeholder="https://supplier.com/product" oninput="onIngredientEdit()">
+            </div>
+            <div class="ic-field">
+              <label class="ic-label" for="ing_notes">Notes</label>
+              <input class="ic-input" type="text" id="ing_notes" placeholder="—" oninput="onIngredientEdit()" autocomplete="off">
+            </div>
+            <div class="ic-field">
+              <label class="ic-label">Custom Attributes</label>
+              <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;"></div>
+              <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
+            </div>
+          </div>
         </div>
+
+        <div class="ic-note">Saving adds this to Items at the stock you entered — no stock history row, because nothing moved.</div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="ing_min_stock">Minimum Stock Alert *</label>
-          <input type="number" id="ing_min_stock" step="0.01" placeholder="e.g., 10" required>
-        </div>
-
-        <div class="form-group">
-          <label for="ing_estimated_delivery">Estimated Delivery (days)</label>
-          <input type="number" id="ing_estimated_delivery" placeholder="Max days for delivery">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Category <span style="color: var(--danger);">*</span></label>
-        <input type="hidden" id="ing_category">
-        <div class="ing-cat-grid">
-          <button type="button" class="ing-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Wood"             onclick="selectIngCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Boxes"            onclick="selectIngCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Cards"            onclick="selectIngCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Plants"           onclick="selectIngCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Candy"            onclick="selectIngCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Beverage"         onclick="selectIngCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Jewelry"          onclick="selectIngCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Party Supplies"   onclick="selectIngCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Gaming"           onclick="selectIngCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Toys"             onclick="selectIngCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Office Supplies"  onclick="selectIngCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Colors"           onclick="selectIngCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Rope"             onclick="selectIngCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Paper"            onclick="selectIngCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Spool"            onclick="selectIngCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Letter"           onclick="selectIngCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Giveaway"         onclick="selectIngCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Electronics"      onclick="selectIngCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Printing Supplies" onclick="selectIngCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Tools"            onclick="selectIngCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Packaging"        onclick="selectIngCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
-          <button type="button" class="ing-cat-chip" data-value="Food"             onclick="selectIngCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="ing_source_url">Source URL</label>
-        <input type="url" id="ing_source_url" placeholder="https://supplier.com/product">
-      </div>
-
-      <div class="form-group">
-        <label>Custom Attributes</label>
-        <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px;">
-          <!-- Dynamic attribute rows will be added here -->
-        </div>
-        <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
-      </div>
-
-      <div style="display: flex; gap: 12px; margin-top: 24px;">
-        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeManualModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex: 1;">Create</button>
+      <div class="ic-foot">
+        <div class="ic-value" id="icValue"></div>
+        <button type="submit" class="ic-save" id="icSave">Save item</button>
+        <button type="button" class="ic-again" id="icAgain" onclick="saveIngredient(null, true)">Save and add another</button>
       </div>
     </form>
   </div>
@@ -1558,6 +1655,11 @@ loadIngredients().then(() => {
   // Initialize lucide icons after content is visible
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
+  // Populate the new-item unit chips once up front, so #manualModal isn't
+  // blank on the very first open (its chip row starts empty in the markup).
+  renderManualItemUnits();
+  onIngredientEdit();
+
   // Check for inventory filter from operations page
   const inventoryFilter = sessionStorage.getItem('inventoryFilter');
   if (inventoryFilter) {
@@ -1569,6 +1671,18 @@ loadIngredients().then(() => {
     // window.inventoryFilteredList from earlier in the session can't
     // leave the page looking like nothing loaded.
     filterByStock('all');
+  }
+
+  // A receipt/order line that didn't match an item (inventory-impact.js's
+  // "Add item" button on orders.html/expenses.html) hands off here via
+  // sessionStorage, since that's a different page/document entirely.
+  const seedRaw = sessionStorage.getItem('shelfy_seed_ingredient');
+  if (seedRaw) {
+    sessionStorage.removeItem('shelfy_seed_ingredient');
+    try {
+      seedManualModal(JSON.parse(seedRaw));
+      document.getElementById('manualModal').classList.add('active');
+    } catch (e) { console.error('Error applying seeded item:', e); }
   }
 });
 
@@ -1657,7 +1771,99 @@ function closeManualModal() {
   document.getElementById('ing_estimated_delivery').value = '';
   document.getElementById('ing_sku').value = '';
   document.getElementById('ing_source_url').value = '';
+  document.getElementById('ing_notes').value = '';
   document.getElementById('customAttributes').innerHTML = '';
+  setManualItemUnit('pcs');
+  setIcSeed(null);
+  const moreBtn = document.getElementById('icMoreBtn');
+  if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+  const optional = document.getElementById('icOptional');
+  if (optional) optional.dataset.open = '0';
+  onIngredientEdit();
+}
+
+// ---------- New-item form (#manualModal) — 15b reference ----------
+
+// Common-first unit list; "Other" opens a prompt for anything not listed.
+const MANUAL_ITEM_UNITS = ['pcs', 'g', 'kg', 'ml', 'L', 'oz', 'lb', 'm'];
+
+function renderManualItemUnits() {
+  const current = document.getElementById('ing_unit').value || 'pcs';
+  const box = document.getElementById('icUnits');
+  if (!box) return;
+  box.innerHTML = MANUAL_ITEM_UNITS.map(u =>
+    `<button type="button" class="ic-unit" aria-pressed="${u === current}" onclick="setManualItemUnit('${u}')">${u}</button>`
+  ).join('') + `<button type="button" class="ic-unit" aria-pressed="${!MANUAL_ITEM_UNITS.includes(current)}" onclick="otherManualItemUnit()">${MANUAL_ITEM_UNITS.includes(current) ? 'Other' : escapeHtml(current)}</button>`;
+}
+function setManualItemUnit(u) {
+  document.getElementById('ing_unit').value = u;
+  renderManualItemUnits();
+  onIngredientEdit();
+}
+function otherManualItemUnit() {
+  const v = prompt('Unit');
+  if (v && v.trim()) setManualItemUnit(v.trim().slice(0, 8));
+}
+
+function toggleIcMore() {
+  const btn = document.getElementById('icMoreBtn');
+  const box = document.getElementById('icOptional');
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', String(open));
+  box.dataset.open = open ? '1' : '0';
+}
+
+// The count tells you there's something in the disclosure without opening it.
+function renderIcMoreCount() {
+  const filled = ['ing_sku', 'ing_estimated_delivery', 'ing_source_url', 'ing_notes']
+    .filter(id => document.getElementById(id)?.value.trim()).length
+    + (document.querySelectorAll('#customAttributes > div').length ? 1 : 0);
+  const el = document.getElementById('icMoreN');
+  if (el) el.textContent = filled ? `${filled} filled` : 'Optional';
+}
+
+// Stock value is the only number worth deriving here, and it catches the
+// classic slip of typing a pack price into "cost each".
+function onIngredientEdit() {
+  const name = document.getElementById('ing_name').value.trim();
+  const q = parseFloat(document.getElementById('ing_quantity').value) || 0;
+  const c = parseFloat(document.getElementById('ing_cost').value) || 0;
+  const unit = document.getElementById('ing_unit').value || 'pcs';
+  const valueEl = document.getElementById('icValue');
+  if (valueEl) {
+    valueEl.innerHTML = q && c
+      ? `${q} ${escapeHtml(unit)} × $${c.toFixed(2)} = <b>$${(q * c).toFixed(2)}</b> of stock`
+      : name ? 'Cost each is optional — add it later from the item page.' : '';
+  }
+  const disabled = !name;
+  const saveBtn = document.getElementById('icSave');
+  const againBtn = document.getElementById('icAgain');
+  if (saveBtn) saveBtn.disabled = disabled;
+  if (againBtn) againBtn.disabled = disabled;
+  renderIcMoreCount();
+}
+
+function setIcSeed(seed) {
+  const box = document.getElementById('icSeed');
+  const sub = document.getElementById('icSub');
+  if (box) {
+    box.innerHTML = seed ? `
+      <div class="ic-seed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h7M9 17h5"/></svg>
+        <span class="ic-seed-t">${escapeHtml(seed.text || 'Started from a receipt line that didn’t match an item.')}</span>
+      </div>` : '';
+  }
+  if (sub) sub.textContent = seed ? 'Started from a receipt line' : 'Something you buy and keep in stock';
+}
+
+// Public hook: open #manualModal pre-filled from an unmatched receipt/order
+// line (see inventory-impact.js's "Add item" button). Only a name is ever
+// reliably known from that path — quantity/cost/unit are for the user to
+// fill in, which is why the seed banner asks them to check it before saving.
+function seedManualModal(seed) {
+  document.getElementById('ing_name').value = (seed && seed.name) || '';
+  setIcSeed(seed ? { text: seed.text || `From "${seed.name}" — check the details before saving.` } : null);
+  onIngredientEdit();
 }
 
 function closeCSVModal() {
@@ -1983,24 +2189,20 @@ async function processImageUpload() {
         document.getElementById('ing_quantity').value = result.data.item.quantity;
       }
       
-      // Unit
+      // Unit — map to the chip list's exact strings so the right chip highlights.
       if (result.data.item?.unit) {
-        const unit = result.data.item.unit.toLowerCase();
-        // Map to form options: kg, g, l, ml, pcs, lb, oz
+        const rawUnit = result.data.item.unit.toLowerCase();
         const unitMap = {
-          'kilograms': 'kg',
-          'kg': 'kg',
-          'grams': 'g',
-          'g': 'g',
-          'liters': 'l',
-          'l': 'l',
-          'milliliters': 'ml',
-          'ml': 'ml',
-          'pieces': 'pcs',
-          'piece': 'pcs',
-          'pcs': 'pcs',
-          'stückzahl': 'pcs'
+          'kilograms': 'kg', 'kg': 'kg',
+          'grams': 'g', 'g': 'g',
+          'liters': 'L', 'l': 'L',
+          'milliliters': 'ml', 'ml': 'ml',
+          'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
+          'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
+          'ounces': 'oz', 'oz': 'oz',
+          'meters': 'm', 'm': 'm'
         };
+        setManualItemUnit(unitMap[rawUnit] || rawUnit);
       }
       
       // SKU
@@ -2010,7 +2212,7 @@ async function processImageUpload() {
       
       // Category
       if (result.data.item?.product_category) {
-        document.getElementById('ing_category').value = result.data.item.product_category;
+        selectIngCategory(result.data.item.product_category);
       }
       
       // Shipping Time (Estimated Delivery)
@@ -2207,7 +2409,7 @@ async function handleURLImport() {
         document.getElementById('ing_estimated_delivery').value = result.data.estimated_delivery;
       }
       if (result.data.product_category) {
-        document.getElementById('ing_category').value = result.data.product_category;
+        selectIngCategory(result.data.product_category);
       }
       if (result.data.vendor || result.data.shipping_time) {
         // Set source URL (vendor/shipping info will be in custom attributes or other fields)
@@ -4291,13 +4493,32 @@ function selectIngCategory(value) {
   document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.value === value));
 }
 
-async function saveIngredient(event) {
+// Clears everything item-specific for "Save and add another" while keeping
+// unit/category/delivery/source — the fields that stay constant across a
+// batch of items from the same receipt or supplier.
+function resetForAnotherIngredient() {
+  document.getElementById('ing_name').value = '';
+  document.getElementById('ing_quantity').value = '';
+  document.getElementById('ing_cost').value = '';
+  document.getElementById('ing_min_stock').value = '';
+  document.getElementById('ing_sku').value = '';
+  document.getElementById('ing_notes').value = '';
+  document.getElementById('customAttributes').innerHTML = '';
+  setIcSeed(null);
+  document.getElementById('ing_name').focus();
+  onIngredientEdit();
+}
+
+async function saveIngredient(event, again) {
   if (event) event.preventDefault();
 
-  // Disable immediately so the user gets instant feedback — previously this was
-  // set late in the function, after several async calls, making the button appear dead.
-  const submitBtn = document.querySelector('#ingredientForm button[type="submit"]');
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+  // Disable both actions immediately so the user gets instant feedback.
+  const saveBtn = document.getElementById('icSave');
+  const againBtn = document.getElementById('icAgain');
+  const activeBtn = again ? againBtn : saveBtn;
+  if (saveBtn) saveBtn.disabled = true;
+  if (againBtn) againBtn.disabled = true;
+  if (activeBtn) activeBtn.textContent = 'Saving…';
 
   try {
 
@@ -4313,39 +4534,15 @@ async function saveIngredient(event) {
   if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
   const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-  // Shake-validate all required fields
-  const invalidFields = [];
-  document.querySelectorAll('#ingredientForm [required]').forEach(el => {
-    const val = el.value.trim();
-    const isEmpty = val === '' || (el.tagName === 'SELECT' && val === '');
-    if (isEmpty) invalidFields.push(el);
-  });
-  // Also validate min_stock separately (required but value "" would pass parseFloat as NaN)
-  const minStockEl = document.getElementById('ing_min_stock');
-  if (minStockEl && minStockEl.value.trim() === '') {
-    if (!invalidFields.includes(minStockEl)) invalidFields.push(minStockEl);
-  }
-  // Validate category (hidden input, shake the grid)
-  const categoryEl = document.getElementById('ing_category');
-  if (!categoryEl || !categoryEl.value.trim()) {
-    const grid = document.querySelector('.ing-cat-grid');
-    if (grid) {
-      grid.classList.remove('input-invalid');
-      void grid.offsetWidth;
-      grid.classList.add('input-invalid');
-      setTimeout(() => grid.classList.remove('input-invalid'), 1500);
-    }
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create'; }
-    return;
-  }
-  if (invalidFields.length > 0) {
-    invalidFields.forEach(el => {
-      el.classList.remove('input-invalid');
-      void el.offsetWidth; // reflow to restart animation
-      el.classList.add('input-invalid');
-      setTimeout(() => el.classList.remove('input-invalid'), 1500);
-    });
-    invalidFields[0].focus();
+  // Only the name is required — everything else (quantity, cost, category,
+  // alert threshold) can be filled in later from the item page.
+  const nameEl = document.getElementById('ing_name');
+  if (!nameEl.value.trim()) {
+    nameEl.classList.remove('input-invalid');
+    void nameEl.offsetWidth;
+    nameEl.classList.add('input-invalid');
+    setTimeout(() => nameEl.classList.remove('input-invalid'), 1500);
+    nameEl.focus();
     return;
   }
 
@@ -4360,7 +4557,7 @@ async function saveIngredient(event) {
         );
     } catch (e) {}
   }
-  
+
   // Capitalize attribute keys consistently
   function capitalizeAttributeKey(key) {
     const commonKeys = {
@@ -4375,18 +4572,18 @@ async function saveIngredient(event) {
       'type': 'Type',
       'variant': 'Variant'
     };
-    
+
     const lowerKey = key.toLowerCase();
     if (commonKeys[lowerKey]) {
       return commonKeys[lowerKey];
     }
-    
+
     // Capitalize first letter of each word
-    return key.split(' ').map(word => 
+    return key.split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     ).join(' ');
   }
-  
+
   // Collect custom attributes
   const customAttrs = {};
   const attrRows = document.querySelectorAll('#customAttributes > div');
@@ -4400,20 +4597,20 @@ async function saveIngredient(event) {
       }
     }
   });
-  
+
   const formData = {
     profile_id: user.id,
     store_id: storeId,
     name: document.getElementById('ing_name').value,
     quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
-    unit: 'pcs',
+    unit: document.getElementById('ing_unit').value || 'pcs',
     cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
-    category: document.getElementById('ing_category').value,
+    category: document.getElementById('ing_category').value || '',
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
     sku: document.getElementById('ing_sku').value || '',
     source_url: document.getElementById('ing_source_url').value || '',
-    notes: '',
+    notes: document.getElementById('ing_notes').value || '',
     custom_attributes: Object.keys(customAttrs).length > 0 ? JSON.stringify(customAttrs) : null
   };
 
@@ -4421,7 +4618,6 @@ async function saveIngredient(event) {
 
     if (error) throw error;
 
-    closeManualModal();
     if (queued && data) {
       ingredients.unshift({
         id: data[0].id,
@@ -4448,14 +4644,18 @@ async function saveIngredient(event) {
       await loadIngredients();
     }
 
+    if (again) {
+      resetForAnotherIngredient();
+    } else {
+      closeManualModal();
+    }
+
   } catch (error) {
     console.error('Error saving ingredient:', error);
     showAlert(error.message || 'Failed to save item', 'Error');
   } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Create';
-    }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save item'; }
+    if (againBtn) { againBtn.disabled = false; againBtn.textContent = 'Save and add another'; }
   }
 }
 
