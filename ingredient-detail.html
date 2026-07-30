@@ -394,11 +394,6 @@
   .qty-adjust-btn--minus:hover { background: var(--border); }
   #qtyDisplay:focus { background: var(--bg-inner); }
 
-  .qty-status { text-align: center; margin-top: 6px; font-size: 12.5px; font-weight: 600;
-                color: var(--text-muted); }
-  .qty-status[data-state="out"] { color: var(--danger); }
-  .qty-status[data-state="low"] { color: var(--warning); }
-
   .restock-row { display: none; }
   @media (max-width: 768px) {
     .restock-row {
@@ -1485,7 +1480,6 @@
             >0</span>
           <button class="qty-adjust-btn" onclick="adjustQty(1)">+</button>
         </div>
-        <div class="qty-status" id="qtyStatus"></div>
       </div>
 
       <div class="restock-row" id="restockRow" style="display:none;">
@@ -2556,17 +2550,6 @@
     const el = document.getElementById('qtyDisplay');
     el.textContent = qty;
     el.style.color = qtyColor;
-    renderQtyStatus();
-  }
-
-  function renderQtyStatus() {
-    const el = document.getElementById('qtyStatus');
-    if (!el || !currentIngredient) return;
-    const q = parseFloat(currentIngredient.quantity) || 0;
-    const min = parseFloat(currentIngredient.min_stock) || 0;
-    const state = q === 0 ? 'out' : (min && q < min ? 'low' : 'ok');
-    el.textContent = `${state === 'out' ? 'Out of stock' : state === 'low' ? 'Running low' : 'in stock'}${min ? ` · min ${min}` : ''}`;
-    el.dataset.state = state;
   }
 
   // ---------- Restock row (mobile) ----------
@@ -2589,7 +2572,7 @@
     const vendor = _vendorNameFromUrl(url) || 'supplier';
     const days = currentIngredient.estimated_delivery;
     const cost = parseFloat(currentIngredient.cost_per_unit) || 0;
-    const sub = [days ? `~${days} days` : null, cost ? `$${cost.toFixed(2)} each` : null].filter(Boolean).join(' · ');
+    const costPart = cost ? `$${cost.toFixed(2)} each` : null;
 
     row.style.display = 'flex';
     const titleEl = document.getElementById('restockTitle');
@@ -2597,11 +2580,21 @@
 
     if (currentIngredient.reorder_pending) {
       titleEl.textContent = `Delivery from ${vendor}`;
+      // Once an order is actually placed, show the real expected arrival
+      // date (reorder_date + the vendor's lead time) instead of the
+      // generic "~N days" lead-time estimate shown before ordering.
+      let eta = null;
+      if (currentIngredient.reorder_date && days) {
+        const d = new Date(currentIngredient.reorder_date);
+        d.setDate(d.getDate() + parseInt(days, 10));
+        eta = `Est. ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      }
+      const sub = [eta, costPart].filter(Boolean).join(' · ');
       subEl.textContent = sub ? `${sub} · On the way` : 'On the way';
       row.onclick = openDeliveryModal;
     } else {
       titleEl.textContent = `Restock from ${vendor}`;
-      subEl.textContent = sub;
+      subEl.textContent = [days ? `~${days} days` : null, costPart].filter(Boolean).join(' · ');
       row.onclick = handleReorderClick;
     }
   }
@@ -2718,7 +2711,6 @@
     document.getElementById('fieldSheet').classList.remove('active');
     autoSave();
     renderDetailRows();
-    renderQtyStatus();   // min_stock may have changed the state
     renderRestockRow();  // source_url may have changed
   }
 
