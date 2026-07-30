@@ -79,12 +79,29 @@
   /* ---------- CARDS VIEW (CARDS) ---------- */
   .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
+  /* ---------- Revenue summary (matches expenses.html's "Spent in X") ---------- */
+  .ord-summary { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
+  .ord-summary-main { flex: 1; }
+  .ord-summary-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+                       text-transform: uppercase; color: var(--text-muted); }
+  .ord-summary-value { display: block; margin-top: 4px; font-size: 30px; font-weight: 800;
+                       letter-spacing: -0.02em; line-height: 1.1;
+                       font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .ord-trend { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px;
+               border-radius: 8px; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
+  /* Revenue trending up is good news — opposite polarity from expenses.html's spend trend. */
+  .ord-trend.up   { background: rgba(16,185,129,0.12); color: #047857; }
+  .ord-trend.down { background: rgba(245,158,11,0.14); color: #b45309; }
+  .ord-trend.flat { background: var(--bg-inner); color: var(--text-muted); }
+
   /* ---------- Mobile staged order rows ---------- */
   .ord-head { display: flex; align-items: baseline; justify-content: space-between;
               padding: 14px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
               text-transform: uppercase; color: var(--text-muted); }
   .ord-head + .ord-head { padding-top: 18px; }
-  .ord-head-right { text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--accent); }
+  .ord-head-right { text-transform: none; letter-spacing: 0; font-size: 12.5px;
+                    font-weight: 800; color: var(--text-main); }
+  .ord-head + .ord-head .ord-head-right { color: var(--text-muted); }
   .ord-swipe { position: relative; height: 68px; overflow: hidden;
                border-top: 1px solid var(--border); background: var(--bg-inner); }
   .ord-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
@@ -96,10 +113,6 @@
   .ord-row { position: absolute; inset: 0; display: flex; align-items: center; gap: 11px;
              padding: 0 12px 0 16px; background: var(--bg-panel); box-sizing: border-box;
              touch-action: pan-y; will-change: transform; }
-  .ord-row-done { position: static; height: 60px; padding-right: 14px; cursor: pointer;
-                  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-                  background: var(--bg-panel); display: flex; align-items: center; gap: 11px;
-                  box-sizing: border-box; }
   .ord-main { flex: 1; min-width: 0; cursor: pointer; }
   .ord-name { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -113,40 +126,6 @@
   .ord-chan[data-c="shopify"] { background: #5a31f4; }
   .ord-chan[data-c="website"] { background: #06b6d4; }
   .ord-chan[data-c="local"]   { background: var(--text-main); }
-  .ord-advance { height: 44px; padding: 0 16px; border: none; border-radius: 11px;
-                 background: var(--accent); color: #fff; font: 800 14px inherit;
-                 font-family: inherit; cursor: pointer; flex-shrink: 0; }
-  .ord-advance-ship { background: var(--text-main); }
-  .ord-chev { color: var(--text-muted); flex-shrink: 0; }
-
-  /* ---------- Ship sheet ---------- */
-  .ship-head { display: flex; flex-direction: column; gap: 3px; margin-bottom: 16px; }
-  .ship-title { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
-  .ship-sub { font-size: 12.5px; color: var(--text-muted); }
-  .ship-field { display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 12px 0 14px;
-                background: var(--bg-inner); border: 1px solid var(--border); border-radius: 14px;
-                box-sizing: border-box; position: relative; }
-  .ship-label { position: absolute; top: 9px; left: 14px; font-size: 10.5px; font-weight: 800;
-                letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
-  .ship-input { flex: 1; min-width: 0; margin-top: 14px; border: none; background: none;
-                color: var(--text-main); font: 700 16px ui-monospace, Menlo, monospace;
-                letter-spacing: 0.02em; outline: none; }
-  .ship-paste { height: 38px; padding: 0 12px; border: none; border-radius: 10px;
-                background: rgba(6,182,212,0.1); color: #0891b2; font: 800 12.5px inherit;
-                font-family: inherit; cursor: pointer; flex-shrink: 0; }
-  .ship-carriers { display: flex; gap: 7px; margin: 14px 0; }
-  .ship-carrier { flex: 1; height: 38px; border: 1px solid var(--border); border-radius: 11px;
-                  background: var(--bg-panel); color: var(--text-main);
-                  font: 600 13px inherit; font-family: inherit; cursor: pointer; }
-  .ship-carrier.active { background: var(--text-main); color: var(--bg-panel);
-                         border-color: var(--text-main); font-weight: 700; }
-  .ship-note { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px;
-               background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2);
-               color: #0e7490; font-size: 12.5px; line-height: 1.4; }
-  .ship-go { width: 100%; height: 54px; border: none; border-radius: 14px; background: var(--accent);
-             color: #fff; font: 800 16.5px inherit; font-family: inherit; cursor: pointer; }
-  .ship-skip { width: 100%; height: 44px; margin-top: 6px; border: none; background: none;
-               color: var(--text-muted); font: 700 13.5px inherit; font-family: inherit; cursor: pointer; }
   .card-small { 
     background: var(--bg-panel); 
     border: 1px solid var(--border); 
@@ -1028,6 +1007,14 @@
   </aside>
 
   <main class="main" style="visibility: hidden;">
+    <div class="ord-summary">
+      <span class="ord-summary-main">
+        <span class="ord-summary-label">Earned in <span id="ordMonthName">this month</span></span>
+        <span class="ord-summary-value" id="ordMonthTotal">$0.00</span>
+      </span>
+      <span class="ord-trend" id="ordTrend" hidden></span>
+    </div>
+
     <div class="top-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 24px;">
       <div style="display: flex; align-items: center; gap: 24px;">
         <div class="view-switcher">
@@ -1160,30 +1147,6 @@
       <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeDeleteModal()">Cancel</button>
       <button class="btn" style="flex: 1; background: var(--danger); color: white; border: none;" onclick="confirmDelete()">Delete</button>
     </div>
-  </div>
-</div>
-
-<!-- Ship sheet (mobile staged view) -->
-<div class="modal-overlay modal-sheet" id="shipSheet" onclick="if(event.target===this)closeShipSheet()">
-  <div class="modal-content" style="max-width:520px">
-    <div class="ship-head">
-      <span class="ship-title" id="shipTitle">Ship</span>
-      <span class="ship-sub"  id="shipSub"></span>
-    </div>
-
-    <label class="ship-field">
-      <span class="ship-label">Tracking number</span>
-      <input id="shipTracking" class="ship-input" type="text" inputmode="latin"
-             autocomplete="off" spellcheck="false" placeholder="Scan or paste">
-      <button type="button" class="ship-paste" onclick="pasteTracking()">Paste</button>
-    </label>
-
-    <div class="ship-carriers" id="shipCarriers"></div>
-
-    <p class="ship-note">Stock came out when this order was imported — shipping only moves the status.</p>
-
-    <button class="ship-go" onclick="confirmShip()">Mark shipped</button>
-    <button class="ship-skip" onclick="confirmShip(true)">Ship without tracking</button>
   </div>
 </div>
 
@@ -1356,9 +1319,41 @@ function switchView(view) {
   }
   
   
+function renderOrderSummary() {
+  const el = document.getElementById('ordTrend');
+  const nameEl = document.getElementById('ordMonthName');
+  const totalEl = document.getElementById('ordMonthTotal');
+  if (!el || !nameEl || !totalEl) return;
+
+  const now = new Date();
+  const key = d => `${d.getFullYear()}-${d.getMonth()}`;
+  const thisKey = key(now);
+  const prevKey = key(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+
+  const sumFor = k => orders
+    .filter(o => key(new Date(o.sale_date)) === k)
+    .reduce((n, o) => n + parseFloat(o.revenue || 0), 0);
+
+  const cur = sumFor(thisKey), prev = sumFor(prevKey);
+  nameEl.textContent = now.toLocaleDateString('en-US', { month: 'long' });
+  totalEl.textContent = `$${cur.toFixed(2)}`;
+
+  if (!prev) { el.hidden = true; return; }          // no baseline, no claim
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  const up = pct > 0;
+  el.hidden = false;
+  // Earning more is good news — green is reserved for an increase (opposite of expenses.html).
+  el.className = 'ord-trend ' + (pct === 0 ? 'flat' : up ? 'up' : 'down');
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="13" height="13">
+      <polyline points="${up ? '6 15 12 9 18 15' : '6 9 12 15 18 9'}"/></svg>${Math.abs(pct)}%`;
+  el.title = `${up ? 'Up' : 'Down'} from $${prev.toFixed(2)} last month`;
+}
+
 function render() {
+  renderOrderSummary();
+
   const searchTerm = (document.getElementById('searchInput')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
-  
+
   let filtered = orders.filter(order => {
     const searchString = `${order.customer || ''} ${order.source || ''} ${order.order_reference || ''} ${order.notes || ''}`.toLowerCase();
     return searchString.includes(searchTerm);
@@ -1446,7 +1441,6 @@ function renderRecent(filtered) {
 const oversold = () => false;
 
 function orderRow(o) {
-  const st = _stage(o);
   const channel = _realChannel(o.source);
   const qty = o.total_quantity || 0;
   const money = `$${parseFloat(o.revenue || 0).toFixed(2)}`;
@@ -1470,18 +1464,13 @@ function orderRow(o) {
             ${channel ? `<span class="ord-chan" data-c="${channel.toLowerCase()}"></span>` : ''}${meta}
           </span>
         </span>
-        ${st.next
-          ? `<button class="ord-advance${st.stage === 'ship' ? ' ord-advance-ship' : ''}"
-               onclick="event.stopPropagation(); advanceOrder('${o.id}')">${st.nextLabel}</button>`
-          : ''}
       </div>
     </div>`;
 }
 
 // Mobile: orders grouped by month with a per-month revenue total, matching
-// expenses.html's ledger — replaces the old status-stage grouping (no more
-// "status" as a first-class concept here; _stage()/orderRow()'s advance
-// button still exist per-row since that's a real action, not a display).
+// expenses.html's ledger — no fulfillment-stage concept here at all;
+// refund/delete are still reachable via row swipe or order-detail.
 function renderRecentByMonth(filtered, container) {
   container.classList.add('ord-staged');
 
@@ -1611,18 +1600,10 @@ function renderList(filtered) {
     const status = order.status || 'processed';
     const trackingDisplay = order.tracking_number ? `<span style="font-size: 12px; color: var(--accent);">📦 ${order.tracking_number}</span>` : '-';
     
-    // Show buttons based on status
-    let actionButtons = '';
-    if (status === 'processed') {
-      actionButtons = `
-        <span style="color: #22c55e; font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'fulfilled')">FULFILLED</span>
-        <span style="color: #a855f7; font-weight:700; cursor:pointer; margin-right: 12px; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')">SHIPPED</span>
-        <span style="color: #ef4444; font-weight:700; cursor:pointer; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')">REFUNDED</span>
-      `;
-    } else if (status === 'fulfilled') {
-      actionButtons = `<span style="color: #a855f7; font-weight:700; cursor:pointer; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'shipped')">SHIPPED</span>`;
-    }
-    
+    // Refund is the only status action left — no fulfillment/shipping stages.
+    const actionButtons = status === 'refunded' ? '' :
+      `<span style="color: #ef4444; font-weight:700; cursor:pointer; font-size: 11px;" onclick="event.stopPropagation(); updateStatusFromList('${order.id}', 'refunded')">REFUND</span>`;
+
     tbody.innerHTML += `
       <tr onclick="window.location.href='/order-detail?id=${order.id}'" onmousedown="if(event.button===1){event.preventDefault();window.open('/order-detail?id=${order.id}','_blank')}" style="cursor: pointer;">
         <td style="color: var(--text-muted); font-weight: 600;">${actualIndex}</td>
@@ -2039,81 +2020,6 @@ async function updateStatusFromList(orderId, newStatus) {
   } catch (error) {
     console.error('Error updating order status:', error);
     alert('Failed to update order status: ' + error.message);
-  }
-}
-
-// Packing is a straight status write; shipping opens the tracking sheet.
-async function advanceOrder(id) {
-  const o = orders.find(x => x.id === id);
-  if (!o) return;
-  const st = _stage(o);
-  if (!st.next) return;
-  if (st.next === 'shipped') return openShipSheet(id);
-  updateStatusFromList(id, st.next);
-}
-
-const CARRIERS = ['DHL', 'Hermes', 'DPD', 'Other'];
-let _shipId = null, _shipCarrier = null;
-
-function openShipSheet(id) {
-  const o = orders.find(x => x.id === id);
-  if (!o) return;
-  _shipId = id;
-  _shipCarrier = localStorage.getItem('shelfy_last_carrier') || CARRIERS[0];
-  const qty = o.total_quantity || 0;
-  document.getElementById('shipTitle').textContent = `Ship to ${o.customer || 'customer'}`;
-  document.getElementById('shipSub').textContent =
-    [_realChannel(o.source), `${qty} item${qty !== 1 ? 's' : ''}`,
-     `$${parseFloat(o.revenue || 0).toFixed(2)}`].filter(Boolean).join(' · ');
-  document.getElementById('shipTracking').value = o.tracking_number || '';
-  renderCarriers();
-  document.getElementById('shipSheet').classList.add('active');
-  // don't autofocus — the keyboard would cover the buttons on a small phone
-}
-
-function renderCarriers() {
-  document.getElementById('shipCarriers').innerHTML = CARRIERS.map(c =>
-    `<button type="button" class="ship-carrier${c === _shipCarrier ? ' active' : ''}"
-       onclick="_shipCarrier='${c}';renderCarriers()">${c}</button>`).join('');
-}
-
-function closeShipSheet() {
-  document.getElementById('shipSheet').classList.remove('active');
-  _shipId = null;
-}
-
-async function pasteTracking() {
-  try {
-    const t = await navigator.clipboard.readText();
-    if (t) document.getElementById('shipTracking').value = t.trim();
-  } catch (e) {
-    document.getElementById('shipTracking').focus();   // denied or unsupported: let them type
-  }
-}
-
-// No `carrier` column exists on sales yet, so the carrier picker is kept as
-// a local-only convenience (remembers your last choice) rather than
-// inventing a schema change — tracking_number alone is what actually persists.
-async function confirmShip(skipTracking = false) {
-  if (!_shipId) return;
-  const id = _shipId;
-  const tracking = skipTracking ? null
-    : (document.getElementById('shipTracking').value || '').trim() || null;
-  closeShipSheet();
-  if (tracking) localStorage.setItem('shelfy_last_carrier', _shipCarrier);
-  try {
-    const patch = { status: 'shipped' };
-    if (tracking) patch.tracking_number = tracking;
-    const { error } = await offlineWrite('sales', 'update', patch, 'id', id);
-    if (error) throw error;
-    const o = orders.find(x => x.id === id);
-    if (o) Object.assign(o, patch);
-    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
-    render();
-    showUndoToast(`Shipped ${o?.customer || 'order'}`, () => updateStatusFromList(id, 'fulfilled'));
-  } catch (e) {
-    console.error('Ship failed:', e);
-    alert('Could not mark as shipped');
   }
 }
 
@@ -2970,18 +2876,6 @@ const ORDER_CHANNELS = ['Etsy', 'Shopify', 'Website', 'Local', 'Other'];
 function _realChannel(source) {
   return ORDER_CHANNELS.includes(source) ? source : null;
 }
-
-// db value -> what the seller is about to do next; drives orderRow()'s
-// advance button. Status itself is no longer shown anywhere as its own
-// display concept — only used to power this and the fulfill/ship/refund
-// actions.
-const ORDER_STAGE = {
-  processed: { stage: 'pack', label: 'To pack', next: 'fulfilled', nextLabel: 'Pack' },
-  fulfilled: { stage: 'ship', label: 'To ship', next: 'shipped',   nextLabel: 'Ship' },
-  shipped:   { stage: 'done', label: 'Done',    next: null,        nextLabel: null },
-  refunded:  { stage: 'refunded', label: 'Refunded', next: null,   nextLabel: null }
-};
-const _stage = o => ORDER_STAGE[o.status || 'processed'] || ORDER_STAGE.processed;
 
 function _updateStatusRestriction() {
   const hasOos = orderRecipes.some(r => r.oos);

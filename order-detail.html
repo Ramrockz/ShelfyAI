@@ -123,16 +123,6 @@
     color: #3b82f6;
   }
 
-  .status-fulfilled {
-    background: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
-  }
-
-  .status-shipped {
-    background: rgba(168, 85, 247, 0.1);
-    color: #a855f7;
-  }
-
   .status-refunded {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
@@ -207,53 +197,6 @@
     opacity: 0.7;
   }
 
-  .btn-status {
-    display: none;
-    padding: 9px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--bg-panel);
-    color: var(--text-main);
-    min-width: 36px;
-  }
-  .btn-status svg, .btn-delete svg { width: 18px; height: 18px; stroke-width: 2; display: block; }
-
-  .btn-status:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .btn-status.fulfilled {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: #22c55e;
-    color: #22c55e;
-  }
-
-  .btn-status.fulfilled:hover {
-    background: rgba(34, 197, 94, 0.2);
-  }
-
-  .btn-status.shipped {
-    background: rgba(168, 85, 247, 0.1);
-    border-color: #a855f7;
-    color: #a855f7;
-  }
-
-  .btn-status.shipped:hover {
-    background: rgba(168, 85, 247, 0.2);
-  }
-
-  .btn-status.refunded {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
-    color: #ef4444;
-  }
-
-  .btn-status.refunded:hover {
-    background: rgba(239, 68, 68, 0.2);
-  }
 
   /* Form styling - matching ingredient-detail */
   .form-section {
@@ -771,7 +714,8 @@
   .ord-more-menu,
   .ord-info-rows,
   .msec,
-  .ord-action-bar {
+  #odNotificationBell,
+  #odUserAvatar {
     display: none;
   }
 
@@ -1108,16 +1052,32 @@
     #itemsSectionHeader { display: none !important; }
     #ordPackHeader { display: flex !important; }
 
-    /* Mobile header block: customer, total, stage strip, ⋯ menu */
+    /* Mobile header block: customer, total, refund indicator, ⋯ menu.
+       The real .navbar (with its own bell/avatar) is hidden on this page at
+       mobile widths — #odNotificationBell/#odUserAvatar below stand in for
+       it, sharing this row with the ⋯ menu instead of showing separately. */
+    .navbar { display: none !important; }
+
     .ord-mobile-header {
       display: block; background: var(--bg-panel); border-radius: 12px;
       padding: 6px 16px 16px; margin-bottom: 16px; border: 1px solid var(--border);
     }
-    .ord-head-top { display: flex; justify-content: flex-end; }
+    .ord-head-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
     .ord-more-btn {
       width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
+    }
+    #odNotificationBell, #odUserAvatar { display: flex; flex-shrink: 0; }
+    #odNotificationBell {
+      position: relative; width: 32px; height: 32px; align-items: center; justify-content: center;
+      background: none; border: none; color: var(--text-main); cursor: pointer;
+    }
+    #odNotificationBell svg { width: 20px; height: 20px; }
+    #odUserAvatar {
+      width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+      background-size: cover; background-position: center; border: none; padding: 0; flex-shrink: 0;
     }
     .ord-head { display: flex; align-items: flex-start; gap: 10px; }
     .ord-head-main { flex: 1; min-width: 0; }
@@ -1145,13 +1105,7 @@
     .ord-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
     .ord-more-item-danger, .ord-more-item-danger svg { color: var(--danger); }
 
-    /* Stage strip */
-    #ordStageStrip { display: flex; align-items: center; gap: 7px; margin-top: 13px; }
-    .stage-step { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-    .stage-bar { height: 4px; border-radius: 99px; background: var(--bg-inner); }
-    .stage-step.on .stage-bar { background: var(--accent); }
-    .stage-label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); letter-spacing: .02em; }
-    .stage-step.cur .stage-label { font-weight: 800; color: var(--accent); }
+    /* Refund indicator — the only order-status concept left on mobile */
     .stage-refunded {
       font-size: 12px; font-weight: 800; letter-spacing: .04em;
       text-transform: uppercase; color: var(--danger); margin-top: 13px; display: block;
@@ -1181,34 +1135,12 @@
     .pack-row:first-child { border-top: none; border-radius: 12px 12px 0 0; }
     .pack-row:last-child { border-radius: 0 0 12px 12px; }
     .pack-row:only-child { border-radius: 12px; }
-    .pack-check {
-      position: relative; width: 26px; height: 26px; flex-shrink: 0; padding: 0;
-      border: 2px solid var(--border); border-radius: 8px; background: transparent;
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
-    }
-    .pack-row.packed .pack-check { background: var(--accent); border-color: var(--accent); }
     .pack-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
     .pack-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pack-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
     .pack-qty { font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); flex-shrink: 0; }
-    .pack-row.packed .pack-name, .pack-row.packed .pack-qty { color: var(--text-muted); }
     .pack-chev { color: var(--border); flex-shrink: 0; }
-
-    /* Single primary action bar — replaces .mobile-bottom-ctas */
-    .ord-action-bar {
-      display: block; position: fixed; bottom: 60px; left: 0; right: 0; z-index: 999;
-      padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-      background: var(--bg-main); border-top: 1px solid var(--border);
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    }
-    .ord-action-bar:empty { display: none; }
-    .ord-primary {
-      display: flex; align-items: center; justify-content: center; gap: 9px;
-      width: 100%; height: 50px; border: none; border-radius: 14px;
-      background: var(--accent); color: #fff; cursor: pointer;
-      font-size: 15px; font-weight: 800; letter-spacing: -.01em;
-    }
-    #receiptPanel { margin-bottom: 220px; }
+    #receiptPanel { margin-bottom: 90px; }
 
     /* Item / channel / one-field sheets */
     .sheet-qty { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; }
@@ -1400,6 +1332,12 @@
          which are hidden at <=768px so the two don't show simultaneously. -->
     <div class="ord-mobile-header" id="ordMobileHeader">
       <div class="ord-head-top">
+        <button id="odNotificationBell" onclick="toggleNotifications(); event.stopPropagation();" aria-label="Notifications">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+        </button>
+        <button id="odUserAvatar" onclick="toggleUserMenu(); event.stopPropagation();" aria-label="Account">U</button>
         <button class="ord-more-btn" id="ordMoreBtn" onclick="toggleOrdMoreMenu(); event.stopPropagation();" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </button>
@@ -1446,7 +1384,6 @@
             <span id="orderStatus" class="status-badge"></span>
           </div>
           <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
-            <button id="btnShipped" class="detail-cta-btn" onclick="showTrackingModal()" title="Mark as Shipped">Shipped</button>
             <button id="btnRefunded" class="detail-cta-btn" onclick="showStatusModal('refunded')" title="Mark as Refunded">Refunded</button>
             <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
           </div>
@@ -1507,8 +1444,7 @@
         </div>
         <!-- Mobile-only: replaces itemsSectionHeader above -->
         <div class="msec" id="ordPackHeader">
-          <span class="msec-title">Pack list</span>
-          <span class="msec-aside" id="ordPackProgress"></span>
+          <span class="msec-title">Items</span>
         </div>
 
         <!-- Desktop Table -->
@@ -1544,13 +1480,6 @@
     </div>
   </div>
 </div>
-
-<!-- Mobile-only: single primary action (Refund/Delete moved into the ⋯ menu
-     above — three permanently-visible icon buttons regardless of status was
-     the same mis-tap risk already fixed on the other detail pages, and it
-     never hid "Mark as Shipped"/"Refund" once an order was already shipped
-     or refunded, unlike the desktop header buttons it was meant to mirror. -->
-<div class="ord-action-bar" id="ordActionBar"></div>
 
 <!-- Item sheet (mobile pack list) — stepper + remove for one line item -->
 <div class="modal-overlay modal-sheet" id="ordItemSheet" onclick="if(event.target===this)closeItemSheet()">
@@ -1627,22 +1556,6 @@
     <div class="modal-actions">
       <button class="btn-primary" onclick="confirmStatusChange()">Confirm</button>
       <button class="btn-secondary" onclick="closeStatusModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Tracking Number Modal -->
-<div class="modal-overlay" id="trackingModal" onclick="if(event.target === this) closeTrackingModal()">
-  <div class="modal-content">
-    <h3>Mark as Shipped</h3>
-    <p>Enter tracking number (optional)</p>
-    <div class="form-group">
-      <label for="trackingInput">Tracking Number</label>
-      <input type="text" id="trackingInput" placeholder="e.g., 1Z999AA10123456784">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="confirmShipOrder()">Mark as Shipped</button>
-      <button class="btn-secondary" onclick="closeTrackingModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -1836,25 +1749,9 @@ function displayOrder() {
     if (trackEl) trackEl.textContent = orderData.tracking_number;
   }
 
-  // Show/hide status buttons based on current status
-  const btnShipped = document.getElementById('btnShipped');
+  // Refund is the only status action left — hide it once already refunded.
   const btnRefunded = document.getElementById('btnRefunded');
-  
-  if (btnShipped && btnRefunded) {
-    if (status === 'processed' || status === 'fulfilled') {
-      // Processed or Fulfilled: can be shipped or refunded
-      btnShipped.style.display = 'inline-flex';
-      btnRefunded.style.display = 'inline-flex';
-    } else if (status === 'shipped') {
-      // Shipped: hide shipped button but keep refund available
-      btnShipped.style.display = 'none';
-      btnRefunded.style.display = 'inline-flex';
-    } else if (status === 'refunded') {
-      // Refunded: no actions available
-      btnShipped.style.display = 'none';
-      btnRefunded.style.display = 'none';
-    }
-  }
+  if (btnRefunded) btnRefunded.style.display = status === 'refunded' ? 'none' : 'inline-flex';
 
   // Display items
   const items = Array.isArray(orderData.items) ? orderData.items : [];
@@ -1898,19 +1795,14 @@ function displayOrder() {
       `;
     }).join('');
     
-    // Mobile: pack list — a checkable row (packed state is a per-order
-    // localStorage scratchpad, not a DB column) that opens an item sheet
-    // for the stepper/remove actions instead of cramming them into the row.
-    const packedSet = _packedSet();
+    // Mobile: item list row, opens an item sheet for the stepper/remove actions.
     cardsContainer.innerHTML = items.map((item, index) => {
       const itemName = item.name || 'Custom item';
       const quantity = item.quantity || 0;
       const price = parseFloat(item.price || 0);
-      const packed = packedSet.has(index);
       const sub = price ? `$${price.toFixed(2)} each` : 'free gift';
       return `
-        <div class="pack-row${packed ? ' packed' : ''}">
-          <button class="pack-check" onclick="togglePacked(${index})" aria-pressed="${packed}" aria-label="Packed">${packed ? _packCheckIcon : ''}</button>
+        <div class="pack-row">
           <button class="pack-main" onclick="openItemSheet(${index})">
             <span class="pack-name">${_escHtml(itemName)}</span>
             <span class="pack-sub">${sub}</span>
@@ -1923,10 +1815,7 @@ function displayOrder() {
   }
 
   renderOrdMobileHeader();
-  renderOrdStageStrip();
   renderOrdInfoRows();
-  renderOrdPrimaryAction();
-  renderPackProgress();
 
   // Display notes if present
   if (orderData.notes) {
@@ -1938,40 +1827,17 @@ function displayOrder() {
 }
 
 // ============================================================
-// Mobile-only: header block, stage strip, info rows, pack list,
-// primary action bar, ⋯ menu. Every write routes through a function
-// that already exists (updateOrderStatus, selectChannel,
-// changeOrderItemQty, removeRecipeItem) — nothing new touches the DB
-// except the one-field sheet writer (saveOrderField), which mirrors
-// makeEditable()'s update+updated_at-stamp pattern for the same reason
-// makeEditable does it: the orders list only re-renders a row when its
-// id+updated_at fingerprint changes.
+// Mobile-only: header block, info rows, item list, ⋯ menu. Every write
+// routes through a function that already exists (updateOrderStatus,
+// selectChannel, changeOrderItemQty, removeRecipeItem) — nothing new
+// touches the DB except the one-field sheet writer (saveOrderField),
+// which mirrors makeEditable()'s update+updated_at-stamp pattern for the
+// same reason makeEditable does it: the orders list only re-renders a
+// row when its id+updated_at fingerprint changes.
 // ============================================================
 
 function _escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-const _packCheckIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-
-// Packed state is a per-order scratchpad, not a DB column — there's no
-// per-item column to write it to, and it doesn't need to sync anywhere else.
-const _packKey = () => `shelfy.packed.${orderId}`;
-function _packedSet() {
-  try { return new Set(JSON.parse(localStorage.getItem(_packKey()) || '[]')); }
-  catch { return new Set(); }
-}
-function togglePacked(index) {
-  const set = _packedSet();
-  set.has(index) ? set.delete(index) : set.add(index);
-  localStorage.setItem(_packKey(), JSON.stringify([...set]));
-  displayOrder();
-}
-function renderPackProgress() {
-  const el = document.getElementById('ordPackProgress');
-  if (!el || !orderData) return;
-  const items = Array.isArray(orderData.items) ? orderData.items : [];
-  const done = [..._packedSet()].filter(i => i < items.length).length;
-  el.textContent = items.length ? `${done} of ${items.length} packed` : '';
 }
 
 function renderOrdMobileHeader() {
@@ -1991,26 +1857,42 @@ function renderOrdMobileHeader() {
       `${qty} item${qty !== 1 ? 's' : ''}`
     ].filter(Boolean).join(' · ');
   }
+
+  // No fulfillment-stage concept left — just a refund indicator, and hiding
+  // "Refund order" in the ⋯ menu once it's already been refunded.
+  const status = orderData.status || 'processed';
+  const stageEl = document.getElementById('ordStageStrip');
+  if (stageEl) stageEl.innerHTML = status === 'refunded' ? '<span class="stage-refunded">Refunded</span>' : '';
+  const menuRefund = document.getElementById('ordMenuRefund');
+  if (menuRefund) menuRefund.style.display = status === 'refunded' ? 'none' : 'flex';
+
+  syncMobileHeaderControls();
 }
 
-// processed/fulfilled/shipped map 1:1 onto 3 milestones, so this shows what's
-// already done, not just "what's next" (orders.html's ORDER_STAGE is the
-// latter — a single current-stage label — which is why its wording doesn't
-// carry over directly here).
-function renderOrdStageStrip() {
-  const el = document.getElementById('ordStageStrip');
-  if (!el || !orderData) return;
-  const status = orderData.status || 'processed';
-  if (status === 'refunded') {
-    el.innerHTML = '<span class="stage-refunded">Refunded</span>';
-    return;
+// Mobile: the real .navbar (and the notification/user dropdowns living
+// inside it) is hidden so the header can show customer name + bell +
+// avatar + ⋯ menu in one row instead. Reparent the dropdowns to <body>
+// first — display:none on an ancestor fully suppresses them otherwise,
+// unlike a z-index issue — then mirror the real avatar's look onto the
+// in-header stand-in.
+function syncMobileHeaderControls() {
+  const notifDropdown = document.getElementById('notificationDropdown');
+  if (notifDropdown && notifDropdown.parentElement !== document.body) {
+    document.body.appendChild(notifDropdown);
   }
-  const stages = ['Order placed', 'Packed', 'Shipped'];
-  const active = status === 'shipped' ? 2 : status === 'fulfilled' ? 1 : 0;
-  el.innerHTML = stages.map((s, i) =>
-    `<span class="stage-step${i <= active ? ' on' : ''}${i === active ? ' cur' : ''}">
-       <span class="stage-bar"></span><span class="stage-label">${s}</span>
-     </span>`).join('');
+  const userDropdown = document.getElementById('userMenuDropdown');
+  if (userDropdown && userDropdown.parentElement !== document.body) {
+    document.body.appendChild(userDropdown);
+  }
+
+  const realAvatar = document.getElementById('userAvatar');
+  const odAvatar = document.getElementById('odUserAvatar');
+  if (realAvatar && odAvatar) {
+    odAvatar.textContent = realAvatar.textContent;
+    odAvatar.style.backgroundImage = realAvatar.style.backgroundImage;
+    odAvatar.style.backgroundSize = realAvatar.style.backgroundSize;
+    odAvatar.style.backgroundPosition = realAvatar.style.backgroundPosition;
+  }
 }
 
 function renderOrdInfoRows() {
@@ -2030,29 +1912,6 @@ function renderOrdInfoRows() {
       <span class="ord-drow-value">${value}</span>
       <svg class="ord-drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
     </button>`).join('');
-}
-
-// The single status gate on mobile — Refund/Delete live in the ⋯ menu now,
-// so this bar only ever needs to show the one action the current status
-// actually implies (mirrors the desktop #btnShipped/#btnRefunded pair, which
-// the old .mobile-bottom-ctas bar didn't: it kept showing "Mark as Shipped"
-// and "Refund" even after an order was already shipped or refunded).
-function renderOrdPrimaryAction() {
-  const bar = document.getElementById('ordActionBar');
-  const menuRefund = document.getElementById('ordMenuRefund');
-  if (!bar || !orderData) return;
-  const status = orderData.status || 'processed';
-  if (status === 'processed' || status === 'fulfilled') {
-    bar.innerHTML = `<button type="button" class="ord-primary" onclick="showTrackingModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      Mark as shipped
-    </button>`;
-  } else if (status === 'shipped' && !orderData.tracking_number) {
-    bar.innerHTML = `<button type="button" class="ord-primary" onclick="showTrackingModal()">Add tracking number</button>`;
-  } else {
-    bar.innerHTML = '';
-  }
-  if (menuRefund) menuRefund.style.display = status === 'refunded' ? 'none' : 'flex';
 }
 
 // ⋯ menu
@@ -2408,10 +2267,8 @@ let pendingStatus = null;
 
 function showStatusModal(newStatus) {
   pendingStatus = newStatus;
-  const titles = { refunded: 'Refund Order', shipped: 'Mark as Shipped', processed: 'Mark as Processed', fulfilled: 'Mark as Fulfilled' };
-  const messages = { refunded: 'Are you sure you want to refund this order?', shipped: 'Are you sure you want to mark this order as shipped?' };
-  document.getElementById('statusModalTitle').textContent = titles[newStatus] || 'Confirm Status Change';
-  document.getElementById('statusModalMessage').textContent = messages[newStatus] || `Are you sure you want to mark this order as ${newStatus}?`;
+  document.getElementById('statusModalTitle').textContent = 'Refund Order';
+  document.getElementById('statusModalMessage').textContent = 'Are you sure you want to refund this order?';
   document.getElementById('statusModal').classList.add('active');
 }
 
@@ -2448,26 +2305,10 @@ async function selectChannel(channel) {
   }
 }
 
-function showTrackingModal() {
-  document.getElementById('trackingModal').classList.add('active');
-  document.getElementById('trackingInput').value = orderData.tracking_number || '';
-}
-
-function closeTrackingModal() {
-  document.getElementById('trackingModal').classList.remove('active');
-  document.getElementById('trackingInput').value = '';
-}
-
 async function confirmStatusChange() {
   if (!pendingStatus) return;
   await updateOrderStatus(pendingStatus, null);
   closeStatusModal();
-}
-
-async function confirmShipOrder() {
-  const trackingNumber = document.getElementById('trackingInput').value.trim();
-  await updateOrderStatus('shipped', trackingNumber || null);
-  closeTrackingModal();
 }
 
 async function updateOrderStatus(newStatus, trackingNumber = null) {
@@ -2500,7 +2341,6 @@ async function updateOrderStatus(newStatus, trackingNumber = null) {
     if (trackingNumber !== null) {
       orderData.tracking_number = trackingNumber;
     }
-    if (newStatus === 'shipped') localStorage.removeItem(_packKey()); // the packing scratchpad's life ends here
 
     // displayOrder() already sets the status badge and reveals the tracking
     // field when one's present — this used to hand-patch both here, including
@@ -3122,7 +2962,6 @@ async function confirmRemoveRecipe() {
     orderData.items = items;
     orderData.total_quantity = totalQuantity;
     orderData.revenue = totalRevenue;
-    localStorage.removeItem(_packKey()); // indices shifted, the packed scratchpad no longer lines up
 
     displayOrder();
     closeRemoveRecipeModal();
