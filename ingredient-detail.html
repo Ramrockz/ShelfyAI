@@ -967,11 +967,12 @@
 
     /* Duplicate and Delete move into the ⋯ menu on mobile — three icon
        buttons in a 390px header is the same mis-tap trap Inventory had.
-       Favorite stays visible in the header. */
+       Favorite moved into the ⋯ menu as "Mark as favorite" — one less
+       icon competing with bell/avatar in the header row. */
     .detail-dup-btn, .detail-del-btn {
       display: none !important;
     }
-    #starIcon { flex-shrink: 0; }
+    #starIcon { display: none !important; }
     .detail-more-btn {
       display: flex; align-items: center; justify-content: center;
       width: 40px; height: 40px; border: none; border-radius: 50%;
@@ -1355,6 +1356,10 @@
   </div>
 
   <div class="detail-more-menu" id="detailMoreMenu">
+    <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); toggleFavorite()">
+      <span id="favoriteMenuIcon" style="font-size:18px; line-height:1; width:18px; display:inline-block; text-align:center;">☆</span>
+      <span id="favoriteMenuLabel">Mark as favorite</span>
+    </button>
     <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); openDetailDuplicateModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
       <span>Duplicate</span>
@@ -1680,15 +1685,8 @@
   }
 
   function displayIngredient(ing) {
-    // Favorite star
-    const starIcon = document.getElementById('starIcon');
-    if (ing.is_favorite) {
-      starIcon.textContent = '★';
-      starIcon.classList.add('favorited');
-    } else {
-      starIcon.textContent = '☆';
-      starIcon.classList.remove('favorited');
-    }
+    // Favorite star (header icon on desktop, "Mark as favorite" menu item on mobile)
+    updateFavoriteUI(!!ing.is_favorite);
 
     // Form fields
     document.getElementById('name').value = ing.name || '';
@@ -2896,20 +2894,24 @@
       if (error) throw error;
 
       currentIngredient.is_favorite = newState;
-      
-      const starIcon = document.getElementById('starIcon');
-      if (newState) {
-        starIcon.textContent = '★';
-        starIcon.classList.add('favorited');
-      } else {
-        starIcon.textContent = '☆';
-        starIcon.classList.remove('favorited');
-      }
+      updateFavoriteUI(newState);
 
     } catch (error) {
       console.error('Error toggling favorite:', error);
       showAlert('Failed to update favorite status');
     }
+  }
+
+  function updateFavoriteUI(isFavorite) {
+    const starIcon = document.getElementById('starIcon');
+    const menuIcon = document.getElementById('favoriteMenuIcon');
+    const menuLabel = document.getElementById('favoriteMenuLabel');
+    if (starIcon) {
+      starIcon.textContent = isFavorite ? '★' : '☆';
+      starIcon.classList.toggle('favorited', isFavorite);
+    }
+    if (menuIcon) menuIcon.textContent = isFavorite ? '★' : '☆';
+    if (menuLabel) menuLabel.textContent = isFavorite ? 'Remove from favorites' : 'Mark as favorite';
   }
 
   async function saveAllChanges() {
