@@ -1727,9 +1727,11 @@
       currentIngredient = data;
       displayIngredient(data);
       
-      // Check if we should auto-open the reorder screen
+      // Check if we should auto-open the reorder screen. Suppliers are a
+      // standalone concept now (see openReorderScreen/materializeDefaultSupplier)
+      // — no source_url required to open it, same as the header's Restock trigger.
       const openReorder = urlParams.get('openReorder');
-      if (openReorder === 'true' && data.source_url && data.source_url.trim()) {
+      if (openReorder === 'true') {
         setTimeout(() => {
           openReorderScreen();
         }, 300);

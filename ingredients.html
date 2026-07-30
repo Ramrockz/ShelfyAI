@@ -107,6 +107,7 @@
   .ing-act { width: 48px; border: none; cursor: pointer; display: flex; flex-direction: column;
              align-items: center; justify-content: center; gap: 3px;
              font-family: inherit; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; }
+  .ing-act-restock { background: #64748b; color: #fff; }
   .ing-act-dup { background: var(--accent); color: #fff; }
   .ing-act-del { background: var(--danger); color: #fff; }
   .ing-row { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px;
@@ -3750,6 +3751,9 @@ function renderRecent(data) {
 
     return `<div class="ing-swipe">
         <div class="ing-actions">
+          <button class="ing-act ing-act-restock" onclick="window.location.href='/ingredient-detail?id=${i.id}&openReorder=true'" aria-label="Restock">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          </button>
           <button class="ing-act ing-act-dup" onclick="openDuplicateModal('${i.id}')" aria-label="Duplicate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           </button>
@@ -4805,9 +4809,9 @@ window.onclick = (e) => {
   }
 })();
 
-// ---------- Inventory row swipe-to-reveal (Edit/Delete) ----------
+// ---------- Inventory row swipe-to-reveal (Restock/Duplicate/Delete) ----------
 (function initSwipe() {
-  const REVEAL    = 96;   // total action width — must equal 2 × .ing-act width
+  const REVEAL    = 144;  // total action width — must equal 3 × .ing-act width
   const THRESHOLD = 40;   // px of travel that commits the open/close
   const RUBBER    = 0.24; // 0 = hard stop at both ends, 1 = no resistance
   const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
