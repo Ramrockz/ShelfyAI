@@ -438,31 +438,18 @@
     #customAttributesPanel { display: none !important; }
   }
 
-  .cat-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-bottom: 8px;
+  .cat-picker-row {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    padding: 12px; background: var(--bg-inner); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-main); font-size: 14px; font-family: inherit;
+    box-sizing: border-box; cursor: pointer; transition: all 0.2s;
   }
-  .cat-chip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    background: var(--bg-inner);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex: 1 1 44px;
-    max-width: 54px;
-    color: var(--text-muted);
-  }
-  .cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
   @media (hover: hover) and (pointer: fine) {
-    .cat-chip:hover { border-color: var(--accent); background: rgba(6,182,212,0.07); color: var(--accent); }
+    .cat-picker-row:hover { border-color: var(--accent); }
   }
-  .cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+  .cat-picker-value { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .cat-picker-value.empty { font-weight: 400; color: var(--text-muted); }
+  .cat-picker-row svg.drow-chev { color: var(--text-muted); flex-shrink: 0; }
 
   .status-badge {
     display: inline-block;
@@ -884,7 +871,7 @@
     #qtyDisplay { font-size: 52px !important; }
     .qty-panel > div { gap: 24px !important; }
 
-    .form-group:has(#catGrid) { display: none; }
+    .form-group:has(#catPickerRow) { display: none; }
 
     /* Reorder container elements: Title -> Stock Status -> Details -> Buttons */
     .container {
@@ -1407,31 +1394,10 @@
         <div class="form-group">
           <label>Category</label>
           <input type="hidden" id="category">
-          <div class="cat-grid" id="catGrid">
-            <button type="button" class="cat-chip" data-value="Apparel"          onclick="selectCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
-            <button type="button" class="cat-chip" data-value="Wood"             onclick="selectCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
-            <button type="button" class="cat-chip" data-value="Boxes"            onclick="selectCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
-            <button type="button" class="cat-chip" data-value="Cards"            onclick="selectCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
-            <button type="button" class="cat-chip" data-value="Plants"           onclick="selectCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
-            <button type="button" class="cat-chip" data-value="Candy"            onclick="selectCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
-            <button type="button" class="cat-chip" data-value="Beverage"         onclick="selectCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
-            <button type="button" class="cat-chip" data-value="Jewelry"          onclick="selectCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
-            <button type="button" class="cat-chip" data-value="Party Supplies"   onclick="selectCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
-            <button type="button" class="cat-chip" data-value="Gaming"           onclick="selectCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
-            <button type="button" class="cat-chip" data-value="Toys"             onclick="selectCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
-            <button type="button" class="cat-chip" data-value="Office Supplies"  onclick="selectCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
-            <button type="button" class="cat-chip" data-value="Colors"           onclick="selectCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
-            <button type="button" class="cat-chip" data-value="Rope"             onclick="selectCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
-            <button type="button" class="cat-chip" data-value="Paper"            onclick="selectCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
-            <button type="button" class="cat-chip" data-value="Spool"            onclick="selectCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
-            <button type="button" class="cat-chip" data-value="Letter"           onclick="selectCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
-            <button type="button" class="cat-chip" data-value="Giveaway"         onclick="selectCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
-            <button type="button" class="cat-chip" data-value="Electronics"      onclick="selectCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
-            <button type="button" class="cat-chip" data-value="Printing Supplies" onclick="selectCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
-            <button type="button" class="cat-chip" data-value="Tools"            onclick="selectCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
-            <button type="button" class="cat-chip" data-value="Packaging"        onclick="selectCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
-            <button type="button" class="cat-chip" data-value="Food"             onclick="selectCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
-          </div>
+          <button type="button" class="cat-picker-row" id="catPickerRow" onclick="openCatSheet()">
+            <span class="cat-picker-value empty" id="catPickerValue">Not set</span>
+            <svg class="drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
         </div>
       </div>
 
@@ -1668,11 +1634,19 @@
     autoSave();
   }
 
+  // Desktop counterpart to catRow() below -- same row-that-opens-a-sheet
+  // pattern, just rendered once into the always-visible desktop form
+  // instead of #detailRows. Name kept as updateCatChips (its two call
+  // sites predate the chip-grid removal) even though there are no more
+  // chips to update, just this one value display.
   function updateCatChips() {
     const val = document.getElementById('category').value;
-    document.querySelectorAll('.cat-chip').forEach(chip => {
-      chip.classList.toggle('selected', chip.dataset.value === val);
-    });
+    const el = document.getElementById('catPickerValue');
+    if (!el) return;
+    const icon = _ING_CAT_ICON_MAP[val];
+    el.className = 'cat-picker-value' + (val ? '' : ' empty');
+    el.innerHTML = val ? `<i data-lucide="${icon || 'tag'}" style="width:16px;height:16px"></i>${escapeHtml(val)}` : 'Not set';
+    if (window.lucide) lucide.createIcons();
   }
 
   function autoSave() {
@@ -2964,9 +2938,8 @@
           <span class="cat-row-label">${escapeHtml(label)}</span>
         </div>`;
     };
-    const chips = [...document.querySelectorAll('#catGrid .cat-chip')];
     document.getElementById('catSheetList').innerHTML =
-      chips.map(b => row(b.dataset.value, _ING_CAT_ICON_MAP[b.dataset.value], b.dataset.value)).join('');
+      Object.keys(_ING_CAT_ICON_MAP).map(label => row(label, _ING_CAT_ICON_MAP[label], label)).join('');
     if (window.lucide) lucide.createIcons();
   }
 
