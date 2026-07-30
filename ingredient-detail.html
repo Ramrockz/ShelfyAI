@@ -915,6 +915,12 @@
       display: flex;
       flex-direction: column;
     }
+    /* .detail-header now owns the top spacing itself (mirroring the real
+       .navbar's compact mobile box model exactly — see bottom-nav.js's
+       injected .navbar override) instead of stacking its own padding on
+       top of .container's, which is what pushed it lower than the
+       navbar on list pages. */
+    .container { padding-top: 0; }
 
     /* Breadcrumb stays at top */
     .breadcrumb {
@@ -935,6 +941,12 @@
       align-items: center;
       gap: 4px;
       order: 2;
+      /* Mirrors the real .navbar's compact mobile box model exactly (see
+         bottom-nav.js's injected override) so the icon row lands at the
+         same on-screen position as the navbar does on list pages. */
+      padding-top: env(safe-area-inset-top, 0px);
+      min-height: 52px;
+      box-sizing: border-box;
     }
 
     .detail-header-title {
@@ -1120,10 +1132,7 @@
   }
   
   @media (max-width: 480px) {
-    /* Matches order-detail.html/expense-detail.html's top padding at this
-       width — this page's header sat a few px lower than theirs since it
-       never picked up that reduction. */
-    .container { padding: 12px 8px; }
+    .container { padding: 12px 8px; padding-top: 0; }
     .panel { padding: 16px 12px; }
 
     .header h1 { font-size: 24px; }
