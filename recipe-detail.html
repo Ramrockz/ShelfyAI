@@ -2707,15 +2707,23 @@ const PRODUCT_EXCLUDED_CATEGORIES = new Set([
 const PRODUCT_CATEGORIES = _recipeCategories.filter(c => !PRODUCT_EXCLUDED_CATEGORIES.has(c));
 
 function openRdmCategorySheet() {
-  const current = recipe?.category || '';
-  document.getElementById('rdmCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
-    const icon = _recipeCategIconMap[cat] || 'tag';
-    return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRdmCategory('${cat.replace(/'/g, "\\'")}')">
-        <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span>
-      </div>`;
-  }).join('');
-  if (window.lucide) lucide.createIcons();
+  // Show the sheet before touching its contents -- a bad icon name or any
+  // other error while building the list used to throw INSIDE this function
+  // and abort before the classList.add('active') line ever ran, so the tap
+  // looked like it did nothing at all.
   document.getElementById('rdmCategorySheet').classList.add('active');
+  try {
+    const current = recipe?.category || '';
+    document.getElementById('rdmCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
+      const icon = _recipeCategIconMap[cat] || 'tag';
+      return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRdmCategory('${cat.replace(/'/g, "\\'")}')">
+          <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span>
+        </div>`;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    console.error('Error rendering category sheet:', e);
+  }
 }
 function closeRdmCategorySheet() {
   document.getElementById('rdmCategorySheet').classList.remove('active');
