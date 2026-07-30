@@ -105,6 +105,9 @@
 
   /* Desktop: hide mobile-only name title; name lives inside the panel */
   #name-mobile, #name-mobile-display { display: none; }
+  /* Desktop: real .navbar already shows the bell/avatar — hide the
+     in-header duplicates used on mobile */
+  #diNotificationBell, #diUserAvatar { display: none; }
   .detail-rows { display: none; }
   @media (max-width: 768px) {
     #name-mobile-display { display: block; }
@@ -969,6 +972,27 @@
       background: transparent; color: var(--text-main); cursor: pointer; flex-shrink: 0;
     }
 
+    /* Name + more-menu now live in one header row alongside the
+       notification bell and profile avatar (matching recipe-detail.html's
+       mobile pattern), instead of a second bar stacked under the standard
+       one. The real .navbar (with its own bell/avatar) is hidden here —
+       #diNotificationBell/#diUserAvatar below are stand-ins that trigger
+       the same dropdowns (reparented to <body> in JS so they aren't
+       hidden along with the real navbar they used to live inside). */
+    .navbar { display: none !important; }
+
+    #diNotificationBell, #diUserAvatar { display: flex; flex-shrink: 0; }
+    #diNotificationBell {
+      position: relative; width: 36px; height: 36px; align-items: center; justify-content: center;
+      background: none; border: none; color: var(--text-main); cursor: pointer;
+    }
+    #diNotificationBell svg { width: 20px; height: 20px; }
+    #diUserAvatar {
+      width: 32px; height: 32px; border-radius: 50%; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+      background-size: cover; background-position: center; border: none; padding: 0; flex-shrink: 0;
+    }
+
     /* Main grid comes after header */
     .main-grid {
       order: 3;
@@ -1300,6 +1324,12 @@
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
     </div>
     <div class="detail-header-actions" style="display:flex; gap:12px; align-items:center;">
+      <button id="diNotificationBell" onclick="toggleNotifications(); event.stopPropagation();" aria-label="Notifications">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+      </button>
+      <button id="diUserAvatar" onclick="toggleUserMenu(); event.stopPropagation();" aria-label="Account">U</button>
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn" title="Mark as Reordered">
         <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
@@ -1694,6 +1724,7 @@
     renderDetailRows();
     renderRestockRow();
     renderLastChange();
+    syncMobileHeaderControls();
 
     // Load related data
     loadRecipes(ing.id);
@@ -2817,6 +2848,31 @@
     display.textContent = input.value || '';
     input.style.display = 'none';
     display.style.display = 'block';
+  }
+
+  // Mobile: the real .navbar (and the notification/user dropdowns living
+  // inside it) is hidden so the header can show name + bell + avatar in
+  // one row instead. Reparent the dropdowns to <body> first — display:none
+  // on an ancestor fully suppresses them otherwise, unlike a z-index issue
+  // — then mirror the real avatar's look onto the in-header stand-in.
+  function syncMobileHeaderControls() {
+    const notifDropdown = document.getElementById('notificationDropdown');
+    if (notifDropdown && notifDropdown.parentElement !== document.body) {
+      document.body.appendChild(notifDropdown);
+    }
+    const userDropdown = document.getElementById('userMenuDropdown');
+    if (userDropdown && userDropdown.parentElement !== document.body) {
+      document.body.appendChild(userDropdown);
+    }
+
+    const realAvatar = document.getElementById('userAvatar');
+    const diAvatar = document.getElementById('diUserAvatar');
+    if (realAvatar && diAvatar) {
+      diAvatar.textContent = realAvatar.textContent;
+      diAvatar.style.backgroundImage = realAvatar.style.backgroundImage;
+      diAvatar.style.backgroundSize = realAvatar.style.backgroundSize;
+      diAvatar.style.backgroundPosition = realAvatar.style.backgroundPosition;
+    }
   }
 
   async function toggleFavorite() {
