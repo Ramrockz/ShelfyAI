@@ -476,128 +476,113 @@
 
 
 
-  .reorder-modal {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 9999 !important;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.2s, visibility 0.2s;
-    pointer-events: none;
-    background: rgba(0, 0, 0, 0.5);
-  }
 
-  .reorder-modal.active {
-    visibility: visible;
-    opacity: 1;
-    pointer-events: auto;
+  /* ---------- Place reorder screen (full-screen mobile overlay) ---------- */
+  .ro-screen {
+    display: none; position: fixed; inset: 0; z-index: 10100;
+    flex-direction: column; background: var(--bg-app, var(--bg-main));
   }
+  .ro-screen.active { display: flex; }
+  .ro-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+  .ro-bar { min-height: calc(52px + env(safe-area-inset-top, 0px)); display: flex; align-items: center;
+            gap: 4px; padding: env(safe-area-inset-top, 0px) 8px 0; box-sizing: border-box; }
+  .ro-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+             background: none; border: none; color: var(--text-main); }
+  .ro-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ro-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main); }
+  .ro-sub { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ro-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  .reorder-modal-content {
-    background: var(--bg-inner) !important;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-    width: 90%;
-    max-width: 600px !important;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
-  }
+  .ro-qty-panel { background: var(--bg-panel); padding: 22px 16px 16px; border-bottom: 1px solid var(--border); }
+  .ro-qty-row { display: flex; align-items: center; justify-content: center; gap: 24px; }
+  .ro-qty-btn { width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px; border: none;
+                background: var(--bg-inner); color: var(--text-main); font-size: 28px; font-weight: 600; line-height: 1; }
+  .ro-qty-btn.plus { background: rgba(6,182,212,.12); color: var(--accent); }
+  .ro-qty-btn:active { transform: scale(.96); }
+  .ro-qty-center { display: flex; flex-direction: column; align-items: center;
+                   flex: 0 1 auto; min-width: 92px; max-width: 150px; }
+  .ro-qty-value { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+                  background: none; border: none; text-align: center; width: 100%; min-width: 0;
+                  padding: 0; color: var(--text-main); -webkit-appearance: none; appearance: none; }
+  .ro-qty-value::-webkit-inner-spin-button, .ro-qty-value::-webkit-outer-spin-button {
+    -webkit-appearance: none; display: none; }
+  .ro-qty-status { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
+  .ro-qty-hints { display: flex; justify-content: center; gap: 7px; margin-top: 16px; flex-wrap: wrap; }
+  .ro-qty-hint { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border);
+                 background: var(--bg-app, var(--bg-main)); color: var(--text-muted); font-size: 12.5px; font-weight: 700; }
+  .ro-qty-hint[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: var(--bg-panel); }
+  .ro-qty-hint small { font-weight: 600; opacity: .7; margin-left: 5px; }
 
-  .modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: var(--text-muted);
-    cursor: pointer;
-    line-height: 1;
-  }
+  .ro-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
+  .ro-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+  .ro-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-muted); }
+  .ro-list { background: var(--bg-panel); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
-  .modal-header {
-    margin-bottom: 24px;
-  }
+  .ro-drow { display: flex; align-items: center; gap: 12px; min-height: 56px; width: 100%;
+             padding: 8px 14px 8px 16px; text-align: left; background: var(--bg-panel); border: none;
+             border-top: 1px solid var(--border); }
+  .ro-list .ro-drow:first-child { border-top: none; }
+  .ro-drow-label { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ro-drow-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+  .ro-drow-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .ro-drow-chev { color: var(--text-muted); flex-shrink: 0; }
+  .ro-drow-tag { flex-shrink: 0; height: 22px; padding: 0 8px; border-radius: 7px; background: var(--bg-inner);
+                 font-size: 11.5px; font-weight: 700; color: var(--text-muted); display: inline-flex; align-items: center; }
 
-  .modal-header h3 {
-    margin: 0 0 16px 0;
-    font-size: 20px;
-  }
+  .ro-op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 12px 10px 16px;
+               border-top: 1px solid var(--border); }
+  .ro-list .ro-op-row:first-child { border-top: none; }
+  .ro-op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
+  .ro-op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ro-op-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+  .ro-op-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .ro-op-meta b { font-weight: 700; color: var(--text-main); }
+  .ro-op-meta[data-state="low"] { color: var(--warning); }
+  .ro-op-meta[data-state="out"] { color: var(--danger); }
+  .ro-op-add { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border);
+               background: var(--bg-panel); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .ro-op-add:active { background: var(--bg-inner); }
+  .ro-op-step { flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
+  .ro-op-step button { width: 40px; height: 44px; border: none; background: none; color: var(--accent);
+                        display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+  .ro-op-step button:active { background: var(--bg-inner); }
+  .ro-op-qty { min-width: 26px; text-align: center; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .ro-note { padding: 14px 20px 26px; font-size: 12px; color: var(--text-muted); }
 
-  .source-url-display {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    background: var(--bg-inner);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
+  .ro-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border);
+             padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .ro-tally { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .ro-tally-l { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .ro-tally-r { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -.02em;
+                font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .ro-warn { font-size: 12px; font-weight: 700; color: var(--warning); margin-top: 2px; }
+  .ro-cont { width: 100%; height: 50px; margin-top: 10px; border: none; border-radius: 13px;
+             background: var(--accent); color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+  .ro-cont:active { opacity: .85; }
+  .ro-cont:disabled { background: var(--bg-inner); color: var(--text-muted); cursor: default; }
 
-  .source-url-display:hover {
-    border-color: var(--accent);
-  }
-
-  .source-url-display a {
-    color: var(--accent);
-    text-decoration: none;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    pointer-events: none;
-  }
-
-  .source-url-display svg {
-    width: 16px;
-    height: 16px;
-    fill: var(--text-muted);
-    flex-shrink: 0;
-  }
-
-  .ingredient-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: var(--bg-inner);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 12px;
-  }
-
-  .ingredient-item-content {
-    flex: 1;
-  }
-
-  .ingredient-item-title {
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
-
-  .ingredient-item-attrs {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-  }
-
-  .ingredient-item-quantity {
-    font-size: 13px;
-    color: var(--text-main);
-    font-weight: 500;
-  }
+  .ro-sheet { position: fixed; inset: 0; z-index: 10200; background: rgba(15,23,42,.42);
+              display: none; align-items: flex-end; }
+  .ro-sheet.active { display: flex; }
+  .ro-sheet-content { width: 100%; background: var(--bg-panel); border-radius: 20px 20px 0 0;
+                      padding: 20px 0 calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 80%; overflow-y: auto; }
+  .ro-sheet-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0 16px 12px; color: var(--text-main); }
+  .ro-sup-opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px;
+                padding: 10px 16px; text-align: left; background: none; border: none; border-top: 1px solid var(--border); }
+  .ro-sup-opt:first-of-type { border-top: none; }
+  .ro-sup-opt[aria-selected="true"] .ro-drow-name { color: var(--accent); }
+  .ro-sup-check { color: var(--accent); flex-shrink: 0; }
+  .ro-sheet-new { display: block; width: 100%; padding: 16px; text-align: left; background: none;
+                  border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 14.5px; font-weight: 700; }
+  .ro-new-sup-form { padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .ro-new-sup-row { display: flex; gap: 10px; }
+  .ro-new-sup-input { flex: 1; height: 46px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border);
+                       background: var(--bg-inner); color: var(--text-main); font-size: 14px; min-width: 0; }
+  .ro-new-sup-save { height: 46px; border: none; border-radius: 10px; background: var(--accent); color: #fff;
+                      font-size: 14.5px; font-weight: 700; }
 
   .btn-reorder {
     background: var(--accent);
@@ -1064,7 +1049,6 @@
     /* Modal adjustments */
     .modal-content,
     .modal-content-custom,
-    .reorder-modal-content,
     .production-modal-content {
       width: calc(100% - 32px) !important;
       max-width: 500px !important;
@@ -1077,13 +1061,11 @@
     }
     .modal-overlay.active .modal-content,
     .modal-overlay.active .modal-content-custom,
-    .modal-overlay.active .reorder-modal-content,
     .modal-overlay.active .production-modal-content {
       transform: translateY(0) !important;
     }
     .modal-content::before,
-    .modal-content-custom::before,
-    .reorder-modal-content::before {
+    .modal-content-custom::before {
       content: '';
       display: block;
       width: 36px;
@@ -1092,12 +1074,7 @@
       border-radius: 2px;
       margin: 0 auto 20px;
     }
-    
-    /* Source URL display */
-    .source-url-display {
-      font-size: 13px;
-    }
-    
+
     /* Inventory table - horizontal scroll */
     .inventory-table-wrapper {
       overflow-x: auto;
@@ -1522,23 +1499,87 @@
 
 </div>
 
-<!-- Place Reorder Modal -->
-<div class="reorder-modal" id="reorderModal" onclick="if(event.target === this) closeReorderModal()">
-  <div class="reorder-modal-content">
-    <button class="modal-close" onclick="closeReorderModal()">&times;</button>
-    <div class="modal-header">
-      <h3>Place Reorder</h3>
-      <div class="source-url-display" id="sourceUrlDisplay" onclick="window.open(this.dataset.url, '_blank')">
-        <a href="#" id="sourceUrlLink">No source URL</a>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
-        </svg>
+<!-- Place Reorder screen — full-screen mobile overlay, replaces the old
+     simple "mark as reordered" modal. Subject ingredient is currentIngredient;
+     supported by a real suppliers/ingredient_suppliers relationship (see
+     create-ingredient-suppliers-tables.sql) instead of the single
+     source_url/cost_per_unit/estimated_delivery fields it used to read. -->
+<div class="ro-screen" id="roScreen">
+  <div class="ro-head">
+    <div class="ro-bar">
+      <button class="ro-back" onclick="closeReorderScreen()" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="ro-titles">
+        <span class="ro-title">Place reorder</span>
+        <span class="ro-sub" id="roSub"></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="ro-scroll">
+    <div class="ro-qty-panel">
+      <div class="ro-qty-row">
+        <button class="ro-qty-btn" aria-label="One fewer" onclick="roStepQty(-1)">&minus;</button>
+        <span class="ro-qty-center">
+          <input class="ro-qty-value" id="roQty" type="number" inputmode="numeric" value="0" onchange="roRenderAll()">
+          <span class="ro-qty-status" id="roQtyStatus"></span>
+        </span>
+        <button class="ro-qty-btn plus" aria-label="One more" onclick="roStepQty(1)">+</button>
       </div>
-      <div style="margin-top: 16px;">
-        <button class="btn-reorder" onclick="markAsReordered()" style="width: 100%; padding: 12px 32px;">Mark as Reordered</button>
+      <div class="ro-qty-hints" id="roHints"></div>
+    </div>
+
+    <div class="ro-sec-head"><span class="ro-sec-title">Supplier</span></div>
+    <div class="ro-list" id="roSupplierSection">
+      <button class="ro-drow" onclick="openRoSupplierSheet()">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name" id="roSupName">No supplier yet</span>
+          <span class="ro-drow-meta" id="roSupMeta"></span>
+        </span>
+        <span class="ro-drow-tag" id="roSupTag" style="display:none;"></span>
+        <svg class="ro-drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <div class="ro-drow" id="roEtaRow" style="display:none;">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name" id="roEtaName">Expected —</span>
+          <span class="ro-drow-meta" id="roEtaMeta"></span>
+        </span>
       </div>
     </div>
-    <div id="reorderIngredientsList" style="margin-top: 0;"></div>
+
+    <div class="ro-sec-head">
+      <span class="ro-sec-title">Ship together</span>
+      <span class="ro-sec-note" id="roAlsoNote"></span>
+    </div>
+    <div class="ro-list" id="roAlso"></div>
+    <div class="ro-note" id="roFootnote"></div>
+  </div>
+
+  <div class="ro-foot">
+    <div class="ro-tally">
+      <span class="ro-tally-l" id="roCount"></span>
+      <span class="ro-tally-r" id="roTotal">$0.00</span>
+    </div>
+    <div id="roWarn"></div>
+    <button class="ro-cont" id="roCont" onclick="placeReorder()">Place reorder</button>
+  </div>
+
+  <div class="ro-sheet" id="roSupSheet" onclick="if(event.target===this)closeRoSupplierSheet()">
+    <div class="ro-sheet-content">
+      <h2 class="ro-sheet-title">Supplier</h2>
+      <div id="roSupList"></div>
+      <div id="roNewSupplierForm" class="ro-new-sup-form" style="display:none;">
+        <input type="text" id="roNewSupName" class="ro-new-sup-input" placeholder="Supplier name">
+        <div class="ro-new-sup-row">
+          <input type="number" id="roNewSupPrice" class="ro-new-sup-input" placeholder="Price each" step="0.01" inputmode="decimal">
+          <input type="number" id="roNewSupLead" class="ro-new-sup-input" placeholder="Lead time (days)" inputmode="numeric">
+        </div>
+        <input type="number" id="roNewSupMoq" class="ro-new-sup-input" placeholder="Minimum order ($, optional)" step="0.01" inputmode="decimal">
+        <button class="ro-new-sup-save" onclick="saveNewSupplier()">Save supplier</button>
+      </div>
+      <button class="ro-sheet-new" id="roNewSupplierToggle" onclick="toggleNewSupplierForm()">New supplier</button>
+    </div>
   </div>
 </div>
 
@@ -1613,8 +1654,13 @@
   let customAttributes = {};
   let hasUnsavedChanges = false;
   let initialFormState = null;
-  let reorderAbortController = null;
   let _autoSaveTimer = null;
+
+  // ---------- Place reorder screen state ----------
+  let roSuppliers = [];       // ingredient_suppliers rows (+ joined supplier name) for currentIngredient
+  let roSupplierId = null;    // selected ingredient_suppliers.id
+  let roAlsoList = [];        // other low/out ingredients sharing the selected supplier
+  let roPicked = {};          // otherIngredientId -> qty, for "ship together"
 
   function selectCategory(value) {
     document.getElementById('category').value = value;
@@ -1681,11 +1727,11 @@
       currentIngredient = data;
       displayIngredient(data);
       
-      // Check if we should auto-open the reorder modal
+      // Check if we should auto-open the reorder screen
       const openReorder = urlParams.get('openReorder');
       if (openReorder === 'true' && data.source_url && data.source_url.trim()) {
         setTimeout(() => {
-          openReorderModal();
+          openReorderScreen();
         }, 300);
       }
 
@@ -1900,65 +1946,370 @@
     }
   }
 
+  // Suppliers are a standalone concept now (suppliers + ingredient_suppliers
+  // tables) — no more "no source URL" gate blocking reorder entirely; a
+  // supplier can be added from inside the reorder screen itself.
   function handleReorderClick() {
     if (!currentIngredient) return;
-    
-    // Check if source_url exists
-    if (!currentIngredient.source_url || !currentIngredient.source_url.trim()) {
-      // Show hint modal
-      document.getElementById('noSourceModal').classList.add('active');
-      return;
-    }
-    
-    // Open reorder modal if source_url exists
-    openReorderModal();
+    openReorderScreen();
   }
 
-  function openReorderModal() {
-    if (!currentIngredient || !currentIngredient.source_url) return;
-    
-    const modal = document.getElementById('reorderModal');
-    const link = document.getElementById('sourceUrlLink');
-    const display = document.getElementById('sourceUrlDisplay');
-    
-    link.textContent = currentIngredient.source_url;
-    display.dataset.url = currentIngredient.source_url;
-    
-    modal.classList.add('active');
-    loadReorderIngredients(currentIngredient.source_url);
-  }
-
-  function closeNoSourceModal() {
-    document.getElementById('noSourceModal').classList.remove('active');
-  }
-
-  function addSourceUrl() {
-    closeNoSourceModal();
-    const sourceUrlField = document.getElementById('source_url');
-    // On mobile the desktop form field is hidden (.panel > .form-section is
-    // display:none there) — there's no Details row for it either, since the
-    // mockup only shows one via the restock card. Fall back to the same
-    // one-field editor sheet the Details rows use.
-    if (sourceUrlField.offsetParent === null) {
-      editField(['source_url'], 'Source URL');
-      return;
-    }
-    sourceUrlField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    sourceUrlField.focus();
-  }
-
-  function closeReorderModal() {
-    // Cancel any ongoing loadReorderIngredients request
-    if (reorderAbortController) {
-      reorderAbortController.abort();
-      reorderAbortController = null;
-    }
-    document.getElementById('reorderModal').classList.remove('active');
-  }
-
-  async function markAsReordered() {
+  async function openReorderScreen() {
     if (!currentIngredient) return;
-    await completeReorder();
+    roPicked = {};
+    document.getElementById('roSub').textContent = currentIngredient.name || '';
+    document.getElementById('roScreen').classList.add('active');
+
+    await loadRoSuppliers();
+    if (!roSuppliers.length) await materializeDefaultSupplier();
+    roSupplierId = (roSuppliers.find(s => s.is_primary) || roSuppliers[0] || {}).id || null;
+
+    roSetQty(roSuggestedQty());
+    await loadRoAlso();
+    roRenderAll();
+  }
+
+  function closeReorderScreen() {
+    document.getElementById('roScreen').classList.remove('active');
+  }
+
+  async function loadRoSuppliers() {
+    roSuppliers = [];
+    if (!currentIngredient) return;
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabaseClient
+        .from('ingredient_suppliers')
+        .select('id, supplier_id, price, lead_time_days, moq, is_primary, last_ordered_at, suppliers(name)')
+        .eq('ingredient_id', currentIngredient.id)
+        .eq('profile_id', user.id)
+        .order('is_primary', { ascending: false })
+        .order('price', { ascending: true });
+      if (error) throw error;
+      roSuppliers = (data || []).map(r => ({
+        id: r.id, supplierId: r.supplier_id, name: r.suppliers?.name || 'Supplier',
+        price: parseFloat(r.price) || 0, lead: r.lead_time_days || 0,
+        moq: parseFloat(r.moq) || 0, is_primary: !!r.is_primary, lastOrdered: r.last_ordered_at
+      }));
+    } catch (e) {
+      console.error('Error loading suppliers:', e);
+    }
+  }
+
+  // First time the reorder screen opens for an ingredient that predates the
+  // suppliers table, turn its old single-vendor fields (source_url,
+  // cost_per_unit, estimated_delivery) into a real supplier row instead of
+  // leaving the reorder screen with nothing to show.
+  async function materializeDefaultSupplier() {
+    const url = currentIngredient.source_url;
+    if (!url || !url.trim()) return;
+    const name = _vendorNameFromUrl(url) || 'Supplier';
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+      const supplierRow = { profile_id: user.id, name };
+      if (storeId) supplierRow.store_id = storeId;
+      const { data: sup, error: supErr } = await supabaseClient
+        .from('suppliers').insert([supplierRow]).select().single();
+      if (supErr) throw supErr;
+
+      const { error: isErr } = await supabaseClient.from('ingredient_suppliers').insert([{
+        ingredient_id: currentIngredient.id,
+        supplier_id: sup.id,
+        profile_id: user.id,
+        price: parseFloat(currentIngredient.cost_per_unit) || 0,
+        lead_time_days: currentIngredient.estimated_delivery || null,
+        moq: 0,
+        is_primary: true
+      }]);
+      if (isErr) throw isErr;
+      await loadRoSuppliers();
+    } catch (e) {
+      console.error('Error materializing default supplier:', e);
+    }
+  }
+
+  function roSup() { return roSuppliers.find(s => s.id === roSupplierId) || null; }
+  function roQty() { return Math.max(0, parseInt(document.getElementById('roQty').value, 10) || 0); }
+
+  // No usage-history tracking exists yet, so "suggested" is just enough to
+  // clear the alert level with a little headroom — not a velocity-based
+  // forecast like a real demand-planning feature would compute.
+  function roSuggestedQty() {
+    const stock = parseFloat(currentIngredient?.quantity) || 0;
+    const min = parseFloat(currentIngredient?.min_stock) || 0;
+    const topUp = Math.max(0, min - stock);
+    return Math.max(topUp, min, 1);
+  }
+
+  function roHints() {
+    const stock = parseFloat(currentIngredient?.quantity) || 0;
+    const min = parseFloat(currentIngredient?.min_stock) || 0;
+    const topUp = Math.max(0, min - stock);
+    const suggested = roSuggestedQty();
+    const hints = [{ n: suggested, label: 'Suggested' }];
+    if (topUp && topUp !== suggested) hints.push({ n: topUp, label: 'Top up to min' });
+    hints.push({ n: suggested * 2, label: 'Double it' });
+    return hints;
+  }
+
+  function roEtaLabel(days) {
+    const d = new Date(Date.now() + (parseInt(days, 10) || 0) * 86400000);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderRoQty() {
+    const q = roQty();
+    const stock = parseFloat(currentIngredient?.quantity) || 0;
+    document.getElementById('roQtyStatus').innerHTML = q
+      ? `units · ${stock} &rarr; <b>${stock + q}</b> in stock`
+      : 'units';
+    document.getElementById('roHints').innerHTML = roHints().map(h =>
+      `<button class="ro-qty-hint" aria-pressed="${h.n === q}" onclick="roSetQty(${h.n})">${h.label}<small>${h.n}</small></button>`
+    ).join('');
+  }
+
+  function renderRoSupplier() {
+    const s = roSup();
+    const nameEl = document.getElementById('roSupName');
+    const metaEl = document.getElementById('roSupMeta');
+    const tagEl = document.getElementById('roSupTag');
+    const etaRow = document.getElementById('roEtaRow');
+    if (!s) {
+      nameEl.textContent = 'Add a supplier';
+      metaEl.textContent = 'No supplier on file for this item yet';
+      tagEl.style.display = 'none';
+      etaRow.style.display = 'none';
+      return;
+    }
+    nameEl.textContent = s.name;
+    const bits = [s.price ? `$${s.price.toFixed(2)} each` : null, s.lead ? `~${s.lead} days` : null,
+                  s.lastOrdered ? `last ordered ${new Date(s.lastOrdered).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : null]
+      .filter(Boolean);
+    metaEl.textContent = bits.join(' · ');
+
+    if (roSuppliers.length > 1) {
+      const cheapest = roSuppliers.reduce((a, b) => (b.price < a.price ? b : a));
+      tagEl.style.display = 'inline-flex';
+      tagEl.textContent = s.id === cheapest.id ? 'cheapest' : `$${(s.price - cheapest.price).toFixed(2)} over ${cheapest.name}`;
+    } else {
+      tagEl.style.display = 'none';
+    }
+
+    if (s.lead) {
+      etaRow.style.display = 'flex';
+      document.getElementById('roEtaName').textContent = 'Expected ' + roEtaLabel(s.lead);
+      document.getElementById('roEtaMeta').textContent = `~${s.lead} days · stock updates when you mark it received`;
+    } else {
+      etaRow.style.display = 'none';
+    }
+  }
+
+  async function loadRoAlso() {
+    roAlsoList = [];
+    const s = roSup();
+    if (!s || !currentIngredient) return;
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabaseClient
+        .from('ingredient_suppliers')
+        .select('ingredient_id, price, ingredients(id, name, quantity, min_stock)')
+        .eq('supplier_id', s.supplierId)
+        .eq('profile_id', user.id)
+        .neq('ingredient_id', currentIngredient.id);
+      if (error) throw error;
+      roAlsoList = (data || [])
+        .filter(r => r.ingredients)
+        .map(r => ({
+          id: r.ingredients.id, name: r.ingredients.name,
+          stock: parseFloat(r.ingredients.quantity) || 0, min: parseFloat(r.ingredients.min_stock) || 0,
+          price: parseFloat(r.price) || 0
+        }))
+        .filter(a => a.stock === 0 || (a.min > 0 && a.stock < a.min))
+        .sort((a, b) => (a.stock === 0 ? 0 : 1) - (b.stock === 0 ? 0 : 1));
+    } catch (e) {
+      console.error('Error loading ship-together items:', e);
+    }
+  }
+
+  function renderRoAlso() {
+    const rows = roAlsoList;
+    const s = roSup();
+    document.getElementById('roAlsoNote').textContent =
+      rows.length && s ? `${rows.length} low at ${s.name}` : '';
+    document.getElementById('roAlso').innerHTML = !rows.length ? `<div class="ro-op-row"><span class="ro-op-main">
+        <span class="ro-op-name" style="font-weight:600;color:var(--text-muted)">${s ? 'Nothing else is low here' : 'Pick a supplier to see what else ships with it'}</span>
+      </span></div>` : rows.map(a => {
+      const q = roPicked[a.id] || 0;
+      const st = a.stock === 0 ? 'out' : 'low';
+      const line = q
+        ? `$${a.price.toFixed(2)} each · <b>${a.stock} &rarr; ${a.stock + q}</b>`
+        : `$${a.price.toFixed(2)} each · ${a.stock} of ${a.min} min`;
+      return `<div class="ro-op-row" data-picked="${q ? 1 : 0}">
+        <span class="ro-op-main">
+          <span class="ro-op-name">${escapeHtml(a.name)}</span>
+          <span class="ro-op-meta"${st && !q ? ` data-state="${st}"` : ''}>${line}</span>
+        </span>
+        ${q ? `<span class="ro-op-step">
+            <button onclick="roBump('${a.id}',-1)" aria-label="One fewer">&minus;</button>
+            <span class="ro-op-qty">${q}</span>
+            <button onclick="roBump('${a.id}',1)" aria-label="One more">+</button>
+          </span>`
+        : `<button class="ro-op-add" onclick="roBump('${a.id}',${Math.max(a.min, 1) || 1})" aria-label="Add ${escapeHtml(a.name)}">+</button>`}
+      </div>`;
+    }).join('');
+    document.getElementById('roFootnote').textContent = s
+      ? `Creates a draft order to ${s.name}. Nothing is deducted or paid until you mark it received.`
+      : '';
+  }
+
+  function renderRoTally() {
+    const s = roSup(), q = roQty();
+    const extraUnits = Object.values(roPicked).reduce((a, b) => a + b, 0);
+    const extra = Object.keys(roPicked).reduce((sum, id) =>
+      sum + roPicked[id] * (roAlsoList.find(a => a.id === id)?.price || 0), 0);
+    const total = (s ? q * s.price : 0) + extra;
+    const lines = (q && s ? 1 : 0) + Object.keys(roPicked).length;
+
+    document.getElementById('roCount').textContent = lines
+      ? `${lines} item${lines > 1 ? 's' : ''} · ${q + extraUnits} unit${q + extraUnits !== 1 ? 's' : ''}`
+      : 'Nothing to order yet';
+    document.getElementById('roTotal').textContent = `$${total.toFixed(2)}`;
+
+    const shortBy = s && s.moq ? s.moq - total : 0;
+    document.getElementById('roWarn').innerHTML = lines && shortBy > 0
+      ? `<div class="ro-warn">$${shortBy.toFixed(2)} under ${escapeHtml(s.name)}'s $${s.moq.toFixed(2)} minimum</div>`
+      : '';
+    const cont = document.getElementById('roCont');
+    cont.disabled = !lines || !s;
+    cont.textContent = lines ? `Place reorder · $${total.toFixed(2)}` : 'Place reorder';
+  }
+
+  function roRenderAll() { renderRoQty(); renderRoSupplier(); renderRoAlso(); renderRoTally(); }
+  function roSetQty(n) { document.getElementById('roQty').value = Math.max(0, n); roRenderAll(); }
+  function roStepQty(d) { roSetQty(roQty() + d); }
+  function roBump(id, d) {
+    const next = (roPicked[id] || 0) + d;
+    if (next <= 0) delete roPicked[id]; else roPicked[id] = next;
+    renderRoAlso();
+    renderRoTally();
+  }
+
+  function openRoSupplierSheet() {
+    const cheapest = roSuppliers.length ? roSuppliers.reduce((a, b) => (b.price < a.price ? b : a)) : null;
+    const fastest = roSuppliers.length ? roSuppliers.reduce((a, b) => (b.lead && (!a.lead || b.lead < a.lead) ? b : a)) : null;
+    document.getElementById('roSupList').innerHTML = roSuppliers.map(s => {
+      const tag = s.id === cheapest?.id ? 'cheapest' : s.id === fastest?.id ? 'fastest' : '';
+      return `<button class="ro-sup-opt" aria-selected="${s.id === roSupplierId}" onclick="pickRoSupplier('${s.id}')">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name">${escapeHtml(s.name)}</span>
+          <span class="ro-drow-meta">$${s.price.toFixed(2)} each${s.lead ? ` · ~${s.lead} days` : ''}${s.moq ? ` · $${s.moq.toFixed(2)} min` : ''}</span>
+        </span>
+        ${tag ? `<span class="ro-drow-tag">${tag}</span>` : ''}
+        ${s.id === roSupplierId ? '<svg class="ro-sup-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </button>`;
+    }).join('');
+    document.getElementById('roNewSupplierForm').style.display = 'none';
+    document.getElementById('roNewSupplierToggle').textContent = 'New supplier';
+    document.getElementById('roSupSheet').classList.add('active');
+  }
+  function closeRoSupplierSheet() { document.getElementById('roSupSheet').classList.remove('active'); }
+  function pickRoSupplier(id) {
+    roSupplierId = id;
+    roPicked = {}; // "ship together" items belong to the old supplier, can't carry over
+    closeRoSupplierSheet();
+    loadRoAlso().then(roRenderAll);
+  }
+  function toggleNewSupplierForm() {
+    const form = document.getElementById('roNewSupplierForm');
+    const isOpen = form.style.display !== 'none';
+    form.style.display = isOpen ? 'none' : 'flex';
+    document.getElementById('roNewSupplierToggle').textContent = isOpen ? 'New supplier' : 'Cancel';
+  }
+  async function saveNewSupplier() {
+    const name = document.getElementById('roNewSupName').value.trim();
+    if (!name) { showAlert('Supplier name is required'); return; }
+    const price = parseFloat(document.getElementById('roNewSupPrice').value) || 0;
+    const lead = parseInt(document.getElementById('roNewSupLead').value, 10) || null;
+    const moq = parseFloat(document.getElementById('roNewSupMoq').value) || 0;
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+      const supplierRow = { profile_id: user.id, name };
+      if (storeId) supplierRow.store_id = storeId;
+      const { data: sup, error: supErr } = await supabaseClient
+        .from('suppliers').insert([supplierRow]).select().single();
+      if (supErr) throw supErr;
+
+      const { data: isRow, error: isErr } = await supabaseClient.from('ingredient_suppliers').insert([{
+        ingredient_id: currentIngredient.id,
+        supplier_id: sup.id,
+        profile_id: user.id,
+        price, lead_time_days: lead, moq,
+        is_primary: roSuppliers.length === 0
+      }]).select().single();
+      if (isErr) throw isErr;
+
+      await loadRoSuppliers();
+      roSupplierId = isRow.id;
+      closeRoSupplierSheet();
+      await loadRoAlso();
+      roRenderAll();
+    } catch (e) {
+      console.error('Error saving supplier:', e);
+      showAlert('Failed to save supplier: ' + e.message);
+    }
+  }
+
+  async function placeReorder() {
+    const s = roSup();
+    const q = roQty();
+    if (!s) { showAlert('Add a supplier first'); return; }
+    if (!q && !Object.keys(roPicked).length) { showAlert('Nothing to order yet'); return; }
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      const today = new Date().toISOString().split('T')[0];
+
+      if (q) {
+        const { error } = await supabaseClient.from('ingredients').update({
+          reorder_pending: true, reorder_date: today, estimated_delivery: s.lead || null
+        }).eq('id', currentIngredient.id);
+        if (error) throw error;
+        currentIngredient.reorder_pending = true;
+        currentIngredient.estimated_delivery = s.lead || null;
+        await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', s.id);
+      }
+
+      for (const [id, pickedQty] of Object.entries(roPicked)) {
+        const also = roAlsoList.find(a => a.id === id);
+        const { data: rows } = await supabaseClient
+          .from('ingredient_suppliers').select('id, lead_time_days')
+          .eq('ingredient_id', id).eq('supplier_id', s.supplierId).limit(1);
+        const row = rows?.[0];
+        await supabaseClient.from('ingredients').update({
+          reorder_pending: true, reorder_date: today, estimated_delivery: row?.lead_time_days || null
+        }).eq('id', id);
+        if (row) await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', row.id);
+      }
+
+      const reorderBtn = document.getElementById('reorderBtn');
+      if (reorderBtn) {
+        reorderBtn.title = 'Confirm Delivery';
+        reorderBtn.onclick = openDeliveryModal;
+        reorderBtn.classList.add('truck-moving');
+      }
+      renderRestockRow();
+      closeReorderScreen();
+    } catch (e) {
+      console.error('Error placing reorder:', e);
+      showAlert('Failed to place reorder: ' + e.message);
+    }
   }
 
   function openExpenseModal() {
@@ -2262,9 +2613,6 @@
       reorderBtn.classList.add('truck-moving');
       renderRestockRow();
 
-      // Close modal
-      closeReorderModal();
-
     } catch (error) {
       console.error('Error marking as reordered:', error);
       showAlert('Failed to mark as reordered');
@@ -2330,138 +2678,6 @@
     }
   }
 
-  async function loadReorderIngredients(sourceUrl) {
-    // Cancel previous request if still running
-    if (reorderAbortController) {
-      reorderAbortController.abort();
-    }
-    
-    // Create new abort controller for this request
-    reorderAbortController = new AbortController();
-    
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-
-      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
-      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-      const baseDomain = extractBaseDomain(sourceUrl);
-      let _q3 = supabaseClient
-        .from('ingredients')
-        .select('id, name, quantity, unit, min_stock, custom_attributes')
-        .eq('profile_id', user.id);
-      if (storeId) _q3 = _q3.eq('store_id', storeId);
-      _q3 = _q3.ilike('source_url', `%${baseDomain}%`)
-        .neq('id', currentIngredient.id)
-        .abortSignal(reorderAbortController?.signal);
-      const { data, error } = await _q3;
-
-      const container = document.getElementById('reorderIngredientsList');
-      if (error) {
-        // Don't show error if request was aborted
-        if (error.name === 'AbortError') return;
-        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        container.innerHTML = '';
-        return;
-      }
-
-      // Sort: out of stock → low on stock → in stock
-      data.sort((a, b) => {
-        const rank = i => {
-          const qty = i.quantity || 0;
-          const min = i.min_stock || 0;
-          if (qty === 0) return 0;
-          if (min > 0 && qty < min) return 1;
-          return 2;
-        };
-        return rank(a) - rank(b);
-      });
-
-      const renderReorderItem = ing => {
-        const qty = ing.quantity || 0;
-        const minStock = ing.min_stock || 0;
-        const stockBadge = qty === 0
-          ? '<span class="stock-pill out">Out</span>'
-          : (minStock > 0 && qty < minStock)
-          ? '<span class="stock-pill low">Low</span>'
-          : '';
-        let attrs = '';
-        if (ing.custom_attributes) {
-          try {
-            const customAttrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-            const values = Object.values(customAttrs).filter(v => v && v.trim());
-            if (values.length > 0) attrs = values.join(', ');
-          } catch (e) {}
-        }
-        return `<div class="ingredient-item">
-          <div class="ingredient-item-content">
-            <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
-            ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
-            <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty}</div>
-          </div>
-          ${stockBadge}
-        </div>`;
-      };
-
-      const isMobile = window.innerWidth <= 768;
-      const PAGE = 10;
-      const visible = isMobile ? data : data.slice(0, PAGE);
-      const remaining = isMobile ? 0 : data.length - PAGE;
-
-      container.innerHTML = '<h4 style="font-size: 13px; font-weight: 600; margin: 16px 0 12px; color: var(--text-muted);">Other items from this source</h4>'
-        + '<div id="reorderItemsVisible">' + visible.map(renderReorderItem).join('') + '</div>'
-        + (remaining > 0 ? `<button id="reorderShowMore" onclick="showMoreReorderItems()" style="margin-top: 10px; width: 100%; padding: 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer;">Show ${remaining} more</button>` : '');
-
-      if (remaining > 0) {
-        window._reorderAllData = data;
-      }
-    } catch (err) {
-      console.error('Error loading reorder ingredients:', err);
-      document.getElementById('reorderIngredientsList').innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Error loading items</p>';
-    }
-  }
-
-  function showMoreReorderItems() {
-    const data = window._reorderAllData;
-    if (!data) return;
-    const btn = document.getElementById('reorderShowMore');
-    const visibleDiv = document.getElementById('reorderItemsVisible');
-    if (btn) btn.remove();
-
-    const renderReorderItem = ing => {
-      const qty = ing.quantity || 0;
-      const minStock = ing.min_stock || 0;
-      const stockBadge = qty === 0
-        ? '<span class="stock-pill out">Out</span>'
-        : (minStock > 0 && qty < minStock)
-        ? '<span class="stock-pill low">Low</span>'
-        : '';
-      let attrs = '';
-      if (ing.custom_attributes) {
-        try {
-          const customAttrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-          const values = Object.values(customAttrs).filter(v => v && v.trim());
-          if (values.length > 0) attrs = values.join(', ');
-        } catch (e) {}
-      }
-      return `<div class="ingredient-item">
-        <div class="ingredient-item-content">
-          <a href="/ingredient-detail?id=${ing.id}" target="_blank" class="ingredient-item-title" style="text-decoration: none; color: var(--text-main);">${escapeHtml(ing.name)}</a>
-          ${attrs ? `<div class="ingredient-item-attrs" style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">${escapeHtml(attrs)}</div>` : ''}
-          <div class="ingredient-item-quantity" style="font-size: 12px; margin-top: 4px;">${qty}</div>
-        </div>
-        ${stockBadge}
-      </div>`;
-    };
-
-    visibleDiv.innerHTML = data.map(renderReorderItem).join('');
-    window._reorderAllData = null;
-  }
 
   function escapeHtml(text) {
     const map = {
@@ -2610,7 +2826,8 @@
   // ---------- Mobile detail rows ----------
   // Order matches the approved mockup: Cost each, Alert below, Category,
   // Attributes, SKU · Notes. Source URL has no row of its own here — it's
-  // set via the "no source" prompt / restock flow (see addSourceUrl()).
+  // set via the Details editor / restock flow, and suppliers (with their
+  // own price/lead time) are managed from the reorder screen.
   const DETAIL_ROWS_TOP = [
     { ids: ['cost_per_unit'], label: 'Cost each',   fmt: v => v.cost_per_unit ? `$${parseFloat(v.cost_per_unit).toFixed(2)}` : '' },
     { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' }
@@ -3379,8 +3596,10 @@ document.addEventListener('keydown', (e) => {
       closeAlert();
     } else if (document.getElementById('confirmModal').classList.contains('active')) {
       resolveConfirm(false);
-    } else if (document.getElementById('reorderModal').classList.contains('active')) {
-      closeReorderModal();
+    } else if (document.getElementById('roSupSheet').classList.contains('active')) {
+      closeRoSupplierSheet();
+    } else if (document.getElementById('roScreen').classList.contains('active')) {
+      closeReorderScreen();
     } else if (document.getElementById('expenseModal').classList.contains('active')) {
       closeExpenseModal();
     } else if (document.getElementById('feedbackModal').classList.contains('active')) {
@@ -3429,23 +3648,6 @@ document.addEventListener('keydown', (e) => {
     <div style="display: flex; gap: 12px;">
       <button id="confirmCancelBtn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="resolveConfirm(false)">Cancel</button>
       <button id="confirmOkBtn" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="resolveConfirm(true)">Confirm</button>
-    </div>
-  </div>
-</div>
-
-<!-- No Source URL Modal -->
-<div class="modal-overlay modal-sheet" id="noSourceModal" onclick="if(event.target === this) closeNoSourceModal()">
-  <div class="modal-content">
-    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">ðŸ“ Source URL Missing</h3>
-    <p style="color: var(--text-main); font-size: 14px; margin-bottom: 16px; line-height: 1.6;">
-      We don't know where to restock this ingredient from yet.
-    </p>
-    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
-      ðŸ’¡ <strong>Tip:</strong> Add a source URL (like a supplier website or product page) to enable the restock feature. This helps you quickly restock ingredients when stock runs low.
-    </p>
-    <div style="display: flex; gap: 12px;">
-      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='var(--bg-panel)'" onclick="closeNoSourceModal()">Cancel</button>
-      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="addSourceUrl()">Add Source URL</button>
     </div>
   </div>
 </div>
