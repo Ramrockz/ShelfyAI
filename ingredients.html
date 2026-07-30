@@ -401,10 +401,13 @@
     gap: 16px;
   }
 
-  .ing-cat-grid { display: flex; flex-wrap: wrap; gap: 7px; }
-  .ing-cat-chip { display: flex; align-items: center; justify-content: center; padding: 10px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; flex: 1 1 44px; max-width: 54px; color: var(--text-muted); }
-  .ing-cat-chip svg { width: 20px; height: 20px; stroke-width: 1.75; }
-  .ing-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+  .ic-cat-row { display: flex; align-items: center; justify-content: space-between; width: 100%;
+                height: 34px; margin-top: 2px; padding: 0; background: none; border: none;
+                text-align: left; font-family: inherit; cursor: pointer; }
+  .ic-cat-value { display: inline-flex; align-items: center; gap: 6px; font-size: 17px; font-weight: 600;
+                  letter-spacing: -.01em; color: var(--text-main); }
+  .ic-cat-value.empty { font-weight: 400; color: var(--text-ghost, #cbd5e1); }
+  .ic-cat-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
 
   /* ---------- New-item form (#manualModal) — 15b reference ---------- */
   .ic-modal { border-radius: 20px; overflow: hidden; }
@@ -1265,38 +1268,17 @@
             <div class="ic-units" id="icUnits"></div>
           </div>
           <div class="ic-field">
-            <label class="ic-label" for="ing_min_stock">Alert below</label>
+            <label class="ic-label" for="ing_min_stock">Low stock alert</label>
             <input class="ic-input" type="number" id="ing_min_stock" step="0.01" placeholder="Off" oninput="onIngredientEdit()">
             <div class="ic-hint">Flags it on the dashboard once stock drops under this.</div>
           </div>
           <div class="ic-field">
             <label class="ic-label">Category <span style="color: var(--danger);">*</span></label>
             <input type="hidden" id="ing_category">
-            <div class="ing-cat-grid">
-              <button type="button" class="ing-cat-chip" data-value="Apparel"          onclick="selectIngCategory('Apparel')"          title="Apparel"><i data-lucide="shirt"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Wood"             onclick="selectIngCategory('Wood')"             title="Wood"><i data-lucide="tree-pine"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Boxes"            onclick="selectIngCategory('Boxes')"            title="Boxes"><i data-lucide="archive"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Cards"            onclick="selectIngCategory('Cards')"            title="Cards"><i data-lucide="tickets"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Plants"           onclick="selectIngCategory('Plants')"           title="Plants"><i data-lucide="sprout"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Candy"            onclick="selectIngCategory('Candy')"            title="Candy"><i data-lucide="lollipop"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Beverage"         onclick="selectIngCategory('Beverage')"         title="Beverage"><i data-lucide="amphora"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Jewelry"          onclick="selectIngCategory('Jewelry')"          title="Jewelry"><i data-lucide="gem"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Party Supplies"   onclick="selectIngCategory('Party Supplies')"   title="Party Supplies"><i data-lucide="party-popper"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Gaming"           onclick="selectIngCategory('Gaming')"           title="Gaming"><i data-lucide="gamepad-2"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Toys"             onclick="selectIngCategory('Toys')"             title="Toys"><i data-lucide="drum"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Office Supplies"  onclick="selectIngCategory('Office Supplies')"  title="Office Supplies"><i data-lucide="paperclip"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Colors"           onclick="selectIngCategory('Colors')"           title="Colors"><i data-lucide="palette"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Rope"             onclick="selectIngCategory('Rope')"             title="Rope"><i data-lucide="lasso"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Paper"            onclick="selectIngCategory('Paper')"            title="Paper"><i data-lucide="origami"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Spool"            onclick="selectIngCategory('Spool')"            title="Spool"><i data-lucide="spool"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Letter"           onclick="selectIngCategory('Letter')"           title="Letter"><i data-lucide="mail"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Giveaway"         onclick="selectIngCategory('Giveaway')"         title="Giveaway"><i data-lucide="gift"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Electronics"      onclick="selectIngCategory('Electronics')"      title="Electronics"><i data-lucide="plug"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Printing Supplies" onclick="selectIngCategory('Printing Supplies')" title="Printing Supplies"><i data-lucide="printer"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Tools"            onclick="selectIngCategory('Tools')"            title="Tools"><i data-lucide="wrench"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Packaging"        onclick="selectIngCategory('Packaging')"        title="Packaging"><i data-lucide="package"></i></button>
-              <button type="button" class="ing-cat-chip" data-value="Food"             onclick="selectIngCategory('Food')"             title="Food"><i data-lucide="wheat"></i></button>
-            </div>
+            <button type="button" class="ic-cat-row" id="icCatRow" onclick="openIcCatSheet()">
+              <span class="ic-cat-value empty" id="icCatValue">Not set</span>
+              <svg class="ic-cat-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+            </button>
           </div>
         </div>
 
@@ -1342,6 +1324,17 @@
         <button type="button" class="ic-again" id="icAgain" onclick="saveIngredient(null, true)">Save and add another</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Category sheet for #manualModal's #icCatRow above. Separate from
+     #catSheet (the ingredient-LIST category filter, further up this file) —
+     different id, different data (no per-category counts), same .cat-row
+     markup/CSS since both are just "pick one category from a list". -->
+<div class="modal-overlay modal-sheet" id="icCatSheet" onclick="if(event.target===this)closeIcCatSheet()">
+  <div class="modal-content" style="max-width:420px">
+    <h3 class="sheet-title" style="margin-top:0;">Category</h3>
+    <div id="icCatSheetList"></div>
   </div>
 </div>
 
@@ -1782,7 +1775,7 @@ function closeManualModal() {
   document.getElementById('ing_quantity').value = '';
   document.getElementById('ing_cost').value = '';
   document.getElementById('ing_category').value = '';
-  document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.remove('selected'));
+  renderIcCatValue();
   document.getElementById('ing_min_stock').value = '';
   document.getElementById('ing_estimated_delivery').value = '';
   document.getElementById('ing_sku').value = '';
@@ -4509,7 +4502,34 @@ function extractBaseDomain(url) {
 
 function selectIngCategory(value) {
   document.getElementById('ing_category').value = value;
-  document.querySelectorAll('.ing-cat-chip').forEach(c => c.classList.toggle('selected', c.dataset.value === value));
+  renderIcCatValue();
+}
+
+// #manualModal's category picker -- opens a sheet instead of the old inline
+// icon-chip grid, matching the product-create pattern in recipes.html
+// (#rbCatSheet/openRbCatSheet). Reuses CAT_META (already built for this
+// page's ingredient-list category-filter sheet) for the label/icon pairs.
+function renderIcCatValue() {
+  const v = document.getElementById('ing_category').value;
+  const el = document.getElementById('icCatValue');
+  if (!el) return;
+  el.className = 'ic-cat-value' + (v ? '' : ' empty');
+  const icon = (CAT_META.find(m => m.label === v) || {}).icon || 'tag';
+  el.innerHTML = v ? `<i data-lucide="${icon}" style="width:15px;height:15px"></i>${escapeHtml(v)}` : 'Not set';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function openIcCatSheet() {
+  const current = document.getElementById('ing_category').value;
+  document.getElementById('icCatSheetList').innerHTML = CAT_META.map(m => {
+    return `<div class="cat-row${m.label === current ? ' active' : ''}" onclick="selectIngCategory('${m.label.replace(/'/g, "\\'")}'); closeIcCatSheet();">
+        <i data-lucide="${m.icon}"></i><span class="cat-row-label">${m.label}</span>
+      </div>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('icCatSheet').classList.add('active');
+}
+function closeIcCatSheet() {
+  document.getElementById('icCatSheet').classList.remove('active');
 }
 
 // Clears everything item-specific for "Save and add another" while keeping
