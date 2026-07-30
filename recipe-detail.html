@@ -1492,7 +1492,14 @@ async function renderRecipe() {
     if (stock === 0) { canProduce = false; hasOutOfStock = true; }
     else if (stock < requiredQty) { canProduce = false; hasLowStock = true; }
 
-    const stockPill = stock === 0 ? '<span class="stock-pill out">Out</span>' : stock < requiredQty ? '<span class="stock-pill low">Low</span>' : '';
+    // "Low" here means short for THIS product; fall back to the ingredient's
+    // own min_stock threshold when there's technically enough for this
+    // product but it's still generally running low.
+    const stockMinStock = parseFloat(stockInfo.min_stock) || 0;
+    const stockPill = stock === 0 ? '<span class="stock-pill out">Out</span>'
+      : stock < requiredQty ? '<span class="stock-pill low">Low</span>'
+      : stockMinStock > 0 && stock < stockMinStock ? '<span class="stock-pill low">Low</span>'
+      : '';
     const isReorderPending = !!(ingredientStockMap[ingredientId]?.reorder_pending);
 
     return `
@@ -1668,22 +1675,27 @@ function renderMobileOverlay() {
     const ingId = comp.ingredient_id || comp.id;
     const stock = ingredientStockMap[ingId];
     const qty = stock?.quantity ?? null;
-    // "Low" used to mean qty < min_stock (a generic Inventory-level threshold)
-    // while desktop used qty < requiredQty (Short, for this product) — two
-    // different answers on the same row. This page only ever needs the
-    // second one: is there enough for what THIS product needs.
+    // "Short N" (qty < requiredQty) answers "is there enough for what THIS
+    // product needs" — takes priority since it's the more actionable/urgent
+    // read. "Low" (qty < the ingredient's own min_stock) still gets shown as
+    // a fallback when there's technically enough for this product but the
+    // ingredient is generally running low — that signal was previously
+    // dropped entirely, hiding it from this page.
     const need = parseFloat(comp.quantity) || 0;
+    const minStock = parseFloat(stock?.min_stock) || 0;
     const stockPill2 = qty === null ? ''
       : qty === 0 ? '<span class="stock-pill out">Out</span>'
       : qty < need ? `<span class="stock-pill low">Short ${(need - qty).toFixed(0)}</span>`
+      : minStock > 0 && qty < minStock ? '<span class="stock-pill low">Low</span>'
       : '';
+    const deliveryPill = stock?.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
     const cost = parseFloat(comp.cost) || 0;
     return `
     <div class="rdm-item-row" onclick="openItemSheet(${index})">
       <span class="rdm-item-main">
         <span class="rdm-item-top">
           <span class="rdm-item-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown')}</span>
-          ${stockPill2}
+          ${stockPill2}${deliveryPill}
         </span>
         <span class="rdm-item-sub">${need} per unit · $${cost.toFixed(2)} of cost</span>
       </span>
