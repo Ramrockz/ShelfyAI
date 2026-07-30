@@ -3628,6 +3628,13 @@ window.addEventListener('shelfy:synced', (e) => {
       }
     } catch (e) { console.error('Error applying seeded product:', e); }
   }
+
+  // The "+" create button on recipe-detail.html can't open this page's
+  // create flow directly (it's a different document) — it hands off here.
+  if (sessionStorage.getItem('shelfy_open_create')) {
+    sessionStorage.removeItem('shelfy_open_create');
+    openBuilder();
+  }
 })();
 
 // Auto-highlight active page in navigation

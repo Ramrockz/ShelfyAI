@@ -1684,6 +1684,13 @@ loadIngredients().then(() => {
       document.getElementById('manualModal').classList.add('active');
     } catch (e) { console.error('Error applying seeded item:', e); }
   }
+
+  // The "+" create button on ingredient-detail.html can't open this page's
+  // create-modal directly (it's a different document) — it hands off here.
+  if (sessionStorage.getItem('shelfy_open_create')) {
+    sessionStorage.removeItem('shelfy_open_create');
+    openModal();
+  }
 });
 
 // Event delegation for star icon clicks

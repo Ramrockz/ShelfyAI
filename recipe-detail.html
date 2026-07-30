@@ -370,7 +370,7 @@
     .rdm-add-ing-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
 
     /* ⋯ menu (Rename / Duplicate / Delete) */
-    .rdm-more-btn {
+    .rdm-more-btn, .rdm-create-btn {
       display: flex; align-items: center; justify-content: center;
       width: 36px; height: 36px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer; flex-shrink: 0;
@@ -1588,6 +1588,14 @@ function closeSwapModal() {
   const titleEl = document.querySelector('#addIngredientModal h3');
   if (titleEl) titleEl.textContent = 'Add Item to Product';
   document.getElementById('addIngredientModal').classList.remove('active');
+}
+
+// Detail pages don't carry the create-modal wiring themselves — hand off
+// to recipes.html, which picks this flag up on load and opens its own
+// create-product flow (same pattern as the existing shelfy_seed_* handoffs).
+function createNewProduct() {
+  sessionStorage.setItem('shelfy_open_create', '1');
+  window.location.href = '/recipes';
 }
 
 function renderMobileOverlay() {
@@ -3454,6 +3462,9 @@ document.addEventListener('keydown', (e) => {
   <div class="rdm-header">
     <div id="rdmHeaderTitle" style="flex:1;font-size:17px;font-weight:700;color:var(--text-main);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Product</div>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+      <button class="rdm-create-btn" onclick="createNewProduct()" aria-label="Create new product">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+      </button>
       <div class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="flex-shrink:0;">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>

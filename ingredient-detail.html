@@ -107,7 +107,7 @@
   #name-mobile, #name-mobile-display { display: none; }
   /* Desktop: real .navbar already shows the bell/avatar — hide the
      in-header duplicates used on mobile */
-  #diNotificationBell, #diUserAvatar { display: none; }
+  #diNotificationBell, #diUserAvatar, #diCreateBtn { display: none; }
   .detail-rows { display: none; }
   @media (max-width: 768px) {
     #name-mobile-display { display: block; }
@@ -979,25 +979,22 @@
       background: transparent; color: var(--text-main); cursor: pointer; flex-shrink: 0;
     }
 
-    /* Name + more-menu now live in one header row alongside the
-       notification bell and profile avatar (matching recipe-detail.html's
-       mobile pattern), instead of a second bar stacked under the standard
-       one. The real .navbar (with its own bell/avatar) is hidden here —
-       #diNotificationBell/#diUserAvatar below are stand-ins that trigger
-       the same dropdowns (reparented to <body> in JS so they aren't
-       hidden along with the real navbar they used to live inside). */
+    /* Name + more-menu now live in one header row alongside a create
+       button, the notification bell, and the profile avatar (matching
+       recipe-detail.html's mobile pattern), instead of a second bar
+       stacked under the standard one. The real .navbar (with its own
+       bell/avatar) is hidden here — #diNotificationBell/#diUserAvatar
+       below reuse the real .notification-bell/.user-avatar classes
+       (not bespoke styling) so they render pixel-identical to the ones
+       on list pages, badge included, and trigger the same dropdowns
+       (reparented to <body> in JS so they aren't hidden along with the
+       real navbar they used to live inside). */
     .navbar { display: none !important; }
 
-    #diNotificationBell, #diUserAvatar { display: flex; flex-shrink: 0; }
-    #diNotificationBell {
-      position: relative; width: 36px; height: 36px; align-items: center; justify-content: center;
-      background: none; border: none; color: var(--text-main); cursor: pointer;
-    }
-    #diNotificationBell svg { width: 20px; height: 20px; }
-    #diUserAvatar {
-      width: 32px; height: 32px; border-radius: 50%; align-items: center; justify-content: center;
-      background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
-      background-size: cover; background-position: center; border: none; padding: 0; flex-shrink: 0;
+    #diCreateBtn, #diNotificationBell, #diUserAvatar { display: flex; flex-shrink: 0; }
+    #diCreateBtn {
+      width: 36px; height: 36px; align-items: center; justify-content: center;
+      background: none; border: none; border-radius: 50%; color: var(--text-main); cursor: pointer; padding: 0;
     }
 
     /* Main grid comes after header */
@@ -1331,12 +1328,18 @@
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
     </div>
     <div class="detail-header-actions" style="display:flex; gap:12px; align-items:center;">
-      <button id="diNotificationBell" onclick="toggleNotifications(); event.stopPropagation();" aria-label="Notifications">
+      <button id="diCreateBtn" onclick="createNewIngredient()" aria-label="Create item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div id="diNotificationBell" class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="flex-shrink:0;">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
         </svg>
+        <span id="diNotificationBadge" class="notification-badge" style="display: none;">0</span>
+      </div>
+      <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
+        <div id="diUserAvatar" class="user-avatar">U</div>
       </button>
-      <button id="diUserAvatar" onclick="toggleUserMenu(); event.stopPropagation();" aria-label="Account">U</button>
       <span id="starIcon" class="star-icon" onclick="toggleFavorite()" style="font-size: 24px;">☆</span>
       <button class="btn-reorder" style="display:none;" id="reorderBtn" title="Mark as Reordered">
         <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
@@ -2877,6 +2880,14 @@
       diAvatar.style.backgroundSize = realAvatar.style.backgroundSize;
       diAvatar.style.backgroundPosition = realAvatar.style.backgroundPosition;
     }
+  }
+
+  // Detail pages don't carry the create-modal wiring themselves — hand off
+  // to ingredients.html, which picks this flag up on load and opens its
+  // own create flow (same pattern as the existing shelfy_seed_* handoffs).
+  function createNewIngredient() {
+    sessionStorage.setItem('shelfy_open_create', '1');
+    window.location.href = '/ingredients';
   }
 
   async function toggleFavorite() {

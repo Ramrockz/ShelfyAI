@@ -513,6 +513,10 @@
      turns each on. A bare element defaults to visible, so without this
      these would render on desktop too, not just fail to hide there. */
   .exp-more-btn,
+  .exp-header-actions,
+  #expCreateBtn,
+  #expNotificationBell,
+  #expUserAvatar,
   #reconcileLine,
   .exp-meta,
   .msec,
@@ -574,22 +578,41 @@
       padding: 16px 12px calc(76px + env(safe-area-inset-bottom, 0px)) 12px;
     }
 
-    /* Detail header: stack on mobile */
+    /* Name + more-menu now live in one header row alongside a create
+       button, the notification bell, and the profile avatar (matching
+       ingredient-detail.html/recipe-detail.html/order-detail.html's mobile
+       pattern), instead of a second bar stacked under the standard one.
+       The real .navbar (with its own bell/avatar) is hidden here —
+       #expNotificationBell/#expUserAvatar below reuse the real
+       .notification-bell/.user-avatar classes (not bespoke styling) so
+       they render pixel-identical to the ones on list pages, badge
+       included, and trigger the same dropdowns (reparented to <body> in
+       JS so they aren't hidden along with the real navbar they used to
+       live inside). */
+    .navbar { display: none !important; }
+
     .detail-header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
       position: relative;
     }
 
     .header-title {
       flex-direction: column;
       align-items: flex-start;
-      gap: 8px;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
     }
 
     .header-title h1 {
-      font-size: 24px;
+      font-size: 18px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+
+    #expenseDate {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
     }
 
     /* Hide desktop actions — Copy/Delete move into the ⋯ menu */
@@ -602,9 +625,10 @@
       display: none !important;
     }
 
-    .exp-more-btn {
+    .exp-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    #expCreateBtn, #expNotificationBell, #expUserAvatar, .exp-more-btn { display: flex; flex-shrink: 0; }
+    #expCreateBtn, .exp-more-btn {
       display: flex; align-items: center; justify-content: center;
-      position: absolute; top: 0; right: 0;
       width: 36px; height: 36px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer;
     }
@@ -911,17 +935,35 @@
   <!-- Header -->
   <div class="detail-header" style="margin-bottom: 24px;">
     <div class="header-title">
-      <h1 id="expenseNumber" style="font-size: 28px; margin: 0;">Expense #—</h1>
+      <h1 id="expenseNumber" style="margin: 0;">Expense #—</h1>
       <div id="expenseDate" style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-top: 4px;"></div>
     </div>
     <div class="header-actions">
       <button class="detail-cta-btn" onclick="copyExpense()">Copy</button>
       <button class="detail-cta-btn" style="color: var(--danger);" onclick="showDeleteModal()">Delete</button>
     </div>
-    <!-- Mobile-only: Copy/Delete/Amount/Date move into this menu -->
-    <button class="exp-more-btn" id="expMoreBtn" onclick="openExpenseMenu()" aria-label="More actions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
-    </button>
+    <!-- Mobile-only: create button, bell, avatar share this row with the
+         title. Copy/Delete/Amount/Date move into the ⋯ menu. The real
+         .navbar (with its own bell/avatar) is hidden on mobile — the bell
+         and avatar here reuse the real .notification-bell/.user-avatar
+         classes so they render identically, badge included. -->
+    <div class="exp-header-actions">
+      <button id="expCreateBtn" onclick="createNewExpense()" aria-label="Create expense">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div id="expNotificationBell" class="notification-bell" onclick="toggleNotifications(); event.stopPropagation();" style="flex-shrink:0;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        <span id="expNotificationBadge" class="notification-badge" style="display: none;">0</span>
+      </div>
+      <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
+        <div id="expUserAvatar" class="user-avatar">U</div>
+      </button>
+      <button class="exp-more-btn" id="expMoreBtn" onclick="openExpenseMenu()" aria-label="More actions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Cost Display -->
@@ -1255,6 +1297,42 @@ function displayExpense() {
 
   const costEl = document.getElementById('expenseCost');
   if (costEl) costEl.textContent = `$${parseFloat(expenseData.amount || 0).toFixed(2)}`;
+
+  syncMobileHeaderControls();
+}
+
+// Mobile: the real .navbar (and the notification/user dropdowns living
+// inside it) is hidden so the header can show the expense title + create
+// button + bell + avatar + ⋯ menu in one row instead. Reparent the
+// dropdowns to <body> first — display:none on an ancestor fully
+// suppresses them otherwise, unlike a z-index issue — then mirror the
+// real avatar's look onto the in-header stand-in.
+function syncMobileHeaderControls() {
+  const notifDropdown = document.getElementById('notificationDropdown');
+  if (notifDropdown && notifDropdown.parentElement !== document.body) {
+    document.body.appendChild(notifDropdown);
+  }
+  const userDropdown = document.getElementById('userMenuDropdown');
+  if (userDropdown && userDropdown.parentElement !== document.body) {
+    document.body.appendChild(userDropdown);
+  }
+
+  const realAvatar = document.getElementById('userAvatar');
+  const expAvatar = document.getElementById('expUserAvatar');
+  if (realAvatar && expAvatar) {
+    expAvatar.textContent = realAvatar.textContent;
+    expAvatar.style.backgroundImage = realAvatar.style.backgroundImage;
+    expAvatar.style.backgroundSize = realAvatar.style.backgroundSize;
+    expAvatar.style.backgroundPosition = realAvatar.style.backgroundPosition;
+  }
+}
+
+// Detail pages don't carry the create-modal wiring themselves — hand off
+// to expenses.html, which picks this flag up on load and opens its own
+// create-expense flow (same pattern as the existing shelfy_seed_* handoffs).
+function createNewExpense() {
+  sessionStorage.setItem('shelfy_open_create', '1');
+  window.location.href = '/expenses';
 }
 
 async function loadIngredients() {

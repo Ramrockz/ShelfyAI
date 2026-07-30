@@ -1197,11 +1197,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Calculate totals as items change
   document.getElementById('itemsList').addEventListener('input', calculateTotals);
-  
+
   // Show the page (also done early in loadOrders when cache exists)
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
   document.documentElement.style.visibility = 'visible';
+
+  // The "+" create button on order-detail.html can't open this page's
+  // create flow directly (it's a different document) — it hands off here.
+  if (sessionStorage.getItem('shelfy_open_create')) {
+    sessionStorage.removeItem('shelfy_open_create');
+    openAddOrderModal();
+  }
 });
 
 // Rebuild cache after offline writes sync

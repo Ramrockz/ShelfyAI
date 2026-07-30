@@ -1309,6 +1309,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelector('.sidebar').style.visibility = 'visible';
   document.querySelector('.main').style.visibility = 'visible';
   document.documentElement.style.visibility = 'visible';
+
+  // The "+" create button on expense-detail.html can't open this page's
+  // create flow directly (it's a different document) — it hands off here.
+  if (sessionStorage.getItem('shelfy_open_create')) {
+    sessionStorage.removeItem('shelfy_open_create');
+    openMethodSelectionModal();
+  }
 });
 
 window.addEventListener('shelfy:synced', (e) => {
