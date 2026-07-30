@@ -180,18 +180,23 @@
     opacity: 1;
     pointer-events: auto;
   }
-  .modal-content { 
+  .modal-content {
     background: var(--bg-inner) !important;
-    border: 1px solid var(--border); 
-    border-radius: 20px; 
-    padding: 32px; 
-    width: 90%; 
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
     max-width: 600px !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     max-height: 90vh;
     overflow-y: auto;
   }
-  
+  /* The generic !important above was silently overriding both steps'
+     intended widths (inline max-width loses to a class !important
+     regardless of specificity) — same bug class found in orders.html. */
+  #expenseStep1 { max-width: 460px !important; }
+  #expenseStep2 { max-width: 520px !important; }
+
   /* Custom scrollbar for modal on desktop */
   .modal-content::-webkit-scrollbar {
     width: 8px;
@@ -620,6 +625,122 @@
     .container { padding: 20px 12px; }
   }
 
+  /* ---------- New expense, manual create (#expenseStep1) — 16b reference ---------- */
+  .ec-modal { border-radius: 20px; overflow: hidden; }
+  .ec-head { flex-shrink: 0; min-height: 52px; display: flex; align-items: center; gap: 4px;
+             padding: 0 8px; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+             background: none; border: none; color: var(--text-main); font-size: 22px; line-height: 1; }
+  .ec-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ec-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .ec-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ec-scan { height: 40px; padding: 0 12px; background: none; border: none;
+             color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; }
+
+  .ec-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+  .ec-glabel { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+               color: var(--text-muted); padding: 18px 16px 8px; }
+  .ec-group { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+              border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-field { padding: 12px 16px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-group .ec-field:first-child { border-top: none; }
+  .ec-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .ec-input { width: 100%; height: 34px; margin-top: 2px; border: none; background: none; outline: none;
+              font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main); }
+  .ec-input::placeholder { color: var(--text-ghost, #cbd5e1); font-weight: 400; }
+  .ec-amount { font-size: 26px; font-weight: 800; letter-spacing: -.03em; height: 38px; }
+  .ec-prefix { display: flex; align-items: baseline; gap: 6px; }
+  .ec-prefix > span { font-size: 20px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-hint { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 3px; }
+
+  .ec-chips { display: flex; gap: 6px; margin-top: 9px; overflow-x: auto;
+              scrollbar-width: none; -ms-overflow-style: none; }
+  .ec-chips::-webkit-scrollbar { display: none; }
+  .ec-chip { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-app, var(--bg-inner)); color: var(--text-muted);
+             font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .ec-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+
+  .ec-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
+  .ec-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+                  color: var(--text-muted); }
+  .ec-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+  .ec-line { display: flex; align-items: center; gap: 10px; min-height: 66px; padding: 10px 12px 10px 16px;
+             border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-group .ec-line:first-child { border-top: none; }
+  .ec-l-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ec-l-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ec-l-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+               font-variant-numeric: tabular-nums; }
+  .ec-l-meta b { color: var(--text-main); font-weight: 700; }
+  .ec-step { flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
+  .ec-step button { width: 38px; height: 44px; border: none; background: none; color: var(--accent-ink, var(--accent));
+                    border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .ec-step button:active { background: var(--bg-inner); }
+  .ec-qty { min-width: 24px; text-align: center; font-size: 16px; font-weight: 800;
+            font-variant-numeric: tabular-nums; }
+  .ec-l-total { flex-shrink: 0; min-width: 62px; text-align: right; font-size: 15px; font-weight: 700;
+                font-variant-numeric: tabular-nums; }
+
+  .ec-add { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px;
+            padding: 0 16px; background: var(--bg-panel); border: none; text-align: left;
+            border-top: 1px solid var(--border-hair, var(--border)); color: var(--accent-ink, var(--accent));
+            font-size: 14.5px; font-weight: 700; }
+  .ec-add:active { background: var(--bg-app, var(--bg-inner)); }
+  .ec-empty { padding: 22px 16px; background: var(--bg-panel); }
+  .ec-empty-t { font-size: 13.5px; color: var(--text-muted); }
+
+  .ec-rec { margin: 14px 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--bg-inner); }
+  .ec-rec-r { display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: var(--text-muted);
+              font-variant-numeric: tabular-nums; }
+  .ec-rec-r + .ec-rec-r { margin-top: 5px; }
+  .ec-rec-r b { margin-left: auto; font-weight: 700; color: var(--text-main); }
+  .ec-rec-gap { border-top: 1px solid var(--border-hair, var(--border)); margin-top: 8px; padding-top: 8px; }
+  .ec-rec-note { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 7px; }
+  .ec-rec-note[data-over="1"] { color: var(--danger); font-weight: 700; }
+  .ec-note { padding: 14px 16px 24px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+
+  .ec-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .ec-tally { display: flex; align-items: center; min-height: 22px; font-size: 12.5px;
+              color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .ec-tally b { margin-left: auto; color: var(--text-main); font-weight: 700; }
+  .ec-save { width: 100%; height: 50px; margin-top: 8px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+
+  /* Item picker, as a sheet — positioned within the modal overlay itself */
+  .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
+              display: none; align-items: flex-end; justify-content: center; }
+  .ec-sheet[data-open="1"] { display: flex; }
+  .ec-panel { width: 100%; max-width: 460px; max-height: 76%; display: flex; flex-direction: column;
+              background: var(--bg-panel); border-radius: 20px 20px 0 0; overflow: hidden; }
+  .ec-grab { width: 36px; height: 4px; border-radius: 99px; background: var(--text-ghost, #cbd5e1);
+             margin: 8px auto 4px; flex-shrink: 0; }
+  .ec-p-head { padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-p-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .ec-search { display: flex; align-items: center; gap: 9px; height: 44px; margin: 0 12px 10px;
+               padding: 0 12px; border-radius: 12px; background: var(--bg-inner); flex-shrink: 0; }
+  .ec-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); }
+  .ec-results { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-res { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
+            padding: 9px 16px; background: var(--bg-panel); border: none; text-align: left;
+            border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-res:active { background: var(--bg-app, var(--bg-inner)); }
+  .ec-res-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ec-res-name { display: block; font-size: 14.5px; font-weight: 600; }
+  .ec-res-meta { display: block; font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px;
+                 font-variant-numeric: tabular-nums; }
+  .ec-res-new { color: var(--accent-ink, var(--accent)); font-weight: 700; font-size: 14.5px; }
+  .ec-cancel { flex-shrink: 0; width: 100%; height: 52px; background: var(--bg-panel); border: none;
+               border-top: 1px solid var(--border-hair, var(--border)); color: var(--text-muted); font-size: 15px;
+               padding-bottom: env(safe-area-inset-bottom); }
+
 </style>
 </head>
 
@@ -844,92 +965,72 @@
 
 <!-- Add/Edit Expense Modal -->
 <div class="modal-overlay" id="expenseModal">
-  <div class="modal-content" id="expenseStep1" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-    <h3 style="margin-top:0; margin-bottom: 24px;" id="modalTitle">Add New Expense</h3>
-    
+  <div class="modal-content ec-modal" id="expenseStep1" style="max-width: 460px; padding: 0; display: flex; flex-direction: column; max-height: 90vh;">
+    <div class="ec-head">
+      <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Cancel">&times;</button>
+      <span class="ec-titles">
+        <span class="ec-title" id="modalTitle">New expense</span>
+        <span class="ec-sub">Vendor, amount, date — items are optional</span>
+      </span>
+      <button type="button" class="ec-scan" onclick="closeExpenseModal(); startReceiptScan();">Scan</button>
+    </div>
+
     <!-- novalidate: native required-field validation runs before the submit
          event even fires, so on some mobile browsers an empty field blocks
          the form with no visible feedback inside this modal's nested
          scroll container. saveExpense() does the same checks explicitly,
          with a visible alert every time. -->
-    <form id="expenseForm" onsubmit="saveExpense(event)" novalidate>
+    <form id="expenseForm" onsubmit="saveExpense(event)" novalidate style="flex:1; min-height:0; display:flex; flex-direction:column;">
       <input type="hidden" id="expense_id">
-      
-      <!-- Items Section -->
-      <div class="form-group">
-        <label>Items</label>
-        
-        <!-- Search at top -->
-        <div style="position: relative; margin-bottom: 16px;">
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">SEARCH</div>
-          <div class="search-wrapper" style="width: 100%;">
-            <i data-lucide="search" class="search-icon"></i>
-            <input 
-              type="text" 
-              id="ingredient_search" 
-              placeholder="Search items..."
-              onfocus="showIngredientDropdownExpense()" 
-              oninput="searchIngredientsExpense(); toggleSearchClear('ingredient_search')" 
-              autocomplete="off"
-              style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px;">
-            <button type="button" class="search-clear" id="ingredient_search_clear" onclick="document.getElementById('ingredient_search').value = ''; searchIngredientsExpense(); this.classList.remove('visible');" title="Clear search">&times;</button>
+      <div class="ec-scroll">
+        <div class="ec-glabel">The receipt</div>
+        <div class="ec-group">
+          <div class="ec-field">
+            <label class="ec-label" for="expense_vendor">Vendor</label>
+            <input class="ec-input" type="text" id="expense_vendor" placeholder="e.g., Bramble Supply Co" oninput="onExpenseEdit()" autocomplete="off">
+            <div class="ec-chips" id="ecVendors"></div>
           </div>
-          <div id="ingredient_results" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+          <div class="ec-field">
+            <label class="ec-label" for="expense_amount">Total on the receipt</label>
+            <span class="ec-prefix"><span>$</span><input class="ec-input ec-amount" type="number" id="expense_amount" step="0.01" required placeholder="0.00" oninput="onExpenseEdit()"></span>
+            <div class="ec-hint">What you actually paid, including shipping and tax.</div>
+          </div>
+          <div class="ec-field">
+            <label class="ec-label" for="expense_date">Date</label>
+            <input class="ec-input" type="date" id="expense_date" required oninput="onExpenseEdit()">
+            <div class="ec-chips" id="ecDates"></div>
+          </div>
         </div>
-        
-        <!-- Categories underneath -->
-        <div style="margin-bottom: 16px;">
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">CATEGORIES</div>
-          <div id="expenseCategoryChips" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
-          <div id="expenseAttrSubfilter" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);"></div>
+
+        <div class="ec-sec-head">
+          <span class="ec-sec-title">Stock it adds</span>
+          <span class="ec-sec-note" id="ecLineNote">Optional</span>
         </div>
-        
-        <!-- Recommended Ingredients -->
-        <div id="recommended_ingredients_section" style="display: none; margin-bottom: 16px;">
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">RECOMMENDED</div>
-          <div id="recommended_ingredients_list" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;"></div>
-        </div>
-        
-        <!-- Selected Ingredients -->
-        <div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">SELECTED</div>
-          <div id="selected_ingredients_list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        </div>
+        <div class="ec-group" id="ecLines"></div>
+
+        <div id="ecRec"></div>
+        <div class="ec-note">Stock goes up when you save. Anything you leave off the item list is still counted in the total.</div>
       </div>
 
-      <!-- Amount and Date -->
-      <div class="form-row">
-        <div class="form-group">
-          <label for="expense_amount">Amount *</label>
-          <input type="number" id="expense_amount" step="0.01" required placeholder="0.00">
-        </div>
-
-        <div class="form-group">
-          <label for="expense_date">Expense Date *</label>
-          <input type="date" id="expense_date" required>
-        </div>
-      </div>
-
-      <!-- Inventory update toggle -->
-      <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.22);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
-        <div>
-          <div style="font-weight:600;font-size:13px;color:var(--text-main);">Update Inventory</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Add purchased quantities to item stock</div>
-        </div>
-        <label class="toggle-switch" style="margin:0;">
-          <input type="checkbox" id="expense_update_inventory" checked onchange="manualExpenseUpdateInventory=this.checked">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <!-- Form Actions -->
-      <div class="form-group">
-        <div style="display: flex; gap: 12px;">
-          <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeExpenseModal()">Cancel</button>
-          <button type="submit" class="btn" style="flex: 1; background: var(--accent); color: white; border: none;">Save</button>
-        </div>
+      <div class="ec-foot">
+        <div class="ec-tally" id="ecTally"></div>
+        <button type="submit" class="ec-save" id="ecSave" disabled>Save expense</button>
       </div>
     </form>
+  </div>
+
+  <!-- Item picker, as a sheet (21c reference) -->
+  <div class="ec-sheet" id="ecItemSheet" data-open="0" onclick="if(event.target===this)closeExpenseItemPicker()">
+    <div class="ec-panel">
+      <div class="ec-grab"></div>
+      <div class="ec-p-head"><div class="ec-p-title">Which item?</div></div>
+      <label class="ec-search">
+        <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
+        <input id="ecItemQ" type="search" placeholder="Search your items" oninput="renderExpenseItemResults()" autocomplete="off">
+      </label>
+      <div class="ec-results" id="ecItemResults"></div>
+      <button type="button" class="ec-cancel" onclick="closeExpenseItemPicker()">Cancel</button>
+    </div>
   </div>
 
   <!-- Success screen: what this expense did to inventory (inventory-impact.js) -->
@@ -1701,50 +1802,34 @@ async function startReceiptScan() {
   captureScreenshot();
 }
 
-// Selected ingredients storage
+// Selected ingredients storage — {id, name, quantity}
 let selectedExpenseIngredients = [];
-let expenseSelectedCategory = null;
-let expenseActiveAttrFilters = new Map(); // Map<key, Set<values>> — OR within key, AND between keys
-let recentIngredients = []; // Store last 3 accessed ingredients
 
 async function openAddExpenseModal() {
   // Load ingredients first
   await loadIngredientsForExpense();
-  
+
   editingExpenseId = null;
   selectedExpenseIngredients = [];
-  expenseSelectedCategory = null;
-  expenseActiveAttrFilters = new Map();
-  manualExpenseUpdateInventory = true;
-  const invToggle = document.getElementById('expense_update_inventory');
-  if (invToggle) invToggle.checked = true;
-  
-  document.getElementById('modalTitle').textContent = 'Add New Expense';
+
+  document.getElementById('modalTitle').textContent = 'New expense';
   document.getElementById('expenseForm').reset();
   document.getElementById('expense_id').value = '';
-  
+  document.getElementById('expense_vendor').value = '';
+
   // Set today's date
   document.getElementById('expense_date').valueAsDate = new Date();
-  
-  // Clear ingredient search and selection
-  document.getElementById('ingredient_search').value = '';
-  document.getElementById('ingredient_results').style.display = 'none';
-  document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
-  
-  // Render category chips and attribute filters
-  renderExpenseCategoryChips();
-  renderExpenseAttrSubfilter();
 
   document.getElementById('expenseStep1').style.display = '';
   document.getElementById('expenseStep2').style.display = 'none';
   document.getElementById('expenseModal').classList.add('active');
+  onExpenseEdit();
 }
 
 function closeExpenseModal() {
   document.getElementById('expenseModal').classList.remove('active');
+  closeExpenseItemPicker();
   selectedExpenseIngredients = [];
-  expenseSelectedCategory = null;
-  expenseActiveAttrFilters = new Map();
 }
 
 // Ingredient search and selection functions
@@ -1774,480 +1859,201 @@ async function loadIngredientsForExpense() {
   }
 }
 
-// Category filtering
-function renderExpenseCategoryChips() {
-  const container = document.getElementById('expenseCategoryChips');
-  if (!container) return;
-  
-  // Get unique categories from existing ingredients
-  const existingCategories = new Set(allIngredients.map(ing => ing.category).filter(Boolean));
-  
-  const allCategories = [
-    { name: 'Apparel', icon: 'shirt' },
-    { name: 'Wood', icon: 'tree-pine' },
-    { name: 'Boxes', icon: 'archive' },
-    { name: 'Cards', icon: 'tickets' },
-    { name: 'Plants', icon: 'sprout' },
-    { name: 'Candy', icon: 'lollipop' },
-    { name: 'Beverage', icon: 'amphora' },
-    { name: 'Jewelry', icon: 'gem' },
-    { name: 'Party Supplies', icon: 'party-popper' },
-    { name: 'Gaming', icon: 'gamepad-2' },
-    { name: 'Toys', icon: 'drum' },
-    { name: 'Office Supplies', icon: 'paperclip' },
-    { name: 'Colors', icon: 'palette' },
-    { name: 'Rope', icon: 'lasso' },
-    { name: 'Paper', icon: 'origami' },
-    { name: 'Spool', icon: 'spool' },
-    { name: 'Letter', icon: 'mail' },
-    { name: 'Giveaway', icon: 'gift' },
-    { name: 'Electronics', icon: 'plug' },
-    { name: 'Printing Supplies', icon: 'printer' },
-    { name: 'Tools', icon: 'wrench' },
-    { name: 'Packaging', icon: 'package' },
-    { name: 'Food', icon: 'wheat' }
-  ];
-  
-  // Filter to only show categories from existing ingredients
-  const categories = allCategories.filter(cat => existingCategories.has(cat.name));
-  
-  container.innerHTML = categories.map(cat => `
-    <div class="expense-cat-chip" data-category="${cat.name}" 
-      onclick="selectExpenseCategory('${cat.name}')" title="${cat.name}"
-      style="padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center;">
-      <i data-lucide="${cat.icon}" style="width: 18px; height: 18px;"></i>
-    </div>
-  `).join('');
-  
-  // Initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+function _escExpenseAttr(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-function selectExpenseCategory(category) {
-  if (expenseSelectedCategory === category) {
-    expenseSelectedCategory = null;
-    expenseActiveAttrFilters = new Map();
-  } else {
-    expenseSelectedCategory = category;
-    expenseActiveAttrFilters = new Map();
+// Recent vendor/date chips (16b) — vendors are derived from the expenses
+// already loaded for this page, no extra query needed.
+function _recentExpenseVendors() {
+  const seen = new Set(), out = [];
+  for (const e of expenses) {
+    const v = (e.vendor || '').trim();
+    if (v && !seen.has(v)) { seen.add(v); out.push(v); }
+    if (out.length >= 5) break;
   }
-  
-  // Update chip styling
-  document.querySelectorAll('.expense-cat-chip').forEach(chip => {
-    if (chip.dataset.category === expenseSelectedCategory) {
-      chip.style.background = 'var(--accent)';
-      chip.style.color = '#fff';
-      chip.style.borderColor = 'var(--accent)';
-    } else {
-      chip.style.background = 'var(--bg-panel)';
-      chip.style.color = 'var(--text-main)';
-      chip.style.borderColor = 'var(--border)';
-    }
-  });
-  
-  // Re-initialize icons after style changes
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-  
-  renderExpenseAttrSubfilter();
-  renderRecommendedIngredients();
-  searchIngredientsExpense();
+  return out;
+}
+function renderExpenseVendorChips() {
+  const box = document.getElementById('ecVendors');
+  if (!box) return;
+  const current = document.getElementById('expense_vendor').value.trim();
+  box.innerHTML = _recentExpenseVendors().map(v =>
+    `<button type="button" class="ec-chip" aria-pressed="${v === current}" onclick="setExpenseVendor('${_escExpenseAttr(v)}')">${_escExpenseAttr(v)}</button>`
+  ).join('');
+}
+function setExpenseVendor(name) {
+  document.getElementById('expense_vendor').value = name;
+  onExpenseEdit();
 }
 
-function renderRecommendedIngredients() {
-  const section = document.getElementById('recommended_ingredients_section');
-  const listDiv = document.getElementById('recommended_ingredients_list');
-  
-  if (!section || !listDiv) return;
-  
-  // Only show if category or attributes are selected
-  const hasFilters = expenseSelectedCategory || expenseActiveAttrFilters.size > 0;
+function _isoDate(d) { return d.toISOString().slice(0, 10); }
+function renderExpenseDateChips() {
+  const box = document.getElementById('ecDates');
+  if (!box) return;
+  const current = document.getElementById('expense_date').value;
+  const today = new Date();
+  const shift = n => { const d = new Date(today); d.setDate(d.getDate() - n); return _isoDate(d); };
+  const opts = [['Today', _isoDate(today)], ['Yesterday', shift(1)], ['2 days ago', shift(2)]];
+  box.innerHTML = opts.map(([label, d]) =>
+    `<button type="button" class="ec-chip" aria-pressed="${d === current}" onclick="setExpenseDate('${d}')">${label}</button>`
+  ).join('');
+}
+function setExpenseDate(d) {
+  document.getElementById('expense_date').value = d;
+  onExpenseEdit();
+}
 
-  if (!hasFilters) {
-    section.style.display = 'none';
-    return;
+// Line-item helpers — each line shows its own stock impact (21c), same
+// grammar as inventory-impact.js and the order-products picker.
+function _expenseLinesTotal() {
+  return selectedExpenseIngredients.reduce((sum, sel) => {
+    const ing = allIngredients.find(i => i.id === sel.id);
+    const cost = ing ? (parseFloat(ing.cost_per_unit) || 0) : 0;
+    return sum + cost * (parseFloat(sel.quantity) || 0);
+  }, 0);
+}
+
+function renderExpenseLines() {
+  const noteEl = document.getElementById('ecLineNote');
+  const box = document.getElementById('ecLines');
+  if (!box) return;
+  const lines = selectedExpenseIngredients;
+  if (noteEl) {
+    noteEl.textContent = lines.length
+      ? `${lines.length} item${lines.length !== 1 ? 's' : ''} · $${_expenseLinesTotal().toFixed(2)}`
+      : 'Optional';
   }
 
-  // Filter ingredients based on selected category and attributes
-  let filtered = allIngredients.filter(ing => {
-    // Don't show already selected ingredients
-    if (selectedExpenseIngredients.some(sel => sel.id === ing.id)) return false;
-
-    // Category filter
-    if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
-
-    // Parse custom_attributes if needed
-    let ingAttrs = ing.custom_attributes;
-    if (typeof ingAttrs === 'string') {
-      try {
-        ingAttrs = JSON.parse(ingAttrs);
-      } catch (e) {
-        ingAttrs = {};
-      }
-    }
-
-    // Attribute filters: OR within key, AND between keys
-    if (expenseActiveAttrFilters.size > 0) {
-      ingAttrs = ingAttrs || {};
-      for (const [key, valSet] of expenseActiveAttrFilters) {
-        if (valSet.size === 0) continue;
-        const ingVal = String(ingAttrs[key] ?? '').trim().toLowerCase();
-        const matches = [...valSet].some(v => v.trim().toLowerCase() === ingVal);
-        if (!matches) return false;
-      }
-    }
-
-    return true;
-  });
-  
-  if (filtered.length === 0) {
-    section.style.display = 'none';
-    return;
-  }
-  
-  section.style.display = 'block';
-  
-  // Show up to 5 recommended ingredients
-  listDiv.innerHTML = filtered.slice(0, 5).map(ing => {
-    let attrs = ing.custom_attributes;
-    if (typeof attrs === 'string') {
-      try {
-        attrs = JSON.parse(attrs);
-      } catch (e) {
-        attrs = {};
-      }
-    }
-    
-    const attrText = attrs && typeof attrs === 'object' 
-      ? Object.values(attrs).filter(v => v).join(' • ')
-      : '';
-    
+  const rowsHtml = lines.map(sel => {
+    const ing = allIngredients.find(i => i.id === sel.id);
+    const cost = ing ? (parseFloat(ing.cost_per_unit) || 0) : 0;
+    const stock = ing ? (parseFloat(ing.quantity) || 0) : 0;
+    const unit = ing ? (ing.unit || '') : '';
+    const qty = parseFloat(sel.quantity) || 0;
     return `
-      <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-        <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${ing.name}</div>
-            ${attrText ? `<div style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${attrText}</div>` : ''}
-          </div>
-          <div style="flex-shrink: 0; padding: 4px 8px; background: var(--accent); color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">Add</div>
-        </div>
-      </div>
-    `;
+      <div class="ec-line">
+        <span class="ec-l-main">
+          <span class="ec-l-name">${_escExpenseAttr(sel.name)}</span>
+          <span class="ec-l-meta">$${cost.toFixed(2)}${unit ? '/' + _escExpenseAttr(unit) : ''} · stock <b>${stock} → ${stock + qty}</b></span>
+        </span>
+        <span class="ec-step">
+          <button type="button" onclick="bumpExpenseLine('${sel.id}', -1)" aria-label="One fewer">−</button>
+          <span class="ec-qty">${qty}</span>
+          <button type="button" onclick="bumpExpenseLine('${sel.id}', 1)" aria-label="One more">+</button>
+        </span>
+        <span class="ec-l-total">$${(qty * cost).toFixed(2)}</span>
+      </div>`;
   }).join('');
+
+  box.innerHTML = (lines.length ? rowsHtml : `
+    <div class="ec-empty">
+      <div class="ec-empty-t">No items yet. Add them and this expense also tops up your stock — skip it and it's recorded as spend only.</div>
+    </div>`) + `
+    <button type="button" class="ec-add" onclick="openExpenseItemPicker()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add an item
+    </button>`;
+
+  if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
 }
 
-function renderExpenseAttrSubfilter() {
-  const container = document.getElementById('expenseAttrSubfilter');
-  if (!container) return;
-  
-  if (!expenseSelectedCategory) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-    return;
-  }
-  
-  container.style.display = 'flex';
-  
-  // Get unique attributes for selected category
-  const categoryIngredients = allIngredients.filter(ing => ing.category === expenseSelectedCategory);
-  const allAttrs = {};
-  
-  categoryIngredients.forEach(ing => {
-    let attrs = ing.custom_attributes;
-    // Parse if string
-    if (typeof attrs === 'string') {
-      try {
-        attrs = JSON.parse(attrs);
-      } catch (e) {
-        attrs = null;
-      }
-    }
-    
-    if (attrs && typeof attrs === 'object') {
-      Object.entries(attrs).forEach(([key, value]) => {
-        if (value) {
-          if (!allAttrs[key]) allAttrs[key] = new Set();
-          allAttrs[key].add(value);
-        }
-      });
-    }
-  });
-  
-  if (Object.keys(allAttrs).length === 0) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-    return;
-  }
-  
-  const chips = [];
-  Object.entries(allAttrs).forEach(([key, values]) => {
-    values.forEach(value => {
-      const isSelected = expenseActiveAttrFilters.has(key) && expenseActiveAttrFilters.get(key).has(value);
-      chips.push(`
-        <div class="expense-attr-chip" data-attr-key="${key}" data-attr-value="${value}" 
-          onclick="toggleExpenseAttribute('${key}', '${value}')"
-          style="padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; ${
-            isSelected 
-              ? 'background: #8b5cf6; color: #fff; border: 1px solid #8b5cf6;' 
-              : 'background: var(--bg-inner); color: var(--text-muted); border: 1px solid var(--border);'
-          }">
-          ${value}
-        </div>
-      `);
-    });
-  });
-  
-  container.innerHTML = chips.join('');
+function bumpExpenseLine(id, delta) {
+  const idx = selectedExpenseIngredients.findIndex(sel => sel.id === id);
+  if (idx < 0) return;
+  const next = (selectedExpenseIngredients[idx].quantity || 0) + delta;
+  if (next <= 0) selectedExpenseIngredients.splice(idx, 1);
+  else selectedExpenseIngredients[idx].quantity = next;
+  onExpenseEdit();
 }
 
-function toggleExpenseAttribute(key, value) {
-  if (!expenseActiveAttrFilters.has(key)) expenseActiveAttrFilters.set(key, new Set());
-  const valSet = expenseActiveAttrFilters.get(key);
-  if (valSet.has(value)) {
-    valSet.delete(value);
-    if (valSet.size === 0) expenseActiveAttrFilters.delete(key);
-  } else {
-    valSet.add(value);
-  }
-  renderExpenseAttrSubfilter();
-  renderRecommendedIngredients();
-  searchIngredientsExpense();
-}
-
-function showIngredientDropdownExpense() {
-  const resultsDiv = document.getElementById('ingredient_results');
-  const searchTerm = document.getElementById('ingredient_search').value.trim();
-  
-  if (!searchTerm) {
-    // Show last 3 recent ingredients
-    if (recentIngredients.length > 0) {
-      resultsDiv.innerHTML = recentIngredients.slice(0, 3).map(ing => `
-        <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
-          <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(ing.custom_attributes)}</div>
-        </div>
-      `).join('');
-      resultsDiv.style.display = 'block';
-    }
-    return;
-  }
-  
-  searchIngredientsExpense();
-}
-
-function searchIngredientsExpense() {
-  const searchTerm = document.getElementById('ingredient_search').value.toLowerCase().trim();
-  const resultsDiv = document.getElementById('ingredient_results');
-  
-  // Apply filters
-  let filtered = allIngredients.filter(ing => {
-    // Check if already selected
-    if (selectedExpenseIngredients.some(sel => sel.id === ing.id)) return false;
-    
-    // Category filter
-    if (expenseSelectedCategory && ing.category !== expenseSelectedCategory) return false;
-    
-    // Parse custom_attributes if needed
-    let ingAttrs = ing.custom_attributes;
-    if (typeof ingAttrs === 'string') {
-      try {
-        ingAttrs = JSON.parse(ingAttrs);
-      } catch (e) {
-        ingAttrs = {};
-      }
-    }
-    
-    // Attribute filters: OR within key, AND between keys
-    if (expenseActiveAttrFilters.size > 0) {
-      ingAttrs = ingAttrs || {};
-      for (const [key, valSet] of expenseActiveAttrFilters) {
-        if (valSet.size === 0) continue;
-        const ingVal = String(ingAttrs[key] ?? '').trim().toLowerCase();
-        const matches = [...valSet].some(v => v.trim().toLowerCase() === ingVal);
-        if (!matches) return false;
-      }
-    }
-
-    // Search term
-    if (searchTerm) {
-      const nameMatch = ing.name.toLowerCase().includes(searchTerm);
-      let attrMatch = false;
-
-      if (ingAttrs && typeof ingAttrs === 'object') {
-        attrMatch = Object.values(ingAttrs).some(val =>
-          val && typeof val === 'string' && val.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      return nameMatch || attrMatch;
-    }
-
-    return true;
-  });
-
-  // Show results if there are filters active OR search term OR just show all
-  const hasFilters = expenseSelectedCategory || expenseActiveAttrFilters.size > 0 || searchTerm;
-  
-  resultsDiv.style.display = 'block';
-  
-  if (filtered.length === 0) {
-    resultsDiv.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
-    resultsDiv.style.display = 'block';
-    return;
-  }
-  
-  resultsDiv.innerHTML = filtered.slice(0, 8).map(ing => {
-    let attrs = ing.custom_attributes;
-    if (typeof attrs === 'string') {
-      try {
-        attrs = JSON.parse(attrs);
-      } catch (e) {
-        attrs = null;
-      }
-    }
-    return `
-    <div onclick="addIngredientToExpense('${ing.id}')" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background=''">
-      <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
-      <div style="font-size: 11px; color: var(--text-muted);">${formatAttributes(attrs)}</div>
-    </div>
-  `;
-  }).join('');
-  resultsDiv.style.display = 'block';
-}
-
-function formatAttributes(attrs) {
-  if (!attrs || typeof attrs !== 'object') return '';
-  return Object.entries(attrs)
-    .filter(([k, v]) => v)
-    .map(([k, v]) => v)
-    .join(' · ') || 'No attributes';
-}
-
-function addIngredientToExpense(ingredientId) {
+function addExpenseLine(ingredientId) {
   const ingredient = allIngredients.find(ing => ing.id === ingredientId);
   if (!ingredient) return;
-  
-  // Add to recent ingredients (keep only last 3 unique)
-  recentIngredients = recentIngredients.filter(ing => ing.id !== ingredient.id);
-  recentIngredients.unshift(ingredient);
-  if (recentIngredients.length > 3) recentIngredients = recentIngredients.slice(0, 3);
-  
-  selectedExpenseIngredients.push({
-    id: ingredient.id,
-    name: ingredient.name,
-    quantity: 1
-  });
-  
-  renderSelectedIngredients();
-  renderRecommendedIngredients();
-  calculateExpenseTotal();
-  
-  // Clear search
-  document.getElementById('ingredient_search').value = '';
-  document.getElementById('ingredient_results').style.display = 'none';
+  const existing = selectedExpenseIngredients.find(sel => sel.id === ingredientId);
+  if (existing) existing.quantity = (existing.quantity || 0) + 1;
+  else selectedExpenseIngredients.push({ id: ingredient.id, name: ingredient.name, quantity: 1 });
+  closeExpenseItemPicker();
+  onExpenseEdit();
 }
 
-function removeIngredientFromExpense(ingredientId) {
-  selectedExpenseIngredients = selectedExpenseIngredients.filter(ing => ing.id !== ingredientId);
-  renderSelectedIngredients();
-  renderRecommendedIngredients();
-  calculateExpenseTotal();
+// Item picker, as a sheet (21c) — replaces the old inline dropdown.
+function openExpenseItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (!sheet) return;
+  sheet.dataset.open = '1';
+  const q = document.getElementById('ecItemQ');
+  if (q) q.value = '';
+  renderExpenseItemResults();
+}
+function closeExpenseItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (sheet) sheet.dataset.open = '0';
+}
+function renderExpenseItemResults() {
+  const box = document.getElementById('ecItemResults');
+  if (!box) return;
+  const q = (document.getElementById('ecItemQ')?.value || '').trim().toLowerCase();
+  const used = new Set(selectedExpenseIngredients.map(sel => sel.id));
+  const hits = (allIngredients || []).filter(ing => !used.has(ing.id) && (!q || (ing.name || '').toLowerCase().includes(q)));
+
+  box.innerHTML = hits.map(ing => {
+    const cost = parseFloat(ing.cost_per_unit) || 0;
+    const stock = parseFloat(ing.quantity) || 0;
+    return `
+    <button type="button" class="ec-res" onclick="addExpenseLine('${ing.id}')">
+      <span class="ec-res-main">
+        <span class="ec-res-name">${_escExpenseAttr(ing.name)}</span>
+        <span class="ec-res-meta">$${cost.toFixed(2)}${ing.unit ? '/' + _escExpenseAttr(ing.unit) : ''} · ${stock} in stock</span>
+      </span>
+    </button>`;
+  }).join('') + `
+    <button type="button" class="ec-res" onclick='openQuickCreateIngredientForExpense(${JSON.stringify(q)})'>
+      <span class="ec-res-main">
+        <span class="ec-res-new">${q ? `Create "${_escExpenseAttr(q)}"` : 'Create a new item'}</span>
+        <span class="ec-res-meta">Comes back here, added to this expense</span>
+      </span>
+    </button>`;
 }
 
-function updateIngredientQuantity(ingredientId, quantity) {
-  const ingredient = selectedExpenseIngredients.find(ing => ing.id === ingredientId);
-  if (ingredient) {
-    ingredient.quantity = Math.max(0, parseFloat(quantity) || 0);
-    renderSelectedIngredients();
-    calculateExpenseTotal();
-  }
+// ---------- The gap between lines and total, said out loud (21d) ----------
+function renderExpenseReconcile() {
+  const box = document.getElementById('ecRec');
+  if (!box) return;
+  const total = parseFloat(document.getElementById('expense_amount').value) || 0;
+  const sum = _expenseLinesTotal();
+  if (!selectedExpenseIngredients.length || !total) { box.innerHTML = ''; return; }
+  const gap = total - sum;
+  const over = gap < -0.005;
+  box.innerHTML = `
+    <div class="ec-rec">
+      <div class="ec-rec-r">Items on this receipt <b>$${sum.toFixed(2)}</b></div>
+      <div class="ec-rec-r">Receipt total <b>$${total.toFixed(2)}</b></div>
+      <div class="ec-rec-r ec-rec-gap">${over ? 'Over the total by' : 'Not stocked'} <b>$${Math.abs(gap).toFixed(2)}</b></div>
+      <div class="ec-rec-note"${over ? ' data-over="1"' : ''}>${over
+        ? 'The item lines cost more than the receipt total — check a quantity or a unit cost.'
+        : "Shipping, tax and anything you didn't list. Counted as spend, not as stock."}</div>
+    </div>`;
 }
 
-function changeIngredientQuantity(ingredientId, delta) {
-  const ingredient = selectedExpenseIngredients.find(ing => ing.id === ingredientId);
-  if (ingredient) {
-    const newQuantity = (ingredient.quantity || 0) + delta;
-    // If trying to go below 1, remove the ingredient
-    if (newQuantity < 1) {
-      removeIngredientFromExpense(ingredientId);
-    } else {
-      ingredient.quantity = newQuantity;
-      renderSelectedIngredients();
-      calculateExpenseTotal();
-    }
-  }
-}
+// One re-render entry point for every field/line change.
+function onExpenseEdit() {
+  renderExpenseVendorChips();
+  renderExpenseDateChips();
+  renderExpenseLines();
+  renderExpenseReconcile();
 
-// Calculate total expense amount based on ingredients and quantities
-function calculateExpenseTotal() {
-  let total = 0;
-  
-  selectedExpenseIngredients.forEach(selectedIng => {
-    const ingredient = allIngredients.find(ing => ing.id === selectedIng.id);
-    if (ingredient) {
-      const unitPrice = parseFloat(ingredient.cost_per_unit || ingredient.price) || 0;
-      const quantity = parseFloat(selectedIng.quantity) || 0;
-      total += unitPrice * quantity;
-    }
-  });
-  
-  // Update the amount field
-  const amountField = document.getElementById('expense_amount');
-  if (amountField) {
-    amountField.value = total.toFixed(2);
+  const vendor = document.getElementById('expense_vendor').value.trim();
+  const total = parseFloat(document.getElementById('expense_amount').value) || 0;
+  const tallyEl = document.getElementById('ecTally');
+  if (tallyEl) {
+    tallyEl.innerHTML = selectedExpenseIngredients.length
+      ? `${selectedExpenseIngredients.length} item${selectedExpenseIngredients.length !== 1 ? 's' : ''} → stock<b>$${total.toFixed(2)}</b>`
+      : `Spend only, no stock change<b>$${total.toFixed(2)}</b>`;
   }
+  const saveBtn = document.getElementById('ecSave');
+  if (saveBtn) saveBtn.disabled = !(vendor && total > 0);
 }
-
-function renderSelectedIngredients() {
-  const container = document.getElementById('selected_ingredients_list');
-  
-  if (selectedExpenseIngredients.length === 0) {
-    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
-    return;
-  }
-  
-  container.innerHTML = selectedExpenseIngredients.map(ing => `
-    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">
-      <div style="flex: 1;">
-        <div style="font-weight: 600; font-size: 14px;">${ing.name}</div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" onclick="changeIngredientQuantity('${ing.id}', -1)" 
-          style="width: 28px; height: 28px; padding: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: center;">
-          −
-        </button>
-        <input type="number" value="${ing.quantity}" min="0" step="0.01" 
-          onchange="updateIngredientQuantity('${ing.id}', this.value)"
-          style="width: 70px; padding: 6px 8px; text-align: center; font-size: 13px; font-weight: 600; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main);">
-        <button type="button" onclick="changeIngredientQuantity('${ing.id}', 1)" 
-          style="width: 28px; height: 28px; padding: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; justify-content: center;">
-          +
-        </button>
-      </div>
-      <button type="button" onclick="removeIngredientFromExpense('${ing.id}')" 
-        style="width: 32px; height: 32px; padding: 0; background: var(--danger); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">
-        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-      </button>
-    </div>
-  `).join('');
-  
-  // Initialize Lucide icons for trash icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('ingredient_results');
-  const input = document.getElementById('ingredient_search');
-  if (dropdown && input && !dropdown.contains(e.target) && !input.contains(e.target)) {
-    dropdown.style.display = 'none';
-  }
-});
 
 // expenses.html called this in two catch blocks (saveExpense,
 // confirmIngredientMapping) but never defined it — every failed save threw
@@ -2284,22 +2090,19 @@ function showNotification(message, type = 'success') {
 async function editExpense(expenseId) {
   // Load ingredients first
   await loadIngredientsForExpense();
-  
+
   const expense = expenses.find(e => e.id === expenseId);
   if (!expense) return;
-  
+
   editingExpenseId = expenseId;
   selectedExpenseIngredients = [];
-  expenseSelectedCategory = null;
-  expenseActiveAttrFilters = new Map();
-  
-  document.getElementById('modalTitle').textContent = 'Edit Expense';
+
+  document.getElementById('modalTitle').textContent = 'Edit expense';
   document.getElementById('expense_id').value = expense.id;
   document.getElementById('expense_amount').value = expense.amount || 0;
   document.getElementById('expense_date').value = expense.expense_date || '';
-  const vendorEl = document.getElementById('expense_vendor');
-  if (vendorEl) vendorEl.value = expense.vendor || '';
-  
+  document.getElementById('expense_vendor').value = expense.vendor || '';
+
   // Load linked ingredients if any
   if (expense.ingredients && Array.isArray(expense.ingredients)) {
     selectedExpenseIngredients = expense.ingredients.map(ing => ({
@@ -2307,36 +2110,31 @@ async function editExpense(expenseId) {
       name: ing.name || 'Unknown',
       quantity: ing.quantity || 1
     }));
-    renderSelectedIngredients();
-  } else {
-    document.getElementById('selected_ingredients_list').innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;">No items linked yet - required</div>';
   }
-  
-  // Render category chips and attribute filters
-  renderExpenseCategoryChips();
-  renderExpenseAttrSubfilter();
 
   document.getElementById('expenseStep1').style.display = '';
   document.getElementById('expenseStep2').style.display = 'none';
   document.getElementById('expenseModal').classList.add('active');
+  onExpenseEdit();
 }
 
 async function saveExpense(event) {
   event.preventDefault();
 
-  // Validate ingredients are linked
-  if (selectedExpenseIngredients.length === 0) {
-    alert('Please link at least one item to this expense');
+  // Items are optional (16b) — a vendor and a valid total are the only
+  // requirements now. Explicit checks instead of relying on the inputs'
+  // native `required` — native constraint validation runs BEFORE the submit
+  // event even fires, so an empty required field blocks the form silently
+  // here on some mobile browsers (the native "please fill this field"
+  // callout can fail to scroll/render correctly inside this modal's nested
+  // overflow-y:auto), and saveExpense() never even gets called. This
+  // surfaces the same problem with a visible alert every time, regardless
+  // of platform.
+  const vendor = document.getElementById('expense_vendor').value.trim();
+  if (!vendor) {
+    alert('Please enter a vendor');
     return;
   }
-
-  // Explicit checks instead of relying on the inputs' native `required` —
-  // native constraint validation runs BEFORE the submit event fires at all,
-  // so an empty required field blocks the form silently here on some mobile
-  // browsers (the native "please fill this field" callout can fail to
-  // scroll/render correctly inside this modal's nested overflow-y:auto),
-  // and saveExpense() never even gets called. This surfaces the same
-  // problem with a visible alert every time, regardless of platform.
   const amountVal = document.getElementById('expense_amount').value;
   if (amountVal === '' || isNaN(parseFloat(amountVal)) || parseFloat(amountVal) <= 0) {
     alert('Please enter a valid amount');
@@ -2355,25 +2153,18 @@ async function saveExpense(event) {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    // Generate description from vendor name or default. There's no
-    // #expense_vendor field in this form today (removed at some point
-    // without the reads below being cleaned up, which threw and aborted
-    // this whole function) — reads default to '' / null until one exists.
-    const vendor = document.getElementById('expense_vendor')?.value?.trim();
-    const description = vendor ? `${vendor} Purchase` : 'Expense Purchase';
-
     const expenseData = {
       profile_id: user.id,
       store_id: storeId,
-      description: description,
+      description: `${vendor} Purchase`,
       amount: parseFloat(document.getElementById('expense_amount').value) || 0,
       expense_date: document.getElementById('expense_date').value,
-      vendor: document.getElementById('expense_vendor')?.value || null,
+      vendor: vendor,
       category: null,
       receipt_url: null,
       ingredients: selectedExpenseIngredients
     };
-    
+
     let savedData, savedError;
     if (editingExpenseId) {
       const { data, error } = await offlineWrite('expenses', 'update', expenseData, 'id', editingExpenseId);
@@ -2393,9 +2184,11 @@ async function saveExpense(event) {
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
-    // Update inventory if toggle is on (add purchased qty to stock)
+    // Stock goes up whenever there are lines, on a fresh (non-edit) save —
+    // no separate opt-out toggle: no lines already means spend-only.
+    const inventoryUpdated = selectedExpenseIngredients.length > 0;
     const changesSummary = [];
-    if (manualExpenseUpdateInventory && !editingExpenseId) {
+    if (inventoryUpdated && !editingExpenseId) {
       for (const item of selectedExpenseIngredients) {
         const ing = allIngredients.find(i => i.id === item.id);
         if (ing && item.quantity > 0) {
@@ -2427,7 +2220,7 @@ async function saveExpense(event) {
     try { render(); } catch (e2) {}
 
     if (!editingExpenseId && savedData && savedData[0]) {
-      showExpenseSuccessScreen(savedData[0], manualExpenseUpdateInventory, changesSummary);
+      showExpenseSuccessScreen(savedData[0], inventoryUpdated, changesSummary);
     } else {
       closeExpenseModal();
     }
@@ -2727,7 +2520,6 @@ let pendingExpenseData = null;
 let mappedItems = []; // Array of { detectedName, detectedPrice, detectedQty, ingredientId, ingredientName, quantity, price }
 let allIngredientsCache = [];
 let updateInventory = true;
-let manualExpenseUpdateInventory = true;
 let dropdownActiveFor = null;
 
 function toggleUpdateInventory() {
@@ -3267,6 +3059,14 @@ function clearIngredientMatch(index) {
 // Quick Create Ingredient functionality
 let quickCreateTargetIndex = null;
 
+// Entry point from the manual expense form's item-picker sheet (21c) — reuses
+// the receipt-mapping flow's create-ingredient modal, but with no mappedItems
+// index to auto-map to (saveQuickIngredient adds it straight to this expense's
+// lines instead when quickCreateTargetIndex is null).
+function openQuickCreateIngredientForExpense(name) {
+  openQuickCreateIngredient(null, name);
+}
+
 function openQuickCreateIngredient(index, detectedName) {
   quickCreateTargetIndex = index;
   
@@ -3379,14 +3179,18 @@ async function saveQuickIngredient(e) {
     // Add to cache
     allIngredientsCache.push(newIngredient);
     allIngredients.push(newIngredient);
-    
-    // Auto-map to the receipt item
+
+    // Auto-map to the receipt item, or — if this was opened from the manual
+    // expense form's item picker (21c) rather than the receipt-mapping flow
+    // — add it straight to this expense's lines instead.
     if (quickCreateTargetIndex !== null && mappedItems[quickCreateTargetIndex]) {
       mappedItems[quickCreateTargetIndex].ingredientId = newIngredient.id;
       mappedItems[quickCreateTargetIndex].ingredientName = newIngredient.name;
       document.getElementById(`ingredient_search_${quickCreateTargetIndex}`).value = newIngredient.name;
+    } else if (quickCreateTargetIndex === null && typeof addExpenseLine === 'function') {
+      addExpenseLine(newIngredient.id);
     }
-    
+
     // Close modal
     closeQuickCreateIngredientModal();
     
