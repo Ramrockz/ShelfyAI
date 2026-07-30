@@ -1308,8 +1308,8 @@
 
 <script>
 (function() {
-  const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
+  const cachedEmail = sessionStorage.getItem('shelfy_user_email') || localStorage.getItem('shelfy_user_email');
+  const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar') || localStorage.getItem('shelfy_user_avatar');
   if (cachedEmail) {
     const emailEl = document.getElementById('userMenuEmail');
     const avatarEl = document.getElementById('userAvatar');
@@ -1328,7 +1328,7 @@
       }
     }
   }
-  const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+  const cachedTier = sessionStorage.getItem('shelfy_user_tier') || localStorage.getItem('shelfy_user_tier');
   if (cachedTier) {
     const roleEl = document.querySelector('.user-menu-role');
     if (roleEl) roleEl.textContent = cachedTier;

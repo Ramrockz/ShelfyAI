@@ -809,9 +809,9 @@
 <script>
   // Load cached user data immediately (inline for instant load before auth.js)
   (function() {
-    const cachedEmail = sessionStorage.getItem('shelfy_user_email');
-    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar');
-    const cachedTier = sessionStorage.getItem('shelfy_user_tier');
+    const cachedEmail = sessionStorage.getItem('shelfy_user_email') || localStorage.getItem('shelfy_user_email');
+    const cachedAvatar = sessionStorage.getItem('shelfy_user_avatar') || localStorage.getItem('shelfy_user_avatar');
+    const cachedTier = sessionStorage.getItem('shelfy_user_tier') || localStorage.getItem('shelfy_user_tier');
     
     if (cachedEmail) {
       const emailEl = document.getElementById('userMenuEmail');
