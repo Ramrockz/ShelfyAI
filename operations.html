@@ -3441,7 +3441,6 @@ function showImportStatus(message, type) {
         <span class="op-tally-l" id="opCount">No products yet</span>
         <span class="op-tally-r" id="opTotal">$0.00</span>
       </div>
-      <div id="opWarn"></div>
       <button id="orderContinueBtn" class="op-cont" disabled onclick="proceedToOrderDetails()">Continue</button>
     </div>
   </div>
@@ -5818,41 +5817,6 @@ function _recipeStockStatus(recipe) {
   return 'in';                // green
 }
 
-// A product here is built from N ingredient components, not a single stock
-// number — so "projected" stock is the worst-case remaining units across a
-// recipe's components after everything currently picked across the WHOLE
-// order, not just this one row (two products sharing an ingredient must
-// both reflect what the other already committed to).
-function _virtualStockMap() {
-  const virtual = {};
-  orderRecipes.forEach(r => {
-    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
-    if (!recipe || !Array.isArray(recipe.components)) return;
-    recipe.components.forEach(c => {
-      const ingId = c.ingredient_id || c.id;
-      const needed = (parseFloat(c.quantity) || 0) * r.quantity;
-      const base = virtual[ingId] !== undefined ? virtual[ingId] : (orderStockMap[ingId] || 0);
-      virtual[ingId] = base - needed;
-    });
-  });
-  return virtual;
-}
-function _projectedStatus(recipe, virtualMap) {
-  const comps = recipe.components || [];
-  if (!comps.length) return { state: '', remain: null };
-  let state = '', worstRemain = null;
-  for (const c of comps) {
-    const ingId = c.ingredient_id || c.id;
-    const remain = virtualMap[ingId] !== undefined ? virtualMap[ingId] : (orderStockMap[ingId] || 0);
-    const min = orderMinMap[ingId] || 0;
-    if (worstRemain === null || remain < worstRemain) worstRemain = remain;
-    if (remain < 0) state = 'short';
-    else if (remain === 0 && state !== 'short') state = 'out';
-    else if (min > 0 && remain <= min && !state) state = 'low';
-  }
-  return { state, remain: worstRemain };
-}
-
 async function _getLastUsedRecipes() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -5886,7 +5850,7 @@ const ORDER_PICK_ICON_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="curr
 // of this could we build" count. Rather than mix that up with a genuine
 // buildable-count feature, this row just shows price -- no invented
 // per-product quantity.
-function _orderRowHtml(recipe, virtualMap) {
+function _orderRowHtml(recipe) {
   const picked = orderRecipes.find(r => r.id === recipe.id);
   const qty = picked ? picked.quantity : 0;
   const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
@@ -6023,7 +5987,6 @@ async function renderOrderRecipeSections() {
   if (clearBtn) clearBtn.dataset.on = q ? '1' : '0';
   renderOrderPickerChips();
 
-  const virtualMap = _virtualStockMap();
   const addedIds = new Set(orderRecipes.map(r => r.id));
   // A picked product is never filtered out — you must be able to un-pick it.
   const pool = (orderRecipeCache || []).filter(r => _orderPickerPasses(r) || addedIds.has(r.id));
@@ -6036,7 +5999,7 @@ async function renderOrderRecipeSections() {
     const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q));
     if (hits.length) {
       html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
-        <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+        <div class="op-list">${hits.map(r => _orderRowHtml(r)).join('')}</div>`;
     } else {
       const activeFilters = orderPickerFilters.cats.size;
       html = `<div class="op-empty">
@@ -6055,11 +6018,11 @@ async function renderOrderRecipeSections() {
     const rest = pool.filter(r => !favIds.has(r.id) && !recentIds.has(r.id));
 
     if (favs.length) html += `<div class="op-sec-head"><span class="op-sec-title">Favorites</span><span class="op-sec-note">${favs.length}</span></div>
-      <div class="op-list">${favs.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+      <div class="op-list">${favs.map(r => _orderRowHtml(r)).join('')}</div>`;
     if (recentList.length) html += `<div class="op-sec-head"><span class="op-sec-title">Ordered recently</span><span class="op-sec-note">${recentList.length}</span></div>
-      <div class="op-list">${recentList.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+      <div class="op-list">${recentList.map(r => _orderRowHtml(r)).join('')}</div>`;
     if (rest.length) html += `<div class="op-sec-head"><span class="op-sec-title">All products</span><span class="op-sec-note">${rest.length}</span></div>
-      <div class="op-list">${rest.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+      <div class="op-list">${rest.map(r => _orderRowHtml(r)).join('')}</div>`;
 
     if (!favs.length && !recentList.length && !rest.length) {
       html += `<div class="op-empty">
@@ -6096,30 +6059,19 @@ function clearOrderPickerFilters() {
   renderOrderRecipeSections();
 }
 
-// Oversell is allowed (backorders happen) but never silent — updatePickerFooter's
-// warning line is the one place that surfaces it.
 function updatePickerFooter() {
   const countEl = document.getElementById('opCount');
   const totalEl = document.getElementById('opTotal');
-  const warnEl = document.getElementById('opWarn');
   const btn = document.getElementById('orderContinueBtn');
   if (!btn) return;
 
   const units = orderRecipes.reduce((s, r) => s + r.quantity, 0);
   const total = orderRecipes.reduce((s, r) => s + r.price * r.quantity, 0);
-  const virtualMap = _virtualStockMap();
-  const shortCount = orderRecipes.filter(r => {
-    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
-    return recipe && _projectedStatus(recipe, virtualMap).state === 'short';
-  }).length;
 
   if (countEl) countEl.textContent = units
     ? `${orderRecipes.length} product${orderRecipes.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}`
     : 'No products yet';
   if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
-  if (warnEl) warnEl.innerHTML = shortCount
-    ? `<div class="op-warn">${shortCount} product${shortCount !== 1 ? 's go' : ' goes'} below zero — the order will still save</div>`
-    : '';
   btn.disabled = !units;
   btn.textContent = units ? `Continue · $${total.toFixed(2)}` : 'Continue';
 }
