@@ -213,17 +213,10 @@
   .ai-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
   .ai-qty-btn:active { transform: scale(.96); }
   .ai-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 0 120px; width: 120px; }
-  /* justify-content: center on this row centers the (number + unit) pair as
-     a whole -- the number itself must be a fixed, content-sized box (not
-     width:100%) or it fights the unit label for space and ends up rendered
-     left-of-center inside its own invisible box, even though the outer
-     .ai-qty-center box is correctly centered between the +/- buttons. */
-  .ai-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
   .ai-qty-value { font-size: 50px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
-                  background: none; border: none; text-align: center; flex: 0 0 auto;
+                  background: none; border: none; text-align: center; margin: 0 auto;
                   padding: 0; color: var(--text-main); -webkit-appearance: none; appearance: none; font-family: inherit; }
   .ai-qty-value::-webkit-inner-spin-button, .ai-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
-  .ai-qty-unit { font-size: 17px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
   .ai-qty-status { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-top: 8px; text-align: center; }
 
   .ai-cost-strip { display: flex; background: var(--bg-panel);
@@ -3530,7 +3523,6 @@ function aiRenderLine() {
   const pctNow = price ? Math.round(((price - now) / price) * 100) : null;
   const marginState = p => p === null ? '' : p < 0 ? 'out' : p < 20 ? 'low' : 'ok';
 
-  document.getElementById('aiUnit').textContent = _aiDraft.unit || ing.unit || '';
   document.getElementById('aiStatus').textContent = _aiDraft.qty ? 'per unit made' : 'set a quantity';
 
   document.getElementById('aiAddVal').textContent = `$${add.toFixed(2)}`;
@@ -4141,10 +4133,7 @@ document.addEventListener('keydown', (e) => {
           <div class="ai-qty-row">
             <button type="button" class="ai-qty-btn" aria-label="Less" onclick="aiStepQty(-1)">−</button>
             <span class="ai-qty-center">
-              <span class="ai-qty-line">
-                <input class="ai-qty-value" id="aiQty" type="number" inputmode="decimal" step="any" value="1" size="3" oninput="aiRenderLine()">
-                <span class="ai-qty-unit" id="aiUnit">ea</span>
-              </span>
+              <input class="ai-qty-value" id="aiQty" type="number" inputmode="decimal" step="any" value="1" size="3" oninput="aiRenderLine()">
               <span class="ai-qty-status" id="aiStatus"></span>
             </span>
             <button type="button" class="ai-qty-btn plus" aria-label="More" onclick="aiStepQty(1)">+</button>
