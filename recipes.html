@@ -970,7 +970,19 @@
     .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
 
     /* ---------- 15d: selected items, pinned ---------- */
-    #recipeDropzone { display: block; margin-top: 12px; padding: 0; background: none; border: none; }
+    /* Capped to ~3 rows + a peek of the 4th (cut off by max-height) plus a
+       bottom fade -- both signal "scroll for more" without extra markup,
+       instead of growing unbounded and silently pushing the search/item
+       list further down the page with no hint that more selected items
+       exist above it. */
+    #recipeDropzone {
+      display: block; margin-top: 12px; padding: 0; background: none; border: none;
+      max-height: 230px; overflow-y: auto;
+    }
+    #recipeDropzone.scrollable {
+      -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
+      mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
+    }
     .rb-sec { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 16px 6px; }
     .rb-sec-title {
       font-size: 11px; font-weight: 700; letter-spacing: .07em;
@@ -3069,6 +3081,11 @@ function renderMobileSelected() {
         </span>
       </div>`;
     }).join('');
+
+  // Only fade the bottom edge when there's actually more to scroll to --
+  // otherwise a short 1-2 item list would show a phantom fade on its last
+  // row even though nothing is cut off.
+  dz.classList.toggle('scrollable', dz.scrollHeight > dz.clientHeight);
 }
 
 // Mobile category sheet — same PRODUCT_CATEGORIES/icon map as the desktop
