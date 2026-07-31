@@ -73,24 +73,8 @@
 
   .detail-back-btn { display: none; }
 
-  .detail-title-input {
-    font-size: 26px;
-    font-weight: 500;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    outline: none;
-    font-family: inherit;
-    color: var(--text-main);
-    padding: 2px 0;
-    width: 100%;
-    transition: border-color 0.2s;
-  }
-  .detail-title-input:focus { border-bottom-color: var(--accent); }
-
-  /* Static-looking title shown by default on mobile — tapping it swaps in
-     #name-mobile (the real input) for editing, closer to a plain <h1> than
-     an always-live text field. */
+  /* Static title shown on mobile -- renaming happens via the ⋯ menu's
+     Rename item (editField(['name'], 'Name')), not by tapping this. */
   .detail-title-display {
     font-size: 26px;
     font-weight: 500;
@@ -100,11 +84,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    cursor: text;
   }
 
   /* Desktop: hide mobile-only name title; name lives inside the panel */
-  #name-mobile, #name-mobile-display { display: none; }
+  #name-mobile-display { display: none; }
   /* Desktop: real .navbar already shows the bell/avatar — hide the
      in-header duplicates used on mobile */
   #diNotificationBell, #diUserAvatar, #diCreateBtn { display: none; }
@@ -1308,12 +1291,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="detail-header-title">
-      <h1 id="name-mobile-display" class="detail-title-display" onclick="startEditName()"></h1>
-      <input type="text" id="name-mobile" class="detail-title-input" placeholder="Item name&hellip;" required
-        style="display:none;"
-        oninput="document.getElementById('name').value=this.value"
-        onblur="document.getElementById('name').value=this.value;autoSave();finishEditName();"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+      <h1 id="name-mobile-display" class="detail-title-display"></h1>
     </div>
     <div class="detail-header-actions" style="display:flex; gap:12px; align-items:center;">
       <button id="diCreateBtn" onclick="createNewIngredient()" aria-label="Create item">
@@ -1350,6 +1328,10 @@
     <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); toggleFavorite()">
       <span id="favoriteMenuIcon" style="font-size:18px; line-height:1; width:18px; display:inline-block; text-align:center;">☆</span>
       <span id="favoriteMenuLabel">Mark as favorite</span>
+    </button>
+    <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); editField(['name'], 'Name')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Rename</span>
     </button>
     <button type="button" class="detail-more-item" onclick="closeDetailMoreMenu(); openDetailDuplicateModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1738,8 +1720,6 @@
 
     // Form fields
     document.getElementById('name').value = ing.name || '';
-    const mobileNameEl = document.getElementById('name-mobile');
-    if (mobileNameEl) mobileNameEl.value = ing.name || '';
     const mobileNameDisplay = document.getElementById('name-mobile-display');
     if (mobileNameDisplay) mobileNameDisplay.textContent = ing.name || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
@@ -2934,6 +2914,8 @@
     autoSave();
     renderDetailRows();
     renderRestockRow();  // source_url may have changed
+    const nameDisplay = document.getElementById('name-mobile-display');
+    if (nameDisplay) nameDisplay.textContent = document.getElementById('name').value || '';
   }
 
   // ---------- Category sheet (Step 11d) ----------
@@ -3062,26 +3044,6 @@
       closeDetailMoreMenu();
     }
   });
-
-  // Mobile title: tap the static <h1> to reveal the real input, matching
-  // the reference — the name isn't an always-live text field anymore.
-  function startEditName() {
-    const display = document.getElementById('name-mobile-display');
-    const input = document.getElementById('name-mobile');
-    if (!display || !input) return;
-    display.style.display = 'none';
-    input.style.display = 'block';
-    input.focus();
-    input.select();
-  }
-  function finishEditName() {
-    const display = document.getElementById('name-mobile-display');
-    const input = document.getElementById('name-mobile');
-    if (!display || !input) return;
-    display.textContent = input.value || '';
-    input.style.display = 'none';
-    display.style.display = 'block';
-  }
 
   // Mobile: the real .navbar (and the notification/user dropdowns living
   // inside it) is hidden so the header can show name + bell + avatar in
