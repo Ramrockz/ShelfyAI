@@ -3010,10 +3010,14 @@ function renderMobileIngredientRow(i) {
   const isFavorite = favoriteIngredients.has(i.id);
   const starIcon = isFavorite ? '★' : '☆';
   const meta = `$${(parseFloat(i.price) || 0).toFixed(2)}/${_escHtml(i.unit || 'unit')}`;
-  const pill = qty === 0 ? '<span class="stock-pill out">Out</span>'
+  // Stock level and delivery status are independent -- an item can be low
+  // (or out) AND have a reorder already on the way, so both chips can show
+  // together rather than one hiding the other.
+  const stockPill = qty === 0 ? '<span class="stock-pill out">Out</span>'
     : (min > 0 && qty < min) ? '<span class="stock-pill low">Low</span>'
-    : i.reorder_pending ? '<span class="stock-pill delivery">On the way</span>'
     : '';
+  const deliveryPill = i.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
+  const pill = stockPill + deliveryPill;
 
   return `<button type="button" class="ai-row" data-on="${selected ? 1 : 0}" onclick="mobileTapIngredient('${i.id}')">
       <span class="ai-main">
