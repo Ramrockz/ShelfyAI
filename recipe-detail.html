@@ -101,12 +101,126 @@
   .detail-dup-btn:hover { opacity: 0.7; }
   .detail-del-btn:hover { opacity: 0.7; }
 
-  /* Category chips for add-ingredient modal */
-  .detail-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .detail-cat-chip { display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-panel); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
-  .detail-cat-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .detail-cat-chip.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
-  .detail-cat-chip svg { width: 20px; height: 20px; }
+  /* ---------- Add/Edit item screen (18h) — replaces the old add-ingredient
+     modal + item-editor sheet with one two-pane flow: pick an item, then
+     say how much of it one unit needs. Same skeleton on desktop (centered
+     card) and mobile (full-screen takeover via the media query below). ---------- */
+  .ai-overlay { z-index: 10003 !important; }
+  .ai-overlay .modal-content {
+    display: flex; flex-direction: column; padding: 0; width: 100%; max-width: 480px;
+    height: 640px; max-height: 88vh; overflow: hidden; position: relative;
+  }
+  @media (max-width: 768px) {
+    .ai-overlay .modal-content { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+  }
+  .ai-pane { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg-app, var(--bg-main)); }
+  .ai-pane[data-on="1"] { display: flex; }
+
+  .ai-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ai-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+  .ai-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+             background: none; border: none; color: var(--text-main); flex-shrink: 0; cursor: pointer; }
+  .ai-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ai-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ai-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ai-act { height: 40px; padding: 0 12px; background: none; border: none;
+            color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; flex-shrink: 0; cursor: pointer; font-family: inherit; }
+
+  .ai-find { padding: 0 12px 12px; }
+  .ai-search { display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 12px; border-radius: 12px; background: var(--bg-inner); }
+  .ai-search svg { color: var(--text-faint, var(--text-muted)); flex-shrink: 0; }
+  .ai-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); font-family: inherit; }
+  .ai-search input::placeholder { color: var(--text-faint, var(--text-muted)); }
+
+  .ai-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .ai-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
+  .ai-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+  .ai-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+  .ai-list { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             border-bottom: 1px solid var(--border-hair, var(--border)); }
+
+  .ai-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px;
+            padding: 9px 14px 9px 16px; text-align: left; background: var(--bg-panel); border: none;
+            border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; font-family: inherit; }
+  .ai-list .ai-row:first-child { border-top: none; }
+  .ai-row[data-on="1"] { background: rgba(6,182,212,.045); }
+  .ai-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ai-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main);
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ai-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .ai-meta[data-state="short"] { color: var(--warning); }
+  .ai-onqty { flex-shrink: 0; height: 26px; padding: 0 9px; border-radius: 8px;
+              background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); font-size: 12.5px; font-weight: 800;
+              display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .ai-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
+  .ai-new { color: var(--accent-deep, var(--accent)); font-weight: 700; font-size: 14.5px; }
+  .ai-note { padding: 14px 20px 26px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+  .ai-star { flex-shrink: 0; font-size: 18px; cursor: pointer; color: var(--text-ghost, #cbd5e1); }
+  .ai-star.favorited { color: #f59e0b; }
+
+  .ai-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .ai-tally { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .ai-tally-l { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .ai-tally-r { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .ai-warn { font-size: 12px; font-weight: 700; color: var(--warning); margin-top: 2px; }
+  .ai-cta { width: 100%; height: 50px; margin-top: 10px; border: none; border-radius: 13px;
+            background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+            letter-spacing: -.01em; cursor: pointer; font-family: inherit; }
+  .ai-cta:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+  .ai-ghost { width: 100%; height: 46px; margin-top: 8px; border-radius: 13px;
+              border: 1px solid var(--border); background: var(--bg-panel);
+              color: var(--accent-deep, var(--accent)); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .ai-ghost:disabled { color: var(--text-faint, var(--text-muted)); cursor: default; }
+
+  /* per-unit quantity pane */
+  .ai-qty-panel { background: var(--bg-panel); padding: 22px 16px 18px; border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ai-qty-row { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .ai-qty-btn { width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px; border: none;
+                background: var(--bg-inner); color: var(--text-muted); font-size: 28px; font-weight: 600; line-height: 1; cursor: pointer; }
+  .ai-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ai-qty-btn:active { transform: scale(.96); }
+  .ai-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 96px; max-width: 170px; }
+  .ai-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
+  .ai-qty-value { font-size: 50px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+                  background: none; border: none; text-align: center; min-width: 0; width: 100%;
+                  padding: 0; color: var(--text-main); -webkit-appearance: none; appearance: none; font-family: inherit; }
+  .ai-qty-value::-webkit-inner-spin-button, .ai-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
+  .ai-qty-unit { font-size: 17px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ai-qty-status { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-top: 8px; text-align: center; }
+  .ai-qty-hints { display: flex; justify-content: center; gap: 7px; margin-top: 16px; flex-wrap: wrap; }
+  .ai-qty-hint { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-hair, var(--border));
+                 background: var(--bg-app, var(--bg-inner)); color: var(--text-muted); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .ai-qty-hint[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+
+  .ai-cost-strip { display: flex; background: var(--bg-panel);
+                   border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ai-cost-strip > div { flex: 1; min-width: 0; padding: 12px 14px; }
+  .ai-cost-strip > div + div { border-left: 1px solid var(--border-hair, var(--border)); }
+  .ai-cost-strip label { display: block; font-size: 10px; font-weight: 800; letter-spacing: .06em;
+                         text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .ai-cost-strip span.val { font-size: 18px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .ai-cost-strip .delta { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-faint, var(--text-muted)); margin-top: 3px; }
+  .ai-cost-strip .delta[data-state="up"] { color: var(--warning); }
+  #aiMargVal[data-state="ok"]  { color: var(--success); }
+  #aiMargVal[data-state="low"] { color: var(--warning); }
+  #aiMargVal[data-state="out"] { color: var(--danger); }
+
+  .ai-group { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ai-drow { display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%;
+             padding: 9px 14px 9px 16px; text-align: left; background: var(--bg-panel); border: none;
+             border-top: 1px solid var(--border-hair, var(--border)); font-family: inherit; }
+  .ai-group .ai-drow:first-child { border-top: none; }
+  .ai-drow-label { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ai-drow-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main); }
+  .ai-drow-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .ai-drow-meta[data-state="short"] { color: var(--warning); }
+
+  .ai-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none; color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .ai-swap { width: 100%; height: 46px; margin-top: 8px; border-radius: 13px; border: 1px solid var(--border);
+             background: var(--bg-panel); color: var(--text-main); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
   /* ---------- GRID ---------- */
   .main-grid {
@@ -310,7 +424,7 @@
     /* Alert / confirm modals must sit above everything */
     #alertModal, #confirmModal { z-index: 10006 !important; }
     #rdmDeliveryModal { z-index: 10006 !important; }
-    #itemSheet, #rdmRenameSheet { z-index: 10006 !important; }
+    #rdmRenameSheet, #aiUnitSheet { z-index: 10006 !important; }
 
     /* === Full-screen recipe view overlay (ms2-style) ===
        Shown unconditionally via CSS (not gated on the recipe finishing its
@@ -421,22 +535,6 @@
                      text-overflow: ellipsis; white-space: nowrap; }
     .rdm-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
     .rdm-chev { color: var(--border); flex-shrink: 0; }
-
-    /* Item sheet */
-    .rdm-sheet-name { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
-    .rdm-sheet-stock { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
-    .rdm-sheet-qty { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; }
-    .rdm-sheet-qty button { width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--border);
-                            background: var(--bg-inner); font-size: 26px; color: var(--text-main); cursor: pointer; }
-    .rdm-sheet-qty input { flex: 1; height: 52px; text-align: center; font-size: 22px; font-weight: 800;
-                           border: 1px solid var(--border); border-radius: 14px; background: var(--bg-inner);
-                           color: var(--text-main); font-family: inherit; }
-    .rdm-sheet-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-                        color: var(--text-muted); margin-bottom: 8px; }
-    .rdm-sheet-act { display: block; width: 100%; height: 50px; margin-top: 8px; border-radius: 12px;
-                     border: 1px solid var(--border); background: var(--bg-inner); font-size: 15px;
-                     font-weight: 700; color: var(--text-main); cursor: pointer; font-family: inherit; }
-    .rdm-sheet-act.danger { color: var(--danger); border-color: rgba(239,68,68,.35); }
 
     /* Restock row (mobile footer) — replaces the old always-on Duplicate/Delete bar */
     .rdm-restock-row {
@@ -597,32 +695,6 @@
       margin: 0 auto;
     }
 
-    /* Add Ingredient Modal - mobile optimizations */
-    #availableIngredientsList > div {
-      padding: 12px 16px !important;
-    }
-
-    /* Container with padding for stock indicator */
-    #availableIngredientsList > div > div[style*="padding-right"] {
-      padding-right: 30px !important;
-    }
-
-    /* Force flex container to constrain width */
-    #availableIngredientsList > div > div > div[style*="flex: 1"] {
-      min-width: 0 !important;
-      max-width: calc(100% - 30px) !important;
-    }
-
-    /* Truncate ingredient name in modal */
-    #availableIngredientsList div[style*="font-weight: 700"][style*="font-size: 16px"] {
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      white-space: nowrap !important;
-      display: block !important;
-      max-width: 100% !important;
-      width: 100% !important;
-    }
-
     /* Ensure Ingredients h3 is visible */
     .panel h3:not(:first-of-type) {
       font-size: 20px;
@@ -661,8 +733,9 @@
       padding: 16px;
     }
 
-    /* Modals must appear above the mobile view overlay */
-    #addIngredientModal, #reorderModal {
+    /* Modals must appear above the mobile view overlay. #addIngredientModal
+       gets its z-index from .ai-overlay (always-on, not mobile-gated) now. */
+    #reorderModal {
       z-index: 10003 !important;
     }
     
@@ -1585,34 +1658,6 @@ async function renderRecipe() {
 
 // ---- Mobile view overlay ----
 
-let swapTargetIndex = null;
-
-async function openSwapModal(index) {
-  swapTargetIndex = index;
-  const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Swap Item';
-  await openAddIngredientModal();
-
-  // Pre-filter by the swapped ingredient's category
-  const comp = recipe.components[index];
-  const swapIngId = comp?.ingredient_id || comp?.id;
-  if (swapIngId) {
-    const swapIng = availableIngredients.find(i => i.id === swapIngId);
-    if (swapIng?.category) {
-      detailActiveCategoryFilter = swapIng.category;
-      renderDetailCatChips();
-      renderAvailableIngredients();
-    }
-  }
-}
-
-function closeSwapModal() {
-  swapTargetIndex = null;
-  const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Add Item to Product';
-  document.getElementById('addIngredientModal').classList.remove('active');
-}
-
 // Detail pages don't carry the create-modal wiring themselves — hand off
 // to recipes.html, which picks this flag up on load and opens its own
 // create-product flow (same pattern as the existing shelfy_seed_* handoffs).
@@ -1691,7 +1736,7 @@ function renderMobileOverlay() {
     const deliveryPill = stock?.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
     const cost = parseFloat(comp.cost) || 0;
     return `
-    <div class="rdm-item-row" onclick="openItemSheet(${index})">
+    <div class="rdm-item-row" onclick="aiOpenLine(null, ${index})">
       <span class="rdm-item-main">
         <span class="rdm-item-top">
           <span class="rdm-item-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown')}</span>
@@ -1735,53 +1780,6 @@ function rdmRenderMargin() {
   el.dataset.state = pct < 0 ? 'out' : pct < 20 ? 'low' : 'ok';
 }
 
-// ---- Item edit sheet (mobile) — the row is read-only; every action here
-// routes to a writer that already exists (rdmSetQty, openSwapModal,
-// reorderIngredient, removeIngredientFromRecipe). Nothing new touches the DB. ----
-let _sheetIndex = null;
-
-function openItemSheet(index) {
-  _sheetIndex = index;
-  const comp = recipe.components[index];
-  if (!comp) return;
-  const ingId = comp.ingredient_id || comp.id;
-  const qty = ingredientStockMap[ingId]?.quantity ?? null;
-  document.getElementById('itemSheetName').textContent = comp.ingredient_name || comp.name || 'Item';
-  document.getElementById('itemSheetStock').textContent =
-    qty === null ? '' : `${qty} in stock · $${(parseFloat(comp.cost) || 0).toFixed(2)} each use`;
-  document.getElementById('itemSheetQty').value = comp.quantity || 1;
-  document.getElementById('itemSheet').classList.add('active');
-}
-
-function closeItemSheet() {
-  document.getElementById('itemSheet')?.classList.remove('active');
-  _sheetIndex = null;
-}
-
-async function sheetQty(delta) {
-  const input = document.getElementById('itemSheetQty');
-  const next = Math.max(0.01, (parseFloat(input.value) || 1) + delta);
-  input.value = next;
-  await rdmSetQty(_sheetIndex, next);
-}
-
-function sheetSwap() {
-  const i = _sheetIndex;
-  closeItemSheet();
-  openSwapModal(i);
-}
-
-function sheetRestock() {
-  const c = recipe.components[_sheetIndex];
-  closeItemSheet();
-  reorderIngredient(c.ingredient_id || c.id);
-}
-
-async function sheetRemove() {
-  const i = _sheetIndex;
-  closeItemSheet();
-  await removeIngredientFromRecipe(i);
-}
 
 // ---- Restock row (mobile footer) — one short item reorders directly; two
 // or more opens the first one's sheet as an interim (no multi-select restock
@@ -1802,11 +1800,13 @@ function rdmRenderRestockRow() {
   row._short = short;
 }
 
-function rdmRestockShort() {
+async function rdmRestockShort() {
   const short = document.getElementById('rdmRestockRow')?._short || [];
   if (!short.length) return;
   if (short.length === 1) return reorderIngredient(short[0].ingredient_id || short[0].id);
-  openItemSheet(recipe.components.indexOf(short[0]));
+  const index = recipe.components.indexOf(short[0]);
+  await openAddIngredientModal(); // ensures availableIngredients is loaded before aiOpenLine needs it
+  aiOpenLine(null, index);
 }
 
 // ---- Mobile "⋯" menu (Rename / Duplicate / Delete) ----
@@ -1850,16 +1850,6 @@ async function saveRdmRename() {
   document.getElementById('rdmTitle').value = value;
   await saveMobileRecipeName();
   closeRdmRenameSheet();
-  renderMobileOverlay();
-}
-
-async function rdmSetQty(index, val) {
-  const comp = recipe.components[index];
-  if (!comp) return;
-  const pricePerUnit = comp.quantity > 0 ? (comp.cost || 0) / comp.quantity : 0;
-  comp.quantity = Math.max(0.01, parseFloat(val) || 1);
-  comp.cost = pricePerUnit * comp.quantity;
-  await updateRecipeInDatabase();
   renderMobileOverlay();
 }
 
@@ -2662,7 +2652,7 @@ async function removeIngredientFromRecipe(index) {
   recipe.components.splice(index, 1);
   await updateRecipeInDatabase();
   renderRecipe();
-  renderAvailableIngredients();
+  if (availableIngredients.length) aiRenderList();
 }
 
 // Products created before the category picker existed (or duplicated from
@@ -2671,7 +2661,7 @@ async function removeIngredientFromRecipe(index) {
 // _productCategoryFor) — purely for display, nothing persists it. Swapping
 // a single component recomputes that vote over the NEW component list, so
 // a product can silently jump to a different category group the moment
-// any one item changes. addIngredientToRecipe() locks in today's
+// any one item changes. aiSaveLine() locks in today's
 // (pre-edit) result via this same vote so future edits stop reshuffling it.
 function _effectiveCategoryFor(components) {
   const cats = (components || [])
@@ -3050,141 +3040,70 @@ async function rdmMarkAsReordered() {
   }
 }
 
-// Add Ingredient Modal Functions
+// ---------- Add/edit item screen (18h) ----------
+// One two-pane flow replaces the old add-ingredient modal + item-editor
+// sheet: pane 1 picks an item (new, or one already in the product to
+// edit/swap/remove), pane 2 sets how much of it one unit needs.
 let availableIngredients = [];
-let detailActiveCategoryFilter = null;
-let detailActiveAttrValueFilters = new Map();
+let _aiEditIndex = null;   // index into recipe.components being edited/replaced, or null when adding new
+let _aiIngredient = null;  // the ingredients-table row currently open in pane 2
+let _aiDraft = null;       // { qty, unit } being edited in pane 2
+let _aiSwapMode = false;   // true while pane 1 is picking a REPLACEMENT for _aiEditIndex
+let _aiSwapQty = null;     // quantity carried over once that replacement is picked
+let _aiUsageCounts = null; // Map<ingredientId, count of OTHER products using it>, loaded once per modal session
 
-function renderDetailAttrSubfilter(cat) {
-  // Group by attribute key (same pattern as other filter panels)
-  const groupedByKey = new Map();
-  availableIngredients
-    .filter(i => i.category && i.category.toLowerCase() === cat.toLowerCase() && i.custom_attributes)
-    .forEach(i => {
-      try {
-        const attrs = typeof i.custom_attributes === 'string' ? JSON.parse(i.custom_attributes) : i.custom_attributes;
-        Object.entries(attrs).forEach(([key, value]) => {
-          if (!value || !String(value).trim()) return;
-          const normalizedKey = key.toLowerCase();
-          const trimmedValue = String(value).trim();
-          const valueKey = trimmedValue.toLowerCase();
-          if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());
-          const vm = groupedByKey.get(normalizedKey);
-          if (!vm.has(valueKey)) vm.set(valueKey, trimmedValue);
-        });
-      } catch (e) {}
+const AI_UNITS = [
+  { u: 'pcs', label: 'pieces' }, { u: 'ea', label: 'each' },
+  { u: 'g', label: 'grams' }, { u: 'kg', label: 'kilograms' },
+  { u: 'ml', label: 'millilitres' }, { u: 'l', label: 'litres' },
+  { u: 'm', label: 'metres' }, { u: 'cm', label: 'centimetres' }
+];
+
+async function _aiLoadUsageCounts() {
+  if (_aiUsageCounts) return _aiUsageCounts;
+  _aiUsageCounts = new Map();
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return _aiUsageCounts;
+    let q = window.supabaseClient.from('recipes').select('id, components').eq('profile_id', user.id);
+    if (window.currentStoreId) q = q.eq('store_id', window.currentStoreId);
+    const { data, error } = await q;
+    if (error) throw error;
+    (data || []).forEach(r => {
+      if (r.id === recipeId) return; // exclude the product being edited right now
+      (r.components || []).forEach(c => {
+        const id = c.ingredient_id || c.id;
+        if (id) _aiUsageCounts.set(id, (_aiUsageCounts.get(id) || 0) + 1);
+      });
     });
-  const el = document.getElementById('detailAttrSubfilter');
-  if (!el) return;
-  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
-  const sortVals = (a, b) => {
-    const an = parseFloat(a), bn = parseFloat(b);
-    if (!isNaN(an) && !isNaN(bn)) return an - bn;
-    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
-    return a.localeCompare(b, undefined, { sensitivity: 'base' });
-  };
-  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
-  const allChips = [];
-  sortedKeys.forEach(key => {
-    const sortedValues = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortVals(a[1], b[1]));
-    sortedValues.forEach(([valueKey, displayValue]) => {
-      const _active = detailActiveAttrValueFilters.has(key) && detailActiveAttrValueFilters.get(key).has(valueKey);
-      allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${valueKey.replace(/"/g,'&quot;')}" onclick="toggleDetailAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g,"&#39;")}')">${displayValue.replace(/"/g,'&quot;')}</button>`);
-    });
-  });
-  el.innerHTML = allChips.join('');
-  el.classList.add('visible');
-}
-
-function hideDetailAttrSubfilter() {
-  const el = document.getElementById('detailAttrSubfilter');
-  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
-}
-
-function toggleDetailAttrFilter(key, value) {
-  if (!detailActiveAttrValueFilters.has(key)) detailActiveAttrValueFilters.set(key, new Set());
-  const keySet = detailActiveAttrValueFilters.get(key);
-  if (keySet.has(value)) {
-    keySet.delete(value);
-    if (keySet.size === 0) detailActiveAttrValueFilters.delete(key);
-  } else {
-    keySet.add(value);
+  } catch (e) {
+    console.error('Error loading item usage counts:', e);
   }
-  document.querySelectorAll('#detailAttrSubfilter .recipe-attr-chip').forEach(chip => {
-    const k = chip.dataset.key, v = chip.dataset.val;
-    chip.classList.toggle('active', !!k && detailActiveAttrValueFilters.has(k) && detailActiveAttrValueFilters.get(k).has(v));
-  });
-  renderAvailableIngredients();
+  return _aiUsageCounts;
 }
 
-const _detailCategoryMap = {
-  'Apparel': 'shirt',
-  'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
-  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora',
-  'Jewelry': 'gem', 'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2',
-  'Toys': 'drum', 'Office Supplies': 'paperclip', 'Colors': 'palette',
-  'Rope': 'lasso', 'Paper': 'origami', 'Spool': 'spool',
-  'Letter': 'mail', 'Giveaway': 'gift', 'Electronics': 'plug',
-  'Printing Supplies': 'printer', 'Tools': 'wrench', 'Packaging': 'package',
-  'Food': 'wheat'
-};
-
-function renderDetailCatChips() {
-  const container = document.getElementById('detailCatChips');
-  if (!container) return;
-  const cats = [...new Set(availableIngredients.map(i => i.category).filter(Boolean))].sort();
-  if (cats.length === 0) { container.innerHTML = ''; return; }
-  container.innerHTML = cats.map(cat => {
-    const icon = _detailCategoryMap[cat] || 'tag';
-    const active = detailActiveCategoryFilter === cat ? ' active' : '';
-    return `<span class="detail-cat-chip${active}" title="${cat}" onclick="toggleDetailCatFilter('${cat.replace(/'/g, "\\'")}')">
-      <i data-lucide="${icon}"></i>
-    </span>`;
-  }).join('');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function toggleDetailCatFilter(cat) {
-  detailActiveCategoryFilter = (detailActiveCategoryFilter === cat) ? null : cat;
-  detailActiveAttrValueFilters = new Map();
-  if (detailActiveCategoryFilter) {
-    renderDetailAttrSubfilter(detailActiveCategoryFilter);
-  } else {
-    hideDetailAttrSubfilter();
-  }
-  renderDetailCatChips();
-  renderAvailableIngredients();
+function _aiAttrMatch(ing, q) {
+  if (!ing.custom_attributes) return false;
+  try {
+    const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+    return Object.values(parsed).filter(Boolean).join(' ').toLowerCase().includes(q);
+  } catch (e) { return false; }
 }
 
 async function openAddIngredientModal() {
-  detailActiveCategoryFilter = null;
-  detailActiveAttrValueFilters = new Map();
-  hideDetailAttrSubfilter();
+  document.getElementById('aiQ').value = '';
   document.getElementById('addIngredientModal').classList.add('active');
-  document.getElementById('ingredientSearchInput').value = '';
-  
-  // Hide bottom buttons on mobile
-  if (window.innerWidth <= 768) {
-    const headerButtons = document.querySelector('.header > div:last-child');
-    if (headerButtons) headerButtons.style.display = 'none';
-  }
-  
-  // Load ingredients if not already loaded
+  aiShowPane('list');
+
   if (availableIngredients.length === 0) {
     try {
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) return;
-
       if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-      let _q6 = window.supabaseClient
-        .from('ingredients')
-        .select('*')
-        .eq('profile_id', user.id);
-      if (storeId) _q6 = _q6.eq('store_id', storeId);
-      const { data, error } = await _q6;
-
+      let q = window.supabaseClient.from('ingredients').select('*').eq('profile_id', user.id);
+      if (storeId) q = q.eq('store_id', storeId);
+      const { data, error } = await q;
       if (error) throw error;
       availableIngredients = data || [];
     } catch (error) {
@@ -3193,208 +3112,330 @@ async function openAddIngredientModal() {
       return;
     }
   }
-
-  renderDetailCatChips();
-  renderAvailableIngredients();
+  await _aiLoadUsageCounts();
+  aiRenderList();
 }
 
 function closeAddIngredientModal() {
-  swapTargetIndex = null;
-  detailActiveCategoryFilter = null;
-  detailActiveAttrValueFilters = new Map();
-  hideDetailAttrSubfilter();
-  const titleEl = document.querySelector('#addIngredientModal h3');
-  if (titleEl) titleEl.textContent = 'Add Item to Product';
   document.getElementById('addIngredientModal').classList.remove('active');
-  
-  // Show bottom buttons on mobile
-  if (window.innerWidth <= 768) {
-    const headerButtons = document.querySelector('.header > div:last-child');
-    if (headerButtons) headerButtons.style.display = 'flex';
-  }
+  _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
+  _aiSwapMode = false; _aiSwapQty = null;
 }
 
-function filterAvailableIngredients() {
-  renderAvailableIngredients();
+function aiShowPane(which) {
+  document.getElementById('aiPaneList').dataset.on = which === 'list' ? '1' : '0';
+  document.getElementById('aiPaneLine').dataset.on = which === 'line' ? '1' : '0';
 }
 
-function renderAvailableIngredients() {
-  const searchTerm = document.getElementById('ingredientSearchInput').value.toLowerCase();
-  const container = document.getElementById('availableIngredientsList');
+function aiBackToList() {
+  _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
+  _aiSwapMode = false; _aiSwapQty = null;
+  aiShowPane('list');
+  aiRenderList();
+}
 
-  // In swap mode show all ingredients; when adding, filter out existing ones
-  const existingIds = new Set((recipe.components || []).map(c => c.ingredient_id || c.id).filter(Boolean));
-  const swapIngredientId = swapTargetIndex !== null
-    ? (recipe.components[swapTargetIndex]?.ingredient_id || null)
+function aiRenderList() {
+  const q = (document.getElementById('aiQ').value || '').trim().toLowerCase();
+  const price = parseFloat(recipe.retail_price) || 0;
+  document.getElementById('aiListSub').textContent =
+    `${recipe.name || 'Product'} · ${price ? `sells for $${price.toFixed(2)}` : 'no sell price set'}`;
+
+  const components = recipe.components || [];
+  const inRecipeIds = new Set(components.map(c => c.ingredient_id || c.id).filter(Boolean));
+  const swapIngId = _aiSwapMode && _aiEditIndex != null
+    ? (components[_aiEditIndex]?.ingredient_id || components[_aiEditIndex]?.id)
     : null;
-  const notInRecipe = swapTargetIndex !== null
-    ? availableIngredients
-    : availableIngredients.filter(ing => !existingIds.has(ing.id));
+  const usage = _aiUsageCounts || new Map();
 
-  const filtered = notInRecipe.filter(ing => {
-    // Category filter
-    if (detailActiveCategoryFilter && ing.category !== detailActiveCategoryFilter) return false;
-
-    // Attribute value subfilter — OR within key, AND between keys
-    if (detailActiveAttrValueFilters.size > 0) {
-      if (!ing.custom_attributes) return false;
-      try {
-        const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-        for (const [attrKey, valSet] of detailActiveAttrValueFilters) {
-          if (valSet.size === 0) continue;
-          const matchingKey = Object.keys(attrs).find(k => k.toLowerCase() === attrKey);
-          if (!matchingKey) return false;
-          if (!valSet.has(String(attrs[matchingKey]).trim().toLowerCase())) return false;
-        }
-      } catch (e) { return false; }
-    }
-
-    // Search in name
-    if (ing.name.toLowerCase().includes(searchTerm)) return true;
-
-    // Search in custom attributes
-    if (ing.custom_attributes) {
-      try {
-        const parsed = typeof ing.custom_attributes === 'string'
-          ? JSON.parse(ing.custom_attributes)
-          : ing.custom_attributes;
-        const attributeValues = Object.values(parsed).filter(v => v).join(' ').toLowerCase();
-        if (attributeValues.includes(searchTerm)) return true;
-      } catch (e) {}
-    }
-
-    return false;
-  });
-  
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
-    return;
-  }
-  
-  // Separate favorites and non-favorites
-  const favorites = filtered.filter(ing => ing.is_favorite);
-  const nonFavorites = filtered.filter(ing => !ing.is_favorite);
-  
-  // Build ingredient card
-  const buildIngCard = (ing) => {
-    let attributes = '';
+  const rowHtml = (ing) => {
+    const isCurrentSwap = swapIngId && ing.id === swapIngId;
+    const inRecipeComp = components.find(c => (c.ingredient_id || c.id) === ing.id);
+    const idx = inRecipeComp ? components.indexOf(inRecipeComp) : null;
+    const onclick = isCurrentSwap ? '' :
+      _aiSwapMode ? `aiPickReplacement('${ing.id}')` :
+      idx !== null ? `aiOpenLine(null, ${idx})` : `aiOpenLine('${ing.id}', null)`;
+    const stockQty = ingredientStockMap[ing.id]?.quantity;
+    const short = stockQty === 0;
+    let attrs = '';
     if (ing.custom_attributes) {
       try {
         const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-        attributes = Object.values(parsed).filter(v => v).join(' · ');
+        attrs = Object.values(parsed).filter(Boolean).join(' · ');
       } catch (e) {}
     }
-    
-    const swapPill = ing.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '<span class="stock-pill low">Low</span>' : '';
-    const isCurrentSwap = swapIngredientId && ing.id === swapIngredientId;
+    const meta = inRecipeComp
+      ? `${inRecipeComp.quantity} ${_escHtml(inRecipeComp.unit || '')} per unit · $${(parseFloat(inRecipeComp.cost) || 0).toFixed(2)} of cost`
+      : `$${(parseFloat(ing.cost_per_unit) || 0).toFixed(2)}/${_escHtml(ing.unit || 'unit')}${attrs ? ' · ' + _escHtml(attrs) : ''}`;
     const starIcon = ing.is_favorite ? '★' : '☆';
-    const starClass = ing.is_favorite ? 'favorited' : '';
-
-    return `
-      <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: ${isCurrentSwap ? 'default' : 'pointer'}; transition: all 0.2s; background: var(--bg-panel); ${isCurrentSwap ? 'opacity:0.35; pointer-events:none;' : ''}"
-        onclick="${isCurrentSwap ? '' : `addIngredientToRecipe('${ing.id}')`}"
-        onmouseover="${isCurrentSwap ? '' : "this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'"}"
-        onmouseout="${isCurrentSwap ? '' : "this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'"}">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-              <span style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${ing.name}</span>
-              <span class="star-icon ${starClass}" onclick="event.stopPropagation(); toggleRecipeIngredientFavorite('${ing.id}')" title="${ing.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">${starIcon}</span>
-            </div>
-            ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
-          </div>
-          ${swapPill}
-        </div>
-      </div>
-    `;
+    return `<button type="button" class="ai-row" data-on="${inRecipeComp ? 1 : 0}"${isCurrentSwap ? ' style="opacity:.35;pointer-events:none"' : ''} onclick="${onclick}">
+        <span class="ai-main">
+          <span class="ai-name">${_escHtml(ing.name)}</span>
+          <span class="ai-meta"${short && !inRecipeComp ? ' data-state="short"' : ''}>${short && !inRecipeComp ? 'Out of stock · ' : ''}${meta}</span>
+        </span>
+        ${inRecipeComp ? `<span class="ai-onqty">${inRecipeComp.quantity} ${_escHtml(inRecipeComp.unit || '')}</span>` : ''}
+        <span class="ai-star${ing.is_favorite ? ' favorited' : ''}" onclick="event.stopPropagation(); toggleRecipeIngredientFavorite('${ing.id}')">${starIcon}</span>
+        <svg class="ai-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>`;
   };
-  
-  // Section label helper
-  const sectionLabel = (label, count) => `<div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 20px 0 10px 0;">${label} <span style="font-weight: 500; letter-spacing: 0;">(${count})</span></div>`;
-  
-  container.innerHTML = '';
-  
-  // Render favorites section
-  if (favorites.length > 0) {
-    container.innerHTML += sectionLabel('Favorites', favorites.length);
-    container.innerHTML += favorites.map(buildIngCard).join('');
+
+  const newRow = () => `<button type="button" class="ai-row" onclick="createNewIngredient()">
+      <span class="ai-main">
+        <span class="ai-new">${q ? `Create "${_escHtml(document.getElementById('aiQ').value.trim())}"` : 'Create a new item'}</span>
+        <span class="ai-meta">Comes back here, added to this product</span>
+      </span>
+    </button>`;
+
+  let html = '';
+  if (q) {
+    const hits = availableIngredients.filter(i => i.name.toLowerCase().includes(q) || _aiAttrMatch(i, q));
+    if (hits.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Matches</span><span class="ai-sec-note">${hits.length}</span></div><div class="ai-list">${hits.map(rowHtml).join('')}</div>`;
+    if (!_aiSwapMode) html += `<div class="ai-list" style="margin-top:${hits.length ? '10px' : '18px'}">${newRow()}</div>`;
+  } else if (_aiSwapMode) {
+    const common = availableIngredients.filter(i => i.id !== swapIngId && !inRecipeIds.has(i.id) && (usage.get(i.id) || 0) >= 2);
+    const rest = availableIngredients.filter(i => !common.includes(i));
+    if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
+    html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}</div>`;
+  } else {
+    const inRecipe = components.map(c => availableIngredients.find(i => i.id === (c.ingredient_id || c.id))).filter(Boolean);
+    const notInRecipe = availableIngredients.filter(i => !inRecipeIds.has(i.id));
+    const common = notInRecipe.filter(i => (usage.get(i.id) || 0) >= 2);
+    const rest = notInRecipe.filter(i => (usage.get(i.id) || 0) < 2);
+    if (inRecipe.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">In this product</span><span class="ai-sec-note">$${(parseFloat(recipe.cost) || 0).toFixed(2)} per unit</span></div><div class="ai-list">${inRecipe.map(rowHtml).join('')}</div>`;
+    if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
+    html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}${newRow()}</div>`;
+    html += `<div class="ai-note">Quantities are per unit made. Stock only moves when you log production.</div>`;
   }
-  
-  // Render other ingredients
-  if (nonFavorites.length > 0) {
-    if (favorites.length > 0) {
-      container.innerHTML += sectionLabel('All Items', nonFavorites.length);
-    }
-    container.innerHTML += nonFavorites.map(buildIngCard).join('');
-  }
+  if (!html) html = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px;">No items found</div>';
+  document.getElementById('aiScroll').innerHTML = html;
+  aiRenderListFoot();
+}
+
+function aiRenderListFoot() {
+  const n = (recipe.components || []).length;
+  const cost = parseFloat(recipe.cost) || 0;
+  const price = parseFloat(recipe.retail_price) || 0;
+  const pct = price ? Math.round(((price - cost) / price) * 100) : null;
+  document.getElementById('aiListCount').textContent = n ? `${n} item${n > 1 ? 's' : ''} · costs to make` : 'No items yet';
+  document.getElementById('aiListTotal').textContent = `$${cost.toFixed(2)}`;
+  document.getElementById('aiListWarn').innerHTML = !n ? ''
+    : pct === null ? '<div class="ai-tally-l">No sell price set for this product yet</div>'
+    : pct < 20 ? `<div class="ai-warn">${pct}% margin at $${price.toFixed(2)}</div>`
+    : `<div class="ai-tally-l">${pct}% margin at $${price.toFixed(2)}</div>`;
+  document.getElementById('aiListDone').textContent = n ? `Done · ${n} item${n > 1 ? 's' : ''}` : 'Done';
 }
 
 async function toggleRecipeIngredientFavorite(ingredientId) {
   const ingredient = availableIngredients.find(i => i.id === ingredientId);
   if (!ingredient) return;
-  
   const newState = !ingredient.is_favorite;
-  
-  // Optimistically update UI
   ingredient.is_favorite = newState;
-  renderAvailableIngredients();
-  
-  // Update database in background
+  aiRenderList();
   try {
-    const { error } = await window.supabaseClient
-      .from('ingredients')
-      .update({ is_favorite: newState })
-      .eq('id', ingredientId);
-
+    const { error } = await window.supabaseClient.from('ingredients').update({ is_favorite: newState }).eq('id', ingredientId);
     if (error) throw error;
   } catch (error) {
     console.error('Error toggling favorite:', error);
-    // Revert on error
     ingredient.is_favorite = !newState;
-    renderAvailableIngredients();
+    aiRenderList();
     showAlert('Failed to update favorite status');
   }
 }
 
-async function addIngredientToRecipe(ingredientId) {
-  const ingredient = availableIngredients.find(i => i.id === ingredientId);
-  if (!ingredient) return;
+// Detail pages hand item creation off to /ingredients (same one-way pattern
+// as createNewProduct() above and ingredient-detail.html's own create
+// button) — it picks the seed up via sessionStorage on load.
+function createNewIngredient() {
+  const q = (document.getElementById('aiQ')?.value || '').trim();
+  sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({
+    name: q,
+    text: `Adding to "${recipe?.name || 'this product'}" — check the details before saving.`
+  }));
+  window.location.href = '/ingredients';
+}
 
-  recipe.components = recipe.components || [];
-
-  // Lock in today's category (explicit, or inferred from the CURRENT
-  // components) before this edit changes them — see _effectiveCategoryFor.
-  if (!recipe.category) {
-    recipe.category = _effectiveCategoryFor(recipe.components);
-  }
-
-  if (swapTargetIndex !== null) {
-    // Swap mode: replace the ingredient at swapTargetIndex, preserve quantity
-    const existing = recipe.components[swapTargetIndex] || {};
-    recipe.components[swapTargetIndex] = {
-      ingredient_id: ingredientId,
-      ingredient_name: ingredient.name,
-      quantity: existing.quantity || 1,
-      unit: ingredient.unit || '',
-      cost: (parseFloat(ingredient.cost_per_unit) || 0) * (existing.quantity || 1),
-      attributes: ingredient.custom_attributes || ''
-    };
-    closeSwapModal();
+// ingredientId is set when adding a brand-new item OR completing a swap;
+// existingIndex is set when editing (or replacing) a component already in
+// recipe.components. Both set at once = swap: keep the index, swap the item.
+function aiOpenLine(ingredientId, existingIndex) {
+  _aiEditIndex = existingIndex != null ? existingIndex : null;
+  let ing, qty, unit;
+  if (existingIndex != null && !ingredientId) {
+    const comp = recipe.components[existingIndex];
+    ing = availableIngredients.find(i => i.id === (comp.ingredient_id || comp.id));
+    qty = parseFloat(comp.quantity) || 1;
+    unit = comp.unit || ing?.unit || '';
   } else {
-    recipe.components.unshift({
-      ingredient_id: ingredientId,
-      ingredient_name: ingredient.name,
-      quantity: 1,
-      unit: ingredient.unit || '',
-      cost: parseFloat(ingredient.cost_per_unit) || 0,
-      attributes: ingredient.custom_attributes || ''
-    });
-    closeAddIngredientModal();
+    ing = availableIngredients.find(i => i.id === ingredientId);
+    qty = _aiSwapQty || 1;
+    unit = ing?.unit || '';
   }
+  if (!ing) return;
+  _aiIngredient = ing;
+  _aiDraft = { qty, unit };
+  _aiSwapMode = false; _aiSwapQty = null;
+
+  const isExisting = existingIndex != null;
+  const stockQty = ingredientStockMap[ing.id]?.quantity;
+  document.getElementById('aiLineName').textContent = ing.name;
+  document.getElementById('aiLineSub').textContent =
+    `$${(parseFloat(ing.cost_per_unit) || 0).toFixed(2)} per ${ing.unit || 'unit'}${stockQty != null ? ` · ${stockQty} ${ing.unit || ''} in stock` : ''}`;
+  document.getElementById('aiQty').value = qty;
+  document.getElementById('aiRemoveBtn').hidden = !isExisting;
+  document.getElementById('aiSwapBtn').hidden = !isExisting;
+  document.getElementById('aiRestockBtn').hidden = !isExisting;
+  document.getElementById('aiLineSave').textContent = isExisting ? 'Save changes' : 'Add to product';
+  document.getElementById('aiLineSaveNext').hidden = isExisting;
+  document.getElementById('aiNote').textContent = isExisting
+    ? 'Changing this quantity changes what every future build of this product consumes. Past builds are untouched.'
+    : 'How much of this one unit needs. Stock is deducted when you log production, not now.';
+
+  aiRenderLine();
+  aiShowPane('line');
+}
+
+function aiRenderLine() {
+  const ing = _aiIngredient;
+  _aiDraft.qty = Math.max(0, parseFloat(document.getElementById('aiQty').value) || 0);
+  const unitCost = parseFloat(ing.cost_per_unit) || 0;
+  const add = Math.round(unitCost * _aiDraft.qty * 100) / 100;
+
+  const otherCost = (recipe.components || []).reduce((s, c, i) => s + (i === _aiEditIndex ? 0 : (parseFloat(c.cost) || 0)), 0);
+  const editedOldCost = _aiEditIndex != null ? (parseFloat(recipe.components[_aiEditIndex].cost) || 0) : 0;
+  const was = otherCost + editedOldCost;
+  const now = otherCost + add;
+
+  const price = parseFloat(recipe.retail_price) || 0;
+  const pctWas = price ? Math.round(((price - was) / price) * 100) : null;
+  const pctNow = price ? Math.round(((price - now) / price) * 100) : null;
+  const marginState = p => p === null ? '' : p < 0 ? 'out' : p < 20 ? 'low' : 'ok';
+
+  document.getElementById('aiUnit').textContent = _aiDraft.unit || ing.unit || '';
+  document.getElementById('aiStatus').textContent = _aiDraft.qty ? 'per unit made' : 'set a quantity';
+
+  const isWhole = _aiDraft.unit === 'pcs' || _aiDraft.unit === 'ea';
+  const hintOpts = isWhole ? [1, 2, 4] : [0.25, 0.5, 1];
+  document.getElementById('aiHints').innerHTML = hintOpts.map(n =>
+    `<button type="button" class="ai-qty-hint" aria-pressed="${n === _aiDraft.qty}" onclick="aiSetQty(${n})">${n} ${_escHtml(_aiDraft.unit || '')}</button>`
+  ).join('');
+
+  document.getElementById('aiAddVal').textContent = `$${add.toFixed(2)}`;
+  document.getElementById('aiAddDelta').textContent = `$${unitCost.toFixed(2)} × ${_aiDraft.qty || 0}`;
+  document.getElementById('aiCostVal').textContent = `$${now.toFixed(2)}`;
+  const cd = document.getElementById('aiCostDelta');
+  cd.textContent = now === was ? 'unchanged' : `${now > was ? '+' : ''}$${(now - was).toFixed(2)}`;
+  now > was ? cd.setAttribute('data-state', 'up') : cd.removeAttribute('data-state');
+
+  const mv = document.getElementById('aiMargVal');
+  mv.textContent = pctNow === null ? '—' : pctNow + '%';
+  pctNow === null ? mv.removeAttribute('data-state') : mv.setAttribute('data-state', marginState(pctNow));
+  document.getElementById('aiMargDelta').textContent = (pctNow === null || pctNow === pctWas) ? '' : `was ${pctWas}%`;
+
+  document.getElementById('aiUnitName').textContent = 'Measured in ' + (AI_UNITS.find(u => u.u === _aiDraft.unit)?.label || _aiDraft.unit || 'unit');
+  document.getElementById('aiUnitMeta').textContent = _aiDraft.unit === (ing.unit || '')
+    ? `Same as how you buy it ($${unitCost.toFixed(2)} per ${ing.unit || 'unit'})`
+    : `You buy it per ${ing.unit || 'unit'} — cost is converted`;
+
+  const stock = ingredientStockMap[ing.id]?.quantity;
+  const buildable = (_aiDraft.qty > 0 && stock != null) ? Math.floor(stock / _aiDraft.qty) : null;
+  const cov = document.getElementById('aiCover'), covM = document.getElementById('aiCoverMeta');
+  cov.textContent = buildable === null ? 'Enough for —'
+    : buildable === 0 ? 'Not enough in stock'
+    : `Enough for ${buildable} unit${buildable > 1 ? 's' : ''}`;
+  covM.textContent = stock != null ? `${stock} ${ing.unit || ''} in stock${ing.min_stock ? ` · min ${ing.min_stock}` : ''}` : 'Stock unknown';
+  buildable === 0 ? covM.setAttribute('data-state', 'short') : covM.removeAttribute('data-state');
+
+  document.getElementById('aiLineTallyL').textContent = _aiDraft.qty ? `${_aiDraft.qty} ${_aiDraft.unit || ''} × $${unitCost.toFixed(2)}` : 'Set a quantity';
+  document.getElementById('aiLineTallyR').textContent = `$${add.toFixed(2)}`;
+  document.getElementById('aiLineSave').disabled = !(_aiDraft.qty > 0);
+  document.getElementById('aiLineSaveNext').disabled = !(_aiDraft.qty > 0);
+}
+
+function aiSetQty(n) {
+  document.getElementById('aiQty').value = n;
+  aiRenderLine();
+}
+function aiStepQty(d) {
+  const step = (_aiDraft.unit === 'pcs' || _aiDraft.unit === 'ea') ? 1 : 0.25;
+  aiSetQty(Math.max(0, Math.round((_aiDraft.qty + d * step) * 100) / 100));
+}
+
+function aiOpenUnitSheet() {
+  const ing = _aiIngredient;
+  document.getElementById('aiUnitSheetSub').textContent = `You buy ${ing.name} per ${ing.unit || 'unit'}. Products can use a smaller measure.`;
+  const ownUnit = ing.unit && !AI_UNITS.some(u => u.u === ing.unit) ? [{ u: ing.unit, label: ing.unit }] : [];
+  document.getElementById('aiUnitList').innerHTML = [...ownUnit, ...AI_UNITS].map(u => `
+    <div class="cat-row${u.u === _aiDraft.unit ? ' active' : ''}" onclick="aiPickUnit('${u.u.replace(/'/g, "\\'")}')">
+      <span class="cat-row-label">${_escHtml(u.label)}${u.u === (ing.unit || '') ? ' <span style="font-weight:400;color:var(--text-muted)">· how you buy it</span>' : ''}</span>
+    </div>`).join('');
+  document.getElementById('aiUnitSheet').classList.add('active');
+}
+function aiCloseUnitSheet() {
+  document.getElementById('aiUnitSheet').classList.remove('active');
+}
+function aiPickUnit(u) {
+  _aiDraft.unit = u;
+  aiCloseUnitSheet();
+  aiRenderLine();
+}
+
+function aiRestock() {
+  const ing = _aiIngredient;
+  closeAddIngredientModal();
+  reorderIngredient(ing.id);
+}
+
+// Swap keeps the current draft's quantity and goes back to pane 1 to pick a
+// replacement for the same recipe.components slot (_aiEditIndex stays set).
+function aiSwap() {
+  _aiSwapMode = true;
+  _aiSwapQty = _aiDraft.qty;
+  aiShowPane('list');
+  aiRenderList();
+}
+function aiPickReplacement(ingredientId) {
+  const qty = _aiSwapQty;
+  _aiSwapMode = false;
+  _aiSwapQty = qty; // aiOpenLine's else-branch reads this for the new draft's starting quantity
+  aiOpenLine(ingredientId, _aiEditIndex);
+}
+
+async function aiSaveLine(next) {
+  if (!(_aiDraft.qty > 0)) return;
+  const ing = _aiIngredient;
+  recipe.components = recipe.components || [];
+  if (!recipe.category) recipe.category = _effectiveCategoryFor(recipe.components);
+
+  const newComp = {
+    ingredient_id: ing.id,
+    ingredient_name: ing.name,
+    quantity: _aiDraft.qty,
+    unit: _aiDraft.unit || ing.unit || '',
+    cost: Math.round((parseFloat(ing.cost_per_unit) || 0) * _aiDraft.qty * 100) / 100,
+    attributes: ing.custom_attributes || ''
+  };
+  if (_aiEditIndex != null) recipe.components[_aiEditIndex] = newComp;
+  else recipe.components.unshift(newComp);
 
   await updateRecipeInDatabase();
   renderRecipe();
-  renderAvailableIngredients();
+
+  if (next) {
+    _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
+    document.getElementById('aiQ').value = '';
+    aiShowPane('list');
+    aiRenderList();
+  } else {
+    closeAddIngredientModal();
+  }
+}
+
+async function aiRemoveLine() {
+  const i = _aiEditIndex;
+  if (i == null) return;
+  _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
+  await removeIngredientFromRecipe(i);
+  aiShowPane('list');
+  aiRenderList();
 }
 
 // Wait for auth to be ready, then load recipe
@@ -3644,22 +3685,6 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-<!-- Item editor sheet (mobile) — stepper, swap, restock, remove for one item -->
-<div class="modal-overlay modal-sheet" id="itemSheet" onclick="if(event.target===this)closeItemSheet()">
-  <div class="modal-content">
-    <div class="rdm-sheet-name" id="itemSheetName"></div>
-    <div class="rdm-sheet-stock" id="itemSheetStock"></div>
-    <div class="rdm-sheet-qty">
-      <button type="button" onclick="sheetQty(-1)">−</button>
-      <input type="number" id="itemSheetQty" min="0.01" step="0.01" inputmode="decimal">
-      <button type="button" onclick="sheetQty(1)">+</button>
-    </div>
-    <div class="rdm-sheet-label">Quantity used per product</div>
-    <button type="button" class="rdm-sheet-act" onclick="sheetRestock()">Restock this item</button>
-    <button type="button" class="rdm-sheet-act" onclick="sheetSwap()">Swap for another item</button>
-    <button type="button" class="rdm-sheet-act danger" onclick="sheetRemove()">Remove from product</button>
-  </div>
-</div>
 
 <!-- Rename sheet (mobile) — writes through the hidden #rdmTitle input -->
 <div class="modal-overlay modal-sheet" id="rdmRenameSheet" onclick="if(event.target===this)closeRdmRenameSheet()">
@@ -3716,30 +3741,130 @@ document.addEventListener('keydown', (e) => {
 </div>
 
 <!-- Add Ingredient Modal -->
-<div class="recipe-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()" style="align-items: flex-start; padding: 5vh 0; overflow-y: auto;">
-  <div class="recipe-builder" style="display: flex; flex-direction: column; max-width: 900px; width: 90%; margin: auto; padding: 32px; height: auto; max-height: 80vh; overflow: hidden;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
-      <h3 style="margin: 0; font-size: 22px; font-weight: 800;">Add Item to Recipe</h3>
-      <span onclick="closeAddIngredientModal()" style="cursor: pointer; color: var(--text-muted); font-size: 32px; line-height: 1; font-weight: 300; transition: color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
+<!-- Add/edit item screen — replaces the old add-ingredient modal + item-editor
+     sheet with one two-pane flow (pick an item, then say how much one unit
+     needs). See openAddIngredientModal()/aiOpenLine() below. -->
+<div class="modal-overlay ai-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()">
+  <div class="modal-content">
+
+    <div class="ai-pane" id="aiPaneList" data-on="1">
+      <div class="ai-head">
+        <div class="ai-bar">
+          <button type="button" class="ai-back" onclick="closeAddIngredientModal()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <span class="ai-titles">
+            <span class="ai-title">Add items</span>
+            <span class="ai-sub" id="aiListSub"></span>
+          </span>
+          <button type="button" class="ai-act" onclick="createNewIngredient()">New</button>
+        </div>
+        <div class="ai-find">
+          <label class="ai-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="17" height="17"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+            <input id="aiQ" type="search" placeholder="Search your items" oninput="aiRenderList()" autocomplete="off">
+          </label>
+        </div>
+      </div>
+      <div class="ai-scroll" id="aiScroll"></div>
+      <div class="ai-foot">
+        <div class="ai-tally">
+          <span class="ai-tally-l" id="aiListCount"></span>
+          <span class="ai-tally-r" id="aiListTotal">$0.00</span>
+        </div>
+        <div id="aiListWarn"></div>
+        <button type="button" class="ai-cta" onclick="closeAddIngredientModal()" id="aiListDone">Done</button>
+      </div>
     </div>
 
-    <div id="detailCatChips" class="detail-cat-chips" style="flex-shrink: 0;"></div>
-    <div id="detailAttrSubfilter" class="recipe-attr-subfilter" style="flex-shrink: 0;"></div>
+    <div class="ai-pane" id="aiPaneLine" data-on="0">
+      <div class="ai-head">
+        <div class="ai-bar">
+          <button type="button" class="ai-back" onclick="aiBackToList()" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="ai-titles">
+            <span class="ai-title" id="aiLineName">—</span>
+            <span class="ai-sub" id="aiLineSub"></span>
+          </span>
+        </div>
+      </div>
 
-    <input
-      type="text"
-      id="ingredientSearchInput"
-      placeholder="Search by name..."
-      oninput="filterAvailableIngredients()"
-      style="width: 100%; padding: 14px 18px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-inner); color: var(--text-main); font-size: 14px; margin-bottom: 16px; box-sizing: border-box; transition: all 0.2s; flex-shrink: 0;"
-      onfocus="this.style.borderColor='var(--accent)'"
-      onblur="this.style.borderColor='var(--border)'"
-      autocomplete="off"
-    />
+      <div class="ai-scroll">
+        <div class="ai-qty-panel">
+          <div class="ai-qty-row">
+            <button type="button" class="ai-qty-btn" aria-label="Less" onclick="aiStepQty(-1)">−</button>
+            <span class="ai-qty-center">
+              <span class="ai-qty-line">
+                <input class="ai-qty-value" id="aiQty" type="number" inputmode="decimal" step="any" value="1" oninput="aiRenderLine()">
+                <span class="ai-qty-unit" id="aiUnit">ea</span>
+              </span>
+              <span class="ai-qty-status" id="aiStatus"></span>
+            </span>
+            <button type="button" class="ai-qty-btn plus" aria-label="More" onclick="aiStepQty(1)">+</button>
+          </div>
+          <div class="ai-qty-hints" id="aiHints"></div>
+        </div>
 
-    <div id="availableIngredientsList" style="overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; flex: 1; min-height: 0;">
-      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
+        <div class="ai-cost-strip">
+          <div>
+            <label>Adds to cost</label>
+            <span class="val" id="aiAddVal">$0.00</span>
+            <span class="delta" id="aiAddDelta"></span>
+          </div>
+          <div>
+            <label>Costs to make</label>
+            <span class="val" id="aiCostVal">$0.00</span>
+            <span class="delta" id="aiCostDelta"></span>
+          </div>
+          <div>
+            <label>Margin</label>
+            <span class="val" id="aiMargVal">—</span>
+            <span class="delta" id="aiMargDelta"></span>
+          </div>
+        </div>
+
+        <div class="ai-sec-head"><span class="ai-sec-title">Details</span></div>
+        <div class="ai-group">
+          <button type="button" class="ai-drow" onclick="aiOpenUnitSheet()">
+            <span class="ai-drow-label">
+              <span class="ai-drow-name" id="aiUnitName">Measured in each</span>
+              <span class="ai-drow-meta" id="aiUnitMeta"></span>
+            </span>
+            <svg class="ai-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+          <div class="ai-drow">
+            <span class="ai-drow-label">
+              <span class="ai-drow-name" id="aiCover">—</span>
+              <span class="ai-drow-meta" id="aiCoverMeta"></span>
+            </span>
+          </div>
+        </div>
+
+        <button type="button" class="ai-swap" id="aiRestockBtn" onclick="aiRestock()" hidden>Restock this item</button>
+        <button type="button" class="ai-swap" id="aiSwapBtn" onclick="aiSwap()" hidden>Swap for another item</button>
+        <button type="button" class="ai-remove" id="aiRemoveBtn" onclick="aiRemoveLine()" hidden>Remove from product</button>
+        <div class="ai-note" id="aiNote"></div>
+      </div>
+
+      <div class="ai-foot">
+        <div class="ai-tally">
+          <span class="ai-tally-l" id="aiLineTallyL"></span>
+          <span class="ai-tally-r" id="aiLineTallyR">$0.00</span>
+        </div>
+        <button type="button" class="ai-cta" id="aiLineSave" onclick="aiSaveLine()">Add to product</button>
+        <button type="button" class="ai-ghost" id="aiLineSaveNext" onclick="aiSaveLine(true)">Save and add another</button>
+      </div>
     </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay modal-sheet" id="aiUnitSheet" onclick="if(event.target===this)aiCloseUnitSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label">How this is measured</label>
+    <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 12px;" id="aiUnitSheetSub"></p>
+    <div id="aiUnitList"></div>
   </div>
 </div>
 
