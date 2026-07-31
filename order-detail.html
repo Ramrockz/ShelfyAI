@@ -2887,6 +2887,12 @@ function ecOpenLine(recipeId, existingIndex) {
   document.getElementById('ecLineSaveBtn').textContent = item ? 'Save changes' : 'Add to order';
 
   ecSyncTotal();
+  // Tapping an existing mobile row calls this directly, without going
+  // through openOrderItemPicker() first -- that's the only other place
+  // that opens the sheet, so without this the pane switch below happened
+  // on a sheet that was still display:none, making the tap look like it
+  // did nothing.
+  document.getElementById('ecItemSheet').dataset.open = '1';
   ecShowPane('line');
 }
 

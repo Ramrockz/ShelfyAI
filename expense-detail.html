@@ -2166,6 +2166,12 @@ function ecOpenLine(ingredientId, existingIndex) {
   document.getElementById('ecLineSaveBtn').textContent = line ? 'Save changes' : 'Add to expense';
 
   ecSyncTotal();
+  // Tapping an existing mobile row calls this directly, without going
+  // through openExpenseItemPicker() first -- that's the only other place
+  // that opens the sheet, so without this the pane switch below happened
+  // on a sheet that was still display:none, making the tap look like it
+  // did nothing.
+  document.getElementById('ecItemSheet').dataset.open = '1';
   ecShowPane('line');
 }
 
@@ -2253,12 +2259,15 @@ async function ecSaveLine() {
     };
     if (isNewLine) expenseIngredients.push(lineData);
     else expenseIngredients[_ecEditingIndex] = lineData;
+    const newAmount = _ecCalcTotal(expenseIngredients);
 
-    let query = window.supabaseClient.from('expenses').update({ ingredients: expenseIngredients }).eq('id', expenseId).eq('profile_id', user.id);
+    let query = window.supabaseClient.from('expenses').update({ ingredients: expenseIngredients, amount: newAmount }).eq('id', expenseId).eq('profile_id', user.id);
     if (storeId) query = query.eq('store_id', storeId);
     const { error } = await query;
     if (error) throw error;
     expenseData.ingredients = expenseIngredients;
+    expenseData.amount = newAmount;
+    _ecSyncTotalCostDisplay();
 
     // Stock moves by however much MORE (or less) was just bought than before —
     // a purchase adds stock, editing a line only adjusts the difference.
@@ -2390,6 +2399,18 @@ async function saveQuickIngredient(e) {
   }
 }
 
+// Total Cost (expenseData.amount) was never recomputed from the line items
+// on any of the paths that change quantity/remove a line -- it only ever
+// changed via the manual "editField('amount', ...)" sheet, so the hero
+// number silently drifted from what the itemized lines actually add up to.
+function _ecCalcTotal(lines) {
+  return lines.reduce((sum, i) => sum + (parseFloat(i.quantity_added || i.quantity || 0) * parseFloat(i.cost_per_unit ?? i.price ?? 0)), 0);
+}
+function _ecSyncTotalCostDisplay() {
+  const costEl = document.getElementById('expenseCost');
+  if (costEl) costEl.textContent = `$${(parseFloat(expenseData.amount) || 0).toFixed(2)}`;
+}
+
 async function changeQuantity(index, delta) {
   try {
     const expenseIngredients = Array.isArray(expenseData.ingredients) ? [...expenseData.ingredients] : [];
@@ -2400,6 +2421,7 @@ async function changeQuantity(index, delta) {
 
     expenseIngredients[index].quantity_added = newQuantity;
     expenseIngredients[index].quantity = newQuantity;
+    const newAmount = _ecCalcTotal(expenseIngredients);
 
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) {
@@ -2411,7 +2433,7 @@ async function changeQuantity(index, delta) {
 
     let query = window.supabaseClient
       .from('expenses')
-      .update({ ingredients: expenseIngredients })
+      .update({ ingredients: expenseIngredients, amount: newAmount })
       .eq('id', expenseId)
       .eq('profile_id', user.id);
 
@@ -2421,7 +2443,9 @@ async function changeQuantity(index, delta) {
     if (error) throw error;
 
     expenseData.ingredients = expenseIngredients;
+    expenseData.amount = newAmount;
     displayIngredients();
+    _ecSyncTotalCostDisplay();
   } catch (error) {
     console.error('Error updating quantity:', error);
     showNotification('Failed to update quantity: ' + error.message, 'error');
@@ -2459,6 +2483,7 @@ async function makeQuantityEditable(index, currentQuantity) {
       
       expenseIngredients[index].quantity_added = newQuantity;
       expenseIngredients[index].quantity = newQuantity;
+      const newAmount = _ecCalcTotal(expenseIngredients);
 
       const { data: { user } } = await window.supabaseClient.auth.getUser();
       if (!user) {
@@ -2470,7 +2495,7 @@ async function makeQuantityEditable(index, currentQuantity) {
 
       let query = window.supabaseClient
         .from('expenses')
-        .update({ ingredients: expenseIngredients })
+        .update({ ingredients: expenseIngredients, amount: newAmount })
         .eq('id', expenseId)
         .eq('profile_id', user.id);
 
@@ -2480,7 +2505,9 @@ async function makeQuantityEditable(index, currentQuantity) {
       if (error) throw error;
 
       expenseData.ingredients = expenseIngredients;
+      expenseData.amount = newAmount;
       displayIngredients();
+      _ecSyncTotalCostDisplay();
     } catch (error) {
       console.error('Error updating quantity:', error);
       showNotification('Failed to update quantity: ' + error.message, 'error');
@@ -2521,34 +2548,37 @@ async function confirmRemoveIngredient() {
     
     expenseIngredients.splice(pendingIngredientRemoveIndex, 1);
     console.log('Updated ingredients:', expenseIngredients);
-    
+    const newAmount = _ecCalcTotal(expenseIngredients);
+
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) {
       showNotification('You must be logged in', 'error');
       return;
     }
-    
+
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    
+
     let query = window.supabaseClient
       .from('expenses')
-      .update({ ingredients: expenseIngredients })
+      .update({ ingredients: expenseIngredients, amount: newAmount })
       .eq('id', expenseId)
       .eq('profile_id', user.id);
-    
+
     if (storeId) {
       query = query.eq('store_id', storeId);
     }
-    
+
     const { error } = await query;
-    
+
     if (error) {
       console.error('Supabase update error:', error);
       throw error;
     }
-    
+
     expenseData.ingredients = expenseIngredients;
+    expenseData.amount = newAmount;
     displayIngredients();
+    _ecSyncTotalCostDisplay();
     closeRemoveIngredientModal();
   } catch (error) {
     console.error('Error removing ingredient:', error);
