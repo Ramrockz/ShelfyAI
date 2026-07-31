@@ -1775,18 +1775,21 @@ function displayOrder() {
     }).join('') + addRowHtml;
 
     // Mobile: item list row, opens an item sheet for the stepper/remove actions.
+    // Same left/right split as expense's item rows: name + "qty × unit price"
+    // on the left, the line total on the right.
     cardsContainer.innerHTML = items.map((item, index) => {
       const itemName = item.name || 'Custom item';
       const quantity = item.quantity || 0;
       const price = parseFloat(item.price || 0);
-      const sub = price ? `$${price.toFixed(2)} each` : 'free gift';
+      const sub = price ? `${quantity} × $${price.toFixed(2)}` : `${quantity} × free`;
+      const lineTotal = (price * quantity).toFixed(2);
       return `
         <div class="pack-row">
           <button class="pack-main" onclick="ecOpenLine(null, ${index})">
             <span class="pack-name">${_escHtml(itemName)}</span>
             <span class="pack-sub">${sub}</span>
           </button>
-          <span class="pack-qty">&times;${quantity}</span>
+          <span class="pack-qty">$${lineTotal}</span>
           <svg class="pack-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
         </div>`;
     }).join('') + addCardHtml;
