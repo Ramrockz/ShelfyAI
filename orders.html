@@ -2546,7 +2546,7 @@ let orderRecipeCache = null;
 let orderFavoriteIds = new Set(); // populated from DB on load
 let orderStockMap = {};
 let orderMinMap = {};
-let orderPickerFilters = { inStock: false, cats: new Set() };
+let orderPickerFilters = { cats: new Set() };
 
 async function loadOrderRecipeData() {
   const { data: { user } } = await supabaseClient.auth.getUser();
@@ -2678,7 +2678,6 @@ function _orderRowHtml(recipe, virtualMap) {
 }
 
 function _orderPickerPasses(recipe) {
-  if (orderPickerFilters.inStock && _recipeStockStatus(recipe) === 'out') return false;
   if (orderPickerFilters.cats.size && !orderPickerFilters.cats.has(recipe.category)) return false;
   return true;
 }
@@ -2687,13 +2686,12 @@ function renderOrderPickerChips() {
   const counts = c => (orderRecipeCache || []).filter(r => r.category === c).length;
   const cats = [...new Set((orderRecipeCache || []).map(r => r.category).filter(Boolean))]
     .sort((a, b) => counts(b) - counts(a));
-  const n = (orderPickerFilters.inStock ? 1 : 0) + orderPickerFilters.cats.size;
+  const n = orderPickerFilters.cats.size;
   const nEl = document.getElementById('opFilterN');
   if (nEl) { nEl.dataset.on = n ? '1' : '0'; nEl.textContent = n; }
   const chipsEl = document.getElementById('opChips');
   if (!chipsEl) return;
   chipsEl.innerHTML = `
-    <button type="button" class="op-chip" aria-pressed="${orderPickerFilters.inStock}" onclick="toggleOrderInStockFilter()">In stock</button>
     ${cats.map(c => `<button type="button" class="op-chip" aria-pressed="${orderPickerFilters.cats.has(c)}" onclick="toggleOrderCatFilter('${_escapeHtml(c)}')">${_escapeHtml(c)}<span class="op-chip-count">${counts(c)}</span></button>`).join('')}
     ${n ? `<button type="button" class="op-chip-clear" onclick="clearOrderPickerFilters()">Clear</button>` : ''}`;
 }
@@ -2722,7 +2720,7 @@ async function renderOrderRecipeSections() {
       html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
         <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
     } else {
-      const activeFilters = orderPickerFilters.inStock || orderPickerFilters.cats.size;
+      const activeFilters = orderPickerFilters.cats.size;
       html = `<div class="op-empty">
         <div class="op-empty-t">No product matches "${_escapeHtml(q)}"</div>
         <div class="op-empty-s">Create it now and it stays in the order.</div>
@@ -2767,12 +2765,11 @@ function toggleOrderPickerFilters() {
   btn.setAttribute('aria-expanded', String(open));
   chips.dataset.open = open ? '1' : '0';
 }
-function toggleOrderInStockFilter() { orderPickerFilters.inStock = !orderPickerFilters.inStock; renderOrderRecipeSections(); }
 function toggleOrderCatFilter(c) {
   if (orderPickerFilters.cats.has(c)) orderPickerFilters.cats.delete(c); else orderPickerFilters.cats.add(c);
   renderOrderRecipeSections();
 }
-function clearOrderPickerFilters() { orderPickerFilters.inStock = false; orderPickerFilters.cats.clear(); renderOrderRecipeSections(); }
+function clearOrderPickerFilters() { orderPickerFilters.cats.clear(); renderOrderRecipeSections(); }
 
 // Oversell is allowed (backorders happen) but never silent — updatePickerFooter's
 // warning line is the one place that surfaces it.
@@ -2876,7 +2873,7 @@ function backToRecipePicker() {
 // â”€â”€â”€ MODAL OPEN / CLOSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openManualOrderModal() {
   orderRecipes = [];
-  orderPickerFilters = { inStock: false, cats: new Set() };
+  orderPickerFilters = { cats: new Set() };
   document.getElementById('manualStep1').style.display = 'flex';
   document.getElementById('manualStep2').style.display = 'none';
   document.getElementById('manualStep3').style.display = 'none';
@@ -3038,7 +3035,7 @@ function startAnotherOrder() {
   const lastCustomer = document.getElementById('new_order_customer')?.value.trim() || '';
   document.getElementById('manualStep3').style.display = 'none';
   orderRecipes = [];
-  orderPickerFilters = { inStock: false, cats: new Set() };
+  orderPickerFilters = { cats: new Set() };
   const custEl = document.getElementById('new_order_customer');
   const refEl  = document.getElementById('new_order_reference');
   if (custEl) custEl.value = lastCustomer;

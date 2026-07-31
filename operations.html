@@ -5765,7 +5765,7 @@ let orderFavoriteIds = new Set();
 let orderStockMap = {};
 let orderMinMap = {};
 let orderDatePicker = null;
-let orderPickerFilters = { inStock: false, cats: new Set() };
+let orderPickerFilters = { cats: new Set() };
 let orderPickerAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter (only shown when exactly one category is active)
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -5910,7 +5910,6 @@ function _orderRowHtml(recipe, virtualMap) {
 }
 
 function _orderPickerPasses(recipe) {
-  if (orderPickerFilters.inStock && _recipeStockStatus(recipe) === 'out') return false;
   if (orderPickerFilters.cats.size && !orderPickerFilters.cats.has(recipe.category)) return false;
   if (!_orderMatchesAttrFilters(recipe)) return false;
   return true;
@@ -5920,13 +5919,12 @@ function renderOrderPickerChips() {
   const counts = c => (orderRecipeCache || []).filter(r => r.category === c).length;
   const cats = [...new Set((orderRecipeCache || []).map(r => r.category).filter(Boolean))]
     .sort((a, b) => counts(b) - counts(a));
-  const n = (orderPickerFilters.inStock ? 1 : 0) + orderPickerFilters.cats.size;
+  const n = orderPickerFilters.cats.size;
   const nEl = document.getElementById('opFilterN');
   if (nEl) { nEl.dataset.on = n ? '1' : '0'; nEl.textContent = n; }
   const chipsEl = document.getElementById('opChips');
   if (!chipsEl) return;
   chipsEl.innerHTML = `
-    <button type="button" class="op-chip" aria-pressed="${orderPickerFilters.inStock}" onclick="toggleOrderInStockFilter()">In stock</button>
     ${cats.map(c => `<button type="button" class="op-chip" aria-pressed="${orderPickerFilters.cats.has(c)}" onclick="toggleOrderCatFilter('${escapeHtml(c)}')">${escapeHtml(c)}<span class="op-chip-count">${counts(c)}</span></button>`).join('')}
     ${n ? `<button type="button" class="op-chip-clear" onclick="clearOrderPickerFilters()">Clear</button>` : ''}`;
 }
@@ -6040,7 +6038,7 @@ async function renderOrderRecipeSections() {
       html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
         <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
     } else {
-      const activeFilters = orderPickerFilters.inStock || orderPickerFilters.cats.size;
+      const activeFilters = orderPickerFilters.cats.size;
       html = `<div class="op-empty">
         <div class="op-empty-t">No product matches "${escapeHtml(q)}"</div>
         <div class="op-empty-s">Create it now and it stays in the order.</div>
@@ -6085,7 +6083,6 @@ function toggleOrderPickerFilters() {
   btn.setAttribute('aria-expanded', String(open));
   chips.dataset.open = open ? '1' : '0';
 }
-function toggleOrderInStockFilter() { orderPickerFilters.inStock = !orderPickerFilters.inStock; renderOrderRecipeSections(); }
 function toggleOrderCatFilter(c) {
   if (orderPickerFilters.cats.has(c)) orderPickerFilters.cats.delete(c); else orderPickerFilters.cats.add(c);
   orderPickerAttrValueFilters = new Map();
@@ -6093,7 +6090,7 @@ function toggleOrderCatFilter(c) {
   renderOrderRecipeSections();
 }
 function clearOrderPickerFilters() {
-  orderPickerFilters.inStock = false; orderPickerFilters.cats.clear();
+  orderPickerFilters.cats.clear();
   orderPickerAttrValueFilters = new Map();
   _renderOrderPickerAttrSubfilter();
   renderOrderRecipeSections();
@@ -6234,7 +6231,7 @@ function openManualOrderModal() {
   // Populate customer autocomplete from recent sales
   _populateCustomerSuggestions();
   document.getElementById('orderRecipeSearchInput').value = '';
-  orderPickerFilters = { inStock: false, cats: new Set() };
+  orderPickerFilters = { cats: new Set() };
   orderPickerAttrValueFilters = new Map();
   document.getElementById('opFilterBtn')?.setAttribute('aria-expanded', 'false');
   document.getElementById('opChips')?.setAttribute('data-open', '0');
@@ -6367,7 +6364,7 @@ function startAnotherOrder() {
   const inp = document.getElementById('orderRecipeSearchInput');
   if (inp) inp.value = '';
   updatePickerFooter();
-  orderPickerFilters = { inStock: false, cats: new Set() };
+  orderPickerFilters = { cats: new Set() };
   orderPickerAttrValueFilters = new Map();
   _renderOrderPickerAttrSubfilter();
   if (orderRecipeCache) { renderOrderRecipeSections(); }
