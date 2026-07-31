@@ -930,6 +930,16 @@
       border-radius: 12px;
     }
 
+    /* .form-section keeps its own (desktop) padding/margin at every other
+       breakpoint -- reduce it here to match .panel's mobile padding above,
+       so the gap below the revenue hero isn't inflated by an unrelated
+       24px+32px desktop spacing rule that was never adjusted for mobile. */
+    .form-section {
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+    }
+
     .form-row {
       grid-template-columns: 1fr;
       gap: 12px;
@@ -1005,13 +1015,13 @@
        instead of showing separately. */
     .navbar { display: none !important; }
 
-    /* The icon row is a plain top bar, not part of the customer/total
-       card below it — no shared background/border, so it doesn't read as
-       one merged block the way it used to. */
+    /* Single row, plain (no card background) — customer name/date on the
+       left, icon row on the right, matching expense-detail's
+       .detail-header + .header-title layout. */
     .ord-mobile-header {
       display: block; margin-bottom: 16px;
     }
-    .ord-head-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .ord-head-top { display: flex; align-items: center; gap: 8px; }
     .ord-more-btn {
       width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer;
@@ -1022,19 +1032,13 @@
       width: 32px; height: 32px; align-items: center; justify-content: center;
       background: none; border: none; border-radius: 50%; color: var(--text-main); cursor: pointer; padding: 0;
     }
-    /* Customer/total card — its own visually distinct block */
-    .ord-head {
-      display: flex; align-items: flex-start; gap: 10px;
-      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px 16px;
-    }
     .ord-head-main { flex: 1; min-width: 0; }
     .ord-customer {
       font-size: 18px; font-weight: 800; letter-spacing: -.01em; cursor: pointer;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
-    .ord-rev-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+    .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ord-rev-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
 
     .ord-more-menu {
       display: none; position: fixed; z-index: 10200; right: 16px;
@@ -1282,6 +1286,10 @@
          which are hidden at <=768px so the two don't show simultaneously. -->
     <div class="ord-mobile-header" id="ordMobileHeader">
       <div class="ord-head-top">
+        <div class="ord-head-main">
+          <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
+          <div class="ord-meta" id="ordMeta"></div>
+        </div>
         <button id="odCreateBtn" onclick="createNewOrder()" aria-label="Create order">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -1298,12 +1306,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </button>
       </div>
-      <div class="ord-head">
-        <div class="ord-head-main">
-          <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
-          <div class="ord-meta" id="ordMeta"></div>
-        </div>
-      </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
       <button type="button" class="ord-more-item ord-more-item-danger" onclick="closeOrdMoreMenu(); showDeleteModal()">
@@ -1313,7 +1315,7 @@
     </div>
 
     <!-- Revenue Panel (first in DOM = first on mobile) -->
-    <div id="revenuePanel" class="panel" style="padding: 24px;">
+    <div id="revenuePanel" class="panel" style="padding: 24px 24px 8px;">
       <div style="text-align: center; margin-bottom: 8px;">
         <div id="totalRevenue" class="editable-field" onclick="openOrderFieldSheet('revenue','Revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer; margin-bottom: 4px;">-</div>
         <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600;">Total Revenue</div>
@@ -1817,14 +1819,8 @@ function renderOrdMobileHeader() {
   if (nameEl) nameEl.textContent = orderData.customer || 'Unknown';
   const metaEl = document.getElementById('ordMeta');
   if (metaEl) {
-    const items = Array.isArray(orderData.items) ? orderData.items : [];
-    const qty = items.reduce((s, i) => s + (i.quantity || 0), 0);
     const d = orderData.sale_date ? new Date(orderData.sale_date) : null;
-    metaEl.textContent = [
-      orderData.source || 'Website',
-      d && !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null,
-      `${qty} item${qty !== 1 ? 's' : ''}`
-    ].filter(Boolean).join(' · ');
+    metaEl.textContent = d && !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
   }
 
   syncMobileHeaderControls();
