@@ -552,15 +552,32 @@
     #rdmMargin[data-state="ok"]  { color: var(--success); }
     #rdmMargin[data-state="out"] { color: var(--danger); }
 
-    /* Items as read rows — tap opens the item sheet (stepper/swap/restock/remove) */
-    .rdm-item-row { display: flex; align-items: center; gap: 12px; min-height: 60px;
+    /* Items as swipeable rows — tap the name to open that item's own detail
+       page, swipe left to reveal Replace/Delete, +/- adjusts quantity
+       in place without opening anything. */
+    .rdm-item-swipe { position: relative; min-height: 60px; overflow: hidden;
+                       border-top: 1px solid var(--border); background: var(--bg-inner); }
+    .rdm-item-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+    .rdm-item-act { width: 60px; border: none; cursor: pointer; color: #fff;
+                    display: flex; align-items: center; justify-content: center;
+                    font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+    .rdm-item-act-replace { background: #64748b; }
+    .rdm-item-act-del { background: var(--danger); }
+    .rdm-item-row { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px;
                     padding: 10px 14px 10px 16px; background: var(--bg-panel);
-                    border-top: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
-    .rdm-item-main { flex: 1; min-width: 0; }
+                    box-sizing: border-box; touch-action: pan-y; will-change: transform; }
+    .rdm-item-main { flex: 1; min-width: 0; cursor: pointer; }
     .rdm-item-top { display: flex; align-items: center; gap: 7px; }
     .rdm-item-name { font-size: 14.5px; font-weight: 700; overflow: hidden;
                      text-overflow: ellipsis; white-space: nowrap; }
     .rdm-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .rdm-item-qty { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+    .rdm-item-step { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
+                      background: var(--bg-inner); color: var(--text-main); font-size: 16px; font-weight: 700;
+                      display: flex; align-items: center; justify-content: center; cursor: pointer;
+                      font-family: inherit; }
+    .rdm-item-num { min-width: 26px; text-align: center; font-size: 13.5px; font-weight: 800;
+                     font-variant-numeric: tabular-nums; }
     .rdm-chev { color: var(--border); flex-shrink: 0; }
 
     /* Restock row (mobile footer) — replaces the old always-on Duplicate/Delete bar */
@@ -1764,15 +1781,25 @@ function renderMobileOverlay() {
     const deliveryPill = stock?.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
     const cost = parseFloat(comp.cost) || 0;
     return `
-    <div class="rdm-item-row" onclick="aiOpenLine(null, ${index})">
-      <span class="rdm-item-main">
-        <span class="rdm-item-top">
-          <span class="rdm-item-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown')}</span>
-          ${stockPill2}${deliveryPill}
+    <div class="rdm-item-swipe">
+      <div class="rdm-item-actions">
+        <button class="rdm-item-act rdm-item-act-replace" onclick="rdmReplaceItem(${index})">Replace</button>
+        <button class="rdm-item-act rdm-item-act-del" onclick="removeIngredientFromRecipe(${index})">Delete</button>
+      </div>
+      <div class="rdm-item-row" data-index="${index}">
+        <span class="rdm-item-main" onclick="window.location.href='/ingredient-detail?id=${ingId}'">
+          <span class="rdm-item-top">
+            <span class="rdm-item-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown')}</span>
+            ${stockPill2}${deliveryPill}
+          </span>
+          <span class="rdm-item-sub">${need} per unit · $${cost.toFixed(2)} of cost</span>
         </span>
-        <span class="rdm-item-sub">${need} per unit · $${cost.toFixed(2)} of cost</span>
-      </span>
-      <svg class="rdm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+        <span class="rdm-item-qty">
+          <button class="rdm-item-step" onclick="event.stopPropagation(); rdmStepQty(${index}, -1)">−</button>
+          <span class="rdm-item-num">${need}</span>
+          <button class="rdm-item-step" onclick="event.stopPropagation(); rdmStepQty(${index}, 1)">+</button>
+        </span>
+      </div>
     </div>`;
   }).join('') + addIngBtn;
   }
@@ -3465,6 +3492,116 @@ async function aiRemoveLine() {
   aiShowPane('list');
   aiRenderList();
 }
+
+// ---------- Mobile item rows: inline qty stepper + swipe-to-replace ----------
+// Tapping the row's name now goes straight to that item's own detail page
+// (aiOpenLine's pane-2 editor is reached only via Replace/Add-item now), so
+// quantity needs its own in-place control -- same "hold price-per-unit
+// constant" trick the old rdmSetQty used, just self-contained here since it
+// doesn't need availableIngredients loaded (comp already has unit + cost).
+async function rdmStepQty(index, delta) {
+  const comp = recipe.components[index];
+  if (!comp) return;
+  const step = (comp.unit === 'pcs' || comp.unit === 'ea' || !comp.unit) ? 1 : 0.25;
+  const pricePerUnit = comp.quantity > 0 ? (comp.cost || 0) / comp.quantity : 0;
+  comp.quantity = Math.max(0.01, Math.round((comp.quantity + delta * step) * 100) / 100);
+  comp.cost = Math.round(pricePerUnit * comp.quantity * 100) / 100;
+  await updateRecipeInDatabase();
+  renderMobileOverlay();
+}
+
+// Replace (swipe action) jumps straight into the add-item picker in swap
+// mode for this slot, carrying over the current quantity -- same mechanism
+// aiSwap() uses from inside pane 2, just entered directly from the row.
+async function rdmReplaceItem(index) {
+  const comp = recipe.components[index];
+  if (!comp) return;
+  _aiEditIndex = index;
+  _aiSwapMode = true;
+  _aiSwapQty = parseFloat(comp.quantity) || 1;
+  await openAddIngredientModal();
+}
+
+// Swipe-to-reveal for .rdm-item-row, same mechanics as ingredients.html's
+// initSwipe() -- event-delegated on the container since #rdmQtyList's
+// innerHTML is fully replaced on every renderMobileOverlay() call. Deferred
+// to DOMContentLoaded: this script block (unlike ingredients.html's, which
+// sits after all its HTML) runs before #rdmQtyList's own markup is parsed,
+// so document.getElementById('rdmQtyList') would otherwise always be null.
+document.addEventListener('DOMContentLoaded', function initRdmItemSwipe() {
+  const REVEAL    = 120;  // total action width -- must equal 2 x .rdm-item-act width
+  const THRESHOLD = 40;
+  const RUBBER    = 0.24;
+  const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
+
+  const list = document.getElementById('rdmQtyList');
+  if (!list) return;
+
+  let open = null;
+  let drag = null;
+  let noClickUntil = 0;
+
+  const setX = (row, x, animate) => {
+    row.style.transition = animate ? EASE : 'none';
+    row.style.transform  = 'translateX(' + x + 'px)';
+  };
+  const close = (animate = true) => {
+    if (!open) return;
+    setX(open, 0, animate);
+    open = null;
+  };
+
+  list.addEventListener('pointerdown', e => {
+    const row = e.target.closest('.rdm-item-row');
+    if (!row || e.target.closest('.rdm-item-step')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    drag = { row, x: e.clientX, y: e.clientY, id: e.pointerId,
+             base: open === row ? -REVEAL : 0, axis: null, cur: null };
+    try { row.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  list.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.axis) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (drag.axis === 'y') { drag = null; return; }
+    }
+    let x = drag.base + dx;
+    if (x > 0)       x = x * RUBBER;
+    if (x < -REVEAL) x = -REVEAL - (-REVEAL - x) * RUBBER;
+    drag.cur = x;
+    setX(drag.row, x, false);
+  });
+
+  const end = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const d = drag;
+    drag = null;
+    if (!d.axis) return;
+    noClickUntil = Date.now() + 300;
+    const x = d.cur === null ? d.base : d.cur;
+    const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
+    if (open && open !== d.row) close();
+    if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+    else        { setX(d.row, 0, true); if (open === d.row) open = null; }
+  };
+  list.addEventListener('pointerup', end);
+  list.addEventListener('pointercancel', end);
+
+  list.addEventListener('click', e => {
+    if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
+    if (!open || e.target.closest('.rdm-item-actions')) return;
+    if (e.target.closest('.rdm-item-row') === open) {
+      e.stopPropagation(); e.preventDefault();
+      close();
+    }
+  }, true);
+
+  window.addEventListener('scroll', () => close(), { passive: true });
+  list.addEventListener('scroll',   () => close(), { passive: true });
+});
 
 // Wait for auth to be ready, then load recipe
 if (typeof window.supabaseClient !== 'undefined') {
