@@ -2965,14 +2965,14 @@
     try {
       const { data } = await supabaseClient
         .from('ingredient_history')
-        .select('created_at, reason, reference_text')
+        .select('changed_at, reason, reference_text')
         .eq('ingredient_id', currentIngredient.id)
-        .order('created_at', { ascending: false })
+        .order('changed_at', { ascending: false })
         .limit(1);
       const h = data?.[0];
       if (!h) { el.textContent = ''; return; }
 
-      const days = Math.floor((Date.now() - new Date(h.created_at)) / 86400000);
+      const days = Math.floor((Date.now() - new Date(h.changed_at)) / 86400000);
       const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
       const why = h.reference_text
         || ({ manual: 'manual adjustment', order: 'an order', expense: 'an expense',
