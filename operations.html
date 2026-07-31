@@ -46,6 +46,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="import-modal.js"></script>
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
@@ -2048,9 +2049,8 @@ async function openExpenseChoiceModal() {
         openAddExpenseModal();
       } else if (method === 'upload') {
         // Pre-existing behavior: the scan result here maps into the
-        // ingredient form fields (see imageUploadContext === 'ingredient'
-        // branch below), not a dedicated expense form — kept as-is.
-        openImageUploadModal('ingredient');
+        // ingredient form fields, not a dedicated expense form — kept as-is.
+        startExpenseUpload();
       }
     }
   });
@@ -2796,7 +2796,7 @@ async function openMethodModal() {
       } else if (method === 'url') {
         openUrlImportModal();
       } else if (method === 'image') {
-        openImageUploadModal('ingredient');
+        startIngredientUpload();
       } else if (method === 'csv') {
         if (typeof openCSVImport === 'function') openCSVImport('ingredient');
       }
@@ -3628,51 +3628,6 @@ function showImportStatus(message, type) {
   </div>
 </div>
 
-<!-- Image/PDF Upload Modal -->
-<div class="modal-overlay" id="imageUploadModal">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
-    <p id="uploadDescription" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt, invoice, or product image</p>
-    
-    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
-      <div style="margin-bottom: 16px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
-      </div>
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
-      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
-      <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
-    </div>
-    
-    <div id="screenshotSectionOps" style="margin-top: 20px; text-align: center;">
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
-      <button class="btn btn-secondary" onclick="captureScreenshot()" style="width: 100%;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
-        Capture Screenshot
-      </button>
-    </div>
-    <script>if(/android|iphone|ipad|ipod/i.test(navigator.userAgent)){document.getElementById('screenshotSectionOps').style.display='none';}</script>
-    
-    <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <img id="previewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
-        <div style="flex: 1;">
-          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
-          <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
-        </div>
-        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
-      </div>
-    </div>
-    
-    <div id="uploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn btn-secondary" onclick="closeImageUploadModal()" style="flex: 1;">Cancel</button>
-      <button class="btn btn-primary" onclick="processImageUpload()" id="processImageBtn" style="flex: 1;" disabled>Process</button>
-    </div>
-  </div>
-</div>
-
 <!-- Recipe Builder Modal -->
 <div class="recipe-overlay" id="recipeBuilderOverlay">
   <div class="recipe-builder">
@@ -3811,430 +3766,101 @@ async function submitFeedback() {
   currentStep = 3;
 }
 
-// Image/PDF Upload Modal Functions
-let uploadedFile = null;
-let imageUploadContext = 'ingredient'; // 'ingredient' or 'order'
+// Shared by startExpenseUpload() and startIngredientUpload() — both map an
+// extracted receipt/image onto the same ing_* ingredient-creation fields.
+function _applyExtractedIngredientFields(data) {
+  const item = (data.item && data.item[0]) || {};
 
-function openImageUploadModal(context = 'ingredient') {
-  imageUploadContext = context;
-  document.getElementById('imageUploadModal').classList.add('active');
-  setupDropZone();
-}
-
-function closeImageUploadModal() {
-  document.getElementById('imageUploadModal').classList.remove('active');
-  clearUpload();
-}
-
-function setupDropZone() {
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('imageFileInput');
-  
-  // Click to browse
-  dropZone.onclick = () => fileInput.click();
-  
-  // File input change
-  fileInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
-  };
-  
-  // Drag and drop
-  dropZone.ondragover = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--accent)';
-    dropZone.style.background = 'rgba(6, 182, 212, 0.05)';
-  };
-  
-  dropZone.ondragleave = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--bg-panel)';
-  };
-  
-  dropZone.ondrop = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--bg-panel)';
-    
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  };
-  
-  // Paste support for screenshots
-  document.addEventListener('paste', async (e) => {
-    // Only handle paste when the image upload modal is open
-    const modal = document.getElementById('imageUploadModal');
-    if (!modal || modal.style.display === 'none') return;
-    
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    
-    for (let item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const blob = item.getAsFile();
-        if (blob) {
-          // Create a file from the blob with a proper filename
-          const file = new File([blob], `screenshot-${Date.now()}.png`, { type: blob.type });
-          handleFile(file);
-        }
-        break;
-      }
-    }
-  });
-  
-  // Close recipe search results when clicking outside
-  document.addEventListener('click', (e) => {
-    const searchInput = document.getElementById('recipeSearch');
-    const searchResults = document.getElementById('recipeSearchResults');
-    
-    if (searchInput && searchResults) {
-      const isClickInside = searchInput.contains(e.target) || searchResults.contains(e.target);
-      if (!isClickInside) {
-        searchResults.style.display = 'none';
-      }
-    }
-  });
-}
-
-function handleFile(file) {
-  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-  
-  if (!validTypes.includes(file.type)) {
-    showUploadStatus('Please upload a PNG, JPG, or PDF file', 'error');
-    return;
+  if (item.name || data.description) {
+    document.getElementById('ing_name').value = item.name || data.description;
   }
-  
-  if (file.size > 10 * 1024 * 1024) { // 10MB limit
-    showUploadStatus('File size must be less than 10MB', 'error');
-    return;
+  if (item.price || data.amount) {
+    const price = item.price || data.amount;
+    const priceMatch = String(price).match(/[\d.]+/);
+    if (priceMatch) document.getElementById('ing_cost').value = priceMatch[0];
   }
-  
-  uploadedFile = file;
-  
-  // Show preview
-  const preview = document.getElementById('uploadPreview');
-  const previewImage = document.getElementById('previewImage');
-  const fileName = document.getElementById('fileName');
-  const fileSize = document.getElementById('fileSize');
-  
-  fileName.textContent = file.name;
-  fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
-  
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImage.src = e.target.result;
-      previewImage.style.display = 'block';
+  if (item.quantity) {
+    document.getElementById('ing_quantity').value = item.quantity;
+  }
+  if (item.unit) {
+    const unit = item.unit.toLowerCase();
+    const unitMap = {
+      'kilograms': 'kg', 'kg': 'kg',
+      'grams': 'g', 'g': 'g',
+      'liters': 'L', 'l': 'L',
+      'milliliters': 'mL', 'ml': 'mL',
+      'pieces': 'pieces', 'piece': 'pieces', 'pcs': 'pieces', 'stückzahl': 'pieces'
     };
-    reader.readAsDataURL(file);
-  } else {
-    previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
-    previewImage.style.display = 'block';
+    document.getElementById('ing_unit').value = unitMap[unit] || 'pieces';
   }
-  
-  preview.style.display = 'block';
-  document.getElementById('processImageBtn').disabled = false;
-}
+  if (item.SKU) document.getElementById('ing_sku').value = item.SKU;
+  if (item.product_category) document.getElementById('ing_category').value = item.product_category;
+  if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
 
-function clearUpload() {
-  uploadedFile = null;
-  document.getElementById('uploadPreview').style.display = 'none';
-  document.getElementById('imageFileInput').value = '';
-  document.getElementById('processImageBtn').disabled = true;
-  document.getElementById('uploadStatus').style.display = 'none';
-}
-
-async function captureScreenshot() {
-  try {
-    showUploadStatus('Capturing screenshot...', 'info');
-    
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { mediaSource: 'screen' }
-    });
-    
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-    
-    await new Promise(resolve => {
-      video.onloadedmetadata = resolve;
-    });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    
-    stream.getTracks().forEach(track => track.stop());
-    
-    canvas.toBlob((blob) => {
-      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-      handleFile(file);
-      showUploadStatus('Screenshot captured successfully', 'success');
-    }, 'image/png');
-    
-  } catch (error) {
-    if (error.name === 'NotAllowedError') {
-      showUploadStatus('Screenshot permission denied', 'error');
-    } else {
-      console.error('Screenshot error:', error);
-      showUploadStatus('Failed to capture screenshot', 'error');
-    }
+  const container = document.getElementById('customAttributes');
+  if (item.attributes?.color) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${item.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+    `;
+    container.appendChild(row);
+  }
+  if (item.attributes?.size) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${item.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
+    `;
+    container.appendChild(row);
   }
 }
 
-async function processImageUpload() {
-  if (!uploadedFile) {
-    showUploadStatus('Please select a file first', 'error');
-    return;
-  }
-  
-  const processBtn = document.getElementById('processImageBtn');
-  const originalText = processBtn.textContent;
-  processBtn.textContent = 'Processing...';
-  processBtn.disabled = true;
-  
-  // Hide all upload UI elements during processing
-  const uploadDescription = document.getElementById('uploadDescription');
-  const dropZone = document.getElementById('dropZone');
-  const uploadPreview = document.getElementById('uploadPreview');
-  const orDivider = dropZone.nextElementSibling; // The "Or" section
-  const cancelBtn = processBtn.parentElement.querySelector('.btn-secondary');
-  
-  if (uploadDescription) uploadDescription.style.display = 'none';
-  dropZone.style.display = 'none';
-  uploadPreview.style.display = 'none';
-  if (orDivider) orDivider.style.display = 'none';
-  cancelBtn.style.display = 'none';
-  processBtn.style.display = 'none';
-  
-  try {
-    showUploadStatus('Extracting data from document...', 'info');
-    
-    console.log('=== Upload Debug Info ===');
-    console.log('File name:', uploadedFile.name);
-    console.log('File type:', uploadedFile.type);
-    console.log('File size:', uploadedFile.size, 'bytes');
-    
-    // Get user session for authentication
+async function _notifyIfIngredientLimitReached() {
+  await checkAIUsage();
+  if (aiUsageStatus && aiUsageStatus.limitReached) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (!session) {
-      throw new Error('You must be logged in to use this feature');
-    }
-    
-    // Create FormData to send file as multipart/form-data
-    const formData = new FormData();
-    formData.append('file', uploadedFile);
-    formData.append('context', imageUploadContext); // Pass context to API
-    
-    console.log('Sending as multipart/form-data with context:', imageUploadContext);
-    
-    const response = await fetch('/api/extract-receipt', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: formData // Don't set Content-Type header - browser will set it with boundary
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      console.log('Error response content-type:', contentType);
-      
-      let errorData;
-      if (contentType && contentType.includes('application/json')) {
-        errorData = await response.json();
-      } else {
-        const errorText = await response.text();
-        console.log('Error response (raw):', errorText);
-        errorData = { error: errorText };
-      }
-      console.log('Error data:', errorData);
-      
-      // If limit reached, update cache and create notification
-      if (response.status === 429) {
-        console.log('[Image Upload] 429 error detected - AI limit reached');
-        await checkAIUsage();
-        
-        // Create AI limit notification
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        console.log('[Image Upload] Session for notification:', session?.user?.id);
-        if (session && typeof createAILimitNotification === 'function') {
-          console.log('[Image Upload] Calling createAILimitNotification');
-          await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
-        } else {
-          console.log('[Image Upload] createAILimitNotification not available or no session');
-        }
-        
-        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
-      }
-      
-      throw new Error(errorData.error || 'Failed to extract data from image');
-    }
-    
-    const result = await response.json();
-    console.log('Success response:', result);
-    
-    if (result.success && result.data) {
-      console.log('Mapping extracted data to form fields:', result.data);
-      console.log('Context:', imageUploadContext);
-      
-      // Only map to ingredient form if context is 'ingredient'
-      if (imageUploadContext === 'ingredient') {
-        // Name
-        if (result.data.item?.name || result.data.description) {
-          document.getElementById('ing_name').value = result.data.item?.name || result.data.description;
-        }
-        
-        // Price
-        if (result.data.item?.price || result.data.amount) {
-          const price = result.data.item?.price || result.data.amount;
-          const priceMatch = String(price).match(/[\d.]+/);
-          if (priceMatch) {
-            document.getElementById('ing_cost').value = priceMatch[0];
-          }
-        }
-        
-        // Quantity
-        if (result.data.item?.quantity) {
-          document.getElementById('ing_quantity').value = result.data.item.quantity;
-        }
-        
-        // Unit
-        if (result.data.item?.unit) {
-          const unit = result.data.item.unit.toLowerCase();
-          // Map to form options: kg, g, L, mL, pieces, lbs, oz, cups, tbsp, tsp
-          const unitMap = {
-            'kilograms': 'kg',
-            'kg': 'kg',
-            'grams': 'g',
-            'g': 'g',
-            'liters': 'L',
-            'l': 'L',
-            'milliliters': 'mL',
-            'ml': 'mL',
-            'pieces': 'pieces',
-            'piece': 'pieces',
-            'pcs': 'pieces',
-            'stückzahl': 'pieces'
-          };
-          document.getElementById('ing_unit').value = unitMap[unit] || 'pieces';
-        }
-        
-        // SKU
-        if (result.data.item?.SKU) {
-          document.getElementById('ing_sku').value = result.data.item.SKU;
-        }
-        
-        // Category
-        if (result.data.item?.product_category) {
-          document.getElementById('ing_category').value = result.data.item.product_category;
-        }
-        
-        // Shipping Time (Estimated Delivery)
-        if (result.data.item?.shipping_time) {
-          document.getElementById('ing_estimated_delivery').value = result.data.item.shipping_time;
-        }
-        
-        // Add extracted attributes as custom attributes (same as URL extraction)
-        const container = document.getElementById('customAttributes');
-        if (result.data.attributes?.color) {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 8px;';
-          row.innerHTML = `
-            <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-            <input type="text" value="${result.data.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-            <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
-          `;
-          container.appendChild(row);
-        }
-        if (result.data.attributes?.size) {
-          const row = document.createElement('div');
-          row.style.cssText = 'display: flex; gap: 8px;';
-          row.innerHTML = `
-            <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-            <input type="text" value="${result.data.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-            <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
-          `;
-          container.appendChild(row);
-        }
-        
-        showUploadStatus('Data imported successfully!', 'success');
-        
-        // Check if user just reached their daily limit
-        console.log('[Image Upload] Checking AI usage after successful extraction');
-        const usageResult = await checkAIUsage();
-        console.log('[Image Upload] AI usage result:', usageResult);
-        console.log('[Image Upload] aiUsageStatus:', aiUsageStatus);
-        
-        if (aiUsageStatus && aiUsageStatus.limitReached) {
-          console.log('[Image Upload] User just reached their limit, creating notification');
-          const { data: { session } } = await window.supabaseClient.auth.getSession();
-          console.log('[Image Upload] Session:', session?.user?.id);
-          console.log('[Image Upload] createAILimitNotification available:', typeof createAILimitNotification);
-          if (session && typeof createAILimitNotification === 'function') {
-            console.log('[Image Upload] Calling createAILimitNotification with userId:', session.user.id, 'tier:', aiUsageStatus.tier);
-            await createAILimitNotification(session.user.id, aiUsageStatus.tier);
-            console.log('[Image Upload] Notification creation completed');
-          } else {
-            console.log('[Image Upload] Cannot create notification - session or function missing');
-          }
-        } else {
-          console.log('[Image Upload] Limit not reached yet. Used:', aiUsageStatus?.used, 'Limit:', aiUsageStatus?.limit);
-        }
-        
-        setTimeout(() => {
-          closeImageUploadModal();
-          openManualEntryModal();
-        }, 1500);
-      } else if (imageUploadContext === 'order') {
-        // Handle order processing - show recipe mapping modal
-        console.log('Order data extracted:', result.data);
-        showUploadStatus('Matching recipes...', 'info');
-        
-        try {
-          // Close image upload modal immediately before showing recipe mapping
-          closeImageUploadModal();
-          
-          // Show the recipe mapping modal for confirmation
-          await showRecipeMappingModal(result.data);
-        } catch (error) {
-          console.error('Failed to process order:', error);
-          showUploadStatus('Failed to process order: ' + error.message, 'error');
-        }
-      }
-    } else {
-      showUploadStatus('No data could be extracted from the image', 'error');
-    }
-    
-  } catch (error) {
-    console.error('Image upload error:', error);
-    showUploadStatus(error.message || 'Failed to process image', 'error');
-  } finally {
-    // Restore UI elements visibility
-    const uploadDescription = document.getElementById('uploadDescription');
-    const dropZone = document.getElementById('dropZone');
-    const uploadPreview = document.getElementById('uploadPreview');
-    const orDivider = dropZone?.nextElementSibling;
-    const cancelBtn = processBtn?.parentElement.querySelector('.btn-secondary');
-    
-    if (uploadDescription) uploadDescription.style.display = '';
-    if (dropZone) dropZone.style.display = '';
-    if (uploadPreview && uploadedFile) uploadPreview.style.display = 'block';
-    if (orDivider) orDivider.style.display = '';
-    if (cancelBtn) cancelBtn.style.display = '';
-    if (processBtn) {
-      processBtn.textContent = originalText;
-      processBtn.disabled = false;
-      processBtn.style.display = '';
+    if (session && typeof createAILimitNotification === 'function') {
+      await createAILimitNotification(session.user.id, aiUsageStatus.tier);
     }
   }
+}
+
+function startExpenseUpload() {
+  // Pre-existing behavior: the scan result maps into the ingredient form
+  // fields, not a dedicated expense form — kept as-is.
+  window.ShelfyImportModal.open('ingredient', {
+    onManual: openAddExpenseModal,
+    onImported: async (data) => {
+      openManualEntryModal();
+      _applyExtractedIngredientFields(data);
+      await _notifyIfIngredientLimitReached();
+    }
+  });
+}
+
+function startIngredientUpload() {
+  window.ShelfyImportModal.open('ingredient', {
+    onManual: openManualEntryModal,
+    onImported: async (data) => {
+      openManualEntryModal();
+      _applyExtractedIngredientFields(data);
+      await _notifyIfIngredientLimitReached();
+    }
+  });
+}
+
+function startOrderUpload() {
+  window.ShelfyImportModal.open('order', {
+    onManual: openManualOrderModal,
+    onImported: (data) => {
+      showRecipeMappingModal(data);
+    }
+  });
 }
 
 async function createSalesEntry(orderData) {
@@ -4746,7 +4372,7 @@ async function confirmMappedOrder() {
   try {
     const customer = document.getElementById('mapped_customer').value.trim();
     if (!customer) {
-      showUploadStatus('Please enter a customer name', 'error');
+      showNotification('Please enter a customer name', 'error');
       return;
     }
     
@@ -4820,7 +4446,6 @@ async function confirmMappedOrder() {
     }
 
     closeRecipeMappingModal();
-    closeImageUploadModal();
 
     // Show the same success screen as manual order entry, confirming the inventory update
     document.getElementById('manualStep1').style.display = 'none';
@@ -4841,58 +4466,6 @@ function fileToBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-function showUploadStatus(message, type) {
-  const statusDiv = document.getElementById('uploadStatus');
-  statusDiv.style.display = 'block';
-  
-  // Show loader animation if extracting
-  if (message.toLowerCase().includes('extracting')) {
-    // Hide form elements
-    const imageModal = document.getElementById('imageUploadModal');
-    const modalContent = imageModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"], div[style*="border: 2px dashed"]');
-      formElements.forEach(el => {
-        if (el.id !== 'uploadStatus' && !el.closest('#uploadStatus')) {
-          el.style.display = 'none';
-        }
-      });
-    }
-    
-    showGlobalLoader();
-  } else {
-    hideGlobalLoader();
-    // Show form elements again
-    const imageModal = document.getElementById('imageUploadModal');
-    const modalContent = imageModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"], div[style*="border: 2px dashed"]');
-      formElements.forEach(el => {
-        if (el.id !== 'uploadStatus' && !el.closest('#uploadStatus')) {
-          el.style.display = '';
-        }
-      });
-    }
-    
-    statusDiv.textContent = message;
-    statusDiv.style.textAlign = 'left';
-    statusDiv.style.padding = '12px';
-    statusDiv.style.border = 'none';
-    statusDiv.style.marginTop = '16px';
-    
-    if (type === 'error') {
-      statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-      statusDiv.style.color = 'var(--danger)';
-    } else if (type === 'success') {
-      statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-      statusDiv.style.color = 'var(--success)';
-    } else {
-      statusDiv.style.background = 'rgba(59, 130, 246, 0.1)';
-      statusDiv.style.color = '#3b82f6';
-    }
-  }
 }
 
 // Recipe Builder Functions
@@ -5747,7 +5320,7 @@ async function openOrderMethodModal() {
       if (method === 'manual') {
         openManualOrderModal();
       } else if (method === 'upload') {
-        openImageUploadModal('order');
+        startOrderUpload();
       }
     }
   });
@@ -6695,8 +6268,6 @@ document.addEventListener('keydown', (e) => {
       if (typeof closeCSVImport === 'function') closeCSVImport();
     } else if (document.getElementById('urlImportModal').classList.contains('active')) {
       closeUrlImportModal();
-    } else if (document.getElementById('imageUploadModal').classList.contains('active')) {
-      closeImageUploadModal();
     } else if (document.getElementById('quantityModal').classList.contains('active')) {
       closeQuantityModal();
     } else if (document.getElementById('recipeBuilderOverlay').classList.contains('active')) {
