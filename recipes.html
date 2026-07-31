@@ -846,11 +846,11 @@
     .ai-row:active { opacity: 0.7; }
     .ai-row[data-on="1"] { background: rgba(6,182,212,.045); }
     .ai-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .ai-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main);
+    .ai-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ai-name { display: block; flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main);
                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ai-row[data-on="1"] .ai-name { color: var(--accent); }
     .ai-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .ai-meta[data-state="short"] { color: var(--warning); }
     .ai-onqty { flex-shrink: 0; height: 26px; padding: 0 9px; border-radius: 8px;
                 background: rgba(6,182,212,.12); color: var(--accent); font-size: 12.5px; font-weight: 800;
                 display: inline-flex; align-items: center; }
@@ -1602,7 +1602,8 @@ async function loadIngredients() {
         attributes: attributes,
         is_favorite: ing.is_favorite || false,
         type: ing.type || 'Production',
-        category: ing.category || null
+        category: ing.category || null,
+        reorder_pending: ing.reorder_pending || false
       };
     });
     
@@ -3005,17 +3006,22 @@ function renderMobileIngList() {
 function renderMobileIngredientRow(i) {
   const qty = parseFloat(i.quantity) || 0;
   const min = parseFloat(i.min_stock) || 0;
-  const short = qty === 0;
-  const low = !short && min > 0 && qty < min;
   const selected = !!currentRecipe[i.id];
   const isFavorite = favoriteIngredients.has(i.id);
   const starIcon = isFavorite ? '★' : '☆';
   const meta = `$${(parseFloat(i.price) || 0).toFixed(2)}/${_escHtml(i.unit || 'unit')}`;
+  const pill = qty === 0 ? '<span class="stock-pill out">Out</span>'
+    : (min > 0 && qty < min) ? '<span class="stock-pill low">Low</span>'
+    : i.reorder_pending ? '<span class="stock-pill delivery">On the way</span>'
+    : '';
 
   return `<button type="button" class="ai-row" data-on="${selected ? 1 : 0}" onclick="mobileTapIngredient('${i.id}')">
       <span class="ai-main">
-        <span class="ai-name">${_escHtml(i.name)}</span>
-        <span class="ai-meta"${short ? ' data-state="short"' : ''}>${short ? 'Out of stock · ' : low ? 'Low stock · ' : ''}${meta}</span>
+        <span class="ai-top">
+          <span class="ai-name">${_escHtml(i.name)}</span>
+          ${pill}
+        </span>
+        <span class="ai-meta">${meta}</span>
       </span>
       ${selected ? `<span class="ai-onqty">Added</span>` : ''}
       <span class="ai-star${isFavorite ? ' favorited' : ''}" onclick="event.stopPropagation(); toggleIngredientFavorite('${i.id}')">${starIcon}</span>
