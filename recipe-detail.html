@@ -3275,11 +3275,23 @@ function aiRenderList() {
       </span>
     </button>`;
 
+  // Search/category-filter empty state — the app-wide "no results" cat
+  // illustration, same asset used everywhere else a search/filter comes
+  // up empty (recipes.html, operations.html, etc).
+  const emptyState = (text) => `<div style="text-align:center;padding:40px 20px;">
+      <img src="/cat_no_results.png" alt="No results" style="width:120px;height:auto;margin-bottom:10px;opacity:0.9;">
+      <p style="color:var(--text-muted);font-size:14px;margin:0;">${text}</p>
+    </div>`;
+
   let html = '';
   if (q) {
     const hits = availableIngredients.filter(matchesCat).filter(i => i.name.toLowerCase().includes(q) || _aiAttrMatch(i, q));
-    if (hits.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Matches</span><span class="ai-sec-note">${hits.length}</span></div><div class="ai-list">${hits.map(rowHtml).join('')}</div>`;
-    if (!_aiSwapMode) html += `<div class="ai-list" style="margin-top:${hits.length ? '10px' : '18px'}">${newRow()}</div>`;
+    if (hits.length) {
+      html += `<div class="ai-sec-head"><span class="ai-sec-title">Matches</span><span class="ai-sec-note">${hits.length}</span></div><div class="ai-list">${hits.map(rowHtml).join('')}</div>`;
+    } else {
+      html += emptyState('No items match your search');
+    }
+    if (!_aiSwapMode) html += `<div class="ai-list" style="margin-top:${hits.length ? '10px' : '4px'}">${newRow()}</div>`;
   } else if (_aiSwapMode) {
     const pool = availableIngredients.filter(i => matchesCat(i) || i.id === swapIngId);
     const common = pool.filter(i => i.id !== swapIngId && !inRecipeIds.has(i.id) && (usage.get(i.id) || 0) >= 2);
@@ -3293,10 +3305,15 @@ function aiRenderList() {
     const rest = notInRecipe.filter(i => (usage.get(i.id) || 0) < 2);
     if (inRecipe.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">In this product</span><span class="ai-sec-note">$${(parseFloat(recipe.cost) || 0).toFixed(2)} per unit</span></div><div class="ai-list">${inRecipe.map(rowHtml).join('')}</div>`;
     if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
-    html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}${newRow()}</div>`;
+    if (rest.length) {
+      html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}${newRow()}</div>`;
+    } else if (!inRecipe.length && !common.length) {
+      html += `<div class="ai-list">${emptyState(_aiCategoryFilter ? 'No items match this category' : 'No items found')}${newRow()}</div>`;
+    } else {
+      html += `<div class="ai-list">${newRow()}</div>`;
+    }
     html += `<div class="ai-note">Quantities are per unit made. Stock only moves when you log production.</div>`;
   }
-  if (!html) html = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px;">No items found</div>';
   document.getElementById('aiScroll').innerHTML = html;
   aiRenderListFoot();
 }

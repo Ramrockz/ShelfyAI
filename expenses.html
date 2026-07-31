@@ -2163,11 +2163,21 @@ function ecRenderList() {
         <span class="ec-res-meta">Comes back here, added to this expense</span>
       </span>
     </button>`;
+  // Same app-wide "no results" cat illustration used everywhere else a
+  // search comes up empty.
+  const emptyState = (text) => `<div style="text-align:center;padding:34px 16px;">
+      <img src="/cat_no_results.png" alt="No results" style="width:100px;height:auto;margin-bottom:8px;opacity:0.9;">
+      <p style="color:var(--text-muted);font-size:13px;margin:0;">${text}</p>
+    </div>`;
 
   let html = '';
   if (q) {
     const hits = (allIngredients || []).filter(ing => (ing.name || '').toLowerCase().includes(q));
-    if (hits.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
+    if (hits.length) {
+      html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
+    } else {
+      html += emptyState('No items match your search');
+    }
     html += newRow();
   } else {
     const on = (allIngredients || []).filter(ing => onIds.has(ing.id));
