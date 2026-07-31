@@ -762,196 +762,107 @@
     text-align: right;
   }
 
-  /* ---------- RECIPE PICKER MODAL ---------- */
-  .recipe-picker-modal .modal-content {
-    max-width: 880px !important;
-    width: calc(100% - 32px) !important;
-    height: auto !important;
-    max-height: 88vh !important;
-    display: flex;
-    flex-direction: column;
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
-  
-  .recipe-picker-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 22px 28px 18px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  
-  .recipe-picker-search {
-    padding: 14px 28px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    position: relative;
-  }
-  
-  .recipe-picker-search input {
-    width: 100%;
-    padding: 12px 38px 12px 38px !important;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    background: var(--bg-main);
-    color: var(--text-main);
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-  }
-  
-  .recipe-picker-search input:focus { border-color: var(--accent); }
-  
-  .recipe-picker-search .search-icon {
-    position: absolute;
-    left: 42px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    color: var(--text-muted);
-    pointer-events: none;
-    z-index: 10;
-  }
-  
-  .recipe-picker-search .search-clear {
-    position: absolute;
-    right: 44px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 18px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    padding: 0;
-    transition: all 0.2s;
-    z-index: 10;
-  }
-  
-  .recipe-picker-search .search-clear:hover {
-    background: var(--bg-inner);
-    color: var(--text-main);
-  }
-  
-  .recipe-picker-search .search-clear.visible { display: flex; }
-  
-  .recipe-picker-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px 28px 4px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent) transparent;
-  }
-  
-  .recipe-picker-body::-webkit-scrollbar { width: 6px; }
-  .recipe-picker-body::-webkit-scrollbar-track { background: transparent; }
-  .recipe-picker-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
-  
-  .recipe-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    margin: 0 0 12px 0;
-  }
-  
-  .recipe-picker-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-  
-  .recipe-ing-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: var(--bg-panel);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .recipe-ing-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .recipe-ing-chip.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
+  /* ---------- Item picker (18b/19b) — same two-pane component as
+     expenses.html/expense-detail.html's add-item picker: pane 1
+     search/filter/sections, pane 2 quantity + price. ---------- */
+  .ec-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
+  .ec-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+                  color: var(--text-muted); }
+  .ec-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
 
-  .recipe-pick-card {
-    background: var(--bg-panel);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    user-select: none;
-  }
-  
-  .recipe-pick-card:hover { border-color: var(--accent); }
-  
-  .recipe-pick-card .card-name { 
-    font-weight: 600; 
-    font-size: 14px; 
-    flex: 1; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    min-width: 0; 
-    margin: 0; 
-    padding-right: 0; 
-  }
-  
-  .recipe-pick-card .card-price { 
-    font-size: 13px; 
-    color: var(--accent); 
-    font-weight: 700; 
-    white-space: nowrap; 
-    margin: 0; 
-    flex-shrink: 0; 
-  }
-  
-  .recipe-pick-card .fav-btn {
-    font-size: 16px; 
-    background: none; 
-    border: none; 
-    cursor: pointer; 
-    padding: 0; 
-    line-height: 1; 
-    flex-shrink: 0;
-    color: var(--text-muted); 
-    opacity: 0.5; 
-    transition: opacity 0.2s, color 0.2s, transform 0.2s;
-  }
-  
-  .recipe-pick-card .fav-btn:hover { opacity: 1; transform: scale(1.2); }
-  .recipe-pick-card .fav-btn.is-fav { color: #f59e0b; opacity: 1; }
-  
-  .recipe-picker-footer {
-    border-top: 1px solid var(--border);
-    padding: 14px 28px;
-    flex-shrink: 0;
-    background: var(--bg-panel);
-  }
+  .ec-group { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+              border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-field { padding: 12px 16px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-group .ec-field:first-child { border-top: none; }
+  .ec-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .ec-input { width: 100%; height: 34px; margin-top: 2px; border: none; background: none; outline: none;
+              font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main); }
+  .ec-input::placeholder { color: var(--text-ghost, #cbd5e1); font-weight: 400; }
+  .ec-prefix { display: flex; align-items: baseline; gap: 6px; }
+  .ec-prefix > span { font-size: 20px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-hint { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 3px; }
+  .ec-hint[data-state="up"] { color: var(--warning); font-weight: 700; }
+
+  .ec-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .ec-tally { display: flex; align-items: center; min-height: 22px; font-size: 12.5px;
+              color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .ec-tally b { margin-left: auto; color: var(--text-main); font-weight: 700; }
+  .ec-save { width: 100%; height: 50px; margin-top: 8px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+
+  .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
+              display: none; align-items: flex-end; justify-content: center; }
+  .ec-sheet[data-open="1"] { display: flex; }
+  .ec-panel { width: 100%; max-width: 460px; max-height: 76%; display: flex; flex-direction: column;
+              background: var(--bg-panel); border-radius: 20px 20px 0 0; overflow: hidden; }
+  .ec-grab { width: 36px; height: 4px; border-radius: 99px; background: var(--text-ghost, #cbd5e1);
+             margin: 8px auto 4px; flex-shrink: 0; }
+  .ec-p-head { padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-p-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .ec-search { display: flex; align-items: center; gap: 9px; height: 44px; margin: 0 12px 10px;
+               padding: 0 12px; border-radius: 12px; background: var(--bg-inner); flex-shrink: 0; }
+  .ec-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); }
+  .ec-find { padding: 0 12px 10px; display: flex; gap: 8px; align-items: center; }
+  .ec-find .ec-search { margin: 0; flex: 1; }
+  .ec-filter-btn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border-hair, var(--border));
+                   background: var(--bg-inner); color: var(--text-muted); display: flex; align-items: center;
+                   justify-content: center; cursor: pointer; }
+  .ec-filter-btn[aria-pressed="true"] { border-color: var(--accent-deep, var(--accent)); background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ec-cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px; border-radius: 12px; cursor: pointer; }
+  .ec-cat-row[aria-pressed="true"] { background: var(--accent-glow, rgba(6,182,212,.1)); color: var(--accent-deep, #0e7490); }
+  .ec-cat-row i, .ec-cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .ec-cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Opens on top of #ecItemSheet (z-index 10020) -- ID selector so it can't
+     lose a cascade tie the way a class-selector override has before. */
+  #ecCatSheet { z-index: 10030 !important; }
+  .ec-results { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-res { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
+            padding: 9px 16px; background: var(--bg-panel); border: none; text-align: left;
+            border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-res:active { background: var(--bg-app, var(--bg-inner)); }
+  .ec-res-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ec-res-name { display: block; font-size: 14.5px; font-weight: 600; }
+  .ec-res-meta { display: block; font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px;
+                 font-variant-numeric: tabular-nums; }
+  .ec-res-meta[data-state="short"], .ec-res-meta[data-state="out"] { color: var(--danger); }
+  .ec-res-meta[data-state="low"] { color: var(--warning); }
+  .ec-res-new { color: var(--accent-ink, var(--accent)); font-weight: 700; font-size: 14.5px; }
+  .ec-cancel { flex-shrink: 0; width: 100%; height: 52px; background: var(--bg-panel); border: none;
+               border-top: 1px solid var(--border-hair, var(--border)); color: var(--text-muted); font-size: 15px;
+               padding-bottom: env(safe-area-inset-bottom); }
+
+  .ec-pane { display: none; flex-direction: column; min-height: 0; flex: 1; }
+  .ec-pane[data-on="1"] { display: flex; }
+  .ec-line-head { display: flex; align-items: center; gap: 8px; padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-line-back { width: 32px; height: 32px; flex-shrink: 0; background: none; border: none;
+                  color: var(--text-main); display: flex; align-items: center; justify-content: center; padding: 0; }
+  .ec-qty-panel { background: var(--bg-panel); padding: 18px 16px 16px;
+                  border-top: 1px solid var(--border-hair, var(--border));
+                  border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-qty-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .ec-qty-btn { width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px; border: none;
+                background: var(--bg-inner); color: var(--text-muted); font-size: 26px; font-weight: 600;
+                line-height: 1; cursor: pointer; }
+  .ec-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ec-qty-btn:disabled { opacity: 0.35; cursor: default; }
+  .ec-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 90px; max-width: 150px; }
+  .ec-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
+  .ec-qty-value { font-size: 44px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+                  background: none; border: none; text-align: center; width: 100%; padding: 0;
+                  color: var(--text-main); -webkit-appearance: none; appearance: none; font-family: inherit; }
+  .ec-qty-value::-webkit-inner-spin-button, .ec-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
+  .ec-qty-unit { font-size: 15px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-qty-status { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
+  .ec-qty-status[data-state="clears"] { color: var(--success); }
+  .ec-qty-status[data-state="short"], .ec-qty-status[data-state="out"] { color: var(--danger); }
+  .ec-qty-status[data-state="low"] { color: var(--warning); }
+  .ec-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none;
+               color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
@@ -1371,7 +1282,7 @@
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
-      <button type="button" class="ord-more-item" onclick="closeOrdMoreMenu(); openRecipeModal()">
+      <button type="button" class="ord-more-item" onclick="closeOrdMoreMenu(); openOrderItemPicker()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>Add item</span>
       </button>
@@ -1456,7 +1367,7 @@
       <div class="form-section recipes-section">
         <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Included Products</h3>
-          <button onclick="openRecipeModal()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
+          <button onclick="openOrderItemPicker()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
             <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
             Add
           </button>
@@ -1501,20 +1412,6 @@
 </div>
 
 <!-- Item sheet (mobile pack list) — stepper + remove for one line item -->
-<div class="modal-overlay modal-sheet" id="ordItemSheet" onclick="if(event.target===this)closeItemSheet()">
-  <div class="modal-content">
-    <div class="rdm-sheet-name" id="ordItemSheetName" style="font-size:17px;font-weight:800;letter-spacing:-.01em;"></div>
-    <div class="rdm-sheet-stock" id="ordItemSheetSub" style="font-size:12.5px;color:var(--text-muted);margin-top:4px;"></div>
-    <div class="sheet-qty">
-      <button type="button" onclick="ordItemSheetQty(-1)" aria-label="Decrease">&minus;</button>
-      <output id="ordItemSheetQty">1</output>
-      <button type="button" onclick="ordItemSheetQty(1)" aria-label="Increase">+</button>
-    </div>
-    <p class="ord-drow-label" style="margin:8px 0 0;">Quantity ordered</p>
-    <button type="button" class="rdm-sheet-act" style="display:block;width:100%;height:50px;margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--bg-inner);font-size:15px;font-weight:700;color:var(--text-main);cursor:pointer;font-family:inherit;" onclick="ordItemSheetRemove()">Remove from order</button>
-  </div>
-</div>
-
 <!-- Channel sheet (mobile) — same channels/write as the desktop chip grid -->
 <div class="modal-overlay modal-sheet" id="ordChannelSheet" onclick="if(event.target===this)closeOrdChannelSheet()">
   <div class="modal-content">
@@ -1533,37 +1430,77 @@
 </div>
 
 <!-- Add Recipe Modal -->
-<div class="modal-overlay recipe-picker-modal" id="recipeModal">
-  <div class="modal-content">
-    <div class="recipe-picker-header">
-      <div>
-        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select products to add to this order</p>
+<!-- Item picker, as a sheet (19b) — pane 1 picks the product, pane 2 sets
+     quantity + price. Same component as expenses.html/expense-detail.html's
+     add-item picker. -->
+<div class="ec-sheet" id="ecItemSheet" data-open="0" onclick="if(event.target===this)closeOrderItemPicker()">
+  <div class="ec-panel">
+    <div class="ec-grab"></div>
+
+    <div class="ec-pane" id="ecPaneList" data-on="1">
+      <div class="ec-p-head"><div class="ec-p-title">Which product?</div></div>
+      <div class="ec-find">
+        <label class="ec-search">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
+          <input id="ecItemQ" type="search" placeholder="Search your products" oninput="ecRenderList()" autocomplete="off">
+        </label>
+        <button type="button" class="ec-filter-btn" id="ecFilterBtn" onclick="ecOpenCatSheet()" aria-label="Filter by category">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+        </button>
       </div>
-      <button onclick="closeRecipeModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">&times;</button>
+      <div class="ec-results" id="ecItemResults"></div>
+      <button type="button" class="ec-cancel" onclick="closeOrderItemPicker()">Cancel</button>
     </div>
 
-    <!-- Attribute filter chips -->
-    <div id="recipeAttrFilterWrapper" style="padding:6px 24px 0;border-bottom:1px solid var(--border);">
-      <div id="recipeModalAttrChips" style="display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px;min-height:36px;"></div>
+    <div class="ec-pane" id="ecPaneLine" data-on="0">
+      <div class="ec-line-head">
+        <button type="button" class="ec-line-back" onclick="ecBackToList()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="ec-p-title" id="ecLineName" style="font-size:16px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</div>
+      </div>
+      <div class="ec-results" id="ecLineScroll" style="border-top:none;">
+        <div class="ec-qty-panel">
+          <div class="ec-qty-row">
+            <button type="button" class="ec-qty-btn" aria-label="Less" onclick="ecStepQty(-1)">−</button>
+            <span class="ec-qty-center">
+              <span class="ec-qty-line">
+                <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
+                <span class="ec-qty-unit" id="ecLUnit"></span>
+              </span>
+              <span class="ec-qty-status" id="ecLStatus"></span>
+            </span>
+            <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
+          </div>
+        </div>
+        <div class="ec-sec-head"><span class="ec-sec-title">What it sells for</span></div>
+        <div class="ec-group">
+          <div class="ec-field">
+            <label class="ec-label" for="ecLCost">Unit price</label>
+            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"></span>
+            <div class="ec-hint" id="ecLCostHint"></div>
+          </div>
+          <div class="ec-field">
+            <label class="ec-label" for="ecLTotal">Line total</label>
+            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
+            <div class="ec-hint">Type either one — the other follows.</div>
+          </div>
+        </div>
+        <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this order</button>
+      </div>
+      <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
+        <div class="ec-tally" id="ecLineTally"></div>
+        <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to order</button>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="recipe-picker-search">
-      <i data-lucide="search" class="search-icon"></i>
-      <input id="recipeSearchInput" type="text" placeholder="Search products by name..."
-             autocomplete="off"
-             oninput="filterRecipesInModal()"
-             onkeydown="if(event.key==='Escape'){this.value='';filterRecipesInModal();}">
-      <button class="search-clear" id="recipeSearchClear" type="button" onclick="document.getElementById('recipeSearchInput').value='';filterRecipesInModal();this.classList.remove('visible');" title="Clear search">&times;</button>
-    </div>
-
-    <div class="recipe-picker-body" id="recipeListContainer">
-      <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
-    </div>
-
-    <div class="recipe-picker-footer" style="padding:14px 24px;">
-      <button class="btn" style="width:100%;padding:10px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeRecipeModal()">Close</button>
-    </div>
+<!-- Category filter sheet (19b) — narrows pane 1's product list -->
+<div class="modal-overlay modal-sheet" id="ecCatSheet" onclick="if(event.target===this)ecCloseCatSheet()">
+  <div class="modal-content">
+    <div class="ec-p-title" style="margin-bottom:14px;">Filter by category</div>
+    <div id="ecCatList"></div>
   </div>
 </div>
 
@@ -1596,24 +1533,6 @@
 </div>
 
 <!-- Quantity Input Modal -->
-<div class="modal-overlay" id="quantityModal" onclick="if(event.target === this) closeQuantityModal()">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Add Product</h3>
-      <button onclick="closeQuantityModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">&times;</button>
-    </div>
-    <p id="quantityModalRecipeName" style="margin: 16px 0 8px; color: var(--text-muted); font-size: 14px;"></p>
-    <div class="form-group" style="margin-bottom: 24px;">
-      <label for="quantityInput">Quantity</label>
-      <input type="number" id="quantityInput" class="form-input" placeholder="Enter quantity" min="1" value="1" style="width: 100%; padding: 12px; font-size: 16px;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddRecipe();}">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeQuantityModal()" style="flex: 1;">Cancel</button>
-      <button class="btn-primary" onclick="confirmAddRecipe()" style="flex: 1;">Add to Order</button>
-    </div>
-  </div>
-</div>
-
 <!-- Remove Recipe Modal -->
 <div class="modal-overlay" id="removeRecipeModal" onclick="if(event.target === this) closeRemoveRecipeModal()">
   <div class="modal-content">
@@ -1822,7 +1741,7 @@ function displayOrder() {
       const sub = price ? `$${price.toFixed(2)} each` : 'free gift';
       return `
         <div class="pack-row">
-          <button class="pack-main" onclick="openItemSheet(${index})">
+          <button class="pack-main" onclick="ecOpenLine(null, ${index})">
             <span class="pack-name">${_escHtml(itemName)}</span>
             <span class="pack-sub">${sub}</span>
           </button>
@@ -2023,38 +1942,6 @@ function closeOrdChannelSheet() {
 async function pickOrdChannel(channel) {
   closeOrdChannelSheet();
   await selectChannel(channel);
-}
-
-// Item sheet (pack list) — stepper/remove route through the writers the
-// desktop table already uses (changeOrderItemQty, removeRecipeItem), so
-// there's exactly one place each of those actions can go wrong, not two.
-let _ordSheetIndex = null;
-function openItemSheet(index) {
-  _ordSheetIndex = index;
-  const item = orderData?.items?.[index];
-  if (!item) return;
-  const price = parseFloat(item.price || 0);
-  const qty = item.quantity || 0;
-  document.getElementById('ordItemSheetName').textContent = item.name || 'Custom item';
-  document.getElementById('ordItemSheetSub').textContent =
-    `${price ? '$' + price.toFixed(2) + ' each' : 'Free gift'} · $${(price * qty).toFixed(2)} line total`;
-  document.getElementById('ordItemSheetQty').textContent = qty;
-  document.getElementById('ordItemSheet').classList.add('active');
-}
-function closeItemSheet() {
-  document.getElementById('ordItemSheet')?.classList.remove('active');
-  _ordSheetIndex = null;
-}
-async function ordItemSheetQty(delta) {
-  if (_ordSheetIndex === null) return;
-  await changeOrderItemQty(_ordSheetIndex, delta);
-  const item = orderData?.items?.[_ordSheetIndex];
-  if (item) document.getElementById('ordItemSheetQty').textContent = item.quantity;
-}
-function ordItemSheetRemove() {
-  const index = _ordSheetIndex;
-  closeItemSheet();
-  removeRecipeItem(index); // opens the existing confirm-before-delete modal
 }
 
 async function downloadReceipt(url, index) {
@@ -2649,282 +2536,383 @@ function makeDateEditable(element, fieldName) {
 }
 
 // Recipe Modal
-function openRecipeModal() {
-  recipeModalAttrValueFilters = new Map();
-  document.getElementById('recipeModal').classList.add('active');
-  document.getElementById('recipeSearchInput').value = '';
-  renderRecipeModalAttrChips();
-  renderRecipeModal();
+async function openOrderItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (!sheet) return;
+  sheet.dataset.open = '1';
+  ecShowPane('list');
+  const q = document.getElementById('ecItemQ');
+  if (q) q.value = '';
+  await _ecLoadInsights();
+  ecRenderList();
+}
+function closeOrderItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (sheet) sheet.dataset.open = '0';
+  _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
+  _ecCategoryFilter = null;
+  document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', 'false');
+}
+function ecShowPane(which) {
+  document.getElementById('ecPaneList').dataset.on = which === 'list' ? '1' : '0';
+  document.getElementById('ecPaneLine').dataset.on = which === 'line' ? '1' : '0';
+}
+function ecBackToList() {
+  _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
+  ecShowPane('list');
+  ecRenderList();
 }
 
-function renderRecipeModalAttrChips() {
-  const container = document.getElementById('recipeModalAttrChips');
-  if (!container) return;
+// ---------- Item picker (19b) — same component/behavior as expenses.html's
+// picker, adapted to products: a product has no stock of its own, so
+// adding/editing/removing a line here deducts (or restores) stock through
+// the product's recipe components instead of on the product directly. ----
+let _ecInsights = null;     // { lastSold: Map<recipeId,{price,date}>, recentIds: [...], stockMap: Map<ingId,{quantity,minStock}> }
+let _ecEditingIndex = null; // index into orderData.items being edited, or null when adding a new line
+let _ecIngredient = null;   // the recipe row currently open in pane 2
+let _ecDraft = null;        // { qty, cost } being edited in pane 2
+let _ecOriginalQty = 0;     // this line's quantity when pane 2 was opened -- already reflected in current stock
+let _ecCategoryFilter = null;
 
-  const groupedByKey = new Map();
-  const sortVals = (key, a, b) => {
-    if (key === 'size') {
-      const SZ = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
-      const ai = SZ.indexOf(a.toLowerCase()), bi = SZ.indexOf(b.toLowerCase());
-      if (ai !== -1 && bi !== -1) return ai - bi;
-      if (ai !== -1) return -1; if (bi !== -1) return 1;
-    }
-    const an = parseFloat(a), bn = parseFloat(b);
-    if (!isNaN(an) && !isNaN(bn)) return an - bn;
-    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
-    return a.localeCompare(b, undefined, { sensitivity: 'base' });
-  };
+const _ecCategoryMap = {
+  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
+  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
+  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
+  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
+  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
+  'Packaging': 'package', 'Food': 'wheat'
+};
 
-  recipes.forEach(r => {
-    if (!r.custom_attributes) return;
-    try {
-      const attrs = typeof r.custom_attributes === 'string' ? JSON.parse(r.custom_attributes) : r.custom_attributes;
-      Object.entries(attrs).forEach(([key, value]) => {
-        if (!value || !String(value).trim()) return;
-        const nk = key.toLowerCase();
-        const tv = String(value).trim();
-        const vk = tv.toLowerCase();
-        if (!groupedByKey.has(nk)) groupedByKey.set(nk, new Map());
-        const vm = groupedByKey.get(nk);
-        if (!vm.has(vk)) vm.set(vk, tv);
-      });
-    } catch (e) {}
-  });
-
-  if (groupedByKey.size === 0) { container.innerHTML = ''; return; }
-
-  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
-  const chips = [];
-  sortedKeys.forEach(key => {
-    const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortVals(key, a[1], b[1]));
-    sorted.forEach(([vk, dv]) => {
-      const active = recipeModalAttrValueFilters.has(key) && recipeModalAttrValueFilters.get(key).has(vk);
-      chips.push(`<button class="recipe-ing-chip${active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${vk.replace(/"/g,'&quot;')}" onclick="toggleRecipeModalAttrFilter('${key.replace(/'/g,"&#39;")}','${vk.replace(/'/g,"&#39;")}')">${dv.replace(/"/g,'&quot;')}</button>`);
-    });
-  });
-  container.innerHTML = chips.join('');
-}
-
-function toggleRecipeModalAttrFilter(key, value) {
-  if (!recipeModalAttrValueFilters.has(key)) recipeModalAttrValueFilters.set(key, new Set());
-  const ks = recipeModalAttrValueFilters.get(key);
-  if (ks.has(value)) { ks.delete(value); if (ks.size === 0) recipeModalAttrValueFilters.delete(key); }
-  else { ks.add(value); }
-  document.querySelectorAll('#recipeModalAttrChips .recipe-ing-chip').forEach(chip => {
-    const k = chip.dataset.key, v = chip.dataset.val;
-    chip.classList.toggle('active', !!k && recipeModalAttrValueFilters.has(k) && recipeModalAttrValueFilters.get(k).has(v));
-  });
-  renderRecipeModal();
-}
-
-function closeRecipeModal() {
-  document.getElementById('recipeModal').classList.remove('active');
-}
-
-function filterRecipesInModal() {
-  const input = document.getElementById('recipeSearchInput');
-  const clearBtn = document.getElementById('recipeSearchClear');
-  const query = input.value.trim();
-  
-  if (clearBtn) {
-    clearBtn.classList.toggle('visible', query !== '');
+// sales.items has no reliable id on older rows -- new lines write recipe_id
+// (see ecSaveLine), older ones fall back to matching by name.
+function _ordFindRecipe(item) {
+  if (item.recipe_id) {
+    const byId = recipes.find(r => r.id === item.recipe_id);
+    if (byId) return byId;
   }
-  
-  renderRecipeModal();
+  const name = (item.name || '').toLowerCase();
+  if (!name) return null;
+  return recipes.find(r => r.name.toLowerCase() === name) ||
+         recipes.find(r => name.includes(r.name.toLowerCase()) || r.name.toLowerCase().includes(name));
 }
 
-function renderRecipeModal() {
-  const container = document.getElementById('recipeListContainer');
-  const searchQuery = document.getElementById('recipeSearchInput').value.trim().toLowerCase();
+async function _ecLoadInsights() {
+  if (_ecInsights) return _ecInsights;
+  _ecInsights = { lastSold: new Map(), recentIds: [], stockMap: new Map() };
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return _ecInsights;
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-  let filteredRecipes = recipes;
+    let sq = window.supabaseClient.from('sales').select('id, sale_date, items').eq('profile_id', user.id).not('items', 'is', null);
+    if (storeId) sq = sq.eq('store_id', storeId);
+    const [salesRes, ingRes] = await Promise.all([
+      sq.order('sale_date', { ascending: false }),
+      window.supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id)
+    ]);
+    if (salesRes.error) throw salesRes.error;
+    (ingRes.data || []).forEach(ing => _ecInsights.stockMap.set(ing.id, {
+      quantity: parseFloat(ing.quantity) || 0, minStock: parseFloat(ing.min_stock) || 0
+    }));
 
-  // Filter by active attribute values (AND between keys, OR within key)
-  if (recipeModalAttrValueFilters.size > 0) {
-    filteredRecipes = filteredRecipes.filter(r => {
-      if (!r.custom_attributes) return false;
-      try {
-        const attrs = typeof r.custom_attributes === 'string' ? JSON.parse(r.custom_attributes) : r.custom_attributes;
-        const normalized = {};
-        Object.entries(attrs).forEach(([k, v]) => { normalized[k.toLowerCase()] = String(v).trim().toLowerCase(); });
-        for (const [fk, fset] of recipeModalAttrValueFilters) {
-          if (!normalized[fk] || !fset.has(normalized[fk])) return false;
+    const seenRecent = new Set();
+    (salesRes.data || []).forEach(sale => {
+      if (sale.id === orderId) return; // this order's own lines aren't "history"
+      (sale.items || []).forEach(item => {
+        const recipe = _ordFindRecipe(item);
+        if (!recipe) return;
+        const price = parseFloat(item.price);
+        if (!_ecInsights.lastSold.has(recipe.id) && price) {
+          _ecInsights.lastSold.set(recipe.id, { price, date: sale.sale_date });
         }
-        return true;
-      } catch (e) { return false; }
+        if (_ecInsights.recentIds.length < 6 && !seenRecent.has(recipe.id)) {
+          seenRecent.add(recipe.id);
+          _ecInsights.recentIds.push(recipe.id);
+        }
+      });
     });
+  } catch (e) {
+    console.error('Error loading order insights:', e);
   }
+  return _ecInsights;
+}
 
-  // Filter by search
-  if (searchQuery) {
-    filteredRecipes = filteredRecipes.filter(r =>
-      r.name.toLowerCase().includes(searchQuery)
-    );
-    
-    if (filteredRecipes.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:60px 20px;"><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
-      return;
-    }
-    
-    // Show search results
-    container.innerHTML = `
-      <div class="recipe-section-title">Search Results</div>
-      <div class="recipe-picker-grid">${filteredRecipes.map(_renderRecipeCard).join('')}</div>
-    `;
-    lucide.createIcons();
-    return;
+function _ecDaysAgo(dateStr) {
+  if (!dateStr) return '';
+  const days = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
+  return `${Math.round(days / 30)} months ago`;
+}
+
+// Deducts (deltaQty > 0, more sold) or restores (deltaQty < 0, less sold /
+// line removed) ingredient stock through the recipe's components -- a
+// product itself has no stock number, so a "line" here always resolves to
+// N ingredient writes instead of one.
+async function _ordAdjustStock(recipe, deltaQty, user) {
+  if (!recipe || !Array.isArray(recipe.components) || !recipe.components.length || !deltaQty) return;
+  for (const comp of recipe.components) {
+    const ingId = comp.ingredient_id || comp.id;
+    if (!ingId) continue;
+    const needed = (parseFloat(comp.quantity) || 0) * deltaQty;
+    if (!needed) continue;
+    try {
+      const { data: ing } = await window.supabaseClient.from('ingredients').select('id, quantity').eq('id', ingId).single();
+      if (!ing) continue;
+      const oldQty = parseFloat(ing.quantity) || 0;
+      const newQty = Math.max(0, oldQty - needed);
+      await window.supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', ingId);
+      await window.supabaseClient.from('ingredient_history').insert([{
+        ingredient_id: ingId, profile_id: user.id, field_name: 'quantity',
+        old_value: String(oldQty), new_value: String(newQty),
+        reason: 'order', reference_id: String(orderId)
+      }]);
+    } catch (e) { console.error('Error adjusting stock for component', ingId, e); }
   }
-  
-  // Not searching - show organized sections
-  const favs = filteredRecipes.filter(r => r.is_favorite);
-  const nonFavs = filteredRecipes.filter(r => !r.is_favorite);
-  
+}
+
+function ecOpenCatSheet() {
+  const cats = [...new Set((recipes || []).map(r => r.category).filter(Boolean))].sort();
+  document.getElementById('ecCatList').innerHTML = cats.map(cat => {
+    const icon = _ecCategoryMap[cat] || 'tag';
+    const on = _ecCategoryFilter === cat;
+    return `<div class="ec-cat-row" aria-pressed="${on}" onclick="ecPickCategory('${cat.replace(/'/g, "\\'")}')">
+        <i data-lucide="${icon}"></i><span class="ec-cat-row-label">${_escHtml(cat)}</span>
+      </div>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('ecCatSheet').classList.add('active');
+}
+function ecCloseCatSheet() {
+  document.getElementById('ecCatSheet').classList.remove('active');
+}
+function ecPickCategory(cat) {
+  _ecCategoryFilter = _ecCategoryFilter === cat ? null : cat;
+  ecCloseCatSheet();
+  document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', String(!!_ecCategoryFilter));
+  ecRenderList();
+}
+
+function createProductFromOrderSearch(name) {
+  sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name: name || '' }));
+  window.location.href = '/recipes';
+}
+
+function ecRenderList() {
+  const box = document.getElementById('ecItemResults');
+  if (!box) return;
+  const q = (document.getElementById('ecItemQ')?.value || '').trim().toLowerCase();
+  const insights = _ecInsights || { lastSold: new Map(), recentIds: [] };
+  const matchesCat = r => !_ecCategoryFilter || r.category === _ecCategoryFilter;
+
+  const rowHtml = recipe => {
+    const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
+    const paid = insights.lastSold.get(recipe.id);
+    return `<button type="button" class="ec-res" onclick="ecOpenLine('${recipe.id}', null)">
+        <span class="ec-res-main">
+          <span class="ec-res-name">${_escHtml(recipe.name)}</span>
+          <span class="ec-res-meta">$${(paid ? paid.price : price).toFixed(2)}</span>
+        </span>
+      </button>`;
+  };
+  const newRow = () => `<button type="button" class="ec-res" onclick='createProductFromOrderSearch(${JSON.stringify(q)})'>
+      <span class="ec-res-main">
+        <span class="ec-res-new">${q ? `Create "${_escHtml(q)}"` : 'Create a new product'}</span>
+        <span class="ec-res-meta">Head to Products to set it up, then come back</span>
+      </span>
+    </button>`;
+  const emptyState = (text) => `<div style="text-align:center;padding:34px 16px;">
+      <img src="/cat_no_results.png" alt="No results" style="width:100px;height:auto;margin-bottom:8px;opacity:0.9;">
+      <p style="color:var(--text-muted);font-size:13px;margin:0;">${text}</p>
+    </div>`;
+
   let html = '';
-  
-  if (favs.length) {
-    html += `<div class="recipe-section-title">Favorites</div>
-      <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
-  }
-  
-  if (nonFavs.length) {
-    html += `<div class="recipe-section-title">All Products</div>
-      <div class="recipe-picker-grid">${nonFavs.map(_renderRecipeCard).join('')}</div>`;
-  }
-  
-  if (!favs.length && !nonFavs.length) {
-    html = '<div style="text-align:center;padding:40px;color:var(--text-muted);">No products available</div>';
-  }
-  
-  container.innerHTML = html;
-  lucide.createIcons();
-}
-
-function _renderRecipeCard(recipe) {
-  // Use retail_price if available, otherwise fall back to cost
-  const price = parseFloat(recipe.retail_price || recipe.cost || 0);
-  const isFav = recipe.is_favorite;
-  const esc = recipe.name.replace(/'/g, "\\'");
-  
-  return `<div class="recipe-pick-card" id="rpc-${recipe.id}"
-      onclick="promptAndAddRecipe('${recipe.id}','${esc}',${price})">
-    <button class="fav-btn${isFav ? ' is-fav' : ''}"
-      onclick="event.stopPropagation();toggleRecipeFavorite('${recipe.id}')"
-      style="pointer-events:auto"
-      title="Favorite">${isFav ? '&#9733;' : '&#9734;'}</button>
-    <div class="card-name">${recipe.name}</div>
-    <div class="card-price">$${price.toFixed(2)}</div>
-  </div>`;
-}
-
-async function toggleRecipeFavorite(recipeId) {
-  try {
-    const recipe = recipes.find(r => r.id === recipeId);
-    if (!recipe) return;
-    
-    const newVal = !recipe.is_favorite;
-    recipe.is_favorite = newVal;
-    
-    // Update UI immediately
-    const card = document.getElementById(`rpc-${recipeId}`);
-    if (card) {
-      const btn = card.querySelector('.fav-btn');
-      if (btn) {
-        btn.textContent = newVal ? '&#9733;' : '&#9734;';
-        btn.classList.toggle('is-fav', newVal);
-      }
+  if (q) {
+    const hits = (recipes || []).filter(matchesCat).filter(r => (r.name || '').toLowerCase().includes(q));
+    if (hits.length) {
+      html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
+    } else {
+      html += emptyState('No items match your search');
     }
-    
-    // Persist to DB
-    await window.supabaseClient
-      .from('recipes')
-      .update({ is_favorite: newVal })
-      .eq('id', recipeId);
-    
-    // Re-render to move to correct section
-    setTimeout(() => renderRecipeModal(), 300);
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
+    html += newRow();
+  } else {
+    const inCat = (recipes || []).filter(matchesCat);
+    const favs = inCat.filter(r => r.is_favorite);
+    const favIds = new Set(favs.map(r => r.id));
+    const recent = insights.recentIds.map(id => inCat.find(r => r.id === id)).filter(r => r && !favIds.has(r.id));
+    const recentIds = new Set(recent.map(r => r.id));
+    const rest = inCat.filter(r => !favIds.has(r.id) && !recentIds.has(r.id));
+    if (favs.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Favorites</span><span class="ec-sec-note">${favs.length}</span></div>${favs.map(rowHtml).join('')}`;
+    if (recent.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Ordered recently</span><span class="ec-sec-note">${recent.length}</span></div>${recent.map(rowHtml).join('')}`;
+    if (rest.length) {
+      html += `<div class="ec-sec-head"><span class="ec-sec-title">All products</span><span class="ec-sec-note">${rest.length}</span></div>${rest.map(rowHtml).join('')}`;
+    } else if (!favs.length && !recent.length) {
+      html += emptyState(_ecCategoryFilter ? 'No items match this category' : 'No items found');
+    }
+    html += newRow();
   }
+  box.innerHTML = html;
 }
 
-let pendingRecipeAdd = null;
-let recipeModalAttrValueFilters = new Map();
+// recipeId = adding a brand-new line; existingIndex = re-opening a line
+// already on this order (indexed, like expense-detail.html's picker, since
+// the same product can appear as more than one line).
+function ecOpenLine(recipeId, existingIndex) {
+  let item = null;
+  if (existingIndex !== null && existingIndex !== undefined) {
+    item = orderData.items[existingIndex];
+    if (!item) return;
+    const matched = _ordFindRecipe(item);
+    recipeId = matched ? matched.id : recipeId;
+  }
+  const recipe = recipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+  _ecEditingIndex = item ? existingIndex : null;
+  _ecIngredient = recipe;
+  _ecOriginalQty = item ? (parseFloat(item.quantity) || 0) : 0;
+  const insights = _ecInsights || { lastSold: new Map() };
+  const paid = insights.lastSold.get(recipe.id);
+  const defaultPrice = item ? (parseFloat(item.price) || 0) : (paid ? paid.price : (parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0));
+  _ecDraft = { qty: item ? (parseFloat(item.quantity) || 1) : 1, cost: defaultPrice };
 
-async function promptAndAddRecipe(recipeId, recipeName, price) {
-  // Store recipe details for later confirmation
-  pendingRecipeAdd = { recipeId, recipeName, price };
-  
-  // Show modal
-  document.getElementById('quantityModalRecipeName').textContent = `Adding: ${recipeName} ($${parseFloat(price).toFixed(2)})`;
-  document.getElementById('quantityInput').value = '1';
-  document.getElementById('quantityModal').classList.add('active');
-  
-  // Focus on input
-  setTimeout(() => {
-    const input = document.getElementById('quantityInput');
-    input.focus();
-    input.select();
-  }, 100);
+  document.getElementById('ecLineName').textContent = recipe.name;
+  document.getElementById('ecLUnit').textContent = '';
+  document.getElementById('ecLQty').value = _ecDraft.qty;
+  document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
+  document.getElementById('ecLRemove').hidden = !item;
+  document.getElementById('ecLineSaveBtn').textContent = item ? 'Save changes' : 'Add to order';
+
+  ecSyncTotal();
+  ecShowPane('line');
 }
 
-function closeQuantityModal() {
-  document.getElementById('quantityModal').classList.remove('active');
-  pendingRecipeAdd = null;
-}
-
-async function confirmAddRecipe() {
-  if (!pendingRecipeAdd) return;
-  
-  const quantityInput = document.getElementById('quantityInput');
-  const quantity = parseInt(quantityInput.value);
-  
-  if (!quantity || isNaN(quantity) || quantity <= 0) {
-    showNotification('Please enter a valid quantity', 'error');
+function ecRenderProjection() {
+  const recipe = _ecIngredient;
+  const q = _ecDraft.qty;
+  const delta = q - _ecOriginalQty; // additional deduction this save would cause
+  const comps = recipe.components || [];
+  const insights = _ecInsights || { stockMap: new Map() };
+  const st = document.getElementById('ecLStatus');
+  if (!comps.length) {
+    st.textContent = '';
+    st.removeAttribute('data-state');
     return;
   }
-  
+  let worstRemain = null, state = '';
+  comps.forEach(c => {
+    const ingId = c.ingredient_id || c.id;
+    const info = insights.stockMap.get(ingId) || { quantity: 0, minStock: 0 };
+    const needed = (parseFloat(c.quantity) || 0) * delta;
+    const remain = info.quantity - needed;
+    if (worstRemain === null || remain < worstRemain) worstRemain = remain;
+    if (remain < 0) state = 'short';
+    else if (remain === 0 && state !== 'short') state = 'out';
+    else if (info.minStock > 0 && remain <= info.minStock && !state) state = 'low';
+  });
+  const remainR = Math.round((worstRemain || 0) * 100) / 100;
+  st.innerHTML = q ? `stock <b>${remainR}</b> left${state === 'short' ? ` · short ${Math.abs(remainR)}` : ''}` : '';
+  state ? st.setAttribute('data-state', state) : st.removeAttribute('data-state');
+}
+
+function ecRenderCostHint() {
+  const recipe = _ecIngredient;
+  const insights = _ecInsights || { lastSold: new Map() };
+  const paid = insights.lastSold.get(recipe.id);
+  const c = _ecDraft.cost;
+  const hint = document.getElementById('ecLCostHint');
+  if (!paid || !c) {
+    hint.removeAttribute('data-state');
+    hint.textContent = paid ? `Last sold for $${paid.price.toFixed(2)} · ${_ecDaysAgo(paid.date)}` : 'No sales history for this product';
+    return;
+  }
+  const d = Math.round((c - paid.price) * 100) / 100;
+  if (Math.abs(d) < 0.005) { hint.removeAttribute('data-state'); hint.textContent = `Same as last time · ${_ecDaysAgo(paid.date)}`; return; }
+  const pct = Math.round((d / paid.price) * 100);
+  // Selling for LESS than last time is the direction worth flagging here
+  // (a markdown), the mirror image of expenses flagging a cost increase.
+  hint.setAttribute('data-state', d < 0 ? 'up' : '');
+  hint.textContent = `${d > 0 ? '▲' : '▼'} $${Math.abs(d).toFixed(2)} (${Math.abs(pct)}%) vs $${paid.price.toFixed(2)} ${_ecDaysAgo(paid.date)}`;
+}
+
+function ecRenderLineFoot() {
+  const q = _ecDraft.qty, c = _ecDraft.cost;
+  document.getElementById('ecLineTally').innerHTML = q
+    ? `${q} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
+    : `Set a quantity<b>$0.00</b>`;
+  document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
+  ecRenderProjection();
+  ecRenderCostHint();
+}
+function ecSyncTotal() {
+  _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
+  _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
+  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
+  ecRenderLineFoot();
+}
+function ecSyncFromTotal() {
+  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
+  if (_ecDraft.qty > 0) {
+    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
+    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
+  }
+  ecRenderLineFoot();
+}
+function ecStepQty(d) {
+  document.getElementById('ecLQty').value = Math.max(0, Math.round((_ecDraft.qty + d) * 100) / 100);
+  ecSyncTotal();
+}
+
+async function ecSaveLine() {
+  if (!(_ecDraft.qty > 0)) return;
+  const recipe = _ecIngredient;
+  const qty = _ecDraft.qty, price = _ecDraft.cost;
+  const isNewLine = _ecEditingIndex === null;
+
   try {
-    const { recipeId, recipeName, price } = pendingRecipeAdd;
-    
-    // Add to items array
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) { showNotification('You must be logged in', 'error'); return; }
+
     const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
-    items.push({
-      name: recipeName,
-      quantity: quantity,
-      price: price
-    });
-    
-    // Update totals
+    // Standardized line shape (19b) -- recipe_id/name/quantity/price; older
+    // lines only ever had {name, quantity, price}, still read via
+    // _ordFindRecipe()'s name-match fallback.
+    const lineData = { recipe_id: recipe.id, name: recipe.name, quantity: qty, price: price };
+    if (isNewLine) items.push(lineData);
+    else items[_ecEditingIndex] = lineData;
+
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + (item.quantity || 0) * parseFloat(item.price || 0), 0);
-    
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    const { error } = await window.supabaseClient
-      .from('sales')
-      .update({
-        items: items,
-        total_quantity: totalQuantity,
-        revenue: totalRevenue
-      })
-      .eq('id', orderId)
-      .eq('profile_id', user.id);
-    
+
+    const { error } = await window.supabaseClient.from('sales')
+      .update({ items, total_quantity: totalQuantity, revenue: totalRevenue })
+      .eq('id', orderId).eq('profile_id', user.id);
     if (error) throw error;
-    
+
     orderData.items = items;
     orderData.total_quantity = totalQuantity;
     orderData.revenue = totalRevenue;
-    
+
+    const delta = qty - _ecOriginalQty;
+    if (delta !== 0) await _ordAdjustStock(recipe, delta, user);
+    _ecInsights = null; // stock just moved -- next open reloads fresh
+
     displayOrder();
-    closeQuantityModal();
-    closeRecipeModal();
-    showNotification('Recipe added to order', 'success');
+    closeOrderItemPicker();
+    showNotification(isNewLine ? 'Product added' : 'Product updated', 'success');
   } catch (error) {
-    console.error('Error adding recipe:', error);
-    showNotification('Failed to add product', 'error');
+    console.error('Error saving order line:', error);
+    showNotification('Failed to save product: ' + error.message, 'error');
   }
+}
+
+async function ecRemoveLine() {
+  if (_ecEditingIndex === null) return;
+  const index = _ecEditingIndex;
+  closeOrderItemPicker();
+  removeRecipeItem(index); // opens the existing confirm-before-delete modal
 }
 
 let pendingRecipeRemoveIndex = null;
@@ -2932,7 +2920,8 @@ let pendingRecipeRemoveIndex = null;
 async function changeOrderItemQty(index, delta) {
   const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
   if (!items[index]) return;
-  const newQty = Math.max(1, (items[index].quantity || 1) + delta);
+  const prevQty = items[index].quantity || 1;
+  const newQty = Math.max(1, prevQty + delta);
   items[index].quantity = newQty;
 
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -2945,6 +2934,11 @@ async function changeOrderItemQty(index, delta) {
     orderData.items = items;
     orderData.total_quantity = totalQuantity;
     orderData.revenue = totalRevenue;
+    const actualDelta = newQty - prevQty;
+    if (actualDelta !== 0) {
+      const recipe = _ordFindRecipe(items[index]);
+      if (recipe) { await _ordAdjustStock(recipe, actualDelta, user); _ecInsights = null; }
+    }
     displayOrder();
   } catch (error) {
     console.error('Error updating quantity:', error);
@@ -2966,14 +2960,15 @@ async function confirmRemoveRecipe() {
   
   try {
     const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
+    const removedItem = items[pendingRecipeRemoveIndex];
     items.splice(pendingRecipeRemoveIndex, 1);
-    
+
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + (item.quantity || 0) * parseFloat(item.price || 0), 0);
-    
+
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
-    
+
     const { error } = await window.supabaseClient
       .from('sales')
       .update({
@@ -2983,12 +2978,18 @@ async function confirmRemoveRecipe() {
       })
       .eq('id', orderId)
       .eq('profile_id', user.id);
-    
+
     if (error) throw error;
-    
+
     orderData.items = items;
     orderData.total_quantity = totalQuantity;
     orderData.revenue = totalRevenue;
+
+    // Removing a line restores the stock its sale deducted.
+    if (removedItem) {
+      const recipe = _ordFindRecipe(removedItem);
+      if (recipe) { await _ordAdjustStock(recipe, -(parseFloat(removedItem.quantity) || 0), user); _ecInsights = null; }
+    }
 
     displayOrder();
     closeRemoveRecipeModal();
