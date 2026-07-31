@@ -463,6 +463,20 @@
   .ec-search { display: flex; align-items: center; gap: 9px; height: 44px; margin: 0 12px 10px;
                padding: 0 12px; border-radius: 12px; background: var(--bg-inner); flex-shrink: 0; }
   .ec-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); }
+  .ec-find { padding: 0 12px 10px; display: flex; gap: 8px; align-items: center; }
+  .ec-find .ec-search { margin: 0; flex: 1; }
+  .ec-filter-btn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border-hair, var(--border));
+                   background: var(--bg-inner); color: var(--text-muted); display: flex; align-items: center;
+                   justify-content: center; cursor: pointer; }
+  .ec-filter-btn[aria-pressed="true"] { border-color: var(--accent-deep, var(--accent)); background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ec-cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px; border-radius: 12px; cursor: pointer; }
+  .ec-cat-row[aria-pressed="true"] { background: var(--accent-glow, rgba(6,182,212,.1)); color: var(--accent-deep, #0e7490); }
+  .ec-cat-row i, .ec-cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .ec-cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Opens on top of #ecItemSheet (z-index 10020) -- ID selector so it can't
+     lose a cascade tie the way a class-selector override has before. */
+  #ecCatSheet { z-index: 10030 !important; }
   .ec-results { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
                 border-top: 1px solid var(--border-hair, var(--border)); }
   .ec-res { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
@@ -1145,10 +1159,15 @@
 
     <div class="ec-pane" id="ecPaneList" data-on="1">
       <div class="ec-p-head"><div class="ec-p-title">Which item?</div></div>
-      <label class="ec-search">
-        <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
-        <input id="ecItemQ" type="search" placeholder="Search your items" oninput="ecRenderList()" autocomplete="off">
-      </label>
+      <div class="ec-find">
+        <label class="ec-search">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
+          <input id="ecItemQ" type="search" placeholder="Search your items" oninput="ecRenderList()" autocomplete="off">
+        </label>
+        <button type="button" class="ec-filter-btn" id="ecFilterBtn" onclick="ecOpenCatSheet()" aria-label="Filter by category">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+        </button>
+      </div>
       <div class="ec-results" id="ecItemResults"></div>
       <button type="button" class="ec-cancel" onclick="closeExpenseItemPicker()">Cancel</button>
     </div>
@@ -1194,6 +1213,14 @@
         <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Category filter sheet (18b) — narrows pane 1's item list -->
+<div class="modal-overlay modal-sheet" id="ecCatSheet" onclick="if(event.target===this)ecCloseCatSheet()">
+  <div class="modal-content">
+    <div class="ec-p-title" style="margin-bottom:14px;">Filter by category</div>
+    <div id="ecCatList"></div>
   </div>
 </div>
 
@@ -1843,6 +1870,39 @@ let _ecInsights = null;    // { lastPaid: Map<ingId,{price,date}>, vendorIds: Se
 let _ecEditingIndex = null; // index into expenseData.ingredients being edited, or null when adding a new line
 let _ecIngredient = null;   // the ingredients-table row currently open in pane 2
 let _ecDraft = null;        // { qty, cost } being edited in pane 2
+let _ecCategoryFilter = null; // category name to filter pane 1's item list by, or null for all
+
+const _ecCategoryMap = {
+  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
+  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
+  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
+  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
+  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
+  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
+  'Packaging': 'package', 'Food': 'wheat'
+};
+
+function ecOpenCatSheet() {
+  const cats = [...new Set((ingredients || []).map(i => i.category).filter(Boolean))].sort();
+  document.getElementById('ecCatList').innerHTML = cats.map(cat => {
+    const icon = _ecCategoryMap[cat] || 'tag';
+    const on = _ecCategoryFilter === cat;
+    return `<div class="ec-cat-row" aria-pressed="${on}" onclick="ecPickCategory('${cat.replace(/'/g, "\\'")}')">
+        <i data-lucide="${icon}"></i><span class="ec-cat-row-label">${_escHtml(cat)}</span>
+      </div>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  document.getElementById('ecCatSheet').classList.add('active');
+}
+function ecCloseCatSheet() {
+  document.getElementById('ecCatSheet').classList.remove('active');
+}
+function ecPickCategory(cat) {
+  _ecCategoryFilter = _ecCategoryFilter === cat ? null : cat; // tap the active one again to clear
+  ecCloseCatSheet();
+  document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', String(!!_ecCategoryFilter));
+  ecRenderList();
+}
 
 async function _ecLoadInsights() {
   if (_ecInsights) return _ecInsights;
@@ -1898,6 +1958,8 @@ function closeExpenseItemPicker() {
   const sheet = document.getElementById('ecItemSheet');
   if (sheet) sheet.dataset.open = '0';
   _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
+  _ecCategoryFilter = null;
+  document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', 'false');
 }
 function ecShowPane(which) {
   document.getElementById('ecPaneList').dataset.on = which === 'list' ? '1' : '0';
@@ -1940,9 +2002,11 @@ function ecRenderList() {
       <p style="color:var(--text-muted);font-size:13px;margin:0;">${text}</p>
     </div>`;
 
+  const matchesCat = ing => !_ecCategoryFilter || ing.category === _ecCategoryFilter;
+
   let html = '';
   if (q) {
-    const hits = (ingredients || []).filter(ing => (ing.name || '').toLowerCase().includes(q));
+    const hits = (ingredients || []).filter(matchesCat).filter(ing => (ing.name || '').toLowerCase().includes(q));
     if (hits.length) {
       html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
     } else {
@@ -1950,11 +2014,16 @@ function ecRenderList() {
     }
     html += newRow();
   } else {
-    const fromVendor = vendor ? (ingredients || []).filter(ing => insights.vendorIds.has(ing.id)) : [];
+    const inCat = (ingredients || []).filter(matchesCat);
+    const fromVendor = vendor ? inCat.filter(ing => insights.vendorIds.has(ing.id)) : [];
     const fromVendorIds = new Set(fromVendor.map(i => i.id));
-    const rest = (ingredients || []).filter(ing => !fromVendorIds.has(ing.id));
+    const rest = inCat.filter(ing => !fromVendorIds.has(ing.id));
     if (fromVendor.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Bought from ${_escHtml(vendor)}</span><span class="ec-sec-note">${fromVendor.length}</span></div>${fromVendor.map(rowHtml).join('')}`;
-    html += `<div class="ec-sec-head"><span class="ec-sec-title">All items</span><span class="ec-sec-note">${rest.length}</span></div>${rest.map(rowHtml).join('')}`;
+    if (rest.length) {
+      html += `<div class="ec-sec-head"><span class="ec-sec-title">All items</span><span class="ec-sec-note">${rest.length}</span></div>${rest.map(rowHtml).join('')}`;
+    } else if (!fromVendor.length) {
+      html += emptyState(_ecCategoryFilter ? 'No items match this category' : 'No items found');
+    }
     html += newRow();
   }
   box.innerHTML = html;
