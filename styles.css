@@ -880,6 +880,73 @@ input[type="number"] {
   .scm-row[data-desktop-only="1"] { display: none; }
 }
 
+/* ── Shared "Import from image or PDF" sheet (import-modal.js) ──
+   One file, one AI read -- replaces the four separately-built upload
+   modals duplicated across ingredients/expenses/orders/operations. */
+#shelfyImportSheet { z-index: 10010; }
+#shelfyImportSheet .modal-content { max-width: 440px; padding: 0; overflow: hidden; }
+.aim-content { display: flex; flex-direction: column; }
+.aim-head { display: flex; align-items: flex-start; gap: 10px; padding: 20px 20px 4px; }
+.aim-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.aim-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.aim-sub { font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px; }
+.aim-close { flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; border: none;
+             background: var(--bg-inner); color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+.aim-drop { margin: 14px 20px 0; padding: 24px 16px; border-radius: 16px;
+            border: 1.5px dashed var(--border); background: var(--bg-inner); text-align: center; }
+.aim-drop[data-over="1"] { border-color: var(--accent-deep, var(--accent)); background: var(--accent-glow, rgba(6,182,212,.12)); }
+.aim-drop-t { display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+.aim-drop-s { display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.aim-drop-btns { display: flex; gap: 8px; margin-top: 14px; }
+.aim-drop-btns button { flex: 1; height: 42px; border-radius: 11px; border: 1px solid var(--border);
+                         background: var(--bg-panel); color: inherit; font-size: 13px; font-weight: 700;
+                         display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; font-family: inherit; }
+.aim-drop-btns button:active { background: var(--bg-inner); }
+
+.aim-sec-head { display: flex; align-items: baseline; padding: 16px 20px 6px; }
+.aim-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.aim-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+
+.aim-card { margin: 0 20px; border-radius: 14px; border: 1px solid var(--border-hair, var(--border)); background: var(--bg-panel); overflow: hidden; }
+.aim-f { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; }
+.aim-f-thumb { width: 40px; height: 50px; flex-shrink: 0; border-radius: 8px; background: var(--bg-inner);
+               border: 1px solid var(--border-hair, var(--border)); display: flex; align-items: center; justify-content: center;
+               color: var(--text-faint, var(--text-muted)); font-size: 9.5px; font-weight: 800; letter-spacing: .04em; }
+.aim-f-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.aim-f-name { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aim-f-meta { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.aim-f-track { height: 4px; border-radius: 99px; background: var(--bg-inner); margin-top: 7px; overflow: hidden; }
+.aim-f-track > i { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s linear; }
+.aim-f-x { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; border: none; background: none;
+           color: var(--text-ghost, #cbd5e1); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.aim-f-x:active { background: var(--bg-inner); color: var(--danger); }
+
+.aim-quote { margin: 0 20px; padding: 12px 14px; border-radius: 14px; background: var(--bg-inner); }
+.aim-q-top { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+.aim-q-l { font-size: 13.5px; font-weight: 700; }
+.aim-q-r { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+.aim-q-track { display: flex; gap: 3px; height: 6px; margin-top: 8px; }
+.aim-q-seg { border-radius: 99px; background: var(--border-hair, var(--border)); overflow: hidden; }
+.aim-q-seg > i { display: block; height: 100%; border-radius: 99px; }
+.aim-q-why { font-size: 11.5px; color: var(--text-muted); margin-top: 7px; }
+.aim-q-why[data-state="warn"] { color: var(--warning, #b45309); font-weight: 700; }
+.aim-q-buy { margin-top: 10px; width: 100%; height: 40px; border: none; border-radius: 10px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit; }
+
+.aim-note { padding: 12px 20px 4px; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+
+.aim-foot { padding: 14px 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.aim-tally { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.aim-tally-l { font-size: 12.5px; color: var(--text-muted); }
+.aim-tally-r { margin-left: auto; font-size: 12.5px; font-weight: 700; }
+.aim-cta { width: 100%; height: 48px; margin-top: 8px; border: none; border-radius: 13px;
+           background: var(--accent-deep, var(--accent)); color: #fff; font-size: 15px; font-weight: 800;
+           letter-spacing: -.01em; cursor: pointer; font-family: inherit; }
+.aim-cta:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+.aim-ghost { width: 100%; height: 40px; margin-top: 4px; background: none; border: none;
+             color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
 /* ── Shared inventory-impact success screen (inventory-impact.js) ──
    Shown after a manual order/expense save that touched stock — one
    screen for both contexts: order (stock came out) and expense (stock

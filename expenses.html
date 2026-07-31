@@ -40,6 +40,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="import-modal.js"></script>
 <script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
@@ -1174,55 +1175,6 @@
   </div>
 </div>
 
-<!-- Image/PDF Upload Modal -->
-<div class="modal-overlay" id="imageUploadModal">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 id="uploadModalTitle" style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
-    <p id="uploadDescription" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt or invoice for automatic data extraction</p>
-    
-    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
-      <div style="margin-bottom: 16px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
-      </div>
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
-      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
-      <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
-    </div>
-    
-    <div id="screenshotSection" style="margin-top: 20px; text-align: center;">
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
-      <button id="captureBtn" class="btn btn-secondary" onclick="captureScreenshot()" style="width: 100%;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
-        <span id="captureBtnLabel">Capture Screenshot</span>
-      </button>
-      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" />
-    </div>
-    <script>
-      if (/android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
-        document.getElementById('screenshotSection').style.display = 'none';
-      }
-    </script>
-    
-    <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <img id="previewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
-        <div style="flex: 1; min-width: 0;">
-          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main); word-break: break-all; overflow-wrap: break-word;"></p>
-          <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
-        </div>
-        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">×</button>
-      </div>
-    </div>
-    
-    <div id="uploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn btn-secondary" onclick="closeImageUploadModal()" style="flex: 1;">Cancel</button>
-      <button class="btn btn-primary" onclick="processImageUpload()" id="processImageBtn" style="flex: 1;" disabled>Process</button>
-    </div>
-  </div>
-</div>
 
 <!-- Ingredient Mapping Modal -->
 <div class="modal-overlay" id="ingredientMappingModal">
@@ -1867,31 +1819,13 @@ function sortTable(column) {
   render();
 }
 
-// Ingredient/order/expense AI scans all draw from one combined monthly pool
-// (see api/extract-receipt.js) — mirrors that logic so we can warn before
-// the user goes through a whole capture only to hit a 429 at the end.
-let aiUsageStatus = null;
-
-// Thin wrapper over the shared create-modal.js sheet — kept because
-// startReceiptScan() below (and possibly other code) reads the bare
-// aiUsageStatus variable directly.
-async function checkAIUsage() {
-  aiUsageStatus = await window.ShelfyCreateModal.checkUsage();
-  return aiUsageStatus;
-}
-
-function _limitReachedAlert() {
-  alert(`Monthly AI scan limit reached: you've used all ${aiUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
-}
-
 async function openMethodSelectionModal() {
   await window.ShelfyCreateModal.open('expense', {
-    onUsage: (status) => { aiUsageStatus = status; },
     onSelect: async (method) => {
       if (method === 'manual') {
         await openAddExpenseModal();
       } else if (method === 'upload') {
-        openImageUploadModal();
+        startReceiptScan();
       }
     }
   });
@@ -1902,23 +1836,17 @@ function closeMethodSelectionModal() {
 }
 
 // Primary FAB action — skips the method menu and goes straight to the
-// camera capture the "upload" method already uses, but checks the AI limit
-// first so a maxed-out user isn't sent through a whole capture just to
-// have it rejected at the end.
-async function startReceiptScan() {
-  await checkAIUsage();
-  if (aiUsageStatus && aiUsageStatus.limitReached) {
-    _limitReachedAlert();
-    return;
-  }
-  // On mobile, captureScreenshot() opens the modal itself once a photo is
-  // actually taken -- opening it here first meant cancelling the camera left
-  // the empty "Import from image" modal sitting open behind it. Desktop's
-  // screen-capture flow still needs the modal open up front to show its
-  // "Capturing screenshot..." status during the async permission prompt.
-  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (!isMobile) openImageUploadModal();
-  captureScreenshot();
+// shared import sheet (import-modal.js), which owns file intake, the
+// scan-cost quote and the actual /api/extract-receipt call. This page only
+// needs to say what to do with the result.
+function startReceiptScan() {
+  window.ShelfyImportModal.open('expense', {
+    onImported: (data, receiptUrl) => {
+      pendingExpenseReceiptUrl = receiptUrl;
+      showIngredientMappingModal(data);
+    },
+    onManual: openAddExpenseModal
+  });
 }
 
 // Selected ingredients storage — {id, name, quantity}
@@ -2758,225 +2686,7 @@ async function confirmDelete() {
   }
 }
 
-// === Image Upload Functions ===
-let uploadedFile = null;
 let pendingExpenseReceiptUrl = null;
-
-function openImageUploadModal() {
-  document.getElementById('imageUploadModal').classList.add('active');
-  setupDropZone();
-}
-
-function closeImageUploadModal() {
-  document.getElementById('imageUploadModal').classList.remove('active');
-  clearUpload();
-  
-  // Reset all UI elements
-  const uploadModalTitle = document.getElementById('uploadModalTitle');
-  const uploadDescription = document.getElementById('uploadDescription');
-  const dropZone = document.getElementById('dropZone');
-  const uploadPreview = document.getElementById('uploadPreview');
-  const screenshotSection = document.getElementById('screenshotSection');
-  const orDivider = dropZone.nextElementSibling;
-  const processBtn = document.getElementById('processImageBtn');
-  const cancelBtn = processBtn?.parentElement?.querySelector('.btn-secondary');
-  const statusDiv = document.getElementById('uploadStatus');
-  
-  if (uploadModalTitle) uploadModalTitle.style.display = '';
-  if (uploadDescription) uploadDescription.style.display = '';
-  if (dropZone) dropZone.style.display = '';
-  if (uploadPreview) uploadPreview.style.display = 'none';
-  if (screenshotSection) screenshotSection.style.display = '';
-  if (orDivider) orDivider.style.display = '';
-  if (cancelBtn) cancelBtn.style.display = '';
-  if (processBtn) {
-    processBtn.style.display = '';
-    processBtn.textContent = 'Process';
-    processBtn.disabled = true;
-  }
-  if (statusDiv) {
-    statusDiv.style.display = 'none';
-    statusDiv.innerHTML = '';
-  }
-}
-
-function setupDropZone() {
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('imageFileInput');
-  
-  // Click to browse
-  dropZone.onclick = () => fileInput.click();
-  
-  // File input change
-  fileInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
-  };
-  
-  // Drag and drop
-  dropZone.ondragover = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--accent)';
-    dropZone.style.background = 'rgba(6, 182, 212, 0.05)';
-  };
-  
-  dropZone.ondragleave = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--bg-panel)';
-  };
-  
-  dropZone.ondrop = (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = 'var(--border)';
-    dropZone.style.background = 'var(--bg-panel)';
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFile(files[0]);
-    }
-  };
-}
-
-function handleFile(file) {
-  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-  
-  if (!validTypes.includes(file.type)) {
-    showUploadStatus('Please upload a PNG, JPG, or PDF file', 'error');
-    return;
-  }
-  
-  if (file.size > 10 * 1024 * 1024) { // 10MB limit
-    showUploadStatus('File size must be less than 10MB', 'error');
-    return;
-  }
-  
-  uploadedFile = file;
-  
-  // Show preview
-  const preview = document.getElementById('uploadPreview');
-  const previewImage = document.getElementById('previewImage');
-  const fileName = document.getElementById('fileName');
-  const fileSize = document.getElementById('fileSize');
-  
-  fileName.textContent = file.name;
-  fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
-  
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImage.src = e.target.result;
-      previewImage.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  } else {
-    previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
-    previewImage.style.display = 'block';
-  }
-  
-  preview.style.display = 'block';
-  document.getElementById('processImageBtn').disabled = false;
-}
-
-function clearUpload() {
-  uploadedFile = null;
-  const preview = document.getElementById('uploadPreview');
-  const fileInput = document.getElementById('imageFileInput');
-  const processBtn = document.getElementById('processImageBtn');
-  const uploadStatus = document.getElementById('uploadStatus');
-  
-  if (preview) preview.style.display = 'none';
-  if (fileInput) fileInput.value = '';
-  if (processBtn) processBtn.disabled = true;
-  if (uploadStatus) uploadStatus.style.display = 'none';
-  
-  // Reset UI elements
-  const uploadDescription = document.getElementById('uploadDescription');
-  const dropZone = document.getElementById('dropZone');
-  const orDivider = dropZone ? dropZone.nextElementSibling : null;
-  const cancelBtn = processBtn ? processBtn.parentElement.querySelector('.btn-secondary') : null;
-  
-  if (uploadDescription) uploadDescription.style.display = 'block';
-  if (dropZone) dropZone.style.display = 'block';
-  if (orDivider) orDivider.style.display = 'block';
-  if (cancelBtn) cancelBtn.style.display = 'block';
-  if (processBtn) {
-    processBtn.style.display = 'block';
-    processBtn.textContent = 'Process';
-  }
-}
-
-async function captureScreenshot() {
-  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  if (isMobile) {
-    // On mobile: open the rear camera via file input. Cancelling the camera
-    // never fires onchange, so nothing else needs to happen -- the modal
-    // only opens here, once there's actually a photo to show.
-    const input = document.getElementById('cameraInput');
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        openImageUploadModal();
-        handleFile(file);
-        showUploadStatus('Photo captured successfully', 'success');
-      }
-      input.value = '';
-    };
-    input.click();
-    return;
-  }
-
-  // Desktop: use screen capture
-  try {
-    showUploadStatus('Capturing screenshot...', 'info');
-    
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { mediaSource: 'screen' }
-    });
-    
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-    
-    await new Promise(resolve => {
-      video.onloadedmetadata = resolve;
-    });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    
-    stream.getTracks().forEach(track => track.stop());
-    
-    canvas.toBlob((blob) => {
-      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-      handleFile(file);
-      showUploadStatus('Screenshot captured successfully', 'success');
-    }, 'image/png');
-    
-  } catch (error) {
-    if (error.name === 'NotAllowedError') {
-      showUploadStatus('Screenshot permission denied', 'error');
-    } else {
-      console.error('Screenshot error:', error);
-      showUploadStatus('Failed to capture screenshot', 'error');
-    }
-  }
-}
-
-// Update button label on mobile
-(function() {
-  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isMobile) {
-    document.addEventListener('DOMContentLoaded', function() {
-      const label = document.getElementById('captureBtnLabel');
-      if (label) label.textContent = 'Take Photo';
-    });
-  }
-})();
 
 // === Ingredient Mapping for Expense Receipts ===
 
@@ -3756,121 +3466,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-async function processImageUpload() {
-  if (!uploadedFile) {
-    showUploadStatus('Please select a file first', 'error');
-    return;
-  }
-  
-  // Save file to local variable before modal closes (which clears uploadedFile)
-  const fileToUpload = uploadedFile;
-  
-  const processBtn = document.getElementById('processImageBtn');
-  const originalText = processBtn.textContent;
-  processBtn.textContent = 'Processing...';
-  processBtn.disabled = true;
-  
-  // Close modal and show global loader
-  closeImageUploadModal();
-  showGlobalLoader();
-  
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) {
-      throw new Error('You must be logged in to use this feature');
-    }
-    
-    const formData = new FormData();
-    formData.append('file', fileToUpload);
-    formData.append('context', 'expense');
-    
-    const response = await fetch('/api/extract-receipt', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: formData
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to process' }));
-      throw new Error(errorData.error || 'Failed to extract data from image');
-    }
-    
-    const result = await response.json();
-    console.log('=== Expense Upload Result ===');
-    console.log('Success:', result.success);
-    console.log('Full response:', JSON.stringify(result, null, 2));
-    if (result.data) {
-      console.log('Vendor:', result.data.vendor);
-      console.log('Amount:', result.data.amount);
-      console.log('Date:', result.data.date);
-      console.log('Items:', result.data.item);
-      console.log('Number of items:', result.data.item?.length);
-    }
-    
-    if (result.success && result.data) {
-      // Upload the receipt file immediately while we still have the File reference
-      pendingExpenseReceiptUrl = null;
-      if (fileToUpload) {
-        try {
-          const ts = Date.now();
-          const fileName = `${session.user.id}/${ts}_${fileToUpload.name}`;
-          const { error: upErr } = await supabaseClient.storage
-            .from('expenses')
-            .upload(fileName, fileToUpload, { cacheControl: '3600', upsert: false });
-          if (upErr) {
-            console.error('Expense receipt upload error:', upErr);
-          } else {
-            const { data: { publicUrl } } = supabaseClient.storage.from('expenses').getPublicUrl(fileName);
-            pendingExpenseReceiptUrl = publicUrl;
-            console.log('Expense receipt pre-uploaded:', publicUrl);
-          }
-        } catch (upEx) {
-          console.error('Expense receipt upload exception:', upEx);
-        }
-      }
-      hideGlobalLoader();
-      showIngredientMappingModal(result.data);
-    } else {
-      throw new Error('Invalid response from API');
-    }
-  } catch (error) {
-    console.error('Error processing upload:', error);
-    
-    hideGlobalLoader();
-    
-    // Reopen modal and show error
-    openImageUploadModal();
-    if (processBtn) {
-      processBtn.textContent = 'Process';
-      processBtn.disabled = false;
-    }
-    
-    const statusDiv = document.getElementById('uploadStatus');
-    if (statusDiv) {
-      statusDiv.style.display = 'block';
-      showUploadStatus(error.message || 'Failed to process document. Please try again.', 'error');
-    }
-  }
-}
-
-function showUploadStatus(message, type = 'info') {
-  const statusEl = document.getElementById('uploadStatus');
-  if (!statusEl) return;
-  
-  statusEl.textContent = message;
-  statusEl.style.display = 'block';
-  
-  if (type === 'error') {
-    statusEl.style.color = 'var(--danger)';
-  } else if (type === 'success') {
-    statusEl.style.color = 'var(--success)';
-  } else {
-    statusEl.style.color = 'var(--text-muted)';
-  }
-}
-
 // Escape key listener for modals
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -3878,8 +3473,6 @@ document.addEventListener('keydown', (e) => {
       closeExpenseModal();
     } else if (document.getElementById('deleteModal').classList.contains('active')) {
       closeDeleteModal();
-    } else if (document.getElementById('imageUploadModal').classList.contains('active')) {
-      closeImageUploadModal();
     } else if (document.getElementById('ingredientMappingModal').classList.contains('active')) {
       closeIngredientMappingModal();
     }
