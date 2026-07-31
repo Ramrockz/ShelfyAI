@@ -1461,7 +1461,8 @@ function orderRow(o) {
   const channel = _realChannel(o.source);
   const qty = o.total_quantity || 0;
   const money = `$${parseFloat(o.revenue || 0).toFixed(2)}`;
-  const meta = [channel, `${qty} item${qty !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+  const day = o.sale_date ? new Date(o.sale_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null;
+  const meta = [day, channel, `${qty} item${qty !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
   return `<div class="ord-swipe">
       <div class="ord-actions">
         <button class="ord-act ord-act-refund" onclick="updateStatusFromList('${o.id}', 'refunded')" aria-label="Refund">
