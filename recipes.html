@@ -1414,14 +1414,14 @@
         </div>
 
         <div style="margin-top:20px;" id="recipeCategoryDesktopGroup">
-          <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Category</label>
+          <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Category <span style="color: var(--danger);">*</span></label>
           <div id="recipeCategoryIconPicker" class="recipe-cat-icon-picker"></div>
         </div>
         <input type="hidden" id="recipeCategoryInput" value="">
         <!-- Mobile-only: labelled row + sheet, same category list/icons as
              the icon grid above (which stays desktop-only). -->
         <button type="button" class="rb-row" id="rbCatRow" onclick="openRbCatSheet()">
-          <span class="rb-row-label">Category</span>
+          <span class="rb-row-label">Category <span style="color: var(--danger);">*</span></span>
           <span class="rb-row-value" id="rbCatValue"></span>
           <svg class="rb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
         </button>
@@ -3171,6 +3171,12 @@ async function saveMobileRecipe() {
       return;
     }
   }
+  if (!document.getElementById('recipeCategoryInput')?.value) {
+    const catRow = document.getElementById('rbCatRow');
+    catRow?.classList.add('input-invalid');
+    setTimeout(() => catRow?.classList.remove('input-invalid'), 450);
+    return;
+  }
   if (Object.keys(currentRecipe).length === 0) {
     return;
   }
@@ -3317,6 +3323,12 @@ async function saveRecipe() {
     nameInput.classList.add('shake');
     nameInput.focus();
     setTimeout(() => nameInput.classList.remove('shake'), 500);
+    return;
+  }
+  if (!document.getElementById('recipeCategoryInput')?.value) {
+    const catPicker = document.getElementById('recipeCategoryIconPicker');
+    catPicker?.classList.add('input-invalid');
+    setTimeout(() => catPicker?.classList.remove('input-invalid'), 450);
     return;
   }
   if (Object.keys(currentRecipe).length === 0) {
