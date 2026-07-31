@@ -1802,7 +1802,7 @@ function renderMobileOverlay() {
         <button class="rdm-item-act rdm-item-act-replace" onclick="rdmReplaceItem(${index})" aria-label="Replace">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
         </button>
-        <button class="rdm-item-act rdm-item-act-del" onclick="removeIngredientFromRecipe(${index})" aria-label="Delete">
+        <button class="rdm-item-act rdm-item-act-del" onclick="rdmDeleteItem(${index})" aria-label="Delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         </button>
       </div>
@@ -3714,6 +3714,17 @@ async function rdmReplaceItem(index) {
   await openAddIngredientModal();
 }
 
+// Delete (swipe action) -- removeIngredientFromRecipe() itself stays
+// confirm-free since aiRemoveLine() already confirms before calling it;
+// this swipe row skipped that entirely, so wrap it here instead of adding
+// a duplicate confirm inside the shared function.
+async function rdmDeleteItem(index) {
+  const comp = recipe.components[index];
+  const name = comp?.ingredient_name || comp?.name || 'this item';
+  if (!await showConfirm(`Remove ${name} from this product?`, 'Remove Item', 'Remove', true)) return;
+  await removeIngredientFromRecipe(index);
+}
+
 // Swipe-to-reveal for .rdm-item-row, same mechanics as ingredients.html's
 // initSwipe() -- event-delegated on the container since #rdmQtyList's
 // innerHTML is fully replaced on every renderMobileOverlay() call. Deferred
@@ -3776,7 +3787,18 @@ document.addEventListener('DOMContentLoaded', function initRdmItemSwipe() {
     const x = d.cur === null ? d.base : d.cur;
     const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
     if (open && open !== d.row) close();
-    if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+    if (commit) {
+      setX(d.row, -REVEAL, true);
+      open = d.row;
+      // Force a synchronous reflow after the swipe-open transform -- same
+      // installed-PWA WebView compositor lag documented elsewhere in this
+      // file (openRdmCategorySheet, aiOpenLine's button-hidden toggle):
+      // without this, hit-testing can lag behind the visual position, so
+      // the first tap on the just-revealed Replace/Delete buttons misses
+      // and hits whatever's still there per the stale hit-test underneath,
+      // requiring a second tap.
+      void d.row.offsetHeight;
+    }
     else        { setX(d.row, 0, true); if (open === d.row) open = null; }
   };
   list.addEventListener('pointerup', end);
