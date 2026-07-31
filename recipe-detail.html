@@ -106,14 +106,28 @@
      say how much of it one unit needs. Same skeleton on desktop (centered
      card) and mobile (full-screen takeover via the media query below). ---------- */
   .ai-overlay { z-index: 10003 !important; }
+  /* !important on every property here: this page's generic mobile
+     ".modal-content, .modal-content-custom, ... { width/max-width/margin/
+     max-height/padding/transform: ... !important }" rule (for the desktop-
+     style .recipe-overlay modals) otherwise wins over a plain, non-!important
+     override at the same "mobile media query" cascade position -- it was
+     silently squashing this screen's sizing back down to a small centered
+     card with 24px/20px padding instead of the intended full-bleed layout. */
   .ai-overlay .modal-content {
-    display: flex; flex-direction: column; padding: 0; width: 100%; max-width: 480px;
-    height: 640px; max-height: 88vh; overflow: hidden; position: relative;
+    display: flex !important; flex-direction: column !important; padding: 0 !important;
+    width: 100% !important; max-width: 480px !important; margin: 0 !important;
+    height: 640px !important; max-height: 88vh !important; overflow: hidden !important;
+    position: relative !important; transform: none !important; border-radius: 20px !important;
   }
   @media (max-width: 768px) {
-    .ai-overlay .modal-content { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    .ai-overlay .modal-content {
+      max-width: 100% !important; height: 100% !important; max-height: 100% !important;
+      border-radius: 0 !important; margin: 0 !important;
+    }
   }
-  .ai-pane { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg-app, var(--bg-main)); }
+  /* Only one pane is ever visible at a time, so plain display:none/flex in
+     normal flow is enough -- no need for position:absolute stacking. */
+  .ai-pane { display: none; flex-direction: column; height: 100%; min-height: 0; background: var(--bg-app, var(--bg-main)); }
   .ai-pane[data-on="1"] { display: flex; }
 
   .ai-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
@@ -783,7 +797,15 @@
       transform: translateY(0) !important;
     }
 
-    /* Bottom sheet for alert/confirm on mobile */
+    /* Bottom sheet for alert/confirm on mobile. No longer transform-animated
+       (was translateY(100%) -> translateY(0) on .active) -- on-device
+       diagnostics on the Category sheet showed the 'active' class and
+       computed styles were all correct (opacity, transform mid-transition)
+       yet it never actually painted, while ingredient-detail.html's plain,
+       non-animated modal-sheet-in-name-only sheets (no .modal-sheet CSS
+       there at all — see #catSheet) work reliably. Matching that: same
+       visibility/opacity toggle as every other modal on this page, just
+       positioned like a bottom sheet, no slide transform to fail silently. */
     .modal-overlay.modal-sheet {
       align-items: flex-end !important;
       padding: 0 !important;
@@ -794,11 +816,7 @@
       margin: 0 !important;
       border-radius: 20px 20px 0 0 !important;
       padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
-      transform: translateY(100%) !important;
-      transition: transform 0.3s ease !important;
-    }
-    .modal-overlay.modal-sheet.active .modal-content {
-      transform: translateY(0) !important;
+      transform: none !important;
     }
     .modal-content::before,
     .modal-content-custom::before,
