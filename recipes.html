@@ -401,10 +401,11 @@
     padding-right: 8px;
   }
 
-  .recipe-cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .recipe-cat-chip { display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--bg-panel); border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--text-muted); }
-  .recipe-cat-chip svg { width: 18px; height: 18px; stroke-width: 1.75; }
-  .recipe-cat-chip.selected { border-color: var(--accent); background: rgba(6,182,212,0.13); color: var(--accent); }
+  .rb-find-row { display: flex; align-items: center; gap: 8px; }
+  .item-cat-filter-btn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
+                          border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-muted);
+                          display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .item-cat-filter-btn[aria-pressed="true"] { border-color: var(--accent-deep, var(--accent)); background: rgba(6,182,212,.12); color: var(--accent-deep, var(--accent)); }
   .recipe-attr-subfilter { display: none; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .recipe-attr-subfilter.visible { display: flex; }
   .recipe-attr-chip { flex-shrink: 0; padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg-panel); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
@@ -1304,6 +1305,18 @@
       </div>
     </div>
 
+    <!-- Category sheet for the recipe-builder's Item Library search (both
+         desktop #recipeCatFilterBtn and mobile #mobileRecipeCatFilterBtn
+         open this same sheet) -- filters ingredientData by ITS OWN category,
+         distinct from #prodCatSheet/#rbCatSheet which are about a product's
+         own category. -->
+    <div class="modal-overlay modal-sheet" id="recipeIngCatSheet" onclick="if(event.target===this)closeRecipeIngCatSheet()">
+      <div class="modal-content" style="max-width:420px">
+        <h3 class="sheet-title" style="margin-top:0;">Filter by category</h3>
+        <div id="recipeIngCatSheetList"></div>
+      </div>
+    </div>
+
     <!-- Mobile category attribute subfilter — shown after a category is picked from the sheet -->
     <div class="prod-mobile-filter-row" id="prodMobileFilterRow">
       <div id="productMobileAttrSubfilter" class="prod-attr-subfilter"></div>
@@ -1400,12 +1413,16 @@
 
       <div class="mobile-ingredient-swiper" id="recipeStep2Section">
         <div class="rb-sec" id="rbAddMoreSec"><span class="rb-sec-title">Add more</span></div>
-        <div class="search-wrapper" style="width: 100%; margin-bottom: 12px;">
-          <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
-          <button type="button" class="search-clear" id="mobileRecipeSearch_clear" onclick="document.getElementById('mobileRecipeSearch').value = ''; renderMobileIngList(); this.classList.remove('visible');" title="Clear search">×</button>
+        <div class="rb-find-row" style="margin-bottom: 12px;">
+          <div class="search-wrapper" style="width: 100%; flex: 1;">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
+            <button type="button" class="search-clear" id="mobileRecipeSearch_clear" onclick="document.getElementById('mobileRecipeSearch').value = ''; renderMobileIngList(); this.classList.remove('visible');" title="Clear search">×</button>
+          </div>
+          <button type="button" class="item-cat-filter-btn" id="mobileRecipeCatFilterBtn" onclick="openRecipeIngCatSheet()" aria-label="Filter by category">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          </button>
         </div>
-        <div id="mobileRecipeCatChips" class="recipe-cat-chips"></div>
         <div id="mobileRecipeAttrSubfilter" class="recipe-attr-subfilter"></div>
         <div id="mobileRecipeIngList"></div>
       </div>
@@ -1420,13 +1437,17 @@
         <h3 style="margin: 0;">Item Library</h3>
         <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
-      <div class="search-wrapper" style="width: 100%;">
-        <i data-lucide="search" class="search-icon"></i>
-        <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="filterRecipeIngredients(); toggleSearchClear('recipeSearchIng')" style="width: 100%;" />
-        <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; filterRecipeIngredients(); this.classList.remove('visible');" title="Clear search">&times;</button>
+      <div class="rb-find-row">
+        <div class="search-wrapper" style="width: 100%; flex: 1;">
+          <i data-lucide="search" class="search-icon"></i>
+          <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="filterRecipeIngredients(); toggleSearchClear('recipeSearchIng')" style="width: 100%;" />
+          <button type="button" class="search-clear" id="recipeSearchIng_clear" onclick="document.getElementById('recipeSearchIng').value = ''; filterRecipeIngredients(); this.classList.remove('visible');" title="Clear search">&times;</button>
+        </div>
+        <button type="button" class="item-cat-filter-btn" id="recipeCatFilterBtn" onclick="openRecipeIngCatSheet()" aria-label="Filter by category">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+        </button>
       </div>
-      <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
-      <div id="recipeAttrSubfilter" class="recipe-attr-subfilter"></div>
+      <div id="recipeAttrSubfilter" class="recipe-attr-subfilter" style="margin-top: 8px;"></div>
 
       <!-- Headers are dynamically generated by renderIngredientList() to show Favorites first, then All Ingredients -->
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
@@ -1498,7 +1519,7 @@ async function loadIngredients() {
       ingredientData = _d;
       favoriteIngredients.clear();
       _d.forEach(ing => { if (ing.is_favorite) favoriteIngredients.add(ing.id); });
-      try { renderRecipeCatChips(); } catch (e) {}
+      try { updateRecipeCatFilterBtnState(); } catch (e) {}
       try { renderIngredientList(); } catch (e) {}
     } catch (e) {}
   }
@@ -1558,7 +1579,7 @@ async function loadIngredients() {
     });
 
     localStorage.setItem('shelfy_cache_recipes_ingredients', JSON.stringify(ingredientData));
-    try { renderRecipeCatChips(); } catch (e) {}
+    try { updateRecipeCatFilterBtnState(); } catch (e) {}
     try { renderIngredientList(); } catch (e) {}
     try { renderProductCatChips(); } catch (e) {}
   } catch (error) {
@@ -2325,6 +2346,7 @@ function closeRecipeBuilder() {
   recipeActiveCategoryFilter = null;
   recipeActiveAttrValueFilters = new Map();
   hideRecipeAttrSubfilters();
+  updateRecipeCatFilterBtnState();
   currentEditingRecipeId = null;
   currentEditReturnUrl = null;
   currentEditingRecipeName = null;
@@ -2696,30 +2718,54 @@ function toggleRecipeAttrFilter(key, value) {
   if (window.innerWidth <= 768) renderMobileIngList();
 }
 
-function renderRecipeCatChips() {
-  const presentCatsSet = new Set(ingredientData.map(i => i.category).filter(Boolean));
-  // Use canonical order, but only show categories that exist in ingredient data
-  const presentCats = _recipeCategories.filter(cat => presentCatsSet.has(cat));
-  const chips = presentCats.map(cat => {
-    const icon = _recipeCategIconMap[cat] || 'tag';
-    const selected = recipeActiveCategoryFilter === cat;
-    return `<button type="button" class="recipe-cat-chip${selected ? ' selected' : ''}" onclick="toggleRecipeCatFilter('${cat}')" title="${cat}"><i data-lucide="${icon}"></i></button>`;
-  }).join('');
-  ['recipeCatChips', 'mobileRecipeCatChips'].forEach(id => {
+// Filter-icon button (next to search) + sheet, replacing the old icon-only
+// chip row -- same sort-by-relevance + count pattern as #catSheet/#prodCatSheet.
+function updateRecipeCatFilterBtnState() {
+  const active = !!recipeActiveCategoryFilter;
+  ['recipeCatFilterBtn', 'mobileRecipeCatFilterBtn'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.innerHTML = chips; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+    if (el) el.setAttribute('aria-pressed', String(active));
   });
 }
 
-function toggleRecipeCatFilter(cat) {
-  recipeActiveCategoryFilter = recipeActiveCategoryFilter === cat ? null : cat;
+function renderRecipeIngCatSheet() {
+  const presentCatsSet = new Set(ingredientData.map(i => i.category).filter(Boolean));
+  const counts = c => ingredientData.filter(i => i.category === c).length;
+  const presentCats = _recipeCategories.filter(cat => presentCatsSet.has(cat))
+    .sort((a, b) => counts(b) - counts(a));
+  const row = (label, icon, value, count) => {
+    const on = recipeActiveCategoryFilter === value;
+    const arg = value === null ? 'null' : `'${value.replace(/'/g, "\\'")}'`;
+    return `<div class="cat-row${on ? ' active' : ''}" onclick="pickRecipeIngCat(${arg})">
+        <i data-lucide="${icon}"></i>
+        <span class="cat-row-label">${label}</span>
+        <span class="cat-row-count">${count}</span>
+      </div>`;
+  };
+  document.getElementById('recipeIngCatSheetList').innerHTML =
+    row('All categories', 'layers', null, ingredientData.length) +
+    presentCats.map(cat => row(cat, _recipeCategIconMap[cat] || 'tag', cat, counts(cat))).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function openRecipeIngCatSheet() {
+  renderRecipeIngCatSheet();
+  document.getElementById('recipeIngCatSheet').classList.add('active');
+}
+function closeRecipeIngCatSheet() {
+  document.getElementById('recipeIngCatSheet').classList.remove('active');
+}
+
+function pickRecipeIngCat(cat) {
+  recipeActiveCategoryFilter = cat;
   recipeActiveAttrValueFilters = new Map();
   if (recipeActiveCategoryFilter) {
     renderRecipeAttrSubfilters(recipeActiveCategoryFilter);
   } else {
     hideRecipeAttrSubfilters();
   }
-  renderRecipeCatChips();
+  closeRecipeIngCatSheet();
+  updateRecipeCatFilterBtnState();
   renderIngredientList();
   if (window.innerWidth <= 768) renderMobileIngList();
 }
@@ -2876,7 +2922,7 @@ function initMobileIngredientList() {
   if (!searchInput) return;
   searchInput.value = '';
   searchInput.addEventListener('input', renderMobileIngList);
-  renderRecipeCatChips();
+  updateRecipeCatFilterBtnState();
   renderMobileIngList();
 }
 
