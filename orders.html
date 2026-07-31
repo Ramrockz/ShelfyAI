@@ -2951,6 +2951,8 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
   const priority = { out_of_stock: 0, low_stock: 1, ok: 2 };
   const sorted = [...changes].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
   const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.oldQty - c.newQty), 0);
+  const soldItems = Array.isArray(order.items) ? order.items : [];
+  const soldUnits = soldItems.reduce((s, it) => s + (parseFloat(it.quantity) || 0), 0);
 
   const rows = sorted.map(c => ({
     name: c.name,
@@ -2958,30 +2960,26 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
     to: c.newQty,
     unit: c.unit,
     href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
-    state: c.status === 'out_of_stock' ? 'out' : c.status === 'low_stock' ? 'low' : ''
+    state: c.status === 'out_of_stock' ? 'out' : c.status === 'low_stock' ? 'low' : '',
+    why: (c.status === 'low_stock' && c.minStock) ? `Alert level ${ShelfyInventoryImpact.fmt(c.minStock)}` : null
   }));
 
-  ShelfyInventoryImpact.render(document.getElementById('successBody'), {
+  const body = document.getElementById('successBody');
+  ShelfyInventoryImpact.render(body, {
     title: 'Order from ' + (order.customer || 'Customer') + ' created',
     sub: [order.source, order.order_reference].filter(Boolean).join(' · ') || null,
     figs: [
       [`$${(parseFloat(order.revenue) || 0).toFixed(2)}`, 'order total'],
-      [String(order.total_quantity || 0), 'items'],
-      ...(changes.length ? [[`−${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'units of stock']] : [])
+      [`${soldUnits} unit${soldUnits === 1 ? '' : 's'}`, 'sold'],
+      ...(changes.length ? [[`−${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'items used']] : [])
     ],
-    secTitle: 'Stock it took',
+    secTitle: 'Inventory updated',
     secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
     rows,
     emptyText: inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.',
-    unmatched: (unmatchedItems || []).map(u => ({
-      name: u.name,
-      why: u.why,
-      action: 'Add item',
-      onAdd: (btn) => {
-        sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({ name: u.name, text: `From "${u.name}" on this order — check the details before saving.` }));
-        window.location.href = '/ingredients';
-      }
-    })),
+    // "Not in inventory" is folded into the unified "Needs attention"
+    // section rendered below instead of the shared renderer's own version.
+    unmatched: [],
     note: inventoryUpdated
       ? 'Stock was deducted when this order was created. Editing the order later does not re-run it.'
       : null,
@@ -2989,6 +2987,87 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
       label: 'Put this stock back',
       onClick: (btn) => undoOrderStock(changes, btn)
     } : null
+  });
+
+  // Order-side-only additions the shared success-screen renderer (also used
+  // by expenses.html) doesn't know about: what actually sold (products carry
+  // no stock of their own, so no from→to for these), and a unified
+  // "Needs attention" list combining low/out-of-stock reorder rows with
+  // unmatched-line rows.
+  renderOrderSoldSection(body, soldItems);
+  renderOrderNeedsAttention(body, changes, unmatchedItems || []);
+}
+
+function renderOrderSoldSection(body, items) {
+  if (!items.length) return;
+  const head = body.querySelector('.ii-head');
+  if (!head) return;
+  const rows = items.map(it => {
+    const qty = parseFloat(it.quantity) || 1;
+    const price = parseFloat(it.price) || 0;
+    return `<div class="ii-sold-row">
+        <span class="ii-sold-qty">${qty} ×</span>
+        <span class="ii-sold-main">
+          <span class="ii-sold-name">${_rcmEsc(it.name || 'Item')}</span>
+          <span class="ii-sold-why">$${price.toFixed(2)} each</span>
+        </span>
+        <span class="ii-sold-money">$${(qty * price).toFixed(2)}</span>
+      </div>`;
+  }).join('');
+  head.insertAdjacentHTML('afterend', `<div class="ii-sec">
+      <div class="ii-sec-head"><span class="ii-sec-title">Sold</span><span class="ii-sec-note">${items.length} product${items.length === 1 ? '' : 's'}</span></div>
+      <div class="ii-list">${rows}</div>
+    </div>`);
+}
+
+// Reorder hands off to ingredient-detail.html's own real reorder screen
+// (?openReorder=true, already supported there) rather than building a new
+// one here. "Add item" reuses the existing seed-and-navigate pattern.
+function renderOrderNeedsAttention(body, changes, unmatchedItems) {
+  const flagged = changes.filter(c => c.status === 'out_of_stock' || c.status === 'low_stock');
+  if (!flagged.length && !unmatchedItems.length) return;
+
+  const rows = flagged.map(c => ({
+    name: c.name,
+    state: c.status === 'out_of_stock' ? 'short' : 'low',
+    why: c.status === 'out_of_stock'
+      ? `Out of stock${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`
+      : `${ShelfyInventoryImpact.fmt(c.newQty)}${c.unit ? ' ' + _rcmEsc(c.unit) : ''} left${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`,
+    action: 'Reorder',
+    onAction: () => { window.location.href = '/ingredient-detail?id=' + encodeURIComponent(c.id) + '&openReorder=true'; }
+  })).concat(unmatchedItems.map(u => ({
+    name: u.name,
+    state: 'low',
+    why: u.why || 'No product matched this line',
+    action: 'Add item',
+    onAction: () => {
+      sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({ name: u.name, text: `From "${u.name}" on this order — check the details before saving.` }));
+      window.location.href = '/ingredients';
+    }
+  })));
+
+  const invSec = body.querySelector('.ii-sec');
+  const rowsHtml = rows.map((r, i) => `<div class="ii-un">
+      <span class="ii-un-main">
+        <span class="ii-un-name">${_rcmEsc(r.name)}</span>
+        <span class="ii-un-why" data-state="${r.state}">${_rcmEsc(r.why)}</span>
+      </span>
+      <button type="button" class="ii-un-btn" data-need-idx="${i}">${_rcmEsc(r.action)}</button>
+    </div>`).join('');
+  const html = `<div class="ii-sec">
+      <div class="ii-sec-head"><span class="ii-sec-title">Needs attention</span><span class="ii-sec-note">${rows.length} to sort out</span></div>
+      <div class="ii-list">${rowsHtml}</div>
+    </div>`;
+  if (invSec) invSec.insertAdjacentHTML('afterend', html);
+  else body.insertAdjacentHTML('beforeend', html);
+
+  body.querySelectorAll('.ii-un-btn[data-need-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = rows[parseInt(btn.dataset.needIdx, 10)];
+      if (!r) return;
+      btn.disabled = true;
+      r.onAction();
+    });
   });
 }
 
@@ -3162,7 +3241,7 @@ async function updateInventoryForNewOrder(selectedRecipes, userId, saleId = null
       } else if (newQuantity > 0 && oldQuantity > 0 && newQuantity <= oldQuantity * 0.25 && oldQuantity >= 4) {
         status = 'low_stock';
       }
-      changesSummary.push({ id: ingredient.id, name: ingredient.name, unit: ingredient.unit, oldQty: oldQuantity, newQty: newQuantity, status });
+      changesSummary.push({ id: ingredient.id, name: ingredient.name, unit: ingredient.unit, oldQty: oldQuantity, newQty: newQuantity, status, minStock });
     });
     await Promise.all(updatePromises);
     return changesSummary;

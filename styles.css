@@ -1166,6 +1166,21 @@ a.stock-name:hover { color: var(--accent); text-decoration: underline; }
              background: var(--bg-panel); font-size: 12.5px; font-weight: 700; color: var(--accent-ink, var(--accent)); cursor: pointer; }
 .ii-un-btn:active { background: var(--bg-inner); }
 .ii-un-btn[data-done="1"] { border-color: transparent; background: none; color: var(--text-faint, var(--text-muted)); }
+.ii-un-why[data-state="low"] { color: var(--warning, #b45309); font-weight: 600; }
+.ii-un-why[data-state="short"] { color: var(--danger, #dc2626); font-weight: 600; }
+
+/* order-only "Sold" rows (orders.html's showOrderSuccessScreen) — products
+   carry no stock of their own, so these are money/quantity only, never
+   rendered by the shared inventory-impact renderer above. */
+.ii-sold-row { display: flex; align-items: center; gap: 11px; min-height: 52px; padding: 8px 14px;
+               border-top: 1px solid var(--border-hair, var(--border)); }
+.ii-list .ii-sold-row:first-child { border-top: none; }
+.ii-sold-qty { flex-shrink: 0; min-width: 26px; font-size: 14px; font-weight: 800; color: var(--accent-ink, var(--accent)); }
+.ii-sold-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ii-sold-name { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.01em;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ii-sold-why { display: block; font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px; }
+.ii-sold-money { flex-shrink: 0; font-size: 14px; font-weight: 800; }
 
 .ii-note { padding: 12px 2px 4px; font-size: 12px; color: var(--text-faint, var(--text-muted)); text-align: left; }
 .ii-undo { display: block; width: 100%; padding: 14px 0 4px; background: none; border: none; text-align: center;
