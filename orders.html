@@ -2414,6 +2414,7 @@ document.addEventListener('keydown', (e) => {
       <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
       <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
       <input type="file" id="orderImageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
+      <input type="file" id="orderCameraInput" accept="image/*" capture="environment" style="display:none;" />
     </div>
     <div id="screenshotSectionOrders" style="margin-top: 20px; text-align: center;">
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
@@ -2530,7 +2531,12 @@ async function startOrderUpload() {
     _orderLimitReachedAlert();
     return;
   }
-  openOrderImageUploadModal();
+  // On mobile, captureOrderScreenshot() opens the modal itself once a photo
+  // is actually taken -- opening it here first would leave an empty modal
+  // open behind the camera if the user cancels. Desktop's screen-capture
+  // flow still needs the modal open up front for its status messages.
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (!isMobile) openOrderImageUploadModal();
   captureOrderScreenshot();
 }
 
@@ -3241,6 +3247,29 @@ function clearOrderUpload() {
   document.getElementById('orderUploadStatus').style.display = 'none';
 }
 async function captureOrderScreenshot() {
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // getDisplayMedia (screen capture) doesn't make sense on mobile and
+    // isn't supported there anyway -- it was throwing immediately and
+    // surfacing as a confusing "Failed to capture screenshot". Open the
+    // rear camera via file input instead, same as expenses.html's
+    // captureScreenshot(). Cancelling the camera never fires onchange, so
+    // nothing else needs to happen.
+    const input = document.getElementById('orderCameraInput');
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        openOrderImageUploadModal();
+        handleOrderFile(file);
+        showOrderUploadStatus('Photo captured successfully', 'success');
+      }
+      input.value = '';
+    };
+    input.click();
+    return;
+  }
+
   try {
     showOrderUploadStatus('Capturing screenshot...', 'info');
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: { mediaSource: 'screen' } });

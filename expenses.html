@@ -1911,7 +1911,13 @@ async function startReceiptScan() {
     _limitReachedAlert();
     return;
   }
-  openImageUploadModal();
+  // On mobile, captureScreenshot() opens the modal itself once a photo is
+  // actually taken -- opening it here first meant cancelling the camera left
+  // the empty "Import from image" modal sitting open behind it. Desktop's
+  // screen-capture flow still needs the modal open up front to show its
+  // "Capturing screenshot..." status during the async permission prompt.
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (!isMobile) openImageUploadModal();
   captureScreenshot();
 }
 
@@ -2904,11 +2910,14 @@ async function captureScreenshot() {
   const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // On mobile: open the rear camera via file input
+    // On mobile: open the rear camera via file input. Cancelling the camera
+    // never fires onchange, so nothing else needs to happen -- the modal
+    // only opens here, once there's actually a photo to show.
     const input = document.getElementById('cameraInput');
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
+        openImageUploadModal();
         handleFile(file);
         showUploadStatus('Photo captured successfully', 'success');
       }
