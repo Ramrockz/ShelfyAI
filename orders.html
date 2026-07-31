@@ -66,6 +66,20 @@
   .cta .btn-primary { background: #fff; color: var(--accent); }
   .cta .btn-primary:hover { background: rgba(255,255,255,0.9); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
+  /* Upload-first primary action -- same shortcut pattern as expenses.html's
+     "Scan receipt" FAB, skipping the method menu and going straight to the
+     upload modal's capture flow. No shadow (matches expenses.html's FAB,
+     which had its drop-shadow removed for the same reason). */
+  .fab-pill {
+    position: fixed; right: 16px; z-index: 900;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+    height: 52px; padding: 0 20px; display: flex; align-items: center; gap: 8px;
+    border: none; border-radius: 99px; background: var(--accent); color: #fff;
+    font: 800 14.5px inherit; font-family: inherit; cursor: pointer;
+  }
+  .fab-pill:active { transform: scale(0.96); }
+  @media (min-width: 769px) { .fab-pill { bottom: 24px; } }
+
   /* ---------- MAIN CONTENT ---------- */
   .main { padding: 32px 36px; position: relative; }
   
@@ -1061,6 +1075,12 @@
 
   </main>
 
+  <!-- Upload-first primary action — the sidebar "+ New Order" button and the
+       empty-state CTAs still open the full method-selection menu. -->
+  <button class="fab-pill" onclick="startOrderUpload()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload file
+  </button>
 </div>
 
 <!-- Add/Edit Order Modal -->
@@ -2494,6 +2514,24 @@ async function openOrderMethodModal() {
 }
 function closeOrderMethodModal() {
   window.ShelfyCreateModal.close();
+}
+
+function _orderLimitReachedAlert() {
+  alert(`Monthly AI scan limit reached: you've used all ${orderAIUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
+}
+
+// Primary FAB action — skips the method menu and goes straight to the
+// capture flow the "upload" method already uses, but checks the AI limit
+// first so a maxed-out user isn't sent through a whole capture just to
+// have it rejected at the end. Mirrors expenses.html's startReceiptScan().
+async function startOrderUpload() {
+  await checkOrderAIUsage();
+  if (orderAIUsageStatus && orderAIUsageStatus.limitReached) {
+    _orderLimitReachedAlert();
+    return;
+  }
+  openOrderImageUploadModal();
+  captureOrderScreenshot();
 }
 
 // --- Manual Order Modal ---
