@@ -2998,7 +2998,7 @@ function renderMobileIngredientRow(i) {
   const selected = !!currentRecipe[i.id];
   const isFavorite = favoriteIngredients.has(i.id);
   const starIcon = isFavorite ? '★' : '☆';
-  const meta = `$${(parseFloat(i.cost_per_unit) || 0).toFixed(2)}/${_escHtml(i.unit || 'unit')}`;
+  const meta = `$${(parseFloat(i.price) || 0).toFixed(2)}/${_escHtml(i.unit || 'unit')}`;
 
   return `<button type="button" class="ai-row" data-on="${selected ? 1 : 0}" onclick="mobileTapIngredient('${i.id}')">
       <span class="ai-main">
