@@ -832,22 +832,31 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    .mob-ing-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 11px 14px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      min-height: 44px;
-    }
-    .mob-ing-row:active { opacity: 0.7; }
-    .mob-ing-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
-    .mob-ing-qty { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    
+    /* Same visual language as recipe-detail.html's ai* item picker (.ai-row
+       family) -- flush rows in a bordered/rounded list group with a
+       name+meta subtitle, instead of separate margin-boxed cards with no
+       price/stock info. */
+    .ai-sec-head { display: flex; align-items: baseline; padding: 18px 4px 8px; }
+    .ai-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+    .ai-list { background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border)); border-radius: 10px; overflow: hidden; }
+    .ai-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px;
+              padding: 9px 14px; text-align: left; background: var(--bg-panel); border: none;
+              border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; font-family: inherit; }
+    .ai-list .ai-row:first-child { border-top: none; }
+    .ai-row:active { opacity: 0.7; }
+    .ai-row[data-on="1"] { background: rgba(6,182,212,.045); }
+    .ai-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .ai-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main);
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ai-row[data-on="1"] .ai-name { color: var(--accent); }
+    .ai-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .ai-meta[data-state="short"] { color: var(--warning); }
+    .ai-onqty { flex-shrink: 0; height: 26px; padding: 0 9px; border-radius: 8px;
+                background: rgba(6,182,212,.12); color: var(--accent); font-size: 12.5px; font-weight: 800;
+                display: inline-flex; align-items: center; }
+    .ai-star { flex-shrink: 0; font-size: 18px; cursor: pointer; color: #cbd5e1; }
+    .ai-star.favorited { color: #f59e0b; }
+
     /* Selected Ingredients Area */
     #recipeDropzone {
       flex: 0 0 auto;
@@ -914,13 +923,6 @@
     .mobile-type-filter:active {
       transform: scale(0.96);
     }
-
-    /* Ingredient selection */
-    .mob-ing-row.selected {
-      border-color: var(--accent);
-      background: rgba(6, 182, 212, 0.08);
-    }
-    .mob-ing-row.selected .mob-ing-name { color: var(--accent); font-weight: 700; }
 
     /* ---------- Fixed header: Cancel / title / Create ---------- */
     #rbHead {
@@ -1323,18 +1325,6 @@
       </div>
     </div>
 
-    <!-- Category sheet for the recipe-builder's Item Library search (both
-         desktop #recipeCatFilterBtn and mobile #mobileRecipeCatFilterBtn
-         open this same sheet) -- filters ingredientData by ITS OWN category,
-         distinct from #prodCatSheet/#rbCatSheet which are about a product's
-         own category. -->
-    <div class="modal-overlay modal-sheet" id="recipeIngCatSheet" onclick="if(event.target===this)closeRecipeIngCatSheet()">
-      <div class="modal-content" style="max-width:420px">
-        <h3 class="sheet-title" style="margin-top:0;">Filter by category</h3>
-        <div id="recipeIngCatSheetList"></div>
-      </div>
-    </div>
-
     <!-- Mobile category attribute subfilter — shown after a category is picked from the sheet -->
     <div class="prod-mobile-filter-row" id="prodMobileFilterRow">
       <div id="productMobileAttrSubfilter" class="prod-attr-subfilter"></div>
@@ -1479,6 +1469,22 @@
     <div class="modal-content">
       <h3 class="sheet-title" style="margin-top:0;">Category</h3>
       <div id="rbCatList"></div>
+    </div>
+  </div>
+
+  <!-- Category sheet for the recipe-builder's Item Library search (both
+       desktop #recipeCatFilterBtn and mobile #mobileRecipeCatFilterBtn open
+       this same sheet) -- filters ingredientData by ITS OWN category,
+       distinct from #prodCatSheet/#rbCatSheet which are about a product's
+       own category. Nested inside #recipeBuilderOverlay (not a page-level
+       sibling like #prodCatSheet) so its z-index only has to beat its
+       siblings within this overlay's own stacking context, not the
+       overlay's z-index:10000 itself -- as a page-level sibling it was
+       rendering BEHIND the already-open recipe builder, invisible. -->
+  <div class="modal-overlay modal-sheet" id="recipeIngCatSheet" onclick="if(event.target===this)closeRecipeIngCatSheet()">
+    <div class="modal-content" style="max-width:420px">
+      <h3 class="sheet-title" style="margin-top:0;">Filter by category</h3>
+      <div id="recipeIngCatSheetList"></div>
     </div>
   </div>
 </div>
@@ -2968,54 +2974,40 @@ function renderMobileIngList() {
     return;
   }
 
-  // Separate favorites and non-favorites
+  // Separate favorites and non-favorites, same sectioned .ai-list/.ai-sec-head
+  // groups as recipe-detail.html's ai* item picker.
   const favorites = visible.filter(i => favoriteIngredients.has(i.id));
   const nonFavorites = visible.filter(i => !favoriteIngredients.has(i.id));
 
   let html = '';
-  
-  // Render favorites section
   if (favorites.length > 0) {
-    html += '<h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 12px 8px; font-weight: 700; letter-spacing: 0.05em;">Favorites</h4>';
-    html += favorites.map(i => renderMobileIngredientRow(i)).join('');
-    
-    if (nonFavorites.length > 0) {
-      html += '<h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 16px 12px 8px; font-weight: 700; letter-spacing: 0.05em;">All Items</h4>';
-    }
+    html += `<div class="ai-sec-head"><span class="ai-sec-title">Favorites</span></div><div class="ai-list">${favorites.map(i => renderMobileIngredientRow(i)).join('')}</div>`;
   }
-  
-  // Render non-favorites
-  html += nonFavorites.map(i => renderMobileIngredientRow(i)).join('');
-  
+  if (nonFavorites.length > 0) {
+    html += `<div class="ai-sec-head"><span class="ai-sec-title">All Items</span></div><div class="ai-list">${nonFavorites.map(i => renderMobileIngredientRow(i)).join('')}</div>`;
+  }
+
   container.innerHTML = html;
-  
-  // Add click handlers for stars
-  container.querySelectorAll('.mob-favorite-star').forEach(star => {
-    star.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = star.dataset.ingredientId;
-      toggleIngredientFavorite(id);
-    });
-  });
 }
 
 function renderMobileIngredientRow(i) {
   const qty = parseFloat(i.quantity) || 0;
   const min = parseFloat(i.min_stock) || 0;
-  const pill = qty === 0 ? '<span class="stock-pill out">Out</span>' : (min > 0 && qty < min) ? '<span class="stock-pill low">Low</span>' : '';
+  const short = qty === 0;
+  const low = !short && min > 0 && qty < min;
   const selected = !!currentRecipe[i.id];
   const isFavorite = favoriteIngredients.has(i.id);
-  const starFill = isFavorite ? 'var(--warning)' : 'none';
-  const starStroke = isFavorite ? 'var(--warning)' : 'var(--text-muted)';
-  
-  return `<div class="mob-ing-row${selected ? ' selected' : ''}" onclick="mobileTapIngredient('${i.id}')">
-    <svg class="mob-favorite-star" data-ingredient-id="${i.id}" width="14" height="14" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" style="flex-shrink:0;margin-right:8px;cursor:pointer;opacity:0.6;">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-    <span class="mob-ing-name">${_escHtml(i.name)}</span>
-    ${pill}
-    ${selected ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="16" height="16" style="color:var(--accent);flex-shrink:0;margin-left:auto;"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
-  </div>`;
+  const starIcon = isFavorite ? '★' : '☆';
+  const meta = `$${(parseFloat(i.cost_per_unit) || 0).toFixed(2)}/${_escHtml(i.unit || 'unit')}`;
+
+  return `<button type="button" class="ai-row" data-on="${selected ? 1 : 0}" onclick="mobileTapIngredient('${i.id}')">
+      <span class="ai-main">
+        <span class="ai-name">${_escHtml(i.name)}</span>
+        <span class="ai-meta"${short ? ' data-state="short"' : ''}>${short ? 'Out of stock · ' : low ? 'Low stock · ' : ''}${meta}</span>
+      </span>
+      ${selected ? `<span class="ai-onqty">Added</span>` : ''}
+      <span class="ai-star${isFavorite ? ' favorited' : ''}" onclick="event.stopPropagation(); toggleIngredientFavorite('${i.id}')">${starIcon}</span>
+    </button>`;
 }
 
 function mobileTapIngredient(id) {
