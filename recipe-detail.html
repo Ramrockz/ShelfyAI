@@ -3415,15 +3415,16 @@ function aiRenderList() {
     if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
     html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}</div>`;
   } else {
-    const inRecipe = components.map(c => availableIngredients.find(i => i.id === (c.ingredient_id || c.id))).filter(Boolean);
+    // Items already in this product are excluded entirely -- this picker is
+    // for adding something new; editing an existing line happens from the
+    // product's own ingredient list, not by re-finding it here.
     const notInRecipe = availableIngredients.filter(i => !inRecipeIds.has(i.id) && matchesCat(i));
     const common = notInRecipe.filter(i => (usage.get(i.id) || 0) >= 2);
     const rest = notInRecipe.filter(i => (usage.get(i.id) || 0) < 2);
-    if (inRecipe.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">In this product</span><span class="ai-sec-note">$${(parseFloat(recipe.cost) || 0).toFixed(2)} per unit</span></div><div class="ai-list">${inRecipe.map(rowHtml).join('')}</div>`;
     if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
     if (rest.length) {
       html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}${newRow()}</div>`;
-    } else if (!inRecipe.length && !common.length) {
+    } else if (!common.length) {
       html += `<div class="ai-list">${emptyState(_aiCategoryFilter ? 'No items match this category' : 'No items found')}${newRow()}</div>`;
     } else {
       html += `<div class="ai-list">${newRow()}</div>`;
@@ -3504,9 +3505,22 @@ function aiOpenLine(ingredientId, existingIndex) {
   document.getElementById('aiLineSub').textContent =
     `$${(parseFloat(ing.cost_per_unit) || 0).toFixed(2)} per ${ing.unit || 'unit'}${stockQty != null ? ` · ${stockQty} ${ing.unit || ''} in stock` : ''}`;
   document.getElementById('aiQty').value = qty;
-  document.getElementById('aiRemoveBtn').hidden = !isExisting;
-  document.getElementById('aiSwapBtn').hidden = !isExisting;
-  document.getElementById('aiRestockBtn').hidden = !isExisting;
+  // Force a reflow/repaint after unhiding these -- on some installed-PWA
+  // WebViews a bare .hidden toggle updates the computed style but the
+  // compositor doesn't re-hit-test the layer until something else forces
+  // it, so the first tap on a just-unhidden button silently does nothing
+  // and only the second tap (after the forced reflow below already ran)
+  // actually registers. Same fix as openRdmCategorySheet() above.
+  [['aiRemoveBtn', !isExisting], ['aiSwapBtn', !isExisting], ['aiRestockBtn', !isExisting]].forEach(([id, hide]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = hide;
+    if (!hide) {
+      void el.offsetHeight;
+      el.style.transform = 'translateZ(0)';
+      requestAnimationFrame(() => { el.style.transform = ''; });
+    }
+  });
   document.getElementById('aiLineSave').textContent = isExisting ? 'Save changes' : 'Add to product';
   document.getElementById('aiNote').textContent = isExisting
     ? 'Changing this quantity changes what every future build of this product consumes. Past builds are untouched.'
@@ -3659,7 +3673,7 @@ async function aiRemoveLine() {
   const i = _aiEditIndex;
   if (i == null) return;
   const name = _aiIngredient?.name || 'this item';
-  if (!confirm(`Remove ${name} from this product?`)) return;
+  if (!await showConfirm(`Remove ${name} from this product?`, 'Remove Item', 'Remove', true)) return;
   _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
   await removeIngredientFromRecipe(i);
   aiShowPane('list');
