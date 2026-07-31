@@ -580,6 +580,7 @@
                       background: var(--bg-inner); color: var(--text-main); font-size: 16px; font-weight: 700;
                       display: flex; align-items: center; justify-content: center; cursor: pointer;
                       font-family: inherit; }
+    .rdm-item-step:disabled { opacity: 0.35; cursor: default; }
     .rdm-item-num { min-width: 26px; text-align: center; font-size: 13.5px; font-weight: 800;
                      font-variant-numeric: tabular-nums; }
     .rdm-chev { color: var(--border); flex-shrink: 0; }
@@ -1784,11 +1785,17 @@ function renderMobileOverlay() {
       : '';
     const deliveryPill = stock?.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
     const cost = parseFloat(comp.cost) || 0;
+    const stepSize = (comp.unit === 'pcs' || comp.unit === 'ea' || !comp.unit) ? 1 : 0.25;
+    const atMin = need <= stepSize;
     return `
     <div class="rdm-item-swipe">
       <div class="rdm-item-actions">
-        <button class="rdm-item-act rdm-item-act-replace" onclick="rdmReplaceItem(${index})">Replace</button>
-        <button class="rdm-item-act rdm-item-act-del" onclick="removeIngredientFromRecipe(${index})">Delete</button>
+        <button class="rdm-item-act rdm-item-act-replace" onclick="rdmReplaceItem(${index})" aria-label="Replace">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+        </button>
+        <button class="rdm-item-act rdm-item-act-del" onclick="removeIngredientFromRecipe(${index})" aria-label="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
       </div>
       <div class="rdm-item-row" data-index="${index}">
         <span class="rdm-item-main" onclick="window.location.href='/ingredient-detail?id=${ingId}'">
@@ -1799,7 +1806,7 @@ function renderMobileOverlay() {
           <span class="rdm-item-sub">${need} per unit · $${cost.toFixed(2)} of cost</span>
         </span>
         <span class="rdm-item-qty">
-          <button class="rdm-item-step" onclick="event.stopPropagation(); rdmStepQty(${index}, -1)">−</button>
+          <button class="rdm-item-step" ${atMin ? 'disabled' : ''} onclick="event.stopPropagation(); rdmStepQty(${index}, -1)">−</button>
           <span class="rdm-item-num">${need}</span>
           <button class="rdm-item-step" onclick="event.stopPropagation(); rdmStepQty(${index}, 1)">+</button>
         </span>
@@ -3532,8 +3539,13 @@ async function rdmStepQty(index, delta) {
   const comp = recipe.components[index];
   if (!comp) return;
   const step = (comp.unit === 'pcs' || comp.unit === 'ea' || !comp.unit) ? 1 : 0.25;
+  // The row's "-" button is already disabled once quantity <= step (see
+  // renderMobileOverlay), so this only guards against a stray call --
+  // it used to clamp to a floor of 0.01, which meant going down from a
+  // whole 1 jumped straight to 0.01 instead of stopping at 1.
+  if (delta < 0 && comp.quantity <= step) return;
   const pricePerUnit = comp.quantity > 0 ? (comp.cost || 0) / comp.quantity : 0;
-  comp.quantity = Math.max(0.01, Math.round((comp.quantity + delta * step) * 100) / 100);
+  comp.quantity = Math.round((comp.quantity + delta * step) * 100) / 100;
   comp.cost = Math.round(pricePerUnit * comp.quantity * 100) / 100;
   await updateRecipeInDatabase();
   renderMobileOverlay();
