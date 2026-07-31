@@ -1004,6 +1004,15 @@
       order: 1;
     }
 
+    /* #lastChange is a direct .container child like .breadcrumb/#alertBlock/
+       .detail-header/.main-grid above, but had no explicit order -- it
+       defaulted to 0, tying with .breadcrumb and rendering right after it,
+       ABOVE the header (order:2) and all the item details (order:3). It
+       belongs after everything else. */
+    .last-change {
+      order: 4;
+    }
+
 
     .header-title h1 {
       font-size: 24px;
