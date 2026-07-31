@@ -741,6 +741,37 @@
                border-top: 1px solid var(--border-hair, var(--border)); color: var(--text-muted); font-size: 15px;
                padding-bottom: env(safe-area-inset-bottom); }
 
+  /* Picker pane 2 (18b) — set quantity + what it cost for the item just
+     picked in pane 1. Reuses .ec-group/.ec-field/.ec-label/.ec-input/
+     .ec-prefix/.ec-hint (already look right for this) and adds only what's
+     genuinely new: the pane-switch mechanism and the quantity stepper. */
+  .ec-pane { display: none; flex-direction: column; min-height: 0; flex: 1; }
+  .ec-pane[data-on="1"] { display: flex; }
+  .ec-line-head { display: flex; align-items: center; gap: 8px; padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-line-back { width: 32px; height: 32px; flex-shrink: 0; background: none; border: none;
+                  color: var(--text-main); display: flex; align-items: center; justify-content: center; padding: 0; }
+  .ec-qty-panel { background: var(--bg-panel); padding: 18px 16px 16px;
+                  border-top: 1px solid var(--border-hair, var(--border));
+                  border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-qty-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .ec-qty-btn { width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px; border: none;
+                background: var(--bg-inner); color: var(--text-muted); font-size: 26px; font-weight: 600;
+                line-height: 1; cursor: pointer; }
+  .ec-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ec-qty-btn:disabled { opacity: 0.35; cursor: default; }
+  .ec-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 90px; max-width: 150px; }
+  .ec-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
+  .ec-qty-value { font-size: 44px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+                  background: none; border: none; text-align: center; width: 100%; padding: 0;
+                  color: var(--text-main); -webkit-appearance: none; appearance: none; font-family: inherit; }
+  .ec-qty-value::-webkit-inner-spin-button, .ec-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
+  .ec-qty-unit { font-size: 15px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-qty-status { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
+  .ec-qty-status[data-state="clears"] { color: var(--success); }
+  .ec-hint[data-state="up"] { color: var(--warning); font-weight: 700; }
+  .ec-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none;
+               color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
 </style>
 </head>
 
@@ -1027,17 +1058,63 @@
     </form>
   </div>
 
-  <!-- Item picker, as a sheet (21c reference) -->
+  <!-- Item picker, as a sheet (18b) — pane 1 picks the item, pane 2 sets
+       quantity + what it cost this time. -->
   <div class="ec-sheet" id="ecItemSheet" data-open="0" onclick="if(event.target===this)closeExpenseItemPicker()">
     <div class="ec-panel">
       <div class="ec-grab"></div>
-      <div class="ec-p-head"><div class="ec-p-title">Which item?</div></div>
-      <label class="ec-search">
-        <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
-        <input id="ecItemQ" type="search" placeholder="Search your items" oninput="renderExpenseItemResults()" autocomplete="off">
-      </label>
-      <div class="ec-results" id="ecItemResults"></div>
-      <button type="button" class="ec-cancel" onclick="closeExpenseItemPicker()">Cancel</button>
+
+      <div class="ec-pane" id="ecPaneList" data-on="1">
+        <div class="ec-p-head"><div class="ec-p-title">Which item?</div></div>
+        <label class="ec-search">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
+          <input id="ecItemQ" type="search" placeholder="Search your items" oninput="ecRenderList()" autocomplete="off">
+        </label>
+        <div class="ec-results" id="ecItemResults"></div>
+        <button type="button" class="ec-cancel" onclick="closeExpenseItemPicker()">Cancel</button>
+      </div>
+
+      <div class="ec-pane" id="ecPaneLine" data-on="0">
+        <div class="ec-line-head">
+          <button type="button" class="ec-line-back" onclick="ecBackToList()" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="ec-p-title" id="ecLineName" style="font-size:16px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</div>
+        </div>
+        <div class="ec-results" id="ecLineScroll" style="border-top:none;">
+          <div class="ec-qty-panel">
+            <div class="ec-qty-row">
+              <button type="button" class="ec-qty-btn" aria-label="Less" onclick="ecStepQty(-1)">−</button>
+              <span class="ec-qty-center">
+                <span class="ec-qty-line">
+                  <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
+                  <span class="ec-qty-unit" id="ecLUnit"></span>
+                </span>
+                <span class="ec-qty-status" id="ecLStatus"></span>
+              </span>
+              <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
+            </div>
+          </div>
+          <div class="ec-sec-head"><span class="ec-sec-title">What it cost</span></div>
+          <div class="ec-group">
+            <div class="ec-field">
+              <label class="ec-label" for="ecLCost">Unit cost</label>
+              <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"><span id="ecLPerUnit" style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-faint,var(--text-muted));"></span></span>
+              <div class="ec-hint" id="ecLCostHint"></div>
+            </div>
+            <div class="ec-field">
+              <label class="ec-label" for="ecLTotal">Line total</label>
+              <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
+              <div class="ec-hint">Type either one — the other follows.</div>
+            </div>
+          </div>
+          <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
+        </div>
+        <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
+          <div class="ec-tally" id="ecLineTally"></div>
+          <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1826,6 +1903,7 @@ async function openAddExpenseModal() {
 
   editingExpenseId = null;
   selectedExpenseIngredients = [];
+  _ecInsights = null;
 
   document.getElementById('modalTitle').textContent = 'New expense';
   document.getElementById('expenseForm').reset();
@@ -1921,12 +1999,12 @@ function setExpenseDate(d) {
 
 // Line-item helpers — each line shows its own stock impact (21c), same
 // grammar as inventory-impact.js and the order-products picker.
+// Each line is { id, name, quantity, cost } -- cost is what was actually
+// paid THIS time (18b), not necessarily the ingredient's current
+// cost_per_unit, which is why it has to be stored on the line itself.
 function _expenseLinesTotal() {
-  return selectedExpenseIngredients.reduce((sum, sel) => {
-    const ing = allIngredients.find(i => i.id === sel.id);
-    const cost = ing ? (parseFloat(ing.cost_per_unit) || 0) : 0;
-    return sum + cost * (parseFloat(sel.quantity) || 0);
-  }, 0);
+  return selectedExpenseIngredients.reduce((sum, sel) =>
+    sum + (parseFloat(sel.cost) || 0) * (parseFloat(sel.quantity) || 0), 0);
 }
 
 function renderExpenseLines() {
@@ -1942,20 +2020,20 @@ function renderExpenseLines() {
 
   const rowsHtml = lines.map(sel => {
     const ing = allIngredients.find(i => i.id === sel.id);
-    const cost = ing ? (parseFloat(ing.cost_per_unit) || 0) : 0;
+    const cost = parseFloat(sel.cost) || 0;
     const stock = ing ? (parseFloat(ing.quantity) || 0) : 0;
     const unit = ing ? (ing.unit || '') : '';
     const qty = parseFloat(sel.quantity) || 0;
     return `
-      <div class="ec-line">
+      <div class="ec-line" onclick="ecOpenLine(null, '${sel.id}')">
         <span class="ec-l-main">
           <span class="ec-l-name">${_escExpenseAttr(sel.name)}</span>
           <span class="ec-l-meta">$${cost.toFixed(2)}${unit ? '/' + _escExpenseAttr(unit) : ''} · stock <b>${stock} → ${stock + qty}</b></span>
         </span>
         <span class="ec-step">
-          <button type="button" onclick="bumpExpenseLine('${sel.id}', -1)" aria-label="One fewer">−</button>
+          <button type="button" onclick="event.stopPropagation(); bumpExpenseLine('${sel.id}', -1)" aria-label="One fewer">−</button>
           <span class="ec-qty">${qty}</span>
-          <button type="button" onclick="bumpExpenseLine('${sel.id}', 1)" aria-label="One more">+</button>
+          <button type="button" onclick="event.stopPropagation(); bumpExpenseLine('${sel.id}', 1)" aria-label="One more">+</button>
         </span>
         <span class="ec-l-total">$${(qty * cost).toFixed(2)}</span>
       </div>`;
@@ -1982,53 +2060,237 @@ function bumpExpenseLine(id, delta) {
   onExpenseEdit();
 }
 
-function addExpenseLine(ingredientId) {
-  const ingredient = allIngredients.find(ing => ing.id === ingredientId);
-  if (!ingredient) return;
-  const existing = selectedExpenseIngredients.find(sel => sel.id === ingredientId);
-  if (existing) existing.quantity = (existing.quantity || 0) + 1;
-  else selectedExpenseIngredients.push({ id: ingredient.id, name: ingredient.name, quantity: 1 });
-  closeExpenseItemPicker();
-  onExpenseEdit();
+// ---------- Item picker (18b) — pick, then set quantity + what it cost ----------
+let _ecInsights = null;   // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }, loaded once per picker session
+let _ecEditingId = null;  // id of the selectedExpenseIngredients line being edited, or null when adding new
+let _ecIngredient = null; // the ingredients-table row currently open in pane 2
+let _ecDraft = null;      // { qty, cost } being edited in pane 2
+
+async function _ecLoadInsights() {
+  if (_ecInsights) return _ecInsights;
+  _ecInsights = { lastPaid: new Map(), vendorIds: new Set() };
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return _ecInsights;
+    let q = supabaseClient.from('expenses').select('vendor, expense_date, ingredients').eq('profile_id', user.id);
+    if (window.currentStoreId) q = q.eq('store_id', window.currentStoreId);
+    const { data, error } = await q.order('expense_date', { ascending: false });
+    if (error) throw error;
+    const vendorLc = (document.getElementById('expense_vendor')?.value || '').trim().toLowerCase();
+    (data || []).forEach(exp => {
+      const isVendor = vendorLc && (exp.vendor || '').trim().toLowerCase() === vendorLc;
+      (exp.ingredients || []).forEach(line => {
+        const id = line.ingredient_id || line.id;
+        if (!id) return;
+        const price = parseFloat(line.cost_per_unit ?? line.cost);
+        if (!_ecInsights.lastPaid.has(id) && price) {
+          _ecInsights.lastPaid.set(id, { price, date: exp.expense_date });
+        }
+        if (isVendor) _ecInsights.vendorIds.add(id);
+      });
+    });
+  } catch (e) {
+    console.error('Error loading expense insights:', e);
+  }
+  return _ecInsights;
 }
 
-// Item picker, as a sheet (21c) — replaces the old inline dropdown.
-function openExpenseItemPicker() {
+function _ecDaysAgo(dateStr) {
+  if (!dateStr) return '';
+  const days = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
+  return `${Math.round(days / 30)} months ago`;
+}
+
+// Item picker, as a sheet (18b) — replaces the old single-pane "which item"
+// list; picking an item now goes to a second pane to set quantity + cost
+// instead of adding instantly at quantity 1 with no cost prompt.
+async function openExpenseItemPicker() {
   const sheet = document.getElementById('ecItemSheet');
   if (!sheet) return;
   sheet.dataset.open = '1';
+  ecShowPane('list');
   const q = document.getElementById('ecItemQ');
   if (q) q.value = '';
-  renderExpenseItemResults();
+  await _ecLoadInsights();
+  ecRenderList();
 }
 function closeExpenseItemPicker() {
   const sheet = document.getElementById('ecItemSheet');
   if (sheet) sheet.dataset.open = '0';
+  _ecEditingId = null; _ecIngredient = null; _ecDraft = null;
 }
-function renderExpenseItemResults() {
+function ecShowPane(which) {
+  document.getElementById('ecPaneList').dataset.on = which === 'list' ? '1' : '0';
+  document.getElementById('ecPaneLine').dataset.on = which === 'line' ? '1' : '0';
+}
+function ecBackToList() {
+  _ecEditingId = null; _ecIngredient = null; _ecDraft = null;
+  ecShowPane('list');
+  ecRenderList();
+}
+
+function ecRenderList() {
   const box = document.getElementById('ecItemResults');
   if (!box) return;
   const q = (document.getElementById('ecItemQ')?.value || '').trim().toLowerCase();
-  const used = new Set(selectedExpenseIngredients.map(sel => sel.id));
-  const hits = (allIngredients || []).filter(ing => !used.has(ing.id) && (!q || (ing.name || '').toLowerCase().includes(q)));
+  const vendor = (document.getElementById('expense_vendor')?.value || '').trim();
+  const insights = _ecInsights || { lastPaid: new Map(), vendorIds: new Set() };
+  const onIds = new Set(selectedExpenseIngredients.map(sel => sel.id));
 
-  box.innerHTML = hits.map(ing => {
-    const cost = parseFloat(ing.cost_per_unit) || 0;
+  const rowHtml = ing => {
+    const sel = selectedExpenseIngredients.find(s => s.id === ing.id);
+    const onclick = sel ? `ecOpenLine(null, '${ing.id}')` : `ecOpenLine('${ing.id}', null)`;
     const stock = parseFloat(ing.quantity) || 0;
-    return `
-    <button type="button" class="ec-res" onclick="addExpenseLine('${ing.id}')">
-      <span class="ec-res-main">
-        <span class="ec-res-name">${_escExpenseAttr(ing.name)}</span>
-        <span class="ec-res-meta">$${cost.toFixed(2)}${ing.unit ? '/' + _escExpenseAttr(ing.unit) : ''} · ${stock} in stock</span>
-      </span>
-    </button>`;
-  }).join('') + `
-    <button type="button" class="ec-res" onclick='openQuickCreateIngredientForExpense(${JSON.stringify(q)})'>
+    const paid = insights.lastPaid.get(ing.id);
+    const meta = sel
+      ? `${sel.quantity} ${_escExpenseAttr(ing.unit || '')} × $${(parseFloat(sel.cost) || 0).toFixed(2)} · stock <b>${stock} → ${stock + (parseFloat(sel.quantity) || 0)}</b>`
+      : `$${(paid ? paid.price : parseFloat(ing.cost_per_unit) || 0).toFixed(2)}/${_escExpenseAttr(ing.unit || 'unit')} · ${stock} in stock`;
+    return `<button type="button" class="ec-res" onclick="${onclick}">
+        <span class="ec-res-main">
+          <span class="ec-res-name">${_escExpenseAttr(ing.name)}</span>
+          <span class="ec-res-meta">${meta}</span>
+        </span>
+        ${sel ? `<span class="ec-res-meta" style="flex-shrink:0;">$${((parseFloat(sel.quantity)||0) * (parseFloat(sel.cost)||0)).toFixed(2)}</span>` : ''}
+      </button>`;
+  };
+  const newRow = () => `<button type="button" class="ec-res" onclick='openQuickCreateIngredientForExpense(${JSON.stringify(q)})'>
       <span class="ec-res-main">
         <span class="ec-res-new">${q ? `Create "${_escExpenseAttr(q)}"` : 'Create a new item'}</span>
         <span class="ec-res-meta">Comes back here, added to this expense</span>
       </span>
     </button>`;
+
+  let html = '';
+  if (q) {
+    const hits = (allIngredients || []).filter(ing => (ing.name || '').toLowerCase().includes(q));
+    if (hits.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
+    html += newRow();
+  } else {
+    const on = (allIngredients || []).filter(ing => onIds.has(ing.id));
+    const notOn = (allIngredients || []).filter(ing => !onIds.has(ing.id));
+    const fromVendor = vendor ? notOn.filter(ing => insights.vendorIds.has(ing.id)) : [];
+    const rest = notOn.filter(ing => !fromVendor.includes(ing));
+    if (on.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">On this expense</span><span class="ec-sec-note">$${_expenseLinesTotal().toFixed(2)}</span></div>${on.map(rowHtml).join('')}`;
+    if (fromVendor.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Bought from ${_escExpenseAttr(vendor)}</span><span class="ec-sec-note">${fromVendor.length}</span></div>${fromVendor.map(rowHtml).join('')}`;
+    html += `<div class="ec-sec-head"><span class="ec-sec-title">All items</span><span class="ec-sec-note">${rest.length}</span></div>${rest.map(rowHtml).join('')}`;
+    html += newRow();
+  }
+  box.innerHTML = html;
+}
+
+// ingredientId = adding a brand-new line; existingId = editing/re-opening a
+// line already in selectedExpenseIngredients (looked up by ingredient id,
+// since that's what a line is keyed by in this flow).
+function ecOpenLine(ingredientId, existingId) {
+  let sel = null;
+  if (existingId) {
+    sel = selectedExpenseIngredients.find(s => s.id === existingId);
+    ingredientId = existingId;
+  }
+  const ing = allIngredients.find(i => i.id === ingredientId);
+  if (!ing) return;
+  _ecEditingId = sel ? existingId : null;
+  _ecIngredient = ing;
+  const insights = _ecInsights || { lastPaid: new Map() };
+  const paid = insights.lastPaid.get(ing.id);
+  const defaultCost = sel ? sel.cost : (paid ? paid.price : (parseFloat(ing.cost_per_unit) || 0));
+  _ecDraft = { qty: sel ? sel.quantity : 1, cost: defaultCost };
+
+  document.getElementById('ecLineName').textContent = ing.name;
+  document.getElementById('ecLUnit').textContent = ing.unit || '';
+  document.getElementById('ecLPerUnit').textContent = 'per ' + (ing.unit || 'unit');
+  document.getElementById('ecLQty').value = _ecDraft.qty;
+  document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
+  document.getElementById('ecLRemove').hidden = !sel;
+  document.getElementById('ecLineSaveBtn').textContent = sel ? 'Save changes' : 'Add to expense';
+
+  ecSyncTotal();
+  ecShowPane('line');
+}
+
+function ecRenderProjection() {
+  const ing = _ecIngredient;
+  const q = _ecDraft.qty;
+  const stock = parseFloat(ing.quantity) || 0;
+  const minStock = parseFloat(ing.min_stock) || 0;
+  const after = Math.round((stock + q) * 100) / 100;
+  const clears = minStock > 0 && stock < minStock && after >= minStock;
+  const st = document.getElementById('ecLStatus');
+  st.innerHTML = q
+    ? `${_escExpenseAttr(ing.unit || '')} · stock ${stock} → <b>${after}</b>${clears ? ' · clears the alert' : ''}`
+    : _escExpenseAttr(ing.unit || '');
+  clears ? st.setAttribute('data-state', 'clears') : st.removeAttribute('data-state');
+}
+
+function ecRenderCostHint() {
+  const ing = _ecIngredient;
+  const insights = _ecInsights || { lastPaid: new Map() };
+  const paid = insights.lastPaid.get(ing.id);
+  const c = _ecDraft.cost;
+  const hint = document.getElementById('ecLCostHint');
+  if (!paid || !c) {
+    hint.removeAttribute('data-state');
+    hint.textContent = paid ? `Last paid $${paid.price.toFixed(2)} · ${_ecDaysAgo(paid.date)}` : 'No purchase history for this item';
+    return;
+  }
+  const d = Math.round((c - paid.price) * 100) / 100;
+  if (Math.abs(d) < 0.005) { hint.removeAttribute('data-state'); hint.textContent = `Same as last time · ${_ecDaysAgo(paid.date)}`; return; }
+  const pct = Math.round((d / paid.price) * 100);
+  hint.setAttribute('data-state', d > 0 ? 'up' : '');
+  hint.textContent = `${d > 0 ? '▲' : '▼'} $${Math.abs(d).toFixed(2)} (${Math.abs(pct)}%) vs $${paid.price.toFixed(2)} ${_ecDaysAgo(paid.date)}`;
+}
+
+function ecRenderLineFoot() {
+  const q = _ecDraft.qty, c = _ecDraft.cost;
+  document.getElementById('ecLineTally').innerHTML = q
+    ? `${q} ${_escExpenseAttr(_ecIngredient.unit || '')} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
+    : `Set a quantity<b>$0.00</b>`;
+  document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
+  ecRenderProjection();
+  ecRenderCostHint();
+}
+function ecSyncTotal() {
+  _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
+  _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
+  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
+  ecRenderLineFoot();
+}
+// Typing a line total derives the unit cost — receipts print totals, not unit costs.
+function ecSyncFromTotal() {
+  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
+  if (_ecDraft.qty > 0) {
+    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
+    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
+  }
+  ecRenderLineFoot();
+}
+function ecStepQty(d) {
+  document.getElementById('ecLQty').value = Math.max(0, Math.round((_ecDraft.qty + d) * 100) / 100);
+  ecSyncTotal();
+}
+
+function ecSaveLine() {
+  if (!(_ecDraft.qty > 0)) return;
+  const ing = _ecIngredient;
+  if (_ecEditingId) {
+    const sel = selectedExpenseIngredients.find(s => s.id === _ecEditingId);
+    if (sel) { sel.quantity = _ecDraft.qty; sel.cost = _ecDraft.cost; }
+  } else {
+    selectedExpenseIngredients.push({ id: ing.id, name: ing.name, quantity: _ecDraft.qty, cost: _ecDraft.cost });
+  }
+  closeExpenseItemPicker();
+  onExpenseEdit();
+}
+function ecRemoveLine() {
+  if (!_ecEditingId) return;
+  const idx = selectedExpenseIngredients.findIndex(s => s.id === _ecEditingId);
+  if (idx >= 0) selectedExpenseIngredients.splice(idx, 1);
+  closeExpenseItemPicker();
+  onExpenseEdit();
 }
 
 // ---------- The gap between lines and total, said out loud (21d) ----------
@@ -2122,8 +2384,9 @@ async function editExpense(expenseId) {
   if (expense.ingredients && Array.isArray(expense.ingredients)) {
     selectedExpenseIngredients = expense.ingredients.map(ing => ({
       id: ing.ingredient_id || ing.id,
-      name: ing.name || 'Unknown',
-      quantity: ing.quantity || 1
+      name: ing.name || ing.ingredient_name || 'Unknown',
+      quantity: ing.quantity || ing.quantity_added || 1,
+      cost: parseFloat(ing.cost_per_unit ?? ing.cost ?? ing.price) || 0
     }));
   }
 
@@ -2177,7 +2440,15 @@ async function saveExpense(event) {
       vendor: vendor,
       category: null,
       receipt_url: null,
-      ingredients: selectedExpenseIngredients
+      // Standardized line shape (18b) — ingredient_id/name/quantity/cost_per_unit,
+      // read back with an id/ingredient_id fallback since two older flows wrote
+      // slightly different field names into this same JSONB column.
+      ingredients: selectedExpenseIngredients.map(sel => ({
+        ingredient_id: sel.id,
+        name: sel.name,
+        quantity: sel.quantity,
+        cost_per_unit: parseFloat(sel.cost) || 0
+      }))
     };
 
     let savedData, savedError;
@@ -2210,8 +2481,14 @@ async function saveExpense(event) {
           const oldQty = parseFloat(ing.quantity) || 0;
           const newQty = oldQty + item.quantity;
           const minStock = parseFloat(ing.min_stock) || 0;
-          await supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', item.id);
+          // Cost paid this time becomes the ingredient's current cost_per_unit,
+          // so the next expense's "last paid" price hint and default unit cost
+          // stay in sync with what was actually purchased most recently.
+          const update = { quantity: newQty };
+          if (parseFloat(item.cost) > 0) update.cost_per_unit = parseFloat(item.cost);
+          await supabaseClient.from('ingredients').update(update).eq('id', item.id);
           ing.quantity = newQty;
+          if (update.cost_per_unit) ing.cost_per_unit = update.cost_per_unit;
           try {
             await supabaseClient.from('ingredient_history').insert([{
               ingredient_id: ing.id,
@@ -3202,8 +3479,9 @@ async function saveQuickIngredient(e) {
       mappedItems[quickCreateTargetIndex].ingredientId = newIngredient.id;
       mappedItems[quickCreateTargetIndex].ingredientName = newIngredient.name;
       document.getElementById(`ingredient_search_${quickCreateTargetIndex}`).value = newIngredient.name;
-    } else if (quickCreateTargetIndex === null && typeof addExpenseLine === 'function') {
-      addExpenseLine(newIngredient.id);
+    } else if (quickCreateTargetIndex === null && typeof ecOpenLine === 'function') {
+      document.getElementById('ecItemSheet').dataset.open = '1';
+      ecOpenLine(newIngredient.id, null);
     }
 
     // Close modal

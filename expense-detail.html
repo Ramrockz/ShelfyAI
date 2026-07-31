@@ -355,6 +355,13 @@
     border-color: var(--accent);
   }
 
+  /* Create New Item form (18b) — matches expenses.html's own quick-create form */
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-panel); color: var(--text-main); font-size: 14px; font-family: inherit; box-sizing: border-box;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
   @keyframes slideIn {
     from {
       transform: translateX(400px);
@@ -414,60 +421,88 @@
     color: #fbbf24;
   }
 
-  .expense-cat-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .expense-cat-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    border: 2px solid var(--border);
-    background: var(--bg-panel);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .expense-cat-chip:hover {
-    border-color: var(--accent);
-    transform: scale(1.05);
-  }
-  .expense-cat-chip.active {
-    border-color: var(--accent);
-    background: rgba(6, 182, 212, 0.1);
-  }
-  .expense-cat-chip i {
-    width: 20px;
-    height: 20px;
-    color: var(--text-main);
-  }
-  .expense-attr-subfilter {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .expense-attr-chip {
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--bg-panel);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .expense-attr-chip:hover {
-    border-color: var(--accent);
-  }
-  .expense-attr-chip.active {
-    border-color: var(--accent);
-    background: rgba(6, 182, 212, 0.1);
-    color: var(--accent);
-  }
+  /* Item picker (18b) — same component as expenses.html's new-expense
+     picker: pane 1 search/sections, pane 2 quantity + cost. */
+  .ec-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
+  .ec-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+                  color: var(--text-muted); }
+  .ec-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+
+  .ec-group { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+              border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-field { padding: 12px 16px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-group .ec-field:first-child { border-top: none; }
+  .ec-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .ec-input { width: 100%; height: 34px; margin-top: 2px; border: none; background: none; outline: none;
+              font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--text-main); }
+  .ec-input::placeholder { color: var(--text-ghost, #cbd5e1); font-weight: 400; }
+  .ec-prefix { display: flex; align-items: baseline; gap: 6px; }
+  .ec-prefix > span { font-size: 20px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-hint { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 3px; }
+  .ec-hint[data-state="up"] { color: var(--warning); font-weight: 700; }
+
+  .ec-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .ec-tally { display: flex; align-items: center; min-height: 22px; font-size: 12.5px;
+              color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .ec-tally b { margin-left: auto; color: var(--text-main); font-weight: 700; }
+  .ec-save { width: 100%; height: 50px; margin-top: 8px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+
+  .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
+              display: none; align-items: flex-end; justify-content: center; }
+  .ec-sheet[data-open="1"] { display: flex; }
+  .ec-panel { width: 100%; max-width: 460px; max-height: 76%; display: flex; flex-direction: column;
+              background: var(--bg-panel); border-radius: 20px 20px 0 0; overflow: hidden; }
+  .ec-grab { width: 36px; height: 4px; border-radius: 99px; background: var(--text-ghost, #cbd5e1);
+             margin: 8px auto 4px; flex-shrink: 0; }
+  .ec-p-head { padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-p-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .ec-search { display: flex; align-items: center; gap: 9px; height: 44px; margin: 0 12px 10px;
+               padding: 0 12px; border-radius: 12px; background: var(--bg-inner); flex-shrink: 0; }
+  .ec-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); }
+  .ec-results { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                border-top: 1px solid var(--border-hair, var(--border)); }
+  .ec-res { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
+            padding: 9px 16px; background: var(--bg-panel); border: none; text-align: left;
+            border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-res:active { background: var(--bg-app, var(--bg-inner)); }
+  .ec-res-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ec-res-name { display: block; font-size: 14.5px; font-weight: 600; }
+  .ec-res-meta { display: block; font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px;
+                 font-variant-numeric: tabular-nums; }
+  .ec-res-new { color: var(--accent-ink, var(--accent)); font-weight: 700; font-size: 14.5px; }
+  .ec-cancel { flex-shrink: 0; width: 100%; height: 52px; background: var(--bg-panel); border: none;
+               border-top: 1px solid var(--border-hair, var(--border)); color: var(--text-muted); font-size: 15px;
+               padding-bottom: env(safe-area-inset-bottom); }
+
+  .ec-pane { display: none; flex-direction: column; min-height: 0; flex: 1; }
+  .ec-pane[data-on="1"] { display: flex; }
+  .ec-line-head { display: flex; align-items: center; gap: 8px; padding: 6px 16px 10px; flex-shrink: 0; }
+  .ec-line-back { width: 32px; height: 32px; flex-shrink: 0; background: none; border: none;
+                  color: var(--text-main); display: flex; align-items: center; justify-content: center; padding: 0; }
+  .ec-qty-panel { background: var(--bg-panel); padding: 18px 16px 16px;
+                  border-top: 1px solid var(--border-hair, var(--border));
+                  border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ec-qty-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .ec-qty-btn { width: 52px; height: 52px; flex-shrink: 0; border-radius: 15px; border: none;
+                background: var(--bg-inner); color: var(--text-muted); font-size: 26px; font-weight: 600;
+                line-height: 1; cursor: pointer; }
+  .ec-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
+  .ec-qty-btn:disabled { opacity: 0.35; cursor: default; }
+  .ec-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 90px; max-width: 150px; }
+  .ec-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
+  .ec-qty-value { font-size: 44px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
+                  background: none; border: none; text-align: center; width: 100%; padding: 0;
+                  color: var(--text-main); -webkit-appearance: none; appearance: none; font-family: inherit; }
+  .ec-qty-value::-webkit-inner-spin-button, .ec-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
+  .ec-qty-unit { font-size: 15px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
+  .ec-qty-status { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
+  .ec-qty-status[data-state="clears"] { color: var(--success); }
+  .ec-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none;
+               color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
   /* Inline editing */
   .editable-field {
@@ -998,7 +1033,7 @@
   <div class="section">
     <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h3 class="section-title" style="margin: 0;">Involved Items</h3>
-      <button onclick="openIngredientModal()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
+      <button onclick="openExpenseItemPicker()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
         <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
         Add
       </button>
@@ -1006,7 +1041,7 @@
     <!-- Mobile-only: replaces itemsSectionHeader above -->
     <div class="msec" id="expItemsMsec">
       <span class="msec-title">Items bought</span>
-      <button type="button" class="msec-aside" onclick="openIngredientModal()">Add item</button>
+      <button type="button" class="msec-aside" onclick="openExpenseItemPicker()">Add item</button>
     </div>
     <!-- Desktop table -->
     <table class="ingredients-desktop-table">
@@ -1055,22 +1090,6 @@
   </div>
 </div>
 
-<!-- Item sheet (mobile) — stepper + remove for one line item -->
-<div class="modal-overlay modal-sheet" id="itemSheet" onclick="if(event.target===this)closeItemSheet()">
-  <div class="modal-content">
-    <h2 class="sheet-title" id="itemSheetName"></h2>
-    <p class="sheet-sub" id="itemSheetSub"></p>
-    <div class="sheet-qty">
-      <button type="button" onclick="sheetQty(-1)" aria-label="Decrease">&minus;</button>
-      <input id="itemSheetQty" type="number" inputmode="numeric" min="1" onchange="sheetQtySet(this.value)">
-      <button type="button" onclick="sheetQty(1)" aria-label="Increase">+</button>
-    </div>
-    <p class="sheet-label">Quantity bought</p>
-    <button type="button" class="sheet-act" id="itemSheetOpenBtn">Open item</button>
-    <button type="button" class="sheet-act danger" onclick="sheetRemove()">Remove from expense</button>
-  </div>
-</div>
-
 <!-- Expense menu (mobile) — Amount/Date edit + Duplicate/Delete -->
 <div class="modal-overlay modal-sheet" id="expenseMenu" onclick="if(event.target===this)closeExpenseMenu()">
   <div class="modal-content">
@@ -1115,65 +1134,65 @@
   </div>
 </div>
 
-<!-- Add Ingredient Modal -->
-<div class="modal-overlay" id="ingredientModal" onclick="if(event.target === this) closeIngredientModal()" style="align-items: flex-start; padding: 5vh 0; overflow-y: auto;">
-  <div class="modal-content" style="max-width: 700px; width: 90%; margin: auto; max-height: 80vh; display: flex; flex-direction: column; padding: 28px;">
-    <div class="modal-header" style="margin-bottom: 20px; padding-bottom: 0; border-bottom: none;">
-      <h3>Add Item to Expense</h3>
-      <button onclick="closeIngredientModal()" style="background:none;border:none;font-size:32px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;transition:color 0.2s;" onmouseover="this.style.color='var(--text-main)'" onmouseout="this.style.color='var(--text-muted)'">×</button>
+<!-- Item picker, as a sheet (18b) — pane 1 picks the item, pane 2 sets
+     quantity + what it cost, whether adding a new line or re-opening one
+     already on this expense. Same component as expenses.html's new-expense
+     flow, so this looks and behaves identically whether the expense is
+     still a draft or already saved. -->
+<div class="ec-sheet" id="ecItemSheet" data-open="0" onclick="if(event.target===this)closeExpenseItemPicker()">
+  <div class="ec-panel">
+    <div class="ec-grab"></div>
+
+    <div class="ec-pane" id="ecPaneList" data-on="1">
+      <div class="ec-p-head"><div class="ec-p-title">Which item?</div></div>
+      <label class="ec-search">
+        <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
+        <input id="ecItemQ" type="search" placeholder="Search your items" oninput="ecRenderList()" autocomplete="off">
+      </label>
+      <div class="ec-results" id="ecItemResults"></div>
+      <button type="button" class="ec-cancel" onclick="closeExpenseItemPicker()">Cancel</button>
     </div>
 
-    <div id="expenseCatChips" class="expense-cat-chips" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
-    <div id="expenseAttrSubfilter" class="expense-attr-subfilter" style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
-
-    <input
-      type="text"
-      id="ingredientSearchInput"
-      placeholder="Search by name..."
-      oninput="filterExpenseIngredients()"
-      style="width: 100%; padding: 14px 18px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-inner); color: var(--text-main); font-size: 14px; margin-bottom: 16px; box-sizing: border-box; transition: all 0.2s; flex-shrink: 0;"
-      onfocus="this.style.borderColor='var(--accent)'"
-      onblur="this.style.borderColor='var(--border)'"
-      autocomplete="off"
-    />
-
-    <div id="expenseIngredientsList" style="overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; flex: 1; min-height: 0;">
-      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading ingredients...</div>
-    </div>
-  </div>
-</div>
-
-<!-- Quantity Input Modal -->
-<div class="modal-overlay" id="quantityModal" onclick="if(event.target === this) closeQuantityModal()">
-  <div class="modal-content" style="max-width: 500px;">
-    <div class="modal-header">
-      <h3>Add Item</h3>
-      <button onclick="closeQuantityModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">×</button>
-    </div>
-    <div id="quantityIngredientName" style="color: var(--text-main); font-size: 16px; font-weight: 600; margin-bottom: 20px;"></div>
-    
-    <div style="margin-bottom: 24px;">
-      <label style="display: block; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: var(--text-main);">Quantity</label>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button onclick="adjustQuantity(-1)" style="width: 44px; height: 44px; border: 2px solid var(--border); background: var(--bg-panel); border-radius: 8px; font-size: 20px; font-weight: 700; cursor: pointer; color: var(--text-main); transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-          <i data-lucide="minus" style="width: 20px; height: 20px;"></i>
+    <div class="ec-pane" id="ecPaneLine" data-on="0">
+      <div class="ec-line-head">
+        <button type="button" class="ec-line-back" onclick="ecBackToList()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <input type="number" id="quantityInput" class="form-input" placeholder="Enter quantity" min="1" step="1" value="1" oninput="updateQuantityPrice()" style="flex: 1; padding: 12px; font-size: 16px; font-weight: 600; text-align: center;">
-        <button onclick="adjustQuantity(1)" style="width: 44px; height: 44px; border: 2px solid var(--border); background: var(--bg-panel); border-radius: 8px; font-size: 20px; font-weight: 700; cursor: pointer; color: var(--text-main); transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-          <i data-lucide="plus" style="width: 20px; height: 20px;"></i>
-        </button>
+        <div class="ec-p-title" id="ecLineName" style="font-size:16px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</div>
       </div>
-      <div id="quantityUnit" style="color: var(--text-muted); font-size: 12px; margin-top: 8px; text-align: center;"></div>
-    </div>
-
-    <div id="quantityPriceDisplay" style="background: var(--bg-inner); padding: 16px; border-radius: 10px; margin-bottom: 24px; text-align: center;">
-      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">Estimated Cost</div>
-      <div style="font-size: 28px; font-weight: 800; color: #ef4444;" id="dynamicPrice">$0.00</div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeQuantityModal()" style="flex: 1;">Cancel</button>
-      <button class="btn-primary" onclick="confirmAddIngredient()" style="flex: 1;">Add Item</button>
+      <div class="ec-results" id="ecLineScroll" style="border-top:none;">
+        <div class="ec-qty-panel">
+          <div class="ec-qty-row">
+            <button type="button" class="ec-qty-btn" aria-label="Less" onclick="ecStepQty(-1)">−</button>
+            <span class="ec-qty-center">
+              <span class="ec-qty-line">
+                <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
+                <span class="ec-qty-unit" id="ecLUnit"></span>
+              </span>
+              <span class="ec-qty-status" id="ecLStatus"></span>
+            </span>
+            <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
+          </div>
+        </div>
+        <div class="ec-sec-head"><span class="ec-sec-title">What it cost</span></div>
+        <div class="ec-group">
+          <div class="ec-field">
+            <label class="ec-label" for="ecLCost">Unit cost</label>
+            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"><span id="ecLPerUnit" style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-faint,var(--text-muted));"></span></span>
+            <div class="ec-hint" id="ecLCostHint"></div>
+          </div>
+          <div class="ec-field">
+            <label class="ec-label" for="ecLTotal">Line total</label>
+            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
+            <div class="ec-hint">Type either one — the other follows.</div>
+          </div>
+        </div>
+        <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
+      </div>
+      <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
+        <div class="ec-tally" id="ecLineTally"></div>
+        <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1190,6 +1209,78 @@
       <button class="btn-secondary" onclick="closeRemoveIngredientModal()" style="flex: 1;">Cancel</button>
       <button class="btn-primary" style="background: #ef4444; flex: 1;" onclick="confirmRemoveIngredient()">Remove</button>
     </div>
+  </div>
+</div>
+
+<!-- Create New Item (18b) — "Create a new item" row in the picker's pane 1 -->
+<div class="modal-overlay" id="quickCreateIngredientModal">
+  <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+    <h3 style="margin-top:0; margin-bottom: 8px;">Create New Item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Fill in the details to create this item.</p>
+
+    <form id="quickIngredientForm" onsubmit="saveQuickIngredient(event)" novalidate>
+      <div class="form-group">
+        <label for="quick_ing_name">Item Name *</label>
+        <input type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
+      </div>
+
+      <div class="form-group">
+        <label for="quick_ing_quantity">Quantity *</label>
+        <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quick_ing_cost">Cost per Unit *</label>
+          <input type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+          <label for="quick_ing_sku">SKU</label>
+          <input type="text" id="quick_ing_sku" placeholder="Stock Keeping Unit">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="quick_ing_min_stock">Minimum Stock Alert *</label>
+        <input type="number" id="quick_ing_min_stock" step="0.01" placeholder="e.g., 10" required value="5">
+      </div>
+
+      <div class="form-group">
+        <label>Category *</label>
+        <input type="hidden" id="quick_ing_category">
+        <div class="ing-cat-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px;">
+          <button type="button" class="quick-ing-cat-chip" data-value="Apparel" onclick="selectQuickIngCategory('Apparel')" title="Apparel" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="shirt" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Wood" onclick="selectQuickIngCategory('Wood')" title="Wood" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="tree-pine" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Boxes" onclick="selectQuickIngCategory('Boxes')" title="Boxes" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="archive" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Cards" onclick="selectQuickIngCategory('Cards')" title="Cards" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="tickets" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Plants" onclick="selectQuickIngCategory('Plants')" title="Plants" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="sprout" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Candy" onclick="selectQuickIngCategory('Candy')" title="Candy" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="lollipop" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Beverage" onclick="selectQuickIngCategory('Beverage')" title="Beverage" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="amphora" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Jewelry" onclick="selectQuickIngCategory('Jewelry')" title="Jewelry" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gem" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Party Supplies" onclick="selectQuickIngCategory('Party Supplies')" title="Party Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="party-popper" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Gaming" onclick="selectQuickIngCategory('Gaming')" title="Gaming" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gamepad-2" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Toys" onclick="selectQuickIngCategory('Toys')" title="Toys" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="drum" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Office Supplies" onclick="selectQuickIngCategory('Office Supplies')" title="Office Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="paperclip" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Colors" onclick="selectQuickIngCategory('Colors')" title="Colors" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="palette" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Rope" onclick="selectQuickIngCategory('Rope')" title="Rope" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="lasso" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Paper" onclick="selectQuickIngCategory('Paper')" title="Paper" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="origami" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Spool" onclick="selectQuickIngCategory('Spool')" title="Spool" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="spool" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Letter" onclick="selectQuickIngCategory('Letter')" title="Letter" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="mail" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Giveaway" onclick="selectQuickIngCategory('Giveaway')" title="Giveaway" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="gift" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Electronics" onclick="selectQuickIngCategory('Electronics')" title="Electronics" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="plug" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Printing Supplies" onclick="selectQuickIngCategory('Printing Supplies')" title="Printing Supplies" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="printer" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Tools" onclick="selectQuickIngCategory('Tools')" title="Tools" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="wrench" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Packaging" onclick="selectQuickIngCategory('Packaging')" title="Packaging" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="package" style="width: 20px; height: 20px;"></i></button>
+          <button type="button" class="quick-ing-cat-chip" data-value="Food" onclick="selectQuickIngCategory('Food')" title="Food" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="wheat" style="width: 20px; height: 20px;"></i></button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeQuickCreateIngredientModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Create & Add</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1449,7 +1540,7 @@ function displayIngredients() {
     mobileList.innerHTML = rows.map(({ index, _itemName, attributesDisplay, quantityValue, unitCost, lineTotal }) => {
       const sub = [`${quantityValue} × $${unitCost.toFixed(2)}`, attributesDisplay].filter(Boolean).join(' · ');
       return `
-      <button type="button" class="exp-item-row" onclick="openItemSheet(${index})">
+      <button type="button" class="exp-item-row" onclick="ecOpenLine(null, ${index})">
         <span class="exp-item-main">
           <span class="exp-item-name">${_escHtml(_itemName)}</span>
           <span class="exp-item-sub">${_escHtml(sub)}</span>
@@ -1485,71 +1576,6 @@ function renderExpMeta() {
   const items = expenseData.ingredients || [];
   const units = items.reduce((s, i) => s + Math.round(parseFloat(i.quantity_added || i.quantity || 0)), 0);
   el.textContent = `${items.length} item${items.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''} in`;
-}
-
-// ---- Item sheet — stepper/remove for one line item ----
-let _sheetIndex = null;
-
-function openItemSheet(index) {
-  _sheetIndex = index;
-  const item = expenseData?.ingredients?.[index];
-  if (!item) return;
-  const ingId = item.ingredient_id || item.id;
-  const _matched = ingredients.find(i => i.id === ingId);
-  const name = item.ingredient_name || item.name || _matched?.name || 'Item';
-  const qty = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
-  const unit = parseFloat(item.cost_per_unit || item.price || _matched?.cost_per_unit || 0);
-  document.getElementById('itemSheetName').textContent = name;
-  document.getElementById('itemSheetSub').textContent = `$${unit.toFixed(2)} each · $${(qty * unit).toFixed(2)} line total`;
-  document.getElementById('itemSheetQty').value = qty;
-  const openBtn = document.getElementById('itemSheetOpenBtn');
-  if (ingId) {
-    openBtn.style.display = 'flex';
-    openBtn.onclick = () => { window.location.href = `/ingredient-detail?id=${ingId}`; };
-  } else {
-    openBtn.style.display = 'none'; // no resolvable ingredient id (e.g. a hand-typed line item)
-  }
-  document.getElementById('itemSheet').classList.add('active');
-}
-
-function closeItemSheet() {
-  document.getElementById('itemSheet')?.classList.remove('active');
-  _sheetIndex = null;
-}
-
-// Re-reads the persisted state after changeQuantity()'s write resolves,
-// rather than computing the next value locally, so the sheet can't drift
-// from the DB if the write ever fails.
-function _refreshItemSheetQty() {
-  const item = expenseData?.ingredients?.[_sheetIndex];
-  if (!item) return;
-  const qty = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
-  const unit = parseFloat(item.cost_per_unit || item.price || 0);
-  document.getElementById('itemSheetQty').value = qty;
-  document.getElementById('itemSheetSub').textContent = `$${unit.toFixed(2)} each · $${(qty * unit).toFixed(2)} line total`;
-}
-
-async function sheetQty(delta) {
-  if (_sheetIndex === null) return;
-  await changeQuantity(_sheetIndex, delta);
-  _refreshItemSheetQty();
-}
-
-async function sheetQtySet(v) {
-  if (_sheetIndex === null) return;
-  const item = expenseData.ingredients[_sheetIndex];
-  if (!item) return;
-  const current = Math.round(parseFloat(item.quantity_added || item.quantity || 0));
-  const next = Math.max(1, Math.round(parseFloat(v)) || 1);
-  if (next === current) { _refreshItemSheetQty(); return; }
-  await changeQuantity(_sheetIndex, next - current);
-  _refreshItemSheetQty();
-}
-
-function sheetRemove() {
-  const index = _sheetIndex;
-  closeItemSheet();
-  removeIngredientItem(index); // opens the existing confirm-before-delete modal
 }
 
 // ---- Expense menu — Amount/Date edit + Duplicate/Delete ----
@@ -1809,438 +1835,372 @@ async function confirmDelete() {
   }
 }
 
-// Ingredient Modal Functions
-let selectedIngredientForQuantity = null;
-let expenseActiveCategoryFilter = null;
-let expenseActiveAttrValueFilters = new Map();
+// ---------- Item picker (18b) — same component/behavior as expenses.html's
+// new-expense picker, except every add/edit/remove here writes straight to
+// the already-saved expense row (and to ingredient stock) immediately,
+// since there's no outer "Save" step on this page.
+let _ecInsights = null;    // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }
+let _ecEditingIndex = null; // index into expenseData.ingredients being edited, or null when adding a new line
+let _ecIngredient = null;   // the ingredients-table row currently open in pane 2
+let _ecDraft = null;        // { qty, cost } being edited in pane 2
 
-const _expenseCategoryMap = {
-  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
-  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
-  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
-  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
-  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
-  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
-  'Packaging': 'package', 'Food': 'wheat'
-};
-
-function openIngredientModal() {
-  expenseActiveCategoryFilter = null;
-  expenseActiveAttrValueFilters = new Map();
-  renderExpenseCatChips();
-  hideExpenseAttrSubfilter();
-  renderExpenseIngredients();
-  document.getElementById('ingredientSearchInput').value = '';
-  document.getElementById('ingredientModal').classList.add('active');
-  
-  // Re-initialize icons after modal is shown
-  setTimeout(() => {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }, 100);
-}
-
-function closeIngredientModal() {
-  document.getElementById('ingredientModal').classList.remove('active');
-}
-
-function renderExpenseCatChips() {
-  const container = document.getElementById('expenseCatChips');
-  if (!container) return;
-  const cats = [...new Set(ingredients.map(i => i.category).filter(Boolean))].sort();
-  if (cats.length === 0) { container.innerHTML = ''; return; }
-  container.innerHTML = cats.map(cat => {
-    const icon = _expenseCategoryMap[cat] || 'tag';
-    const active = expenseActiveCategoryFilter === cat ? ' active' : '';
-    return `<span class=\"expense-cat-chip${active}\" title=\"${cat}\" onclick=\"toggleExpenseCatFilter('${cat.replace(/'/g, "\\'")}')\">
-      <i data-lucide=\"${icon}\"></i>
-    </span>`;
-  }).join('');
-  // Use setTimeout to ensure DOM is updated before initializing icons
-  setTimeout(() => {
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
-      console.log('Category icons initialized');
-    }
-  }, 100);
-}
-
-function toggleExpenseCatFilter(cat) {
-  expenseActiveCategoryFilter = (expenseActiveCategoryFilter === cat) ? null : cat;
-  expenseActiveAttrValueFilters = new Map();
-  if (expenseActiveCategoryFilter) {
-    renderExpenseAttrSubfilter(expenseActiveCategoryFilter);
-  } else {
-    hideExpenseAttrSubfilter();
-  }
-  renderExpenseCatChips();
-  renderExpenseIngredients();
-}
-
-function _getAttrNormalized(ing) {
-  if (!ing.custom_attributes) return null;
+async function _ecLoadInsights() {
+  if (_ecInsights) return _ecInsights;
+  _ecInsights = { lastPaid: new Map(), vendorIds: new Set() };
   try {
-    const a = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-    const r = {};
-    Object.entries(a).forEach(([k, v]) => { if (v && String(v).trim()) r[k.toLowerCase()] = String(v).trim().toLowerCase(); });
-    return r;
-  } catch (e) { return null; }
-}
-
-function renderExpenseAttrSubfilter(category) {
-  const container = document.getElementById('expenseAttrSubfilter');
-  if (!container) return;
-
-  const sortVals = (key, a, b) => {
-    if (key === 'size') {
-      const SZ = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
-      const ai = SZ.indexOf(a.toLowerCase()), bi = SZ.indexOf(b.toLowerCase());
-      if (ai !== -1 && bi !== -1) return ai - bi;
-      if (ai !== -1) return -1; if (bi !== -1) return 1;
-    }
-    const an = parseFloat(a), bn = parseFloat(b);
-    if (!isNaN(an) && !isNaN(bn)) return an - bn;
-    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
-    return a.localeCompare(b, undefined, { sensitivity: 'base' });
-  };
-
-  // Base: ingredients in this category
-  const base = ingredients.filter(i => i.category === category && i.custom_attributes);
-
-  // Collect all keys from the base
-  const allKeys = new Set();
-  base.forEach(ing => {
-    const n = _getAttrNormalized(ing);
-    if (n) Object.keys(n).forEach(k => allKeys.add(k));
-  });
-  if (allKeys.size === 0) { container.innerHTML = ''; container.style.display = 'none'; return; }
-
-  const sortedKeys = Array.from(allKeys).sort((a, b) => a.localeCompare(b));
-  const chips = [];
-
-  sortedKeys.forEach(key => {
-    // Cascading: for this key, filter base by all OTHER active filters
-    const otherFilters = new Map(expenseActiveAttrValueFilters);
-    otherFilters.delete(key);
-
-    const candidateIngs = base.filter(ing => {
-      const n = _getAttrNormalized(ing);
-      if (!n) return false;
-      for (const [fk, fset] of otherFilters) {
-        if (!n[fk] || !fset.has(n[fk])) return false;
-      }
-      return true;
-    });
-
-    // Collect unique display values for this key from candidates
-    const valMap = new Map();
-    candidateIngs.forEach(ing => {
-      const n = _getAttrNormalized(ing);
-      if (!n || !n[key]) return;
-      const vk = n[key];
-      if (!valMap.has(vk)) {
-        // Get original display value
-        try {
-          const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-          const origEntry = Object.entries(attrs).find(([k]) => k.toLowerCase() === key);
-          valMap.set(vk, origEntry ? String(origEntry[1]).trim() : vk);
-        } catch (e) { valMap.set(vk, vk); }
-      }
-    });
-
-    if (valMap.size === 0) return;
-
-    const sorted = Array.from(valMap.entries()).sort((a, b) => sortVals(key, a[1], b[1]));
-    sorted.forEach(([vk, dv]) => {
-      const active = expenseActiveAttrValueFilters.has(key) && expenseActiveAttrValueFilters.get(key).has(vk);
-      chips.push(`<span class="expense-attr-chip${active ? ' active' : ''}" data-key="${key.replace(/"/g,'&quot;')}" data-val="${vk.replace(/"/g,'&quot;')}" onclick="toggleExpenseAttrFilter('${key.replace(/'/g,"&#39;")}','${vk.replace(/'/g,"&#39;")}')">${dv.replace(/</g,'&lt;')}</span>`);
-    });
-  });
-
-  if (chips.length === 0) { container.innerHTML = ''; container.style.display = 'none'; return; }
-  container.innerHTML = chips.join('');
-  container.style.display = 'flex';
-}
-
-function toggleExpenseAttrFilter(key, val) {
-  if (!expenseActiveAttrValueFilters.has(key)) expenseActiveAttrValueFilters.set(key, new Set());
-  const ks = expenseActiveAttrValueFilters.get(key);
-  if (ks.has(val)) { ks.delete(val); if (ks.size === 0) expenseActiveAttrValueFilters.delete(key); }
-  else { ks.add(val); }
-  // Re-render chips so unavailable values disappear (cascading)
-  renderExpenseAttrSubfilter(expenseActiveCategoryFilter);
-  renderExpenseIngredients();
-}
-
-function hideExpenseAttrSubfilter() {
-  const container = document.getElementById('expenseAttrSubfilter');
-  if (container) { container.innerHTML = ''; container.style.display = 'none'; }
-}
-
-function filterExpenseIngredients() {
-  renderExpenseIngredients();
-}
-
-function renderExpenseIngredients() {
-  const searchTerm = document.getElementById('ingredientSearchInput').value.toLowerCase();
-  const container = document.getElementById('expenseIngredientsList');
-
-  // Filter out already added ingredients
-  const existingIds = new Set((expenseData?.ingredients || []).map(c => c.ingredient_id).filter(Boolean));
-  const notInExpense = ingredients.filter(ing => !existingIds.has(ing.id));
-
-  const filtered = notInExpense.filter(ing => {
-    // Category filter
-    if (expenseActiveCategoryFilter && ing.category !== expenseActiveCategoryFilter) return false;
-
-    // Attribute value subfilter (AND between keys, OR within key)
-    if (expenseActiveAttrValueFilters.size > 0) {
-      if (!ing.custom_attributes) return false;
-      try {
-        const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-        const normalized = {};
-        Object.entries(attrs).forEach(([k, v]) => { normalized[k.toLowerCase()] = String(v).trim().toLowerCase(); });
-        for (const [fk, fset] of expenseActiveAttrValueFilters) {
-          if (!normalized[fk] || !fset.has(normalized[fk])) return false;
-        }
-      } catch (e) { return false; }
-    }
-
-    // Search in name
-    if (ing.name.toLowerCase().includes(searchTerm)) return true;
-
-    // Search in custom attributes
-    if (ing.custom_attributes) {
-      try {
-        const parsed = typeof ing.custom_attributes === 'string'
-          ? JSON.parse(ing.custom_attributes)
-          : ing.custom_attributes;
-        const attributeValues = Object.values(parsed).filter(v => v).join(' ').toLowerCase();
-        if (attributeValues.includes(searchTerm)) return true;
-      } catch (e) {}
-    }
-
-    return false;
-  });
-  
-  if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 60px 20px;"><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
-    return;
-  }
-  
-  // Separate favorites and non-favorites
-  const favorites = filtered.filter(ing => ing.is_favorite);
-  const nonFavorites = filtered.filter(ing => !ing.is_favorite);
-  
-  // Build ingredient card
-  const buildIngCard = (ing) => {
-    let attributes = '';
-    if (ing.custom_attributes) {
-      try {
-        const parsed = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-        attributes = Object.values(parsed).filter(v => v).join(' · ');
-      } catch (e) {}
-    }
-    
-    const stockPill = ing.quantity === 0 ? '<span class="stock-pill out">Out</span>' : (ing.min_stock > 0 && ing.quantity <= ing.min_stock) ? '<span class="stock-pill low">Low</span>' : '';
-    const starIcon = ing.is_favorite ? '★' : '☆';
-    const starClass = ing.is_favorite ? 'favorited' : '';
-
-    return `
-      <div style="padding: 14px 20px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; background: var(--bg-panel);"
-        onclick="selectIngredient('${ing.id}')"
-        onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateX(4px)'"
-        onmouseout="this.style.borderColor='var(--border)'; this.style.transform='translateX(0)'">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-          <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
-            <span class="star-icon ${starClass}" onclick="event.stopPropagation(); toggleExpenseIngredientFavorite('${ing.id}')" title="${ing.is_favorite ? 'Remove from favorites' : 'Add to favorites'}" style="flex-shrink: 0;">${starIcon}</span>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 700; font-size: 15px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ing.name}</div>
-              ${attributes ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attributes}</div>` : ''}
-            </div>
-          </div>
-          ${stockPill}
-        </div>
-      </div>
-    `;
-  };
-  
-  // Section label helper
-  const sectionLabel = (label, count) => `<div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 20px 0 10px 0;">${label} <span style="font-weight: 500; letter-spacing: 0;">(${count})</span></div>`;
-  
-  container.innerHTML = '';
-  
-  // Render favorites section
-  if (favorites.length > 0) {
-    container.innerHTML += sectionLabel('Favorites', favorites.length);
-    container.innerHTML += favorites.map(buildIngCard).join('');
-  }
-  
-  // Render other ingredients
-  if (nonFavorites.length > 0) {
-    if (favorites.length > 0) {
-      container.innerHTML += sectionLabel('All Ingredients', nonFavorites.length);
-    }
-    container.innerHTML += nonFavorites.map(buildIngCard).join('');
-  }
-}
-
-async function toggleExpenseIngredientFavorite(ingredientId) {
-  const ingredient = ingredients.find(i => i.id === ingredientId);
-  if (!ingredient) return;
-  
-  const newState = !ingredient.is_favorite;
-  
-  // Optimistically update UI
-  ingredient.is_favorite = newState;
-  renderExpenseIngredients();
-  
-  // Update database in background
-  try {
-    const { error } = await window.supabaseClient
-      .from('ingredients')
-      .update({ is_favorite: newState })
-      .eq('id', ingredientId);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error toggling favorite:', error);
-    // Revert on error
-    ingredient.is_favorite = !newState;
-    renderExpenseIngredients();
-    showNotification('Failed to update favorite', 'error');
-  }
-}
-
-function selectIngredient(ingredientId) {
-  selectedIngredientForQuantity = ingredients.find(i => i.id === ingredientId);
-  if (!selectedIngredientForQuantity) return;
-  
-  closeIngredientModal();
-  
-  // Show quantity modal
-  document.getElementById('quantityIngredientName').textContent = selectedIngredientForQuantity.name;
-  document.getElementById('quantityUnit').textContent = `Unit: ${selectedIngredientForQuantity.unit || 'units'}`;
-  document.getElementById('quantityInput').value = '1';
-  updateQuantityPrice();
-  document.getElementById('quantityModal').classList.add('active');
-  
-  // Focus input and create icons
-  setTimeout(() => {
-    const input = document.getElementById('quantityInput');
-    input.focus();
-    input.select();
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }, 100);
-}
-
-function adjustQuantity(delta) {
-  const input = document.getElementById('quantityInput');
-  let current = parseInt(input.value) || 0;
-  current = Math.max(1, current + delta);
-  input.value = current;
-  updateQuantityPrice();
-}
-
-function updateQuantityPrice() {
-  if (!selectedIngredientForQuantity) return;
-  
-  const quantity = parseInt(document.getElementById('quantityInput').value) || 0;
-  const pricePerUnit = selectedIngredientForQuantity.cost_per_unit || 0;
-  const totalCost = quantity * pricePerUnit;
-  
-  const priceDisplay = document.getElementById('dynamicPrice');
-  if (priceDisplay) {
-    priceDisplay.textContent = `$${totalCost.toFixed(2)}`;
-  }
-}
-
-function closeQuantityModal() {
-  document.getElementById('quantityModal').classList.remove('active');
-  selectedIngredientForQuantity = null;
-}
-
-async function confirmAddIngredient() {
-  const quantity = parseInt(document.getElementById('quantityInput').value);
-  
-  if (!selectedIngredientForQuantity) {
-    showNotification('No item selected', 'error');
-    return;
-  }
-  
-  console.log('Adding ingredient:', selectedIngredientForQuantity.id, 'quantity:', quantity);
-  
-  if (!quantity || quantity <= 0) {
-    showNotification('Please enter a valid quantity', 'error');
-    return;
-  }
-  
-  try {
-    const ingredient = selectedIngredientForQuantity;
-    
-    console.log('Found ingredient:', ingredient);
-    
-    // Add to ingredients array
-    const expenseIngredients = Array.isArray(expenseData.ingredients) ? [...expenseData.ingredients] : [];
-    expenseIngredients.push({
-      ingredient_id: ingredient.id,
-      ingredient_name: ingredient.name,
-      quantity_added: quantity,
-      unit: ingredient.unit,
-      cost_per_unit: ingredient.cost_per_unit || 0,
-      custom_attributes: ingredient.custom_attributes
-    });
-
     const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) {
-      showNotification('You must be logged in', 'error');
-      return;
+    if (!user) return _ecInsights;
+    let q = window.supabaseClient.from('expenses').select('id, vendor, expense_date, ingredients').eq('profile_id', user.id);
+    if (window.currentStoreId) q = q.eq('store_id', window.currentStoreId);
+    const { data, error } = await q.order('expense_date', { ascending: false });
+    if (error) throw error;
+    const vendorLc = (expenseData?.vendor || '').trim().toLowerCase();
+    (data || []).forEach(exp => {
+      if (exp.id === expenseId) return; // this expense's own lines aren't "history"
+      const isVendor = vendorLc && (exp.vendor || '').trim().toLowerCase() === vendorLc;
+      (exp.ingredients || []).forEach(line => {
+        const id = line.ingredient_id || line.id;
+        if (!id) return;
+        const price = parseFloat(line.cost_per_unit ?? line.cost ?? line.price);
+        if (!_ecInsights.lastPaid.has(id) && price) {
+          _ecInsights.lastPaid.set(id, { price, date: exp.expense_date });
+        }
+        if (isVendor) _ecInsights.vendorIds.add(id);
+      });
+    });
+  } catch (e) {
+    console.error('Error loading expense insights:', e);
+  }
+  return _ecInsights;
+}
+
+function _ecDaysAgo(dateStr) {
+  if (!dateStr) return '';
+  const days = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
+  return `${Math.round(days / 30)} months ago`;
+}
+
+async function openExpenseItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (!sheet) return;
+  sheet.dataset.open = '1';
+  ecShowPane('list');
+  const q = document.getElementById('ecItemQ');
+  if (q) q.value = '';
+  await _ecLoadInsights();
+  ecRenderList();
+}
+function closeExpenseItemPicker() {
+  const sheet = document.getElementById('ecItemSheet');
+  if (sheet) sheet.dataset.open = '0';
+  _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
+}
+function ecShowPane(which) {
+  document.getElementById('ecPaneList').dataset.on = which === 'list' ? '1' : '0';
+  document.getElementById('ecPaneLine').dataset.on = which === 'line' ? '1' : '0';
+}
+function ecBackToList() {
+  _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
+  ecShowPane('list');
+  ecRenderList();
+}
+
+function ecRenderList() {
+  const box = document.getElementById('ecItemResults');
+  if (!box) return;
+  const q = (document.getElementById('ecItemQ')?.value || '').trim().toLowerCase();
+  const vendor = (expenseData?.vendor || '').trim();
+  const insights = _ecInsights || { lastPaid: new Map(), vendorIds: new Set() };
+
+  const rowHtml = ing => {
+    const stock = parseFloat(ing.quantity) || 0;
+    const paid = insights.lastPaid.get(ing.id);
+    const meta = `$${(paid ? paid.price : parseFloat(ing.cost_per_unit) || 0).toFixed(2)}/${_escHtml(ing.unit || 'unit')} · ${stock} in stock`;
+    return `<button type="button" class="ec-res" onclick="ecOpenLine('${ing.id}', null)">
+        <span class="ec-res-main">
+          <span class="ec-res-name">${_escHtml(ing.name)}</span>
+          <span class="ec-res-meta">${meta}</span>
+        </span>
+      </button>`;
+  };
+  const newRow = () => `<button type="button" class="ec-res" onclick='openQuickCreateIngredientForExpense(${JSON.stringify(q)})'>
+      <span class="ec-res-main">
+        <span class="ec-res-new">${q ? `Create "${_escHtml(q)}"` : 'Create a new item'}</span>
+        <span class="ec-res-meta">Comes back here, added to this expense</span>
+      </span>
+    </button>`;
+
+  let html = '';
+  if (q) {
+    const hits = (ingredients || []).filter(ing => (ing.name || '').toLowerCase().includes(q));
+    if (hits.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
+    html += newRow();
+  } else {
+    const fromVendor = vendor ? (ingredients || []).filter(ing => insights.vendorIds.has(ing.id)) : [];
+    const fromVendorIds = new Set(fromVendor.map(i => i.id));
+    const rest = (ingredients || []).filter(ing => !fromVendorIds.has(ing.id));
+    if (fromVendor.length) html += `<div class="ec-sec-head"><span class="ec-sec-title">Bought from ${_escHtml(vendor)}</span><span class="ec-sec-note">${fromVendor.length}</span></div>${fromVendor.map(rowHtml).join('')}`;
+    html += `<div class="ec-sec-head"><span class="ec-sec-title">All items</span><span class="ec-sec-note">${rest.length}</span></div>${rest.map(rowHtml).join('')}`;
+    html += newRow();
+  }
+  box.innerHTML = html;
+}
+
+// ingredientId = adding a brand-new line; existingIndex = re-opening a line
+// already on this expense (indexed, not keyed by ingredient id, since this
+// page allows more than one line for the same ingredient — e.g. two
+// separate receipt entries for the same item).
+function ecOpenLine(ingredientId, existingIndex) {
+  let line = null;
+  if (existingIndex !== null && existingIndex !== undefined) {
+    line = expenseData.ingredients[existingIndex];
+    if (!line) return;
+    ingredientId = line.ingredient_id || line.id;
+  }
+  const ing = ingredients.find(i => i.id === ingredientId);
+  if (!ing) return;
+  _ecEditingIndex = line ? existingIndex : null;
+  _ecIngredient = ing;
+  const insights = _ecInsights || { lastPaid: new Map() };
+  const paid = insights.lastPaid.get(ing.id);
+  const lineQty = line ? Math.round(parseFloat(line.quantity_added || line.quantity || 0)) : 1;
+  const lineCost = line ? (parseFloat(line.cost_per_unit ?? line.price) || 0) : (paid ? paid.price : (parseFloat(ing.cost_per_unit) || 0));
+  _ecDraft = { qty: lineQty, cost: lineCost };
+
+  document.getElementById('ecLineName').textContent = ing.name;
+  document.getElementById('ecLUnit').textContent = ing.unit || '';
+  document.getElementById('ecLPerUnit').textContent = 'per ' + (ing.unit || 'unit');
+  document.getElementById('ecLQty').value = _ecDraft.qty;
+  document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
+  document.getElementById('ecLRemove').hidden = !line;
+  document.getElementById('ecLineSaveBtn').textContent = line ? 'Save changes' : 'Add to expense';
+
+  ecSyncTotal();
+  ecShowPane('line');
+}
+
+function ecRenderProjection() {
+  const ing = _ecIngredient;
+  const q = _ecDraft.qty;
+  const stock = parseFloat(ing.quantity) || 0;
+  const minStock = parseFloat(ing.min_stock) || 0;
+  const after = Math.round((stock + q) * 100) / 100;
+  const clears = minStock > 0 && stock < minStock && after >= minStock;
+  const st = document.getElementById('ecLStatus');
+  st.innerHTML = q
+    ? `${_escHtml(ing.unit || '')} · stock ${stock} → <b>${after}</b>${clears ? ' · clears the alert' : ''}`
+    : _escHtml(ing.unit || '');
+  clears ? st.setAttribute('data-state', 'clears') : st.removeAttribute('data-state');
+}
+
+function ecRenderCostHint() {
+  const ing = _ecIngredient;
+  const insights = _ecInsights || { lastPaid: new Map() };
+  const paid = insights.lastPaid.get(ing.id);
+  const c = _ecDraft.cost;
+  const hint = document.getElementById('ecLCostHint');
+  if (!paid || !c) {
+    hint.removeAttribute('data-state');
+    hint.textContent = paid ? `Last paid $${paid.price.toFixed(2)} · ${_ecDaysAgo(paid.date)}` : 'No purchase history for this item';
+    return;
+  }
+  const d = Math.round((c - paid.price) * 100) / 100;
+  if (Math.abs(d) < 0.005) { hint.removeAttribute('data-state'); hint.textContent = `Same as last time · ${_ecDaysAgo(paid.date)}`; return; }
+  const pct = Math.round((d / paid.price) * 100);
+  hint.setAttribute('data-state', d > 0 ? 'up' : '');
+  hint.textContent = `${d > 0 ? '▲' : '▼'} $${Math.abs(d).toFixed(2)} (${Math.abs(pct)}%) vs $${paid.price.toFixed(2)} ${_ecDaysAgo(paid.date)}`;
+}
+
+function ecRenderLineFoot() {
+  const q = _ecDraft.qty, c = _ecDraft.cost;
+  document.getElementById('ecLineTally').innerHTML = q
+    ? `${q} ${_escHtml(_ecIngredient.unit || '')} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
+    : `Set a quantity<b>$0.00</b>`;
+  document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
+  ecRenderProjection();
+  ecRenderCostHint();
+}
+function ecSyncTotal() {
+  _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
+  _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
+  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
+  ecRenderLineFoot();
+}
+function ecSyncFromTotal() {
+  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
+  if (_ecDraft.qty > 0) {
+    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
+    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
+  }
+  ecRenderLineFoot();
+}
+function ecStepQty(d) {
+  document.getElementById('ecLQty').value = Math.max(0, Math.round((_ecDraft.qty + d) * 100) / 100);
+  ecSyncTotal();
+}
+
+async function ecSaveLine() {
+  if (!(_ecDraft.qty > 0)) return;
+  const ing = _ecIngredient;
+  const qty = _ecDraft.qty, cost = _ecDraft.cost;
+  const isNewLine = _ecEditingIndex === null;
+
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) { showNotification('You must be logged in', 'error'); return; }
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+
+    const expenseIngredients = Array.isArray(expenseData.ingredients) ? [...expenseData.ingredients] : [];
+    const prevQty = isNewLine ? 0 : Math.round(parseFloat(expenseIngredients[_ecEditingIndex].quantity_added || expenseIngredients[_ecEditingIndex].quantity || 0));
+    const lineData = {
+      ingredient_id: ing.id,
+      ingredient_name: ing.name,
+      quantity_added: qty,
+      quantity: qty,
+      unit: ing.unit,
+      cost_per_unit: cost,
+      custom_attributes: ing.custom_attributes
+    };
+    if (isNewLine) expenseIngredients.push(lineData);
+    else expenseIngredients[_ecEditingIndex] = lineData;
+
+    let query = window.supabaseClient.from('expenses').update({ ingredients: expenseIngredients }).eq('id', expenseId).eq('profile_id', user.id);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { error } = await query;
+    if (error) throw error;
+    expenseData.ingredients = expenseIngredients;
+
+    // Stock moves by however much MORE (or less) was just bought than before —
+    // a purchase adds stock, editing a line only adjusts the difference.
+    const delta = qty - prevQty;
+    if (delta !== 0) {
+      const currentQty = parseFloat(ing.quantity) || 0;
+      const newQty = Math.max(0, currentQty + delta);
+      const update = { quantity: newQty };
+      if (cost > 0) update.cost_per_unit = cost;
+      await window.supabaseClient.from('ingredients').update(update).eq('id', ing.id).eq('profile_id', user.id);
+      ing.quantity = newQty;
+      if (update.cost_per_unit) ing.cost_per_unit = update.cost_per_unit;
+      try {
+        await window.supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: ing.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(currentQty),
+          new_value: String(newQty),
+          reason: 'expense',
+          reference_id: String(expenseId)
+        }]);
+      } catch (e) { /* history table optional */ }
     }
+
+    displayIngredients();
+    closeExpenseItemPicker();
+    showNotification(isNewLine ? 'Item added' : 'Item updated', 'success');
+  } catch (error) {
+    console.error('Error saving expense line:', error);
+    showNotification('Failed to save item: ' + error.message, 'error');
+  }
+}
+
+async function ecRemoveLine() {
+  if (_ecEditingIndex === null) return;
+  const index = _ecEditingIndex;
+  closeExpenseItemPicker();
+  removeIngredientItem(index); // opens the existing confirm-before-delete modal
+}
+
+// ---- Create New Item (18b) — "Create a new item" row in the picker ----
+function openQuickCreateIngredientForExpense(name) {
+  document.getElementById('quick_ing_name').value = name || '';
+  document.getElementById('quick_ing_quantity').value = 1;
+  document.getElementById('quick_ing_cost').value = '';
+  document.getElementById('quick_ing_sku').value = '';
+  document.getElementById('quick_ing_min_stock').value = '5';
+  document.getElementById('quick_ing_category').value = '';
+  document.querySelectorAll('.quick-ing-cat-chip').forEach(chip => {
+    chip.style.background = 'var(--bg-panel)';
+    chip.style.borderColor = 'var(--border)';
+    chip.style.color = 'var(--text-main)';
+  });
+  document.getElementById('quickCreateIngredientModal').classList.add('active');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function selectQuickIngCategory(category) {
+  document.getElementById('quick_ing_category').value = category;
+  document.querySelectorAll('.quick-ing-cat-chip').forEach(chip => {
+    if (chip.dataset.value === category) {
+      chip.style.background = 'var(--accent)';
+      chip.style.borderColor = 'var(--accent)';
+      chip.style.color = '#fff';
+    } else {
+      chip.style.background = 'var(--bg-panel)';
+      chip.style.borderColor = 'var(--border)';
+      chip.style.color = 'var(--text-main)';
+    }
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeQuickCreateIngredientModal() {
+  document.getElementById('quickCreateIngredientModal').classList.remove('active');
+}
+
+async function saveQuickIngredient(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('quick_ing_name').value.trim();
+  const quantity = parseFloat(document.getElementById('quick_ing_quantity').value) || 0;
+  const cost = parseFloat(document.getElementById('quick_ing_cost').value) || 0;
+  const sku = document.getElementById('quick_ing_sku').value.trim();
+  const minStock = parseFloat(document.getElementById('quick_ing_min_stock').value) || 0;
+  const category = document.getElementById('quick_ing_category').value;
+
+  if (!name || !category) {
+    alert('Please fill in all required fields (Name, Category)');
+    return;
+  }
+
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) { alert('Please log in to create items'); return; }
 
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    let query = window.supabaseClient
-      .from('expenses')
-      .update({ ingredients: expenseIngredients })
-      .eq('id', expenseId)
-      .eq('profile_id', user.id);
-
-    if (storeId) {
-      query = query.eq('store_id', storeId);
-    }
-
-    const { error } = await query;
+    const { data: newIngredient, error } = await window.supabaseClient
+      .from('ingredients')
+      .insert([{
+        profile_id: user.id,
+        store_id: storeId,
+        name: name,
+        quantity: quantity,
+        cost_per_unit: cost,
+        sku: sku,
+        min_stock: minStock,
+        category: category,
+        custom_attributes: {}
+      }])
+      .select()
+      .single();
 
     if (error) {
-      console.error('Supabase update error:', error);
-      throw error;
+      console.error('Error creating ingredient:', error);
+      alert('Failed to create item. Please try again.');
+      return;
     }
 
-    console.log('Ingredient added successfully');
-    expenseData.ingredients = expenseIngredients;
-
-    // Deduct from inventory
-    const currentQty = parseFloat(ingredient.quantity) || 0;
-    const newQty = Math.max(0, currentQty - quantity);
-    await window.supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', ingredient.id).eq('profile_id', user.id);
-    try {
-      await window.supabaseClient.from('ingredient_history').insert([{
-        ingredient_id: ingredient.id,
-        profile_id: user.id,
-        field_name: 'quantity',
-        old_value: String(currentQty),
-        new_value: String(newQty),
-        reason: 'expense',
-        reference_id: String(expenseId)
-      }]);
-    } catch (e) { /* history table optional */ }
-
-    displayIngredients();
-    closeQuantityModal();
-    selectedIngredientForQuantity = null;
-    showNotification('Ingredient added', 'success');
-  } catch (error) {
-    console.error('Error adding ingredient:', error);
-    showNotification('Failed to add ingredient: ' + error.message, 'error');
+    ingredients.push(newIngredient);
+    closeQuickCreateIngredientModal();
+    document.getElementById('ecItemSheet').dataset.open = '1';
+    ecOpenLine(newIngredient.id, null);
+  } catch (err) {
+    console.error('Error saving ingredient:', err);
+    alert('An error occurred. Please try again.');
   }
 }
 
