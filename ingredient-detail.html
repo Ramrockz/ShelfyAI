@@ -2983,9 +2983,10 @@
 
       const days = Math.floor((Date.now() - new Date(h.changed_at)) / 86400000);
       const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
-      const why = h.reference_text
+      let why = h.reference_text
         || ({ manual: 'manual adjustment', order: 'an order', expense: 'an expense',
               restock: 'a restock' }[h.reason] || null);
+      if (why && why.trim().toLowerCase() === 'unknown') why = null;
       el.textContent = `Last changed ${when}${why ? ` · ${why}` : ''}`;
     } catch (e) {
       console.error('Error loading last change:', e);
