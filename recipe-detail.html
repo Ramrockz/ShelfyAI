@@ -163,9 +163,9 @@
                  scrollbar-width: none; -ms-overflow-style: none; }
   .ai-attr-bar::-webkit-scrollbar { display: none; }
   .ai-attr-bar.visible { display: flex; }
-  .ai-chip { flex-shrink: 0; height: 32px; padding: 0 11px; border-radius: 10px;
-             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-inner); color: var(--text-muted);
-             font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; font-family: inherit; }
+  .ai-chip { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-app, var(--bg-inner)); color: var(--text-muted);
+             font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; font-family: inherit; }
   .ai-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
 
   .ai-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -3182,7 +3182,11 @@ async function openAddIngredientModal() {
   // substitute doesn't start from every category in the catalog.
   if (_aiSwapMode && _aiEditIndex != null) {
     const cat = _aiCategoryFromComponent(_aiEditIndex);
-    if (cat) { _aiCategoryFilter = cat; document.getElementById('aiFilterBtn')?.classList.add('active'); }
+    if (cat) {
+      _aiCategoryFilter = cat;
+      document.getElementById('aiFilterBtn')?.classList.add('active');
+      _aiRenderAttrSubfilter(cat);
+    }
   }
   aiRenderList();
 }
