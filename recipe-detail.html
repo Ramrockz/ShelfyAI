@@ -105,7 +105,12 @@
      modal + item-editor sheet with one two-pane flow: pick an item, then
      say how much of it one unit needs. Same skeleton on desktop (centered
      card) and mobile (full-screen takeover via the media query below). ---------- */
-  .ai-overlay { z-index: 99999 !important; }
+  /* ID selector, not .ai-overlay -- the base .modal-overlay rule further
+     down this stylesheet is an equally-specific single-class selector that
+     ALSO sets z-index !important, and being later in source order it was
+     winning the tie, silently resetting this back to 10000. An ID selector
+     has higher specificity and can't lose that tie regardless of order. */
+  #addIngredientModal { z-index: 99999 !important; }
   /* !important on every property here: this page's generic mobile
      ".modal-content, .modal-content-custom, ... { width/max-width/margin/
      max-height/padding/transform: ... !important }" rule (for the desktop-
