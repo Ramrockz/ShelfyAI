@@ -204,10 +204,6 @@
             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
             letter-spacing: -.01em; cursor: pointer; font-family: inherit; }
   .ai-cta:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
-  .ai-ghost { width: 100%; height: 46px; margin-top: 8px; border-radius: 13px;
-              border: 1px solid var(--border); background: var(--bg-panel);
-              color: var(--accent-deep, var(--accent)); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  .ai-ghost:disabled { color: var(--text-faint, var(--text-muted)); cursor: default; }
 
   /* per-unit quantity pane */
   .ai-qty-panel { background: var(--bg-panel); padding: 22px 16px 18px; border-bottom: 1px solid var(--border-hair, var(--border)); }
@@ -216,7 +212,7 @@
                 background: var(--bg-inner); color: var(--text-muted); font-size: 28px; font-weight: 600; line-height: 1; cursor: pointer; }
   .ai-qty-btn.plus { background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent)); }
   .ai-qty-btn:active { transform: scale(.96); }
-  .ai-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 1 auto; min-width: 96px; max-width: 170px; }
+  .ai-qty-center { display: flex; flex-direction: column; align-items: center; flex: 0 0 120px; width: 120px; }
   .ai-qty-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
   .ai-qty-value { font-size: 50px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
                   background: none; border: none; text-align: center; min-width: 0; width: 100%;
@@ -224,10 +220,6 @@
   .ai-qty-value::-webkit-inner-spin-button, .ai-qty-value::-webkit-outer-spin-button { -webkit-appearance: none; display: none; }
   .ai-qty-unit { font-size: 17px; font-weight: 700; color: var(--text-faint, var(--text-muted)); }
   .ai-qty-status { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-top: 8px; text-align: center; }
-  .ai-qty-hints { display: flex; justify-content: center; gap: 7px; margin-top: 16px; flex-wrap: wrap; }
-  .ai-qty-hint { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border-hair, var(--border));
-                 background: var(--bg-app, var(--bg-inner)); color: var(--text-muted); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  .ai-qty-hint[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
 
   .ai-cost-strip { display: flex; background: var(--bg-panel);
                    border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
@@ -3500,7 +3492,7 @@ function aiOpenLine(ingredientId, existingIndex) {
   _aiSwapMode = false; _aiSwapQty = null;
 
   const isExisting = existingIndex != null;
-  const stockQty = ingredientStockMap[ing.id]?.quantity;
+  const stockQty = ingredientStockMap[ing.id]?.quantity ?? ing.quantity;
   document.getElementById('aiLineName').textContent = ing.name;
   document.getElementById('aiLineSub').textContent =
     `$${(parseFloat(ing.cost_per_unit) || 0).toFixed(2)} per ${ing.unit || 'unit'}${stockQty != null ? ` · ${stockQty} ${ing.unit || ''} in stock` : ''}`;
@@ -3509,7 +3501,6 @@ function aiOpenLine(ingredientId, existingIndex) {
   document.getElementById('aiSwapBtn').hidden = !isExisting;
   document.getElementById('aiRestockBtn').hidden = !isExisting;
   document.getElementById('aiLineSave').textContent = isExisting ? 'Save changes' : 'Add to product';
-  document.getElementById('aiLineSaveNext').hidden = isExisting;
   document.getElementById('aiNote').textContent = isExisting
     ? 'Changing this quantity changes what every future build of this product consumes. Past builds are untouched.'
     : 'How much of this one unit needs. Stock is deducted when you log production, not now.';
@@ -3537,12 +3528,6 @@ function aiRenderLine() {
   document.getElementById('aiUnit').textContent = _aiDraft.unit || ing.unit || '';
   document.getElementById('aiStatus').textContent = _aiDraft.qty ? 'per unit made' : 'set a quantity';
 
-  const isWhole = _aiDraft.unit === 'pcs' || _aiDraft.unit === 'ea';
-  const hintOpts = isWhole ? [1, 2, 4] : [0.25, 0.5, 1];
-  document.getElementById('aiHints').innerHTML = hintOpts.map(n =>
-    `<button type="button" class="ai-qty-hint" aria-pressed="${n === _aiDraft.qty}" onclick="aiSetQty(${n})">${n} ${_escHtml(_aiDraft.unit || '')}</button>`
-  ).join('');
-
   document.getElementById('aiAddVal').textContent = `$${add.toFixed(2)}`;
   document.getElementById('aiAddDelta').textContent = `$${unitCost.toFixed(2)} × ${_aiDraft.qty || 0}`;
   document.getElementById('aiCostVal').textContent = `$${now.toFixed(2)}`;
@@ -3560,7 +3545,7 @@ function aiRenderLine() {
     ? `Same as how you buy it ($${unitCost.toFixed(2)} per ${ing.unit || 'unit'})`
     : `You buy it per ${ing.unit || 'unit'} — cost is converted`;
 
-  const stock = ingredientStockMap[ing.id]?.quantity;
+  const stock = ingredientStockMap[ing.id]?.quantity ?? ing.quantity;
   const buildable = (_aiDraft.qty > 0 && stock != null) ? Math.floor(stock / _aiDraft.qty) : null;
   const cov = document.getElementById('aiCover'), covM = document.getElementById('aiCoverMeta');
   cov.textContent = buildable === null ? 'Enough for —'
@@ -3572,7 +3557,6 @@ function aiRenderLine() {
   document.getElementById('aiLineTallyL').textContent = _aiDraft.qty ? `${_aiDraft.qty} ${_aiDraft.unit || ''} × $${unitCost.toFixed(2)}` : 'Set a quantity';
   document.getElementById('aiLineTallyR').textContent = `$${add.toFixed(2)}`;
   document.getElementById('aiLineSave').disabled = !(_aiDraft.qty > 0);
-  document.getElementById('aiLineSaveNext').disabled = !(_aiDraft.qty > 0);
 }
 
 function aiSetQty(n) {
@@ -3646,7 +3630,7 @@ async function aiPickReplacement(ingredientId) {
   closeAddIngredientModal();
 }
 
-async function aiSaveLine(next) {
+async function aiSaveLine() {
   if (!(_aiDraft.qty > 0)) return;
   const ing = _aiIngredient;
   recipe.components = recipe.components || [];
@@ -3665,15 +3649,7 @@ async function aiSaveLine(next) {
 
   await updateRecipeInDatabase();
   renderRecipe();
-
-  if (next) {
-    _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
-    document.getElementById('aiQ').value = '';
-    aiShowPane('list');
-    aiRenderList();
-  } else {
-    closeAddIngredientModal();
-  }
+  closeAddIngredientModal();
 }
 
 async function aiRemoveLine() {
@@ -4168,7 +4144,6 @@ document.addEventListener('keydown', (e) => {
             </span>
             <button type="button" class="ai-qty-btn plus" aria-label="More" onclick="aiStepQty(1)">+</button>
           </div>
-          <div class="ai-qty-hints" id="aiHints"></div>
         </div>
 
         <div class="ai-cost-strip">
@@ -4218,7 +4193,6 @@ document.addEventListener('keydown', (e) => {
           <span class="ai-tally-r" id="aiLineTallyR">$0.00</span>
         </div>
         <button type="button" class="ai-cta" id="aiLineSave" onclick="aiSaveLine()">Add to product</button>
-        <button type="button" class="ai-ghost" id="aiLineSaveNext" onclick="aiSaveLine(true)">Save and add another</button>
       </div>
     </div>
 
