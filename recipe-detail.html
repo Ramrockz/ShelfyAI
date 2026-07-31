@@ -569,7 +569,6 @@
       padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
       background: var(--bg-panel); border-top: 1px solid var(--border);
     }
-    .rdm-restock-row .truck-anim-icon { color: var(--accent); flex-shrink: 0; }
     .rdm-restock-row #rdmRestockLabel { flex: 1; font-size: 14.5px; font-weight: 700; color: var(--accent); }
 
     /* Rename sheet */
@@ -1624,9 +1623,7 @@ async function renderRecipe() {
             <button onclick="openSwapModal(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
             </button>
-            <button onclick="reorderIngredient('${ingredientId}')" style="background: var(--bg-inner); border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">
-              <span class="truck-anim-icon${isReorderPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
-            </button>
+            <button onclick="reorderIngredient('${ingredientId}')" style="background: ${isReorderPending ? 'rgba(6,182,212,0.12)' : 'var(--bg-inner)'}; border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0 12px; height: 36px; border-radius: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">${isReorderPending ? 'On the way' : 'Reorder'}</button>
           </div>
         </div>
       </div>
@@ -3710,7 +3707,6 @@ document.addEventListener('keydown', (e) => {
     <div id="rdmQtyList" style="padding:0 20px;"></div>
   </div>
   <div class="rdm-restock-row" id="rdmRestockRow" style="display:none;" onclick="rdmRestockShort()">
-    <span class="truck-anim-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
     <span id="rdmRestockLabel"></span>
     <svg class="rdm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
   </div>

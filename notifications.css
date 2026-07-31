@@ -132,106 +132,9 @@
   flex-wrap: nowrap;
 }
 
-.notif-reorder-btn {
-  height: 28px;
-  width: 52px;
-  padding: 0;
-  border-radius: 6px;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.notif-reorder-btn .truck-anim-icon svg {
-  stroke: #fff;
-  width: 12px !important;
-  height: 12px !important;
-}
-
-.notif-reorder-btn.notif-reorder-pending {
-  background: rgba(16, 185, 129, 0.15);
-}
-
-.notif-reorder-btn.notif-reorder-pending svg {
-  stroke: var(--success);
-}
-
-.notif-reorder-btn:hover {
-  opacity: 0.85;
-}
-
-/* Truck Animation */
-.truck-anim-icon {
-  display: inline-block;
-}
-
-.truck-speed {
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.truck-anim-active .truck-speed {
-  animation: speed-lines 1s ease-in-out infinite;
-}
-
-.truck-anim-active .truck-speed-1 {
-  animation-delay: 0s;
-}
-
-.truck-anim-active .truck-speed-2 {
-  animation-delay: 0.1s;
-}
-
-.truck-anim-active .truck-speed-3 {
-  animation-delay: 0.2s;
-}
-
-.truck-anim-active .truck-body {
-  animation: truck-bounce 0.5s ease-in-out infinite;
-}
-
-.truck-anim-active .truck-wheel {
-  animation: wheel-spin 0.6s linear infinite;
-  transform-origin: center;
-}
-
-@keyframes speed-lines {
-  0%, 100% {
-    opacity: 0;
-    transform: translateX(0);
-  }
-  50% {
-    opacity: 0.6;
-    transform: translateX(-3px);
-  }
-}
-
-@keyframes truck-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1px);
-  }
-}
-
-@keyframes wheel-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .notif-open-link,
-.notif-delete-link {
+.notif-delete-link,
+.notif-reorder-link {
   background: none;
   border: none;
   cursor: pointer;
@@ -245,9 +148,12 @@
 
 .notif-open-link { color: var(--accent); }
 .notif-delete-link { color: var(--danger); }
+.notif-reorder-link { color: var(--accent); flex-shrink: 0; }
+.notif-reorder-link.notif-reorder-pending { color: var(--success); }
 
 .notif-open-link:hover,
-.notif-delete-link:hover { opacity: 0.7; }
+.notif-delete-link:hover,
+.notif-reorder-link:hover { opacity: 0.7; }
 
 .notification-empty {
   padding: 40px 20px;

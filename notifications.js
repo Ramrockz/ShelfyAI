@@ -121,9 +121,7 @@ function renderNotifications() {
   listContainer.innerHTML = notificationsCache.map(notification => {
     const isPending = notification.ingredient_id && notificationReorderMap[notification.ingredient_id];
     const truckBtn = notification.ingredient_id ? `
-      <button class="notif-reorder-btn${isPending ? ' notif-reorder-pending' : ''}" title="${isPending ? 'Confirm Delivery' : 'Reorder'}" onclick="${isPending ? `openDeliveryForIngredient('${notification.ingredient_id}')` : `markAsReordered('${notification.ingredient_id}', '${notification.id}')`}; event.stopPropagation();">
-        <span class="truck-anim-icon${isPending ? ' truck-anim-active' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line class="truck-speed truck-speed-1" x1="0" x2="5" y1="8" y2="8"/><line class="truck-speed truck-speed-2" x1="-1" x2="6" y1="11" y2="11"/><line class="truck-speed truck-speed-3" x1="0" x2="4" y1="14" y2="14"/><g class="truck-body"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><g class="truck-wheel"><circle cx="7" cy="18" r="2"/><line stroke-width="1.5" x1="7" x2="7" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="5.5" x2="8.5" y1="18" y2="18"/></g><g class="truck-wheel"><circle cx="17" cy="18" r="2"/><line stroke-width="1.5" x1="17" x2="17" y1="16.5" y2="19.5"/><line stroke-width="1.5" x1="15.5" x2="18.5" y1="18" y2="18"/></g></g></svg></span>
-      </button>
+      <span class="notif-reorder-link${isPending ? ' notif-reorder-pending' : ''}" title="${isPending ? 'Confirm Delivery' : 'Reorder'}" onclick="${isPending ? `openDeliveryForIngredient('${notification.ingredient_id}')` : `markAsReordered('${notification.ingredient_id}', '${notification.id}')`}; event.stopPropagation();">${isPending ? 'On the way' : 'Reorder'}</span>
     ` : '';
     const isWelcomeGuide = notification.type === 'welcome_guide';
     const isAiLimitReached = notification.type === 'ai_limit_reached';

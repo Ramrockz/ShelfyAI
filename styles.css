@@ -1421,26 +1421,6 @@ tr:hover td {
   animation: skeleton-shimmer 1.2s infinite;
 }
 
-/* ================================
-   Truck icon animations (shared)
-   ================================ */
-@keyframes truckBodyBounce {
-  0%, 100% { transform: translateY(0); }
-  25%       { transform: translateY(-1px); }
-  50%       { transform: translateY(0); }
-  75%       { transform: translateY(-0.5px); }
-}
-@keyframes truckWheelSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes truckSpeedLine {
-  0%   { opacity: 0;   transform: translateX(0px)   scaleX(0.2); }
-  20%  { opacity: 0.7; transform: translateX(-4px)  scaleX(1);   }
-  60%  { opacity: 0.5; transform: translateX(-10px) scaleX(0.8); }
-  100% { opacity: 0;   transform: translateX(-16px) scaleX(0.3); }
-}
-
 /* Nav inline search — hidden by default; bottom-nav.js reveals it on mobile
    when the search icon it injects is tapped (see .mobile-search-active). */
 .nav-search-input { display: none; }
@@ -1449,35 +1429,6 @@ tr:hover td {
 .nav-actions .search-wrapper {
   display: none;
 }
-
-.truck-anim-icon { display: inline-flex; align-items: center; justify-content: center; }
-.truck-anim-icon svg { overflow: visible !important; width: 16px !important; height: 16px !important; }
-.truck-speed { opacity: 0; transform-origin: right center; }
-
-/* .truck-anim-active, .truck-moving (ingredient-detail), .reordering (recipe-detail) all trigger the same animation */
-.truck-anim-active .truck-body,
-.truck-moving .truck-body,
-.reordering .truck-body {
-  animation: truckBodyBounce 0.8s ease-in-out infinite;
-}
-.truck-anim-active .truck-wheel,
-.truck-moving .truck-wheel,
-.reordering .truck-wheel {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: truckWheelSpin 1s linear infinite;
-}
-.truck-anim-active .truck-speed,
-.truck-moving .truck-speed,
-.reordering .truck-speed {
-  animation: truckSpeedLine 1s ease-out infinite;
-}
-.truck-anim-active .truck-speed-2,
-.truck-moving .truck-speed-2,
-.reordering .truck-speed-2 { animation-delay: 0.15s; }
-.truck-anim-active .truck-speed-3,
-.truck-moving .truck-speed-3,
-.reordering .truck-speed-3 { animation-delay: 0.3s; }
 
 /* ─── Offline sync banner ─────────────────────────────────────────────────── */
 #shelfy-offline-banner {
