@@ -105,7 +105,7 @@
      modal + item-editor sheet with one two-pane flow: pick an item, then
      say how much of it one unit needs. Same skeleton on desktop (centered
      card) and mobile (full-screen takeover via the media query below). ---------- */
-  .ai-overlay { z-index: 10003 !important; }
+  .ai-overlay { z-index: 99999 !important; }
   /* !important on every property here: this page's generic mobile
      ".modal-content, .modal-content-custom, ... { width/max-width/margin/
      max-height/padding/transform: ... !important }" rule (for the desktop-
@@ -435,10 +435,18 @@
 
     /* Keep bottom nav above the mobile overlay */
     #bottom-nav { z-index: 10005 !important; }
-    /* Alert / confirm modals must sit above everything */
-    #alertModal, #confirmModal { z-index: 10006 !important; }
-    #rdmDeliveryModal { z-index: 10006 !important; }
-    #rdmRenameSheet, #aiUnitSheet { z-index: 10006 !important; }
+    /* Every sheet/modal on this page must sit above #mobileViewOverlay
+       (z-index:10002, solid background -- not transparent, so anything
+       below it is fully hidden, not just dimmed). #rdmCategorySheet was
+       missing from this list entirely, silently relying on the base
+       .modal-overlay z-index of 10000 (< 10002) -- it was rendering
+       correctly underneath #mobileViewOverlay's opaque background the
+       whole time. Bumping every one of them well clear of anything else
+       on the page instead of picking values just barely above 10002. */
+    #alertModal, #confirmModal, #rdmDeliveryModal, #rdmRenameSheet,
+    #rdmCategorySheet, #aiUnitSheet {
+      z-index: 99999 !important;
+    }
 
     /* === Full-screen recipe view overlay (ms2-style) ===
        Shown unconditionally via CSS (not gated on the recipe finishing its
@@ -750,7 +758,7 @@
     /* Modals must appear above the mobile view overlay. #addIngredientModal
        gets its z-index from .ai-overlay (always-on, not mobile-gated) now. */
     #reorderModal {
-      z-index: 10003 !important;
+      z-index: 99999 !important;
     }
     
     .recipe-builder {
