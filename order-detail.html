@@ -123,11 +123,6 @@
     color: #3b82f6;
   }
 
-  .status-refunded {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-  }
-
   .header-actions {
     display: flex;
     gap: 12px;
@@ -999,7 +994,7 @@
     #itemsSectionHeader { display: none !important; }
     #ordPackHeader { display: flex !important; }
 
-    /* Mobile header block: customer, total, refund indicator, ⋯ menu.
+    /* Mobile header block: customer, total, ⋯ menu.
        The real .navbar (with its own bell/avatar) is hidden on this page at
        mobile widths — #odCreateBtn/#odNotificationBell/#odUserAvatar below
        stand in for it, reusing the real .notification-bell/.user-avatar
@@ -1056,13 +1051,7 @@
     .ord-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
     .ord-more-item-danger, .ord-more-item-danger svg { color: var(--danger); }
 
-    /* Refund indicator — the only order-status concept left on mobile */
-    .stage-refunded {
-      font-size: 12px; font-weight: 800; letter-spacing: .04em;
-      text-transform: uppercase; color: var(--danger); margin-top: 13px; display: block;
-    }
-
-    /* Info rows: Channel / Reference / Revenue / Tracking */
+/* Info rows: Channel / Reference / Revenue / Tracking */
     .ord-info-rows { display: block; margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
     .ord-drow {
       display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
@@ -1311,16 +1300,11 @@
         <div class="ord-head-main">
           <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
           <div class="ord-meta" id="ordMeta"></div>
-          <div id="ordStageStrip"></div>
         </div>
         <div class="ord-total" id="ordTotalDisplay" onclick="openOrderFieldSheet('revenue','Revenue')">$0.00</div>
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
-      <button type="button" class="ord-more-item" id="ordMenuRefund" onclick="closeOrdMoreMenu(); showStatusModal('refunded')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
-        <span>Refund order</span>
-      </button>
       <button type="button" class="ord-more-item ord-more-item-danger" onclick="closeOrdMoreMenu(); showDeleteModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         <span>Delete order</span>
@@ -1345,7 +1329,6 @@
             <span id="orderStatus" class="status-badge"></span>
           </div>
           <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
-            <button id="btnRefunded" class="detail-cta-btn" onclick="showStatusModal('refunded')" title="Mark as Refunded">Refunded</button>
             <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
           </div>
         </div>
@@ -1545,18 +1528,6 @@
   </div>
 </div>
 
-<!-- Status Confirmation Modal -->
-<div class="modal-overlay" id="statusModal" onclick="if(event.target === this) closeStatusModal()">
-  <div class="modal-content">
-    <h3 id="statusModalTitle">Confirm Status Change</h3>
-    <p id="statusModalMessage">Are you sure you want to update this order status?</p>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="confirmStatusChange()">Confirm</button>
-      <button class="btn-secondary" onclick="closeStatusModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
 
 <!-- Delete Confirmation Modal -->
 <div class="modal-overlay" id="deleteModal" onclick="if(event.target === this) closeDeleteModal()">
@@ -1728,10 +1699,6 @@ function displayOrder() {
     if (trackEl) trackEl.textContent = orderData.tracking_number;
   }
 
-  // Refund is the only status action left — hide it once already refunded.
-  const btnRefunded = document.getElementById('btnRefunded');
-  if (btnRefunded) btnRefunded.style.display = status === 'refunded' ? 'none' : 'inline-flex';
-
   // Display items
   const items = Array.isArray(orderData.items) ? orderData.items : [];
   const tableBody = document.getElementById('itemsTableBody');
@@ -1821,8 +1788,8 @@ function displayOrder() {
 
 // ============================================================
 // Mobile-only: header block, info rows, item list, ⋯ menu. Every write
-// routes through a function that already exists (updateOrderStatus,
-// selectChannel, changeOrderItemQty, removeRecipeItem) — nothing new
+// routes through a function that already exists (selectChannel,
+// changeOrderItemQty, removeRecipeItem) — nothing new
 // touches the DB except the one-field sheet writer (saveOrderField),
 // which mirrors makeEditable()'s update+updated_at-stamp pattern for the
 // same reason makeEditable does it: the orders list only re-renders a
@@ -1850,14 +1817,6 @@ function renderOrdMobileHeader() {
       `${qty} item${qty !== 1 ? 's' : ''}`
     ].filter(Boolean).join(' · ');
   }
-
-  // No fulfillment-stage concept left — just a refund indicator, and hiding
-  // "Refund order" in the ⋯ menu once it's already been refunded.
-  const status = orderData.status || 'processed';
-  const stageEl = document.getElementById('ordStageStrip');
-  if (stageEl) stageEl.innerHTML = status === 'refunded' ? '<span class="stage-refunded">Refunded</span>' : '';
-  const menuRefund = document.getElementById('ordMenuRefund');
-  if (menuRefund) menuRefund.style.display = status === 'refunded' ? 'none' : 'flex';
 
   syncMobileHeaderControls();
 }
@@ -2262,20 +2221,6 @@ async function loadAffectedIngredients() {
   // Removed - no longer showing Updated Inventory section
 }
 
-let pendingStatus = null;
-
-function showStatusModal(newStatus) {
-  pendingStatus = newStatus;
-  document.getElementById('statusModalTitle').textContent = 'Refund Order';
-  document.getElementById('statusModalMessage').textContent = 'Are you sure you want to refund this order?';
-  document.getElementById('statusModal').classList.add('active');
-}
-
-function closeStatusModal() {
-  document.getElementById('statusModal').classList.remove('active');
-  pendingStatus = null;
-}
-
 async function selectChannel(channel) {
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
@@ -2304,56 +2249,6 @@ async function selectChannel(channel) {
   }
 }
 
-async function confirmStatusChange() {
-  if (!pendingStatus) return;
-  await updateOrderStatus(pendingStatus, null);
-  closeStatusModal();
-}
-
-async function updateOrderStatus(newStatus, trackingNumber = null) {
-  if (!orderId || !orderData) return;
-  
-  try {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) {
-      showNotification('You must be logged in to update order status', 'error');
-      return;
-    }
-
-    const updateData = { status: newStatus };
-    
-    // Add tracking number if provided (for shipped status)
-    if (trackingNumber !== null) {
-      updateData.tracking_number = trackingNumber;
-    }
-
-    const { error } = await window.supabaseClient
-      .from('sales')
-      .update(updateData)
-      .eq('id', orderId)
-      .eq('profile_id', user.id);
-
-    if (error) throw error;
-
-    // Update local data and UI
-    orderData.status = newStatus;
-    if (trackingNumber !== null) {
-      orderData.tracking_number = trackingNumber;
-    }
-
-    // displayOrder() already sets the status badge and reveals the tracking
-    // field when one's present — this used to hand-patch both here, including
-    // a reference to a #trackingCard id that doesn't exist anywhere in the
-    // page. That threw and aborted the rest of this function, so the success
-    // notification below never fired whenever a tracking number was set.
-    displayOrder();
-
-    showNotification(`Order status updated to ${newStatus}!`, 'success');
-  } catch (error) {
-    console.error('Error updating order status:', error);
-    showNotification('Failed to update order status: ' + error.message, 'error');
-  }
-}
 
 function showNotification(message, type = 'success') {
   if (type === 'error') console.error(message);
