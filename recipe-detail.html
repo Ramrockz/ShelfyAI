@@ -157,6 +157,17 @@
                    justify-content: center; cursor: pointer; }
   .ai-filter-btn.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
 
+  /* Attribute sub-filter (19d) -- cascading chips (size/color/etc) scoped to
+     whichever category is currently selected. */
+  .ai-attr-bar { display: none; gap: 6px; padding: 0 16px 10px; overflow-x: auto;
+                 scrollbar-width: none; -ms-overflow-style: none; }
+  .ai-attr-bar::-webkit-scrollbar { display: none; }
+  .ai-attr-bar.visible { display: flex; }
+  .ai-chip { flex-shrink: 0; height: 32px; padding: 0 11px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-inner); color: var(--text-muted);
+             font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; font-family: inherit; }
+  .ai-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+
   .ai-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .ai-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
   .ai-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
@@ -3118,6 +3129,7 @@ let _aiSwapMode = false;   // true while pane 1 is picking a REPLACEMENT for _ai
 let _aiSwapQty = null;     // quantity carried over once that replacement is picked
 let _aiUsageCounts = null; // Map<ingredientId, count of OTHER products using it>, loaded once per modal session
 let _aiCategoryFilter = null; // category name to filter pane 1's pickable items by, or null for all
+let _aiAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter scoped to _aiCategoryFilter
 
 const AI_UNITS = [
   { u: 'pcs', label: 'pieces' }, { u: 'ea', label: 'each' },
@@ -3200,7 +3212,9 @@ function closeAddIngredientModal() {
   document.getElementById('addIngredientModal').classList.remove('active');
   _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
   _aiSwapMode = false; _aiSwapQty = null; _aiCategoryFilter = null;
+  _aiAttrValueFilters = new Map();
   document.getElementById('aiFilterBtn')?.classList.remove('active');
+  _aiHideAttrSubfilter();
 }
 
 function aiOpenCatSheet() {
@@ -3219,9 +3233,99 @@ function aiCloseCatSheet() {
 }
 function aiPickCategory(cat) {
   _aiCategoryFilter = _aiCategoryFilter === cat ? null : cat; // tap the active one again to clear
+  _aiAttrValueFilters = new Map();
   aiCloseCatSheet();
   document.getElementById('aiFilterBtn').classList.toggle('active', !!_aiCategoryFilter);
+  if (_aiCategoryFilter) _aiRenderAttrSubfilter(_aiCategoryFilter);
+  else _aiHideAttrSubfilter();
   aiRenderList();
+}
+
+// Cascading attribute chips (size/color/etc) scoped to the selected
+// category -- only ever built from ingredients actually in that category,
+// and each key's remaining values narrow as other keys get picked (AND
+// across keys, OR within a key's own values).
+function _aiRenderAttrSubfilter(cat) {
+  const groupedByKey = new Map();
+  (availableIngredients || [])
+    .filter(ing => ing.category && ing.category.toLowerCase() === cat.toLowerCase() && ing.custom_attributes)
+    .forEach(ing => {
+      try {
+        const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+        Object.entries(attrs || {}).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          if (_aiAttrValueFilters.size > 0) {
+            for (const [filterKey, filterSet] of _aiAttrValueFilters) {
+              if (filterKey === normalizedKey || !filterSet || filterSet.size === 0) continue;
+              const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === filterKey);
+              if (!matchKey || !filterSet.has(String(attrs[matchKey]).trim().toLowerCase())) return;
+            }
+          }
+          if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());
+          const valuesMap = groupedByKey.get(normalizedKey);
+          if (!valuesMap.has(valueKey)) valuesMap.set(valueKey, trimmedValue);
+        });
+      } catch (e) {}
+    });
+
+  const el = document.getElementById('aiAttrBar');
+  if (!el) return;
+  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+
+  const sortValues = (key, a, b) => {
+    if (key === 'size') {
+      const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+    }
+    const an = parseFloat(a), bn = parseFloat(b);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  const chips = [];
+  sortedKeys.forEach(key => {
+    const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortValues(key, a[1], b[1]));
+    sorted.forEach(([valueKey, displayValue]) => {
+      const active = _aiAttrValueFilters.has(key) && _aiAttrValueFilters.get(key).has(valueKey);
+      chips.push(`<button type="button" class="ai-chip" aria-pressed="${active}" onclick="aiToggleAttrFilter('${key.replace(/'/g,"\\'")}','${valueKey.replace(/'/g,"\\'")}')">${_escHtml(displayValue)}</button>`);
+    });
+  });
+  el.innerHTML = chips.join('');
+  el.classList.add('visible');
+}
+function _aiHideAttrSubfilter() {
+  const el = document.getElementById('aiAttrBar');
+  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
+}
+function aiToggleAttrFilter(key, value) {
+  if (!_aiAttrValueFilters.has(key)) _aiAttrValueFilters.set(key, new Set());
+  const set = _aiAttrValueFilters.get(key);
+  if (set.has(value)) { set.delete(value); if (set.size === 0) _aiAttrValueFilters.delete(key); }
+  else set.add(value);
+  if (_aiCategoryFilter) _aiRenderAttrSubfilter(_aiCategoryFilter);
+  aiRenderList();
+}
+function _aiMatchesAttrFilters(ing) {
+  if (_aiAttrValueFilters.size === 0) return true;
+  if (!ing.custom_attributes) return false;
+  try {
+    const attrs = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
+    for (const [key, valSet] of _aiAttrValueFilters) {
+      if (valSet.size === 0) continue;
+      const matchKey = Object.keys(attrs).find(k => k.toLowerCase() === key);
+      if (!matchKey) return false;
+      if (!valSet.has(String(attrs[matchKey]).trim().toLowerCase())) return false;
+    }
+    return true;
+  } catch (e) { return false; }
 }
 
 function aiShowPane(which) {
@@ -3248,7 +3352,7 @@ function aiRenderList() {
     ? (components[_aiEditIndex]?.ingredient_id || components[_aiEditIndex]?.id)
     : null;
   const usage = _aiUsageCounts || new Map();
-  const matchesCat = ing => !_aiCategoryFilter || ing.category === _aiCategoryFilter;
+  const matchesCat = ing => (!_aiCategoryFilter || ing.category === _aiCategoryFilter) && _aiMatchesAttrFilters(ing);
 
   const rowHtml = (ing) => {
     const isCurrentSwap = swapIngId && ing.id === swapIngId;
@@ -4025,6 +4129,7 @@ document.addEventListener('keydown', (e) => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
           </button>
         </div>
+        <div class="ai-attr-bar" id="aiAttrBar"></div>
       </div>
       <div class="ai-scroll" id="aiScroll"></div>
       <div class="ai-foot">

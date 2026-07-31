@@ -1812,16 +1812,13 @@ function openProductFamily(id) {
 
 function render() {
     const q = (document.getElementById('searchRecipes')?.value || document.getElementById('navSearchInput')?.value || '').toLowerCase();
-    const matchingIngIds = _getProductMatchingIngIds();
     updateAvailChipCounts();
     const allData = recipes.filter(r => {
       const parent = r.parent_id ? recipes.find(p => p.id === r.parent_id) : null;
       const hay = (r.name + ' ' + (parent?.name || '') + ' ' +
                    Object.values(r.attributes || {}).join(' ')).toLowerCase();
       if (!hay.includes(q)) return false;
-      if (matchingIngIds !== null) {
-        if (!r.components || !r.components.some(c => matchingIngIds.has(c.ingredient_id))) return false;
-      }
+      if (!_productPassesFilters(r)) return false;
       return true;
     });
     renderProductFilterBadges();
@@ -2076,36 +2073,28 @@ function _escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function _getProductMatchingIngIds() {
-  if (!productCategoryFilter && productAttrValueFilters.size === 0) return null;
-  return new Set(
-    ingredientData
-      .filter(ing => {
-        if (productCategoryFilter && (!ing.category || ing.category.toLowerCase() !== productCategoryFilter.toLowerCase())) return false;
-        if (productAttrValueFilters.size > 0) {
-          if (!ing.attributes) return false;
-          for (const [attrKey, valSet] of productAttrValueFilters) {
-            if (valSet.size === 0) continue;
-            const matchingKey = Object.keys(ing.attributes).find(k => k.toLowerCase() === attrKey);
-            if (!matchingKey) return false;
-            const ingVal = String(ing.attributes[matchingKey]).trim().toLowerCase();
-            if (!valSet.has(ingVal)) return false;
-          }
-        }
-        return true;
-      })
-      .map(ing => ing.id)
-  );
+// A product is filtered by its OWN category/attributes (recipe.category,
+// recipe.attributes -- the finished good's own variant data), not by what
+// ingredients happen to be used as components -- picking "Packaging" used
+// to surface any product that merely contains a packaging ingredient.
+function _productPassesFilters(r) {
+  if (productCategoryFilter && (!r.category || r.category.toLowerCase() !== productCategoryFilter.toLowerCase())) return false;
+  if (productAttrValueFilters.size > 0) {
+    if (!r.attributes) return false;
+    for (const [attrKey, valSet] of productAttrValueFilters) {
+      if (valSet.size === 0) continue;
+      const matchingKey = Object.keys(r.attributes).find(k => k.toLowerCase() === attrKey);
+      if (!matchingKey) return false;
+      const val = String(r.attributes[matchingKey]).trim().toLowerCase();
+      if (!valSet.has(val)) return false;
+    }
+  }
+  return true;
 }
 
 function renderProductCatChips() {
-  const usedIngIds = new Set(
-    recipes.flatMap(r => (r.components || []).map(c => c.ingredient_id))
-  );
-  const presentCatSet = new Set(
-    ingredientData.filter(ing => usedIngIds.has(ing.id)).map(ing => ing.category).filter(Boolean)
-  );
-  const presentCats = _recipeCategories.filter(cat => presentCatSet.has(cat));
+  const presentCatSet = new Set(recipes.map(r => r.category).filter(Boolean));
+  const presentCats = PRODUCT_CATEGORIES.filter(cat => presentCatSet.has(cat));
 
   const chips = presentCats.map(cat => {
     const icon = _recipeCategIconMap[cat] || 'tag';
@@ -2132,11 +2121,8 @@ function renderProdCatSheet() {
         <span class="cat-row-count">${count}</span>
       </div>`;
   };
-  const counts = cat => recipes.filter(r => (r.components || []).some(c => {
-    const ing = ingredientData.find(i => i.id === (c.ingredient_id || c.id));
-    return ing && ing.category && ing.category.toLowerCase() === cat.toLowerCase();
-  })).length;
-  const sortedCats = [..._recipeCategories].sort((a, b) => counts(b) - counts(a));
+  const counts = cat => recipes.filter(r => r.category && r.category.toLowerCase() === cat.toLowerCase()).length;
+  const sortedCats = [...PRODUCT_CATEGORIES].sort((a, b) => counts(b) - counts(a));
   document.getElementById('prodCatSheetList').innerHTML =
     row('All categories', 'layers', null, recipes.length) +
     sortedCats.map(cat => row(cat, _recipeCategIconMap[cat] || 'tag', cat, counts(cat))).join('');
@@ -2169,27 +2155,24 @@ function toggleProductCatFilter(cat) {
 }
 
 function _renderProductAttrSubfilters(cat) {
-  const usedIngIds = new Set(
-    recipes.flatMap(r => (r.components || []).map(c => c.ingredient_id))
-  );
   const groupedByKey = new Map();
-  ingredientData
-    .filter(ing => ing.category && ing.category.toLowerCase() === cat.toLowerCase() && ing.attributes && usedIngIds.has(ing.id))
-    .forEach(ing => {
+  recipes
+    .filter(r => r.category && r.category.toLowerCase() === cat.toLowerCase() && r.attributes)
+    .forEach(r => {
       try {
-        Object.entries(ing.attributes).forEach(([key, value]) => {
+        Object.entries(r.attributes).forEach(([key, value]) => {
           if (!value || !String(value).trim()) return;
           const normalizedKey = key.toLowerCase();
           const trimmedValue = String(value).trim();
           const valueKey = trimmedValue.toLowerCase();
-          // Only show this value if the ingredient passes all OTHER active attribute filters
+          // Only show this value if the product passes all OTHER active attribute filters
           if (productAttrValueFilters.size > 0) {
             for (const [filterKey, filterSet] of productAttrValueFilters) {
               if (filterKey === normalizedKey) continue;
               if (!filterSet || filterSet.size === 0) continue;
-              const matchKey = Object.keys(ing.attributes).find(k => k.toLowerCase() === filterKey);
+              const matchKey = Object.keys(r.attributes).find(k => k.toLowerCase() === filterKey);
               if (!matchKey) return;
-              if (!filterSet.has(String(ing.attributes[matchKey]).trim().toLowerCase())) return;
+              if (!filterSet.has(String(r.attributes[matchKey]).trim().toLowerCase())) return;
             }
           }
           if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());

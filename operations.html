@@ -1292,6 +1292,112 @@
     }
   }
 
+  /* ---------- Product picker (#manualStep1) — same sectioned-row picker
+     used on orders.html's own "New order" flow, since this dashboard modal
+     builds the same kind of order. ---------- */
+  .op-modal { border-radius: 20px; overflow: hidden; }
+  .op-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .op-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 20px; }
+  .op-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .op-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  .op-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .op-skip { height: 40px; padding: 0 12px; background: none; border: none;
+             color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; }
+
+  .op-find { display: flex; align-items: center; gap: 8px; padding: 0 20px 12px; }
+  .op-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; height: 44px;
+               padding: 0 12px; border-radius: 12px; background: var(--bg-inner); }
+  .op-search input { flex: 1; min-width: 0; border: none; background: none; outline: none;
+                     font-size: 15px; color: var(--text-main); }
+  .op-search input::placeholder { color: var(--text-faint, var(--text-muted)); }
+  .op-clear { width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--text-ghost, #cbd5e1);
+              color: #fff; display: none; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; line-height: 1; }
+  .op-clear[data-on="1"] { display: flex; }
+
+  .op-filter { position: relative; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px;
+               border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main);
+               display: flex; align-items: center; justify-content: center; }
+  .op-filter:active { background: var(--bg-inner); }
+  .op-filter[aria-expanded="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+  .op-filter-n { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px;
+                 border-radius: 99px; background: var(--accent-deep, var(--accent)); color: #fff; font-size: 10.5px;
+                 font-weight: 800; display: none; align-items: center; justify-content: center;
+                 border: 2px solid var(--bg-panel); }
+  .op-filter-n[data-on="1"] { display: flex; }
+
+  .op-chips { display: none; gap: 7px; padding: 0 20px 12px; overflow-x: auto;
+              scrollbar-width: none; -ms-overflow-style: none; }
+  .op-chips::-webkit-scrollbar { display: none; }
+  .op-chips[data-open="1"] { display: flex; }
+  .op-chip { flex-shrink: 0; height: 34px; padding: 0 12px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-app, var(--bg-inner)); color: var(--text-muted);
+             font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .op-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+  .op-chip-clear { flex-shrink: 0; height: 34px; padding: 0 10px; border: none; background: none;
+                   color: var(--accent-deep, var(--accent)); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+
+  /* Attribute sub-filter (19d) -- cascading chips (size/color/etc), shown
+     only when exactly one category is active (the .op-chip system supports
+     picking several categories at once, which doesn't map to "one scoped
+     set of attribute values" the way a single-select category filter does). */
+  .op-attr-bar { display: none; gap: 6px; padding: 0 20px 12px; overflow-x: auto;
+                 scrollbar-width: none; -ms-overflow-style: none; }
+  .op-attr-bar::-webkit-scrollbar { display: none; }
+  .op-attr-bar.visible { display: flex; }
+
+  .op-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .op-sec-head { display: flex; align-items: baseline; padding: 18px 20px 8px; }
+  .op-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+                  color: var(--text-muted); }
+  .op-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+  .op-list { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             border-bottom: 1px solid var(--border-hair, var(--border)); }
+
+  .op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px 10px 20px;
+            border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
+  .op-list .op-row:first-child { border-top: none; }
+  .op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
+  .op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .op-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .op-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+             font-variant-numeric: tabular-nums; }
+  .op-meta b { font-weight: 700; color: var(--text-main); }
+  .op-meta[data-state="low"] { color: var(--warning, #b45309); }
+  .op-meta[data-state="out"], .op-meta[data-state="short"] { color: var(--danger, #dc2626); }
+
+  .op-add { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--bg-panel);
+            color: var(--accent-ink, var(--accent)); display: flex; align-items: center; justify-content: center; }
+  .op-add:active { background: var(--bg-inner); }
+  .op-step { flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
+  .op-step button { width: 40px; height: 44px; border: none; background: none; color: var(--accent-ink, var(--accent));
+                    display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+  .op-step button:active { background: var(--bg-inner); }
+  .op-qty { min-width: 26px; text-align: center; font-size: 16px; font-weight: 800;
+            font-variant-numeric: tabular-nums; }
+
+  .op-empty { padding: 40px 24px; text-align: center; }
+  .op-empty-t { font-size: 15px; font-weight: 700; }
+  .op-empty-s { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+  .op-empty-b { height: 44px; margin-top: 16px; padding: 0 16px; border-radius: 12px;
+                border: 1px solid var(--border); background: var(--bg-panel);
+                color: var(--accent-ink, var(--accent)); font-size: 13.5px; font-weight: 700; }
+  .op-note { padding: 14px 20px 26px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+
+  .op-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+             padding: 10px 20px calc(12px + env(safe-area-inset-bottom)); }
+  .op-tally { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+  .op-tally-l { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .op-tally-r { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -.02em;
+                font-variant-numeric: tabular-nums; }
+  .op-warn { font-size: 12px; font-weight: 700; color: var(--danger, #dc2626); margin-top: 2px; }
+  .op-cont { width: 100%; height: 50px; margin-top: 10px; border: none; border-radius: 13px;
+             background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
+             letter-spacing: -.01em; cursor: pointer; }
+  .op-cont:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+
   /* ---------- RECIPE PICKER MODAL ---------- */
   .recipe-picker-modal .modal-content {
     max-width: 880px !important;
@@ -3316,35 +3422,46 @@ function showImportStatus(message, type) {
 <!-- Manual Order Creation Modal -->
 <div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
 
-  <!-- Step 1: Recipe Picker -->
-  <div class="modal-content" id="manualStep1">
-    <div class="recipe-picker-header">
-      <div>
-        <h3 style="margin:0;font-size:20px;">Add Products to Order</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">Select one or more products to include in this order</p>
+  <!-- Step 1: Product Picker -->
+  <div class="modal-content op-modal" id="manualStep1" style="padding:0; display:flex; flex-direction:column;">
+    <div class="op-head">
+      <div class="op-bar">
+        <span class="op-titles">
+          <span class="op-title">Add products</span>
+          <span class="op-sub">Select one or more products to include in this order</span>
+        </span>
+        <button type="button" class="op-skip" onclick="openProductCreateFromOrder()">New</button>
+        <button type="button" onclick="closeManualOrderModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;padding:8px;">&times;</button>
       </div>
-      <button onclick="closeManualOrderModal()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px;">×</button>
+      <div class="op-find">
+        <label class="op-search">
+          <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint,var(--text-muted));flex-shrink:0;"></i>
+          <input id="orderRecipeSearchInput" type="text" placeholder="Search your products"
+                 autocomplete="off"
+                 oninput="renderOrderRecipeSections()"
+                 onkeydown="if(event.key==='Escape'){this.value='';renderOrderRecipeSections()}">
+          <button class="op-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';renderOrderRecipeSections();" aria-label="Clear">&times;</button>
+        </label>
+        <button class="op-filter" id="opFilterBtn" aria-expanded="false" aria-label="Filter products" onclick="toggleOrderPickerFilters()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19" height="19"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+          <span class="op-filter-n" id="opFilterN" data-on="0"></span>
+        </button>
+      </div>
+      <div class="op-chips" id="opChips"></div>
+      <div class="op-attr-bar" id="opAttrBar"></div>
     </div>
 
-    <div class="recipe-picker-search">
-      <input id="orderRecipeSearchInput" type="text" placeholder="Search products by name or item..."
-             autocomplete="off"
-             oninput="filterOrderRecipes(this.value)"
-             onkeydown="if(event.key==='Escape'){this.value='';filterOrderRecipes('')}">
-      <button class="search-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';filterOrderRecipes('');" title="Clear search">×</button>
-    </div>
-
-    <div id="orderPickerFilterBar" style="padding: 0 28px 10px; flex-shrink: 0; display: none;">
-      <div id="orderPickerCatChips" class="recipe-cat-chips"></div>
-      <div id="orderPickerAttrSubfilter" class="recipe-attr-subfilter"></div>
-    </div>
-
-    <div class="recipe-picker-body" id="orderRecipePickerBody">
+    <div class="op-scroll" id="orderRecipePickerBody">
       <div style="text-align:center;padding:40px;color:var(--text-muted);">Loading products…</div>
     </div>
 
-    <div class="recipe-picker-footer" style="padding:10px 28px;">
-      <button id="orderContinueBtn" class="btn btn-primary" style="width:100%;padding:10px;opacity:0.4;cursor:not-allowed;" disabled onclick="proceedToOrderDetails()">Continue</button>
+    <div class="op-foot">
+      <div class="op-tally">
+        <span class="op-tally-l" id="opCount">No products yet</span>
+        <span class="op-tally-r" id="opTotal">$0.00</span>
+      </div>
+      <div id="opWarn"></div>
+      <button id="orderContinueBtn" class="op-cont" disabled onclick="proceedToOrderDetails()">Continue</button>
     </div>
   </div>
 
@@ -5666,13 +5783,12 @@ function closeOrderMethodModal() {
 // === Manual Order Creation ===
 let orderRecipes = [];
 let orderRecipeCache = null;
-let orderIngredientData = [];
 let orderFavoriteIds = new Set();
 let orderStockMap = {};
 let orderMinMap = {};
 let orderDatePicker = null;
-let orderPickerCatFilter = null;
-let orderPickerAttrValueFilters = new Map();
+let orderPickerFilters = { inStock: false, cats: new Set() };
+let orderPickerAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter (only shown when exactly one category is active)
 
 document.addEventListener('DOMContentLoaded', () => {
   orderDatePicker = flatpickr('#new_order_date', {
@@ -5691,19 +5807,10 @@ async function loadOrderRecipeData() {
   let _qr = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
   if (storeId) _qr = _qr.eq('store_id', storeId);
   _qr = _qr.order('name');
-  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock, category, custom_attributes, name').eq('profile_id', user.id);
+  let _qi = supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id);
   if (storeId) _qi = _qi.eq('store_id', storeId);
   const [{ data: recipes }, { data: ingredients }] = await Promise.all([_qr, _qi]);
   orderStockMap = {}; orderMinMap = {};
-  orderIngredientData = (ingredients || []).map(ing => {
-    let attributes = null;
-    try {
-      if (ing.custom_attributes) {
-        attributes = typeof ing.custom_attributes === 'string' ? JSON.parse(ing.custom_attributes) : ing.custom_attributes;
-      }
-    } catch (e) {}
-    return { ...ing, attributes };
-  });
   if (ingredients) ingredients.forEach(i => {
     orderStockMap[i.id] = parseFloat(i.quantity) || 0;
     orderMinMap[i.id] = parseFloat(i.min_stock) || 0;
@@ -5712,6 +5819,9 @@ async function loadOrderRecipeData() {
   orderFavoriteIds = new Set((recipes || []).filter(r => r.is_favorite).map(r => r.id));
 }
 
+// Current stock as of right now, ignoring anything picked in this order —
+// used only to tag a freshly-added line as already-out (`oos`, read by
+// saveManualOrder/_updateStatusRestriction) and for the "In stock" filter.
 function _recipeStockStatus(recipe) {
   const comps = recipe.components || [];
   if (!comps.length) return 'in';
@@ -5730,10 +5840,39 @@ function _recipeStockStatus(recipe) {
   return 'in';                // green
 }
 
-function _stockBadge(status) {
-  if (status === 'low') return '<span class="stock-pill low">Low</span>';
-  if (status !== 'in')  return '<span class="stock-pill out">Out</span>';
-  return '';
+// A product here is built from N ingredient components, not a single stock
+// number — so "projected" stock is the worst-case remaining units across a
+// recipe's components after everything currently picked across the WHOLE
+// order, not just this one row (two products sharing an ingredient must
+// both reflect what the other already committed to).
+function _virtualStockMap() {
+  const virtual = {};
+  orderRecipes.forEach(r => {
+    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
+    if (!recipe || !Array.isArray(recipe.components)) return;
+    recipe.components.forEach(c => {
+      const ingId = c.ingredient_id || c.id;
+      const needed = (parseFloat(c.quantity) || 0) * r.quantity;
+      const base = virtual[ingId] !== undefined ? virtual[ingId] : (orderStockMap[ingId] || 0);
+      virtual[ingId] = base - needed;
+    });
+  });
+  return virtual;
+}
+function _projectedStatus(recipe, virtualMap) {
+  const comps = recipe.components || [];
+  if (!comps.length) return { state: '', remain: null };
+  let state = '', worstRemain = null;
+  for (const c of comps) {
+    const ingId = c.ingredient_id || c.id;
+    const remain = virtualMap[ingId] !== undefined ? virtualMap[ingId] : (orderStockMap[ingId] || 0);
+    const min = orderMinMap[ingId] || 0;
+    if (worstRemain === null || remain < worstRemain) worstRemain = remain;
+    if (remain < 0) state = 'short';
+    else if (remain === 0 && state !== 'short') state = 'out';
+    else if (min > 0 && remain <= min && !state) state = 'low';
+  }
+  return { state, remain: worstRemain };
 }
 
 async function _getLastUsedRecipes() {
@@ -5759,157 +5898,100 @@ async function _getLastUsedRecipes() {
   } catch { return []; }
 }
 
-function _renderRecipeCard(recipe) {
-  const price = recipe.retail_price || (recipe.cost ? recipe.cost * 1.6 : 0);
-  const status = _recipeStockStatus(recipe);
-  const badge = _stockBadge(status);
-  const isFav = orderFavoriteIds.has(recipe.id);
-  const esc = recipe.name.replace(/'/g, "\\'" );
-  const cantBuild = status === 'out';
-  return `<div class="recipe-pick-card${cantBuild ? ' cant-build' : ''}" id="rpc-${recipe.id}"
-      onclick="toggleOrderRecipeSelect('${recipe.id}','${esc}',${price})"
-    <div class="card-name">${recipe.name}</div>
-  </div>`;
-}
+const ORDER_PICK_ICON_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ORDER_PICK_ICON_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
-function _renderAddedSection() {
-  if (!orderRecipes.length) return '';
-  return `<div class="added-recipes-section">
-    <div class="recipe-section-title">Added Products</div>
-    ${orderRecipes.map(r => `
-      <div class="added-recipe-row" id="arr-${r.id}">
-        <span class="ar-name">${r.name}</span>
-        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',-1)">−</button>
-        <span class="ar-qty" id="arq-${r.id}">${r.quantity}</span>
-        <button class="ar-qty-btn" type="button" onclick="adjustPickerQtyById('${r.id}',1)">+</button>
-        <button class="ar-remove" type="button" onclick="removeOrderRecipe('${r.id}')">×</button>
-      </div>`).join('')}
-  </div>`;
-}
-
-async function renderOrderRecipeSections(filtered) {
-  const body = document.getElementById('orderRecipePickerBody');
-  const isSearch = filtered !== null;
-  const addedIds = new Set(orderRecipes.map(r => r.id));
-  const fullList = isSearch ? filtered : (orderRecipeCache || []);
-  const list = fullList.filter(r => !addedIds.has(r.id));
-  let html = _renderAddedSection();
-  if (isSearch) {
-    if (list.length) {
-      html += `<div class="recipe-section-title">Search Results</div>
-        <div class="recipe-picker-grid">${list.map(_renderRecipeCard).join('')}</div>`;
-    } else if (!orderRecipes.length) {
-      html += '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No products match your search</p></div>';
-    }
-    body.innerHTML = html;
-    return;
+function _orderRowHtml(recipe, virtualMap) {
+  const picked = orderRecipes.find(r => r.id === recipe.id);
+  const qty = picked ? picked.quantity : 0;
+  const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
+  const nameEsc = escapeHtml(recipe.name);
+  let metaHtml = `$${price.toFixed(2)}`;
+  let state = '';
+  if ((recipe.components || []).length) {
+    const proj = _projectedStatus(recipe, virtualMap);
+    state = proj.state;
+    metaHtml += qty ? ` · <b>${proj.remain}</b> left` : ` · ${proj.remain} left`;
+    if (state === 'short') metaHtml += ` · short ${Math.abs(proj.remain)}`;
+    else if (state === 'out' && qty) metaHtml += ' · none left';
   }
-  const favs = list.filter(r => orderFavoriteIds.has(r.id));
-  const favIds = new Set(favs.map(r => r.id));
-  const nonFavList = list.filter(r => !favIds.has(r.id));
-
-  const lastUsed = await _getLastUsedRecipes();
-  const recentList = (lastUsed || []).filter(r => !addedIds.has(r.id) && !favIds.has(r.id));
-  const recentIds = new Set(recentList.map(r => r.id));
-  const allOnly = nonFavList.filter(r => !recentIds.has(r.id));
-
-  if (favs.length) html += `<div class="recipe-section-title">Favorites</div>
-    <div class="recipe-picker-grid">${favs.map(_renderRecipeCard).join('')}</div>`;
-  if (recentList.length) html += `<div class="recipe-section-title">Recently Used</div>
-    <div class="recipe-picker-grid">${recentList.map(_renderRecipeCard).join('')}</div>`;
-  if (allOnly.length) html += `<div class="recipe-section-title">All Products</div>
-    <div class="recipe-picker-grid">${allOnly.map(_renderRecipeCard).join('')}</div>`;
-
-  if (!favs.length && !recentList.length && !allOnly.length && orderRecipes.length) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">All products have been added</div>';
-  }
-
-  body.innerHTML = html;
+  const stepper = qty
+    ? `<span class="op-step" onclick="event.stopPropagation()">
+        <button type="button" onclick="bumpOrderRecipe('${recipe.id}', -1)" aria-label="One fewer">${ORDER_PICK_ICON_MINUS}</button>
+        <span class="op-qty">${qty}</span>
+        <button type="button" onclick="bumpOrderRecipe('${recipe.id}', 1)" aria-label="One more">${ORDER_PICK_ICON_PLUS}</button>
+      </span>`
+    : `<button type="button" class="op-add" aria-label="Add ${nameEsc}">${ORDER_PICK_ICON_PLUS}</button>`;
+  return `
+    <div class="op-row" data-picked="${qty ? 1 : 0}" onclick="bumpOrderRecipe('${recipe.id}', 1)">
+      <span class="op-main">
+        <span class="op-name">${nameEsc}</span>
+        <span class="op-meta"${state ? ` data-state="${state}"` : ''}>${metaHtml}</span>
+      </span>
+      ${stepper}
+    </div>`;
 }
 
-function filterOrderRecipes(query) {
-  const clearBtn = document.getElementById('orderSearchClear');
-  if (clearBtn) clearBtn.style.display = (query && query.trim()) ? 'flex' : 'none';
-  const catFiltered = _getOrderPickerFilteredList();
-  if (!query || !query.trim()) { renderOrderRecipeSections(catFiltered); return; }
-  const term = query.trim().toLowerCase();
-  const base = catFiltered ?? (orderRecipeCache || []);
-  const filtered = base.filter(r => {
-    if ((r.name || '').toLowerCase().includes(term)) return true;
-    if (Array.isArray(r.components)) {
-      return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(term));
-    }
-    return false;
-  });
-  renderOrderRecipeSections(filtered);
+function _orderPickerPasses(recipe) {
+  if (orderPickerFilters.inStock && _recipeStockStatus(recipe) === 'out') return false;
+  if (orderPickerFilters.cats.size && !orderPickerFilters.cats.has(recipe.category)) return false;
+  if (!_orderMatchesAttrFilters(recipe)) return false;
+  return true;
 }
 
-function _getOrderPickerMatchingIngIds() {
-  if (!orderPickerCatFilter && orderPickerAttrValueFilters.size === 0) return null;
-  return new Set(
-    orderIngredientData.filter(ing => {
-      if (orderPickerCatFilter && (!ing.category || ing.category.toLowerCase() !== orderPickerCatFilter.toLowerCase())) return false;
-      if (orderPickerAttrValueFilters.size > 0) {
-        if (!ing.attributes) return false;
-        for (const [attrKey, valSet] of orderPickerAttrValueFilters) {
-          if (valSet.size === 0) continue;
-          const matchingKey = Object.keys(ing.attributes).find(k => k.toLowerCase() === attrKey);
-          if (!matchingKey) return false;
-          if (!valSet.has(String(ing.attributes[matchingKey]).trim().toLowerCase())) return false;
-        }
-      }
-      return true;
-    }).map(ing => ing.id)
-  );
+function renderOrderPickerChips() {
+  const cats = [...new Set((orderRecipeCache || []).map(r => r.category).filter(Boolean))].sort();
+  const n = (orderPickerFilters.inStock ? 1 : 0) + orderPickerFilters.cats.size;
+  const nEl = document.getElementById('opFilterN');
+  if (nEl) { nEl.dataset.on = n ? '1' : '0'; nEl.textContent = n; }
+  const chipsEl = document.getElementById('opChips');
+  if (!chipsEl) return;
+  chipsEl.innerHTML = `
+    <button type="button" class="op-chip" aria-pressed="${orderPickerFilters.inStock}" onclick="toggleOrderInStockFilter()">In stock</button>
+    ${cats.map(c => `<button type="button" class="op-chip" aria-pressed="${orderPickerFilters.cats.has(c)}" onclick="toggleOrderCatFilter('${escapeHtml(c)}')">${escapeHtml(c)}</button>`).join('')}
+    ${n ? `<button type="button" class="op-chip-clear" onclick="clearOrderPickerFilters()">Clear</button>` : ''}`;
 }
 
-function _getOrderPickerFilteredList() {
-  const matchingIngIds = _getOrderPickerMatchingIngIds();
-  if (!matchingIngIds) return null;
-  return (orderRecipeCache || []).filter(r =>
-    (r.components || []).some(c => matchingIngIds.has(c.ingredient_id))
-  );
+// Attribute sub-filter (19d) -- cascading chips scoped to the PRODUCT's own
+// variant attributes (recipe.attributes), not any ingredient's, since this
+// picker chooses products. Only meaningful (and only shown) when exactly
+// one category is active -- .op-chip supports picking several categories
+// at once, which doesn't map to "one scoped set of attribute values."
+function _singleActiveCategory() {
+  return orderPickerFilters.cats.size === 1 ? Array.from(orderPickerFilters.cats)[0] : null;
 }
-
-function renderOrderPickerCatChips() {
-  const el = document.getElementById('orderPickerCatChips');
-  const bar = document.getElementById('orderPickerFilterBar');
-  if (!el || !bar) return;
-  const presentCatSet = new Set(orderIngredientData.map(ing => ing.category).filter(Boolean));
-  const knownOrder = ['Apparel','Wood','Boxes','Cards','Plants','Candy','Beverage','Jewelry','Party Supplies','Gaming','Toys','Office Supplies','Colors','Rope','Paper','Spool','Letter','Giveaway','Electronics','Printing Supplies','Tools','Packaging','Food'];
-  const allCats = [...knownOrder.filter(c => presentCatSet.has(c)), ...Array.from(presentCatSet).filter(c => !knownOrder.includes(c)).sort()];
-  if (!allCats.length) { bar.style.display = 'none'; return; }
-  el.innerHTML = allCats.map(cat => {
-    const icon = _recipeCategIconMap[cat] || 'tag';
-    const selected = orderPickerCatFilter === cat;
-    return `<button type="button" class="recipe-cat-chip${selected ? ' selected' : ''}" onclick="toggleOrderPickerCatFilter('${cat.replace(/'/g,"&#39;")}')" title="${cat.replace(/"/g,'&quot;')}"><i data-lucide="${icon}"></i></button>`;
-  }).join('');
-  bar.style.display = '';
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-function toggleOrderPickerCatFilter(cat) {
-  orderPickerCatFilter = orderPickerCatFilter === cat ? null : cat;
-  orderPickerAttrValueFilters = new Map();
-  renderOrderPickerCatChips();
-  if (orderPickerCatFilter) {
-    _renderOrderPickerAttrSubfilters(orderPickerCatFilter);
-  } else {
-    _hideOrderPickerAttrSubfilters();
-  }
-  const q = document.getElementById('orderRecipeSearchInput')?.value || '';
-  filterOrderRecipes(q);
-}
-
-function _renderOrderPickerAttrSubfilters(cat) {
-  const el = document.getElementById('orderPickerAttrSubfilter');
+function _renderOrderPickerAttrSubfilter() {
+  const el = document.getElementById('opAttrBar');
   if (!el) return;
-  const catItems = orderIngredientData.filter(ing =>
-    ing.category && ing.category.toLowerCase() === cat.toLowerCase() && ing.attributes
-  );
-  const allKeys = new Set();
-  catItems.forEach(i => { try { Object.keys(i.attributes).forEach(k => allKeys.add(k.toLowerCase())); } catch(e){} });
-  if (allKeys.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+  const cat = _singleActiveCategory();
+  if (!cat) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+
+  const groupedByKey = new Map();
+  (orderRecipeCache || [])
+    .filter(r => r.category && r.category.toLowerCase() === cat.toLowerCase() && r.attributes)
+    .forEach(r => {
+      try {
+        Object.entries(r.attributes || {}).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          if (orderPickerAttrValueFilters.size > 0) {
+            for (const [filterKey, filterSet] of orderPickerAttrValueFilters) {
+              if (filterKey === normalizedKey || !filterSet || filterSet.size === 0) continue;
+              const matchKey = Object.keys(r.attributes).find(k => k.toLowerCase() === filterKey);
+              if (!matchKey || !filterSet.has(String(r.attributes[matchKey]).trim().toLowerCase())) return;
+            }
+          }
+          if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());
+          const valuesMap = groupedByKey.get(normalizedKey);
+          if (!valuesMap.has(valueKey)) valuesMap.set(valueKey, trimmedValue);
+        });
+      } catch (e) {}
+    });
+
+  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+
   const sortValues = (key, a, b) => {
     if (key === 'size') {
       const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
@@ -5918,120 +6000,185 @@ function _renderOrderPickerAttrSubfilters(cat) {
       if (ai !== -1) return -1; if (bi !== -1) return 1;
     }
     const aNum = parseFloat(a), bNum = parseFloat(b);
-    const aIsNum = !isNaN(aNum), bIsNum = !isNaN(bNum);
-    if (aIsNum && bIsNum) return aNum - bNum;
-    if (aIsNum) return -1; if (bIsNum) return 1;
+    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+    if (!isNaN(aNum)) return -1; if (!isNaN(bNum)) return 1;
     return a.localeCompare(b, undefined, { sensitivity: 'base' });
   };
-  const sortedKeys = Array.from(allKeys).sort((a, b) => a.localeCompare(b));
-  const allChips = [];
+
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  const chips = [];
   sortedKeys.forEach(key => {
-    const eligible = catItems.filter(item => {
-      for (const [attrKey, valSet] of orderPickerAttrValueFilters) {
-        if (attrKey === key || valSet.size === 0) continue;
-        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === attrKey);
-        if (!mk || !valSet.has(String(item.attributes[mk]).trim().toLowerCase())) return false;
-      }
-      return true;
-    });
-    const valuesMap = new Map();
-    eligible.forEach(item => {
-      try {
-        const mk = Object.keys(item.attributes).find(k => k.toLowerCase() === key);
-        if (!mk) return;
-        const val = String(item.attributes[mk]).trim();
-        if (!val) return;
-        const vk = val.toLowerCase();
-        if (!valuesMap.has(vk)) valuesMap.set(vk, val);
-      } catch(e) {}
-    });
-    if (valuesMap.size === 0) return;
-    Array.from(valuesMap.entries()).sort((a, b) => sortValues(key, a[1], b[1])).forEach(([valueKey, displayValue]) => {
-      const esc = displayValue.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-      const _active = orderPickerAttrValueFilters.has(key) && orderPickerAttrValueFilters.get(key).has(valueKey);
-      allChips.push(`<button class="recipe-attr-chip${_active ? ' active' : ''}" onclick="toggleOrderPickerAttrFilter('${key.replace(/'/g,"&#39;")}','${valueKey.replace(/'/g,"&#39;")}')">${esc}</button>`);
+    const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortValues(key, a[1], b[1]));
+    sorted.forEach(([valueKey, displayValue]) => {
+      const active = orderPickerAttrValueFilters.has(key) && orderPickerAttrValueFilters.get(key).has(valueKey);
+      chips.push(`<button type="button" class="op-chip" aria-pressed="${active}" onclick="toggleOrderPickerAttrFilter('${key.replace(/'/g,"\\'")}','${valueKey.replace(/'/g,"\\'")}')">${escapeHtml(displayValue)}</button>`);
     });
   });
-  el.innerHTML = allChips.join('');
+  el.innerHTML = chips.join('');
   el.classList.add('visible');
 }
-
-function _hideOrderPickerAttrSubfilters() {
-  const el = document.getElementById('orderPickerAttrSubfilter');
-  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
-}
-
 function toggleOrderPickerAttrFilter(key, value) {
   if (!orderPickerAttrValueFilters.has(key)) orderPickerAttrValueFilters.set(key, new Set());
-  const keySet = orderPickerAttrValueFilters.get(key);
-  if (keySet.has(value)) { keySet.delete(value); if (keySet.size === 0) orderPickerAttrValueFilters.delete(key); }
-  else { keySet.add(value); }
-  if (orderPickerCatFilter) _renderOrderPickerAttrSubfilters(orderPickerCatFilter);
-  const q = document.getElementById('orderRecipeSearchInput')?.value || '';
-  filterOrderRecipes(q);
+  const set = orderPickerAttrValueFilters.get(key);
+  if (set.has(value)) { set.delete(value); if (set.size === 0) orderPickerAttrValueFilters.delete(key); }
+  else set.add(value);
+  _renderOrderPickerAttrSubfilter();
+  renderOrderRecipeSections();
+}
+function _orderMatchesAttrFilters(recipe) {
+  if (orderPickerAttrValueFilters.size === 0) return true;
+  if (!recipe.attributes) return false;
+  for (const [key, valSet] of orderPickerAttrValueFilters) {
+    if (valSet.size === 0) continue;
+    const matchKey = Object.keys(recipe.attributes).find(k => k.toLowerCase() === key);
+    if (!matchKey) return false;
+    if (!valSet.has(String(recipe.attributes[matchKey]).trim().toLowerCase())) return false;
+  }
+  return true;
 }
 
-function toggleOrderRecipeSelect(id, name, price) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx >= 0) {
-    orderRecipes[idx].quantity += 1;
-  } else {
-    const recipe = (orderRecipeCache || []).find(r => r.id === id);
-    const isOos = recipe ? _recipeStockStatus(recipe) === 'out' : false;
-    orderRecipes.push({ id, name, price: parseFloat(price), quantity: 1, oos: isOos });
-  }
+async function renderOrderRecipeSections() {
+  const body = document.getElementById('orderRecipePickerBody');
+  if (!body) return;
   const inp = document.getElementById('orderRecipeSearchInput');
-  const query = inp ? inp.value.trim() : '';
-  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
+  const q = (inp?.value || '').trim().toLowerCase();
+  const clearBtn = document.getElementById('orderSearchClear');
+  if (clearBtn) clearBtn.dataset.on = q ? '1' : '0';
+  renderOrderPickerChips();
+
+  const virtualMap = _virtualStockMap();
+  const addedIds = new Set(orderRecipes.map(r => r.id));
+  // A picked product is never filtered out — you must be able to un-pick it.
+  const pool = (orderRecipeCache || []).filter(r => _orderPickerPasses(r) || addedIds.has(r.id));
+
+  let html = '';
+  if (q) {
+    const hits = pool.filter(r => {
+      if ((r.name || '').toLowerCase().includes(q)) return true;
+      if (Array.isArray(r.components)) return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(q));
+      return false;
+    });
+    if (hits.length) {
+      html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
+        <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    } else {
+      const activeFilters = orderPickerFilters.inStock || orderPickerFilters.cats.size;
+      html = `<div class="op-empty">
+        <div class="op-empty-t">No product matches "${escapeHtml(q)}"</div>
+        <div class="op-empty-s">Create it now and it stays in the order.</div>
+        <button type="button" class="op-empty-b" onclick='createProductFromOrderSearch(${JSON.stringify(q)})'>Create "${escapeHtml(q)}"</button>
+        ${activeFilters ? `<div class="op-empty-s" style="margin-top:14px">Filters active — <a href="#" onclick="clearOrderPickerFilters();return false">clear them</a></div>` : ''}
+      </div>`;
+    }
+  } else {
+    const favs = pool.filter(r => orderFavoriteIds.has(r.id));
+    const favIds = new Set(favs.map(r => r.id));
+    const lastUsed = await _getLastUsedRecipes();
+    const recentList = (lastUsed || []).filter(r => !favIds.has(r.id) && _orderPickerPasses(r));
+    const recentIds = new Set(recentList.map(r => r.id));
+    const rest = pool.filter(r => !favIds.has(r.id) && !recentIds.has(r.id));
+
+    if (favs.length) html += `<div class="op-sec-head"><span class="op-sec-title">Favorites</span><span class="op-sec-note">${favs.length}</span></div>
+      <div class="op-list">${favs.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    if (recentList.length) html += `<div class="op-sec-head"><span class="op-sec-title">Ordered recently</span><span class="op-sec-note">${recentList.length}</span></div>
+      <div class="op-list">${recentList.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+    if (rest.length) html += `<div class="op-sec-head"><span class="op-sec-title">All products</span><span class="op-sec-note">${rest.length}</span></div>
+      <div class="op-list">${rest.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
+
+    if (!favs.length && !recentList.length && !rest.length) {
+      html += `<div class="op-empty">
+        <div class="op-empty-t">No products yet</div>
+        <div class="op-empty-s">Create your first product to start adding it to orders.</div>
+        <button type="button" class="op-empty-b" onclick="openProductCreateFromOrder()">New product</button>
+      </div>`;
+    }
+    html += `<div class="op-note">Stock isn't deducted until you create the order.</div>`;
+  }
+
+  body.innerHTML = html;
   updatePickerFooter();
 }
 
-function toggleOrderFavorite(id) {
-  const newVal = !orderFavoriteIds.has(id);
-  if (newVal) orderFavoriteIds.add(id); else orderFavoriteIds.delete(id);
-  const cached = (orderRecipeCache || []).find(r => r.id === id);
-  if (cached) cached.is_favorite = newVal;
-  supabaseClient.from('recipes').update({ is_favorite: newVal }).eq('id', id)
-    .then(({ error }) => { if (error) console.error('Error saving favorite:', error); });
-  const inp = document.getElementById('orderRecipeSearchInput');
-  if (!inp || !inp.value.trim()) renderOrderRecipeSections(null);
+function toggleOrderPickerFilters() {
+  const btn = document.getElementById('opFilterBtn');
+  const chips = document.getElementById('opChips');
+  if (!btn || !chips) return;
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', String(open));
+  chips.dataset.open = open ? '1' : '0';
+}
+function toggleOrderInStockFilter() { orderPickerFilters.inStock = !orderPickerFilters.inStock; renderOrderRecipeSections(); }
+function toggleOrderCatFilter(c) {
+  if (orderPickerFilters.cats.has(c)) orderPickerFilters.cats.delete(c); else orderPickerFilters.cats.add(c);
+  orderPickerAttrValueFilters = new Map();
+  _renderOrderPickerAttrSubfilter();
+  renderOrderRecipeSections();
+}
+function clearOrderPickerFilters() {
+  orderPickerFilters.inStock = false; orderPickerFilters.cats.clear();
+  orderPickerAttrValueFilters = new Map();
+  _renderOrderPickerAttrSubfilter();
+  renderOrderRecipeSections();
 }
 
+// Oversell is allowed (backorders happen) but never silent — updatePickerFooter's
+// warning line is the one place that surfaces it.
 function updatePickerFooter() {
+  const countEl = document.getElementById('opCount');
+  const totalEl = document.getElementById('opTotal');
+  const warnEl = document.getElementById('opWarn');
   const btn = document.getElementById('orderContinueBtn');
   if (!btn) return;
-  if (orderRecipes.length) {
-    btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
-  } else {
-    btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
+
+  const units = orderRecipes.reduce((s, r) => s + r.quantity, 0);
+  const total = orderRecipes.reduce((s, r) => s + r.price * r.quantity, 0);
+  const virtualMap = _virtualStockMap();
+  const shortCount = orderRecipes.filter(r => {
+    const recipe = (orderRecipeCache || []).find(rc => rc.id === r.id);
+    return recipe && _projectedStatus(recipe, virtualMap).state === 'short';
+  }).length;
+
+  if (countEl) countEl.textContent = units
+    ? `${orderRecipes.length} product${orderRecipes.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}`
+    : 'No products yet';
+  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+  if (warnEl) warnEl.innerHTML = shortCount
+    ? `<div class="op-warn">${shortCount} product${shortCount !== 1 ? 's go' : ' goes'} below zero — the order will still save</div>`
+    : '';
+  btn.disabled = !units;
+  btn.textContent = units ? `Continue · $${total.toFixed(2)}` : 'Continue';
+}
+
+function bumpOrderRecipe(id, delta) {
+  const idx = orderRecipes.findIndex(r => r.id === id);
+  if (idx >= 0) {
+    const next = orderRecipes[idx].quantity + delta;
+    if (next <= 0) orderRecipes.splice(idx, 1);
+    else orderRecipes[idx].quantity = next;
+  } else if (delta > 0) {
+    const recipe = (orderRecipeCache || []).find(r => r.id === id);
+    if (!recipe) return;
+    const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
+    const isOos = _recipeStockStatus(recipe) === 'out';
+    orderRecipes.push({ id, name: recipe.name, price, quantity: 1, oos: isOos });
   }
+  renderOrderRecipeSections();
 }
 
-function removeOrderRecipe(id) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx < 0) return;
-  orderRecipes.splice(idx, 1);
-  const inp = document.getElementById('orderRecipeSearchInput');
-  const query = inp ? inp.value.trim() : '';
-  if (query) filterOrderRecipes(query); else renderOrderRecipeSections(null);
-  updatePickerFooter();
+// "New" header button / search-miss "Create ..." button both hand off to
+// recipes.html's builder via sessionStorage (separate page/document, same
+// pattern as ingredients.html's seedManualModal for unmatched receipt
+// lines) — warn first since anything already picked here doesn't survive
+// the navigation.
+function openProductCreateFromOrder() {
+  if (orderRecipes.length && !confirm("Creating a new product will leave this order — the products you've already picked won't be saved. Continue?")) return;
+  sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name: '' }));
+  window.location.href = '/recipes';
 }
-
-function adjustPickerQtyById(id, delta) {
-  const idx = orderRecipes.findIndex(r => r.id === id);
-  if (idx < 0) return;
-  orderRecipes[idx].quantity = Math.max(1, orderRecipes[idx].quantity + delta);
-  const qtyEl = document.getElementById('arq-' + id);
-  if (qtyEl) qtyEl.textContent = orderRecipes[idx].quantity;
-  const priceEl = document.getElementById('arp-' + id);
-  if (priceEl) priceEl.textContent = `$${(orderRecipes[idx].price * orderRecipes[idx].quantity).toFixed(2)}`;
-  updatePickerFooter();
-}
-
-function adjustPickerQty(index, delta) {
-  if (!orderRecipes[index]) return;
-  orderRecipes[index].quantity = Math.max(1, orderRecipes[index].quantity + delta);
-  updatePickerFooter();
+function createProductFromOrderSearch(name) {
+  if (orderRecipes.length && !confirm("Creating a new product will leave this order — the products you've already picked won't be saved. Continue?")) return;
+  sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name }));
+  window.location.href = '/recipes';
 }
 
 function proceedToOrderDetails() {
@@ -6109,16 +6256,17 @@ function openManualOrderModal() {
   // Populate customer autocomplete from recent sales
   _populateCustomerSuggestions();
   document.getElementById('orderRecipeSearchInput').value = '';
-  orderPickerCatFilter = null;
+  orderPickerFilters = { inStock: false, cats: new Set() };
   orderPickerAttrValueFilters = new Map();
-  _hideOrderPickerAttrSubfilters();
+  document.getElementById('opFilterBtn')?.setAttribute('aria-expanded', 'false');
+  document.getElementById('opChips')?.setAttribute('data-open', '0');
+  _renderOrderPickerAttrSubfilter();
   updatePickerFooter();
   document.getElementById('manualOrderModal').classList.add('active');
   if (orderRecipeCache) {
-    renderOrderPickerCatChips();
-    renderOrderRecipeSections(null);
+    renderOrderRecipeSections();
   } else {
-    loadOrderRecipeData().then(() => { renderOrderPickerCatChips(); renderOrderRecipeSections(null); });
+    loadOrderRecipeData().then(() => { renderOrderRecipeSections(); });
   }
 }
 
@@ -6241,11 +6389,11 @@ function startAnotherOrder() {
   const inp = document.getElementById('orderRecipeSearchInput');
   if (inp) inp.value = '';
   updatePickerFooter();
-  orderPickerCatFilter = null;
+  orderPickerFilters = { inStock: false, cats: new Set() };
   orderPickerAttrValueFilters = new Map();
-  _hideOrderPickerAttrSubfilters();
-  if (orderRecipeCache) { renderOrderPickerCatChips(); renderOrderRecipeSections(null); }
-  else loadOrderRecipeData().then(() => { renderOrderPickerCatChips(); renderOrderRecipeSections(null); });
+  _renderOrderPickerAttrSubfilter();
+  if (orderRecipeCache) { renderOrderRecipeSections(); }
+  else loadOrderRecipeData().then(() => { renderOrderRecipeSections(); });
 }
 
 // kept for compatibility

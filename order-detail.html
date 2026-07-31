@@ -830,6 +830,16 @@
   .ec-cat-row i, .ec-cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
   .ec-cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Attribute sub-filter (19d) -- cascading chips scoped to whichever
+     category is currently selected. */
+  .ec-chip { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
+             border: 1px solid var(--border-hair, var(--border)); background: var(--bg-app, var(--bg-inner)); color: var(--text-muted);
+             font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; font-family: inherit; }
+  .ec-chip[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+  .ec-attr-bar { display: none; gap: 6px; padding: 0 16px 10px; overflow-x: auto;
+                 scrollbar-width: none; -ms-overflow-style: none; }
+  .ec-attr-bar::-webkit-scrollbar { display: none; }
+  .ec-attr-bar.visible { display: flex; }
   /* Opens on top of #ecItemSheet (z-index 10020) -- ID selector so it can't
      lose a cascade tie the way a class-selector override has before. */
   #ecCatSheet { z-index: 10030 !important; }
@@ -1478,6 +1488,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
         </button>
       </div>
+      <div class="ec-attr-bar" id="ecAttrBar"></div>
       <div class="ec-results" id="ecItemResults"></div>
       <button type="button" class="ec-cancel" onclick="closeOrderItemPicker()">Cancel</button>
     </div>
@@ -2625,7 +2636,9 @@ function closeOrderItemPicker() {
   if (sheet) sheet.dataset.open = '0';
   _ecEditingIndex = null; _ecIngredient = null; _ecDraft = null;
   _ecCategoryFilter = null;
+  _ecAttrValueFilters = new Map();
   document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', 'false');
+  _ecHideAttrSubfilter();
 }
 function ecShowPane(which) {
   document.getElementById('ecPaneList').dataset.on = which === 'list' ? '1' : '0';
@@ -2647,6 +2660,7 @@ let _ecIngredient = null;   // the recipe row currently open in pane 2
 let _ecDraft = null;        // { qty, cost } being edited in pane 2
 let _ecOriginalQty = 0;     // this line's quantity when pane 2 was opened -- already reflected in current stock
 let _ecCategoryFilter = null;
+let _ecAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter scoped to _ecCategoryFilter
 
 const _ecCategoryMap = {
   'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
@@ -2765,9 +2779,95 @@ function ecCloseCatSheet() {
 }
 function ecPickCategory(cat) {
   _ecCategoryFilter = _ecCategoryFilter === cat ? null : cat;
+  _ecAttrValueFilters = new Map();
   ecCloseCatSheet();
   document.getElementById('ecFilterBtn')?.setAttribute('aria-pressed', String(!!_ecCategoryFilter));
+  if (_ecCategoryFilter) _ecRenderAttrSubfilter(_ecCategoryFilter);
+  else _ecHideAttrSubfilter();
   ecRenderList();
+}
+
+// Cascading attribute chips (size/color/etc) scoped to the selected
+// category -- reads the PRODUCT's own variant attributes (recipe.attributes),
+// not any ingredient's, since this picker is choosing products, not raw
+// materials. AND across keys, OR within a key's own values.
+function _ecRenderAttrSubfilter(cat) {
+  const groupedByKey = new Map();
+  (recipes || [])
+    .filter(r => r.category && r.category.toLowerCase() === cat.toLowerCase() && r.attributes)
+    .forEach(r => {
+      try {
+        Object.entries(r.attributes || {}).forEach(([key, value]) => {
+          if (!value || !String(value).trim()) return;
+          const normalizedKey = key.toLowerCase();
+          const trimmedValue = String(value).trim();
+          const valueKey = trimmedValue.toLowerCase();
+          if (_ecAttrValueFilters.size > 0) {
+            for (const [filterKey, filterSet] of _ecAttrValueFilters) {
+              if (filterKey === normalizedKey || !filterSet || filterSet.size === 0) continue;
+              const matchKey = Object.keys(r.attributes).find(k => k.toLowerCase() === filterKey);
+              if (!matchKey || !filterSet.has(String(r.attributes[matchKey]).trim().toLowerCase())) return;
+            }
+          }
+          if (!groupedByKey.has(normalizedKey)) groupedByKey.set(normalizedKey, new Map());
+          const valuesMap = groupedByKey.get(normalizedKey);
+          if (!valuesMap.has(valueKey)) valuesMap.set(valueKey, trimmedValue);
+        });
+      } catch (e) {}
+    });
+
+  const el = document.getElementById('ecAttrBar');
+  if (!el) return;
+  if (groupedByKey.size === 0) { el.classList.remove('visible'); el.innerHTML = ''; return; }
+
+  const sortValues = (key, a, b) => {
+    if (key === 'size') {
+      const SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+      const ai = SIZE_ORDER.indexOf(a.toLowerCase()), bi = SIZE_ORDER.indexOf(b.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+    }
+    const an = parseFloat(a), bn = parseFloat(b);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    if (!isNaN(an)) return -1; if (!isNaN(bn)) return 1;
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+  };
+
+  const sortedKeys = Array.from(groupedByKey.keys()).sort((a, b) => a.localeCompare(b));
+  const chips = [];
+  sortedKeys.forEach(key => {
+    const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortValues(key, a[1], b[1]));
+    sorted.forEach(([valueKey, displayValue]) => {
+      const active = _ecAttrValueFilters.has(key) && _ecAttrValueFilters.get(key).has(valueKey);
+      chips.push(`<button type="button" class="ec-chip" aria-pressed="${active}" onclick="ecToggleAttrFilter('${key.replace(/'/g,"\\'")}','${valueKey.replace(/'/g,"\\'")}')">${_escHtml(displayValue)}</button>`);
+    });
+  });
+  el.innerHTML = chips.join('');
+  el.classList.add('visible');
+}
+function _ecHideAttrSubfilter() {
+  const el = document.getElementById('ecAttrBar');
+  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
+}
+function ecToggleAttrFilter(key, value) {
+  if (!_ecAttrValueFilters.has(key)) _ecAttrValueFilters.set(key, new Set());
+  const set = _ecAttrValueFilters.get(key);
+  if (set.has(value)) { set.delete(value); if (set.size === 0) _ecAttrValueFilters.delete(key); }
+  else set.add(value);
+  if (_ecCategoryFilter) _ecRenderAttrSubfilter(_ecCategoryFilter);
+  ecRenderList();
+}
+function _ecMatchesAttrFilters(recipe) {
+  if (_ecAttrValueFilters.size === 0) return true;
+  if (!recipe.attributes) return false;
+  for (const [key, valSet] of _ecAttrValueFilters) {
+    if (valSet.size === 0) continue;
+    const matchKey = Object.keys(recipe.attributes).find(k => k.toLowerCase() === key);
+    if (!matchKey) return false;
+    if (!valSet.has(String(recipe.attributes[matchKey]).trim().toLowerCase())) return false;
+  }
+  return true;
 }
 
 function createProductFromOrderSearch(name) {
@@ -2780,7 +2880,7 @@ function ecRenderList() {
   if (!box) return;
   const q = (document.getElementById('ecItemQ')?.value || '').trim().toLowerCase();
   const insights = _ecInsights || { lastSold: new Map(), recentIds: [] };
-  const matchesCat = r => !_ecCategoryFilter || r.category === _ecCategoryFilter;
+  const matchesCat = r => (!_ecCategoryFilter || r.category === _ecCategoryFilter) && _ecMatchesAttrFilters(r);
 
   const rowHtml = recipe => {
     const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
