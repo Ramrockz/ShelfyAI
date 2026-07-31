@@ -43,6 +43,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="import-modal.js"></script>
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
@@ -1249,50 +1250,6 @@
 <!-- CSV Import modal injected by csv-import.js -->
 
 
-<div class="modal-overlay" id="imageModal" onclick="if(event.target === this) closeImageModal()">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a receipt, invoice, or product image</p>
-    
-    <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);" onclick="document.getElementById('imageFileInput').click()">
-      <div style="margin-bottom: 16px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
-      </div>
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
-      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
-      <input type="file" id="imageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" onchange="handleImageUpload(event)" />
-    </div>
-    
-    <div id="screenshotSectionIng" style="margin-top: 20px; text-align: center;">
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
-      <button class="btn" style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="captureScreenshot()">
-        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
-        Capture Screenshot
-      </button>
-    </div>
-    <script>if(/android|iphone|ipad|ipod/i.test(navigator.userAgent)){document.getElementById('screenshotSectionIng').style.display='none';}</script>
-    
-    <div id="uploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <img id="previewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
-        <div style="flex: 1;">
-          <p id="fileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
-          <p id="fileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
-        </div>
-        <button onclick="clearUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">&times;</button>
-      </div>
-    </div>
-    
-    <div id="uploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="closeImageModal()">Cancel</button>
-      <button class="btn btn-primary" id="processImageBtn" style="flex: 1;" onclick="processImageUpload()" disabled>Process</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="urlModal" onclick="if(event.target === this) closeURLModal()">
   <div class="modal-content" id="urlModalContent" style="max-width: 500px;">
     <h3 style="margin: 0 0 20px 0;">Import from URL</h3>
@@ -1372,7 +1329,6 @@ let listCurrentPage = 1;
 let itemsPerPage = 10;
 let cardsToShow = 15;
 let confirmResolver = null;
-let uploadedFile = null;
 
 // Toggle search clear button visibility
 function toggleSearchClear(inputId) {
@@ -1642,22 +1598,100 @@ async function checkAIUsage() {
   return aiUsageStatus;
 }
 
+function openManualIngredientModal() {
+  document.getElementById('manualModal').classList.add('active');
+}
+
+function startIngredientUpload() {
+  window.ShelfyImportModal.open('ingredient', {
+    onManual: openManualIngredientModal,
+    onImported: async (data, receiptUrl) => {
+      openManualIngredientModal();
+      // Wait for modal to be fully rendered before touching its fields.
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const item = (data.item && data.item[0]) || {};
+
+      if (item.name || data.description) {
+        document.getElementById('ing_name').value = item.name || data.description;
+      }
+      if (item.price || data.amount) {
+        const price = item.price || data.amount;
+        const priceMatch = String(price).match(/[\d.]+/);
+        if (priceMatch) document.getElementById('ing_cost').value = priceMatch[0];
+      }
+      if (item.quantity) {
+        document.getElementById('ing_quantity').value = item.quantity;
+      }
+      // Unit — map to the chip list's exact strings so the right chip highlights.
+      if (item.unit) {
+        const rawUnit = item.unit.toLowerCase();
+        const unitMap = {
+          'kilograms': 'kg', 'kg': 'kg',
+          'grams': 'g', 'g': 'g',
+          'liters': 'L', 'l': 'L',
+          'milliliters': 'ml', 'ml': 'ml',
+          'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
+          'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
+          'ounces': 'oz', 'oz': 'oz',
+          'meters': 'm', 'm': 'm'
+        };
+        setManualItemUnit(unitMap[rawUnit] || rawUnit);
+      }
+      if (item.SKU) document.getElementById('ing_sku').value = item.SKU;
+      if (item.product_category) selectIngCategory(item.product_category);
+      if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
+      if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+
+      const container = document.getElementById('customAttributes');
+      if (item.attributes?.color) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${item.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+        `;
+        container.appendChild(row);
+      }
+      if (item.attributes?.size) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; gap: 8px;';
+        row.innerHTML = `
+          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${item.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+        `;
+        container.appendChild(row);
+      }
+
+      await checkAIUsage();
+      if (aiUsageStatus && aiUsageStatus.limitReached) {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (session && typeof createAILimitNotification === 'function') {
+          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
+        }
+      }
+    }
+  });
+}
+
 async function openModal() {
   // Offline: skip the method picker entirely and go straight to manual entry.
   // checkAIUsage() is a network call that hangs when offline.
   if (!navigator.onLine) {
-    document.getElementById('manualModal').classList.add('active');
+    openManualIngredientModal();
     return;
   }
   await window.ShelfyCreateModal.open('ingredient', {
     onUsage: (status) => { aiUsageStatus = status; },
     onSelect: (method) => {
       if (method === 'manual') {
-        document.getElementById('manualModal').classList.add('active');
+        openManualIngredientModal();
       } else if (method === 'csv') {
         if (typeof openCSVImport === 'function') openCSVImport('ingredient');
       } else if (method === 'image') {
-        document.getElementById('imageModal').classList.add('active');
+        startIngredientUpload();
       } else if (method === 'url') {
         hideGlobalLoader();
         document.getElementById('urlModalContent').style.display = '';
@@ -1787,10 +1821,6 @@ function closeCSVModal() {
   if (typeof closeCSVImport === 'function') closeCSVImport();
 }
 
-function closeImageModal() {
-  document.getElementById('imageModal').classList.remove('active');
-}
-
 function closeURLModal() {
   document.getElementById('urlModal').classList.remove('active');
   document.getElementById('urlInput').value = '';
@@ -1800,405 +1830,6 @@ function closeURLModal() {
   if (processBtn) { processBtn.disabled = false; processBtn.textContent = 'Process'; }
   const statusDiv = document.getElementById('importStatus');
   if (statusDiv) { statusDiv.style.display = 'none'; statusDiv.innerHTML = ''; }
-}
-
-function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  handleFile(file);
-}
-
-function handleFile(file) {
-  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-  
-  if (!validTypes.includes(file.type)) {
-    showUploadStatus('Please upload a PNG, JPG, or PDF file', 'error');
-    return;
-  }
-  
-  if (file.size > 10 * 1024 * 1024) { // 10MB limit
-    showUploadStatus('File size must be less than 10MB', 'error');
-    return;
-  }
-  
-  uploadedFile = file;
-  
-  // Show preview
-  const preview = document.getElementById('uploadPreview');
-  const previewImage = document.getElementById('previewImage');
-  const fileName = document.getElementById('fileName');
-  const fileSize = document.getElementById('fileSize');
-  
-  if (fileName) fileName.textContent = file.name;
-  if (fileSize) fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
-  
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (previewImage) {
-        previewImage.src = e.target.result;
-        previewImage.style.display = 'block';
-      }
-    };
-    reader.readAsDataURL(file);
-  } else {
-    if (previewImage) {
-      previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png';
-      previewImage.style.display = 'block';
-    }
-  }
-  
-  if (preview) preview.style.display = 'block';
-  const processBtn = document.getElementById('processImageBtn');
-  if (processBtn) processBtn.disabled = false;
-}
-
-async function captureScreenshot() {
-  try {
-    showUploadStatus('Capturing screenshot...', 'info');
-    
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { mediaSource: 'screen' }
-    });
-    
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-    
-    await new Promise(resolve => {
-      video.onloadedmetadata = resolve;
-    });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    
-    stream.getTracks().forEach(track => track.stop());
-    
-    canvas.toBlob((blob) => {
-      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-      showUploadStatus('Screenshot captured successfully. AI extraction coming soon.', 'success');
-      // Enable process button
-      const processBtn = document.getElementById('processImageBtn');
-      if (processBtn) processBtn.disabled = false;
-    }, 'image/png');
-    
-  } catch (error) {
-    if (error.name === 'NotAllowedError') {
-      showUploadStatus('Screenshot permission denied', 'error');
-    } else {
-      console.error('Screenshot error:', error);
-      showUploadStatus('Failed to capture screenshot', 'error');
-    }
-  }
-}
-
-function showUploadStatus(message, type) {
-  const statusDiv = document.getElementById('uploadStatus');
-  if (!statusDiv) return;
-  
-  statusDiv.style.display = 'block';
-  
-  // Show loader animation if extracting
-  if (message.toLowerCase().includes('extracting')) {
-    // Remove modal background
-    const modalContent = document.getElementById('imageUploadModal')?.querySelector('.modal-content');
-    if (modalContent) modalContent.style.background = 'transparent';
-    
-    statusDiv.innerHTML = `<div class="loader-container"><lottie-player src="/loading_screen.json" background="transparent" speed="1" style="width:200px;height:200px;" autoplay loop></lottie-player></div>`;
-    statusDiv.style.background = 'transparent';
-    statusDiv.style.border = 'none';
-    statusDiv.style.borderRadius = '0';
-    statusDiv.style.boxShadow = 'none';
-    statusDiv.style.textAlign = 'center';
-    statusDiv.style.padding = '0';
-  } else {
-    // Restore modal background
-    const modalContent = document.getElementById('imageUploadModal')?.querySelector('.modal-content');
-    if (modalContent) modalContent.style.background = '';
-    
-    statusDiv.textContent = message;
-    statusDiv.style.textAlign = 'left';
-    statusDiv.style.padding = '12px';
-    statusDiv.style.borderRadius = '8px';
-    
-    // Set color based on type
-    if (type === 'success') {
-      statusDiv.style.background = 'var(--success-bg, #d1fae5)';
-      statusDiv.style.color = 'var(--success, #065f46)';
-      statusDiv.style.border = '1px solid var(--success, #10b981)';
-    } else if (type === 'error') {
-      statusDiv.style.background = 'var(--danger-bg, #fee2e2)';
-      statusDiv.style.color = 'var(--danger, #991b1b)';
-      statusDiv.style.border = '1px solid var(--danger, #ef4444)';
-    } else {
-      statusDiv.style.background = 'var(--info-bg, #dbeafe)';
-      statusDiv.style.color = 'var(--info, #1e40af)';
-      statusDiv.style.border = '1px solid var(--info, #3b82f6)';
-    }
-  }
-}
-
-function showImportStatus(message, type) {
-  const statusDiv = document.getElementById('importStatus');
-  if (!statusDiv) return;
-  
-  statusDiv.style.display = 'block';
-  
-  // Show loader animation if extracting
-  if (message.toLowerCase().includes('extracting')) {
-    showGlobalLoader();
-    document.getElementById('urlModalContent').style.display = 'none';
-  } else {
-    // Restore modal content, hide loader
-    hideGlobalLoader();
-    document.getElementById('urlModalContent').style.display = '';
-    
-    statusDiv.textContent = message;
-    statusDiv.style.textAlign = 'left';
-    statusDiv.style.padding = '12px';
-    statusDiv.style.borderRadius = '8px';
-    statusDiv.style.marginTop = '16px';
-    
-    // Set color based on type
-    if (type === 'success') {
-      statusDiv.style.background = 'var(--success-bg, #d1fae5)';
-      statusDiv.style.color = 'var(--success, #065f46)';
-      statusDiv.style.border = '1px solid var(--success, #10b981)';
-    } else if (type === 'error') {
-      statusDiv.style.background = 'var(--danger-bg, #fee2e2)';
-      statusDiv.style.color = 'var(--danger, #991b1b)';
-      statusDiv.style.border = '1px solid var(--danger, #ef4444)';
-    } else {
-      statusDiv.style.background = 'var(--info-bg, #dbeafe)';
-      statusDiv.style.color = 'var(--info, #1e40af)';
-      statusDiv.style.border = '1px solid var(--info, #3b82f6)';
-    }
-  }
-}
-
-function clearUpload() {
-  uploadedFile = null;
-  
-  const preview = document.getElementById('uploadPreview');
-  if (preview) preview.style.display = 'none';
-  
-  const fileInput = document.getElementById('imageFileInput');
-  if (fileInput) fileInput.value = '';
-  
-  const processBtn = document.getElementById('processImageBtn');
-  if (processBtn) processBtn.disabled = true;
-  
-  const statusDiv = document.getElementById('uploadStatus');
-  if (statusDiv) statusDiv.style.display = 'none';
-}
-
-async function processImageUpload() {
-  if (!uploadedFile) {
-    showUploadStatus('Please select a file first', 'error');
-    return;
-  }
-  
-  const processBtn = document.getElementById('processImageBtn');
-  const originalText = processBtn.textContent;
-  processBtn.textContent = 'Processing...';
-  processBtn.disabled = true;
-  
-  try {
-    showUploadStatus('Extracting data from document...', 'info');
-    
-    console.log('=== Upload Debug Info ===');
-    console.log('File name:', uploadedFile.name);
-    console.log('File type:', uploadedFile.type);
-    console.log('File size:', uploadedFile.size, 'bytes');
-    
-    // Get user session for authentication
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (!session) {
-      throw new Error('You must be logged in to use this feature');
-    }
-    
-    // Create FormData to send file as multipart/form-data
-    const formData = new FormData();
-    formData.append('file', uploadedFile);
-    formData.append('context', 'ingredient'); // Pass context to API
-    
-    console.log('Sending as multipart/form-data with context: ingredient');
-    
-    const response = await fetch('/api/extract-receipt', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: formData // Don't set Content-Type header - browser will set it with boundary
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      console.log('Error response content-type:', contentType);
-      
-      let errorData;
-      if (contentType && contentType.includes('application/json')) {
-        errorData = await response.json();
-      } else {
-        const errorText = await response.text();
-        console.log('Error response (raw):', errorText);
-        errorData = { error: errorText };
-      }
-      console.log('Error data:', errorData);
-      
-      // If limit reached, update cache and create notification
-      if (response.status === 429) {
-        console.log('[Ingredients Image] 429 error detected - AI limit reached');
-        await checkAIUsage();
-        
-        // Create AI limit notification
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        console.log('[Ingredients Image] Session for notification:', session?.user?.id);
-        if (session && typeof createAILimitNotification === 'function') {
-          console.log('[Ingredients Image] Calling createAILimitNotification');
-          await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
-        } else {
-          console.log('[Ingredients Image] createAILimitNotification not available or no session');
-        }
-        
-        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
-      }
-      
-      throw new Error(errorData.error || 'Failed to extract data from image');
-    }
-    
-    const result = await response.json();
-    console.log('Success response:', result);
-    
-    if (result.success && result.data) {
-      console.log('Mapping extracted data to form fields:', result.data);
-      
-      // Close image modal and open manual entry modal
-      closeImageModal();
-      document.getElementById('manualModal').classList.add('active');
-      
-      // Wait for modal to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Name
-      if (result.data.item?.name || result.data.description) {
-        document.getElementById('ing_name').value = result.data.item?.name || result.data.description;
-      }
-      
-      // Price
-      if (result.data.item?.price || result.data.amount) {
-        const price = result.data.item?.price || result.data.amount;
-        const priceMatch = String(price).match(/[\d.]+/);
-        if (priceMatch) {
-          document.getElementById('ing_cost').value = priceMatch[0];
-        }
-      }
-      
-      // Quantity
-      if (result.data.item?.quantity) {
-        document.getElementById('ing_quantity').value = result.data.item.quantity;
-      }
-      
-      // Unit — map to the chip list's exact strings so the right chip highlights.
-      if (result.data.item?.unit) {
-        const rawUnit = result.data.item.unit.toLowerCase();
-        const unitMap = {
-          'kilograms': 'kg', 'kg': 'kg',
-          'grams': 'g', 'g': 'g',
-          'liters': 'L', 'l': 'L',
-          'milliliters': 'ml', 'ml': 'ml',
-          'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
-          'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
-          'ounces': 'oz', 'oz': 'oz',
-          'meters': 'm', 'm': 'm'
-        };
-        setManualItemUnit(unitMap[rawUnit] || rawUnit);
-      }
-      
-      // SKU
-      if (result.data.item?.SKU) {
-        document.getElementById('ing_sku').value = result.data.item.SKU;
-      }
-      
-      // Category
-      if (result.data.item?.product_category) {
-        selectIngCategory(result.data.item.product_category);
-      }
-      
-      // Shipping Time (Estimated Delivery)
-      if (result.data.item?.shipping_time) {
-        document.getElementById('ing_estimated_delivery').value = result.data.item.shipping_time;
-      }
-      
-      // Vendor (store in source URL)
-      if (result.data.vendor) {
-        document.getElementById('ing_source_url').value = url;
-      }
-      
-      // Add extracted attributes as custom attributes
-      const container = document.getElementById('customAttributes');
-      if (result.data.attributes?.color) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${result.data.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-      if (result.data.attributes?.size) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${result.data.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-      
-      showUploadStatus('Data imported successfully!', 'success');
-      
-      // Check if user just reached their daily limit
-      console.log('[Image Upload - Ingredients] Checking AI usage after successful extraction');
-      const usageResult = await checkAIUsage();
-      console.log('[Image Upload - Ingredients] AI usage result:', usageResult);
-      console.log('[Image Upload - Ingredients] aiUsageStatus:', aiUsageStatus);
-      
-      if (aiUsageStatus && aiUsageStatus.limitReached) {
-        console.log('[Image Upload - Ingredients] User just reached their limit, creating notification');
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        console.log('[Image Upload - Ingredients] Session:', session?.user?.id);
-        console.log('[Image Upload - Ingredients] createAILimitNotification available:', typeof createAILimitNotification);
-        if (session && typeof createAILimitNotification === 'function') {
-          console.log('[Image Upload - Ingredients] Calling createAILimitNotification with userId:', session.user.id, 'tier:', aiUsageStatus.tier);
-          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
-          console.log('[Image Upload - Ingredients] Notification creation completed');
-        } else {
-          console.log('[Image Upload - Ingredients] Cannot create notification - session or function missing');
-        }
-      } else {
-        console.log('[Image Upload - Ingredients] Limit not reached yet. Used:', aiUsageStatus?.used, 'Limit:', aiUsageStatus?.limit);
-      }
-    } else {
-      showUploadStatus('No data could be extracted from the image', 'error');
-    }
-    
-  } catch (error) {
-    console.error('Image upload error:', error);
-    showUploadStatus(error.message || 'Failed to process image', 'error');
-  } finally {
-    processBtn.textContent = originalText;
-    processBtn.disabled = false;
-  }
 }
 
 async function handleURLImport() {
@@ -4993,8 +4624,6 @@ document.addEventListener('keydown', (e) => {
       closeManualModal();
     } else if (document.getElementById('csvImportModal') && document.getElementById('csvImportModal').classList.contains('active')) {
       closeCSVImport();
-    } else if (document.getElementById('imageModal').classList.contains('active')) {
-      closeImageModal();
     } else if (document.getElementById('urlModal').classList.contains('active')) {
       closeURLModal();
     } else if (document.getElementById('duplicateModal').classList.contains('active')) {
