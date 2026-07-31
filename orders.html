@@ -42,6 +42,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
+<script src="import-modal.js"></script>
 <script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -2400,47 +2401,6 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-<!-- Image / PDF Upload Modal -->
-<div class="modal-overlay" id="orderImageUploadModal">
-  <div class="modal-content" style="max-width: 600px;">
-    <h3 style="margin: 0 0 20px 0;">Import from Image/PDF</h3>
-    <p id="orderUploadDescription" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload an order screenshot or invoice</p>
-    <div id="orderDropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-panel);">
-      <div style="margin-bottom: 16px;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3097/3097412.png" alt="Upload" width="48" height="48" style="opacity: 0.5;">
-      </div>
-      <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-main);">Drag & drop your file here</p>
-      <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">or click to browse</p>
-      <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Supports: PNG, JPG, PDF</p>
-      <input type="file" id="orderImageFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display: none;" />
-      <input type="file" id="orderQuickFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display:none;" />
-    </div>
-    <div id="screenshotSectionOrders" style="margin-top: 20px; text-align: center;">
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-muted);">Or</p>
-      <button class="btn btn-secondary" onclick="captureOrderScreenshot()" style="width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);">
-        <img src="https://cdn-icons-png.flaticon.com/512/3603/3603423.png" alt="Screenshot" width="16" height="16" style="vertical-align: middle; margin-right: 8px; filter: brightness(0);">
-        Capture Screenshot
-      </button>
-    </div>
-    <script>if(/android|iphone|ipad|ipod/i.test(navigator.userAgent)){document.getElementById('screenshotSectionOrders').style.display='none';}</script>
-    <div id="orderUploadPreview" style="display: none; margin-top: 20px; padding: 16px; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border);">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <img id="orderPreviewImage" src="" alt="Preview" style="max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover;">
-        <div style="flex: 1;">
-          <p id="orderFileName" style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main);"></p>
-          <p id="orderFileSize" style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);"></p>
-        </div>
-        <button onclick="clearOrderUpload()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 4px 8px;">&times;</button>
-      </div>
-    </div>
-    <div id="orderUploadStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeOrderImageUploadModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="processOrderImageUpload()" id="processOrderImageBtn" style="flex: 1;" disabled>Process</button>
-    </div>
-  </div>
-</div>
-
 
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
@@ -2487,27 +2447,19 @@ document.addEventListener('keydown', (e) => {
 
 // State
 let orderRecipes = [];
-let orderUploadedFile = null;
 let pendingReceiptUrl = null;
 let mappedOrderData = null;
 let mappedRecipes = [];
-let orderAIUsageStatus = null;
 
 // --- Method Modal ---
 // Thin wrapper over the shared create-modal.js sheet.
-async function checkOrderAIUsage() {
-  orderAIUsageStatus = await window.ShelfyCreateModal.checkUsage();
-  return orderAIUsageStatus;
-}
-
 async function openOrderMethodModal() {
   await window.ShelfyCreateModal.open('order', {
-    onUsage: (status) => { orderAIUsageStatus = status; },
     onSelect: (method) => {
       if (method === 'manual') {
         openManualOrderModal();
       } else if (method === 'upload') {
-        openOrderImageUploadModal();
+        startOrderUpload();
       }
     }
   });
@@ -2516,27 +2468,15 @@ function closeOrderMethodModal() {
   window.ShelfyCreateModal.close();
 }
 
-function _orderLimitReachedAlert() {
-  alert(`Monthly AI scan limit reached: you've used all ${orderAIUsageStatus.limit} scans for this month (ingredients, orders and expenses share one pool). Limit resets on the 1st of next month.`);
-}
-
-// Primary FAB action — skips the method menu and goes straight to the
-// capture flow the "upload" method already uses, but checks the AI limit
-// first so a maxed-out user isn't sent through a whole capture just to
-// have it rejected at the end. Mirrors expenses.html's startReceiptScan().
-async function startOrderUpload() {
-  await checkOrderAIUsage();
-  if (orderAIUsageStatus && orderAIUsageStatus.limitReached) {
-    _orderLimitReachedAlert();
-    return;
-  }
-  // On mobile, captureOrderScreenshot() opens the modal itself once a photo
-  // is actually taken -- opening it here first would leave an empty modal
-  // open behind the camera if the user cancels. Desktop's screen-capture
-  // flow still needs the modal open up front for its status messages.
-  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (!isMobile) openOrderImageUploadModal();
-  captureOrderScreenshot();
+// Primary FAB action — also used by the method menu's "upload" choice.
+function startOrderUpload() {
+  window.ShelfyImportModal.open('order', {
+    onImported: (data, receiptUrl) => {
+      pendingReceiptUrl = receiptUrl;
+      showRecipeMappingModal(data);
+    },
+    onManual: openManualOrderModal
+  });
 }
 
 // --- Manual Order Modal ---
@@ -3147,203 +3087,6 @@ async function updateInventoryForNewOrder(selectedRecipes, userId, saleId = null
   }
 }
 
-// --- Image Upload ---
-function openOrderImageUploadModal() {
-  document.getElementById('orderImageUploadModal').classList.add('active');
-  setupOrderDropZone();
-}
-function closeOrderImageUploadModal() {
-  document.getElementById('orderImageUploadModal').classList.remove('active');
-  clearOrderUpload();
-}
-function setupOrderDropZone() {
-  const dropZone = document.getElementById('orderDropZone');
-  const fileInput = document.getElementById('orderImageFileInput');
-  dropZone.onclick = () => fileInput.click();
-  fileInput.onchange = (e) => { const file = e.target.files[0]; if (file) handleOrderFile(file); };
-  dropZone.ondragover = (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; dropZone.style.background = 'rgba(6,182,212,0.05)'; };
-  dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = 'var(--bg-panel)'; };
-  dropZone.ondrop = (e) => {
-    e.preventDefault(); dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = 'var(--bg-panel)';
-    const file = e.dataTransfer.files[0]; if (file) handleOrderFile(file);
-  };
-}
-function handleOrderFile(file) {
-  if (!['image/png','image/jpeg','image/jpg','application/pdf'].includes(file.type)) {
-    showOrderUploadStatus('Please upload a PNG, JPG, or PDF file', 'error'); return;
-  }
-  if (file.size > 10 * 1024 * 1024) { showOrderUploadStatus('File size must be less than 10MB', 'error'); return; }
-  orderUploadedFile = file;
-  const preview = document.getElementById('orderUploadPreview');
-  const previewImage = document.getElementById('orderPreviewImage');
-  document.getElementById('orderFileName').textContent = file.name;
-  document.getElementById('orderFileSize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => { previewImage.src = e.target.result; previewImage.style.display = 'block'; };
-    reader.readAsDataURL(file);
-  } else {
-    previewImage.src = 'https://cdn-icons-png.flaticon.com/512/337/337946.png'; previewImage.style.display = 'block';
-  }
-  preview.style.display = 'block';
-  document.getElementById('processOrderImageBtn').disabled = false;
-}
-function clearOrderUpload() {
-  orderUploadedFile = null;
-  document.getElementById('orderUploadPreview').style.display = 'none';
-  document.getElementById('orderImageFileInput').value = '';
-  document.getElementById('processOrderImageBtn').disabled = true;
-  document.getElementById('orderUploadStatus').style.display = 'none';
-}
-async function captureOrderScreenshot() {
-  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  if (isMobile) {
-    // getDisplayMedia (screen capture) doesn't make sense on mobile and
-    // isn't supported there anyway -- it was throwing immediately and
-    // surfacing as a confusing "Failed to capture screenshot". This button
-    // is labelled "Upload file", so open the plain file/gallery picker
-    // (no capture attribute, unlike a camera-first "Scan" shortcut) instead.
-    // Cancelling the picker never fires onchange, so nothing else needs to
-    // happen.
-    const input = document.getElementById('orderQuickFileInput');
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        openOrderImageUploadModal();
-        handleOrderFile(file);
-      }
-      input.value = '';
-    };
-    input.click();
-    return;
-  }
-
-  try {
-    showOrderUploadStatus('Capturing screenshot...', 'info');
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { mediaSource: 'screen' } });
-    const video = document.createElement('video');
-    video.srcObject = stream; video.play();
-    await new Promise(resolve => { video.onloadedmetadata = resolve; });
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    stream.getTracks().forEach(track => track.stop());
-    canvas.toBlob((blob) => {
-      const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-      handleOrderFile(file);
-      showOrderUploadStatus('Screenshot captured successfully', 'success');
-    }, 'image/png');
-  } catch (error) {
-    showOrderUploadStatus(error.name === 'NotAllowedError' ? 'Screenshot permission denied' : 'Failed to capture screenshot', 'error');
-  }
-}
-function showOrderUploadStatus(message, type) {
-  const statusDiv = document.getElementById('orderUploadStatus');
-  statusDiv.style.display = 'block';
-  if (message.toLowerCase().includes('extracting') || message.toLowerCase().includes('matching')) {
-    const imageModal = document.getElementById('orderImageUploadModal');
-    const modalContent = imageModal?.querySelector('.modal-content');
-    if (modalContent) {
-      modalContent.querySelectorAll('h3, .form-group, button, p').forEach(el => {
-        if (el.id !== 'orderUploadStatus' && !el.closest('#orderUploadStatus')) el.style.display = 'none';
-      });
-    }
-    const dropZone = document.getElementById('orderDropZone');
-    if (dropZone) dropZone.style.display = 'none';
-    const preview = document.getElementById('orderUploadPreview');
-    if (preview) preview.style.display = 'none';
-    showGlobalLoader();
-  } else {
-    hideGlobalLoader();
-    statusDiv.textContent = message;
-    statusDiv.style.cssText = `display:block;font-size:13px;padding:12px;border-radius:8px;margin-top:16px;border:none;background:${type==='error'?'rgba(239,68,68,0.1)':type==='success'?'rgba(16,185,129,0.1)':'rgba(59,130,246,0.1)'};color:${type==='error'?'var(--danger)':type==='success'?'var(--success)':'#3b82f6'};`;
-  }
-}
-async function processOrderImageUpload() {
-  if (!orderUploadedFile) { showOrderUploadStatus('Please select a file first', 'error'); return; }
-  const processBtn = document.getElementById('processOrderImageBtn');
-  const originalText = processBtn.textContent;
-  processBtn.textContent = 'Processing...';
-  processBtn.disabled = true;
-  try {
-    showOrderUploadStatus('Extracting data from document...', 'info');
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (!session) throw new Error('You must be logged in to use this feature');
-    const formData = new FormData();
-    formData.append('file', orderUploadedFile);
-    formData.append('context', 'order');
-    const response = await fetch('/api/extract-receipt', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}` },
-      body: formData
-    });
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorData;
-      if (contentType && contentType.includes('application/json')) {
-        errorData = await response.json();
-      } else {
-        errorData = { error: await response.text() };
-      }
-      if (response.status === 429) {
-        if (typeof createAILimitNotification === 'function') {
-          await createAILimitNotification(session.user.id, 'free');
-        }
-        throw new Error(`${errorData.error || 'Monthly limit reached'}. Limit resets on the 1st of next month.`);
-      }
-      throw new Error(errorData.error || 'Failed to extract data from image');
-    }
-    const result = await response.json();
-    console.log('=== Order Upload Result ===');
-    console.log(JSON.stringify(result, null, 2));
-    
-    if (result.success && result.data) {
-      showOrderUploadStatus('Matching recipes...', 'info');
-      try {
-        // Upload the receipt file immediately while we still have the File reference,
-        // then store the URL so confirmMappedOrder() can attach it to the sales record.
-        pendingReceiptUrl = null;
-        if (orderUploadedFile) {
-          try {
-            showOrderUploadStatus('Uploading receipt...', 'info');
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (user) {
-              const ts = Date.now();
-              const fileName = `${user.id}/${ts}_${orderUploadedFile.name}`;
-              const { error: upErr } = await supabaseClient.storage
-                .from('expenses')
-                .upload(fileName, orderUploadedFile, { cacheControl: '3600', upsert: false });
-              if (upErr) {
-                console.error('Receipt upload error:', upErr);
-              } else {
-                const { data: { publicUrl } } = supabaseClient.storage.from('expenses').getPublicUrl(fileName);
-                pendingReceiptUrl = publicUrl;
-                console.log('Receipt pre-uploaded, URL:', publicUrl);
-              }
-            }
-          } catch (upEx) {
-            console.error('Receipt upload exception:', upEx);
-          }
-        }
-        closeOrderImageUploadModal();
-        await showRecipeMappingModal(result.data);
-      } catch (error) {
-        console.error('Failed to process order:', error);
-        showOrderUploadStatus('Failed to process order: ' + error.message, 'error');
-      }
-    } else {
-      showOrderUploadStatus('No data could be extracted from the image', 'error');
-    }
-  } catch (error) {
-    console.error('Image upload error:', error);
-    showOrderUploadStatus(error.message || 'Failed to process image', 'error');
-  } finally {
-    processBtn.textContent = originalText;
-    processBtn.disabled = false;
-  }
-}
-
 // --- Recipe Mapping (AI result) ---
 function calculateSimilarity(str1, str2) {
   const s1 = str1.toLowerCase().trim();
@@ -3763,7 +3506,7 @@ async function confirmMappedOrder() {
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const orderReference = document.getElementById('mapped_reference').value || null;
-    // Use the URL pre-uploaded during processOrderImageUpload()
+    // Use the URL pre-uploaded during startOrderUpload()'s onImported callback
     const receiptUrls = pendingReceiptUrl ? [pendingReceiptUrl] : null;
     pendingReceiptUrl = null;
 
