@@ -2581,14 +2581,20 @@ let _ecOriginalQty = 0;     // this line's quantity when pane 2 was opened -- al
 let _ecCategoryFilter = null;
 let _ecAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter scoped to _ecCategoryFilter
 
+// This picker chooses PRODUCTS (recipes), which use their own general
+// handmade-marketplace taxonomy -- independent of the ingredient category
+// list used elsewhere on this page (e.g. the receipt/expense side).
 const _ecCategoryMap = {
-  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
-  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
-  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
-  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
-  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
-  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
-  'Packaging': 'package', 'Food': 'wheat'
+  'Jewelry': 'gem', 'Clothing & Apparel': 'shirt', 'Accessories': 'watch',
+  'Bags & Purses': 'shopping-bag', 'Shoes & Footwear': 'footprints',
+  'Home Decor': 'home', 'Furniture': 'armchair', 'Kitchen & Dining': 'utensils-crossed',
+  'Art & Prints': 'image', 'Craft Supplies': 'scissors', 'Digital Downloads': 'download',
+  'Paper Goods & Stationery': 'notebook-pen', 'Wedding & Party': 'party-popper',
+  'Toys & Games': 'gamepad-2', 'Baby & Kids': 'baby', 'Beauty & Personal Care': 'sparkles',
+  'Candles & Home Fragrance': 'flame', 'Bath & Body': 'droplet', 'Pet Products': 'paw-print',
+  'Seasonal & Holiday': 'gift', 'Vintage Items': 'clock', 'Collectibles': 'star',
+  'Electronics & Accessories': 'plug', 'Books': 'book-open', 'Patterns & Tutorials': 'file-text',
+  'Other Handmade Goods': 'tag'
 };
 
 // sales.items has no reliable id on older rows -- new lines write recipe_id

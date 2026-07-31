@@ -2722,24 +2722,6 @@ async function removeIngredientFromRecipe(index) {
   if (availableIngredients.length) aiRenderList();
 }
 
-// Products created before the category picker existed (or duplicated from
-// one) have category === null and are only ever grouped by a live
-// majority-vote over their components' own categories (see recipes.html's
-// _productCategoryFor) — purely for display, nothing persists it. Swapping
-// a single component recomputes that vote over the NEW component list, so
-// a product can silently jump to a different category group the moment
-// any one item changes. aiSaveLine() locks in today's
-// (pre-edit) result via this same vote so future edits stop reshuffling it.
-function _effectiveCategoryFor(components) {
-  const cats = (components || [])
-    .map(c => availableIngredients.find(i => i.id === (c.ingredient_id || c.id))?.category)
-    .filter(Boolean);
-  if (!cats.length) return null;
-  const counts = {};
-  cats.forEach(c => { counts[c] = (counts[c] || 0) + 1; });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-}
-
 // Same list/icon-map/exclusions as recipes.html's create-product form —
 // a product is a finished good, so categories that only make sense for
 // raw-material ingredients (packaging, thread spools, dye, ...) are hidden.
@@ -2757,11 +2739,30 @@ const _recipeCategIconMap = {
   'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
   'Packaging': 'package', 'Food': 'wheat'
 };
-const PRODUCT_EXCLUDED_CATEGORIES = new Set([
-  'Wood', 'Boxes', 'Rope', 'Paper', 'Spool', 'Colors', 'Tools', 'Packaging',
-  'Electronics', 'Office Supplies', 'Printing Supplies', 'Party Supplies'
-]);
-const PRODUCT_CATEGORIES = _recipeCategories.filter(c => !PRODUCT_EXCLUDED_CATEGORIES.has(c));
+// A product is a finished good, not a raw material -- it uses its own
+// general handmade-marketplace taxonomy, independent of _recipeCategories
+// above (which only makes sense for the ingredients that go INTO a product).
+const PRODUCT_CATEGORIES = [
+  'Jewelry', 'Clothing & Apparel', 'Accessories', 'Bags & Purses', 'Shoes & Footwear',
+  'Home Decor', 'Furniture', 'Kitchen & Dining', 'Art & Prints', 'Craft Supplies',
+  'Digital Downloads', 'Paper Goods & Stationery', 'Wedding & Party', 'Toys & Games',
+  'Baby & Kids', 'Beauty & Personal Care', 'Candles & Home Fragrance', 'Bath & Body',
+  'Pet Products', 'Seasonal & Holiday', 'Vintage Items', 'Collectibles',
+  'Electronics & Accessories', 'Books', 'Patterns & Tutorials', 'Other Handmade Goods'
+];
+
+const _productCategIconMap = {
+  'Jewelry': 'gem', 'Clothing & Apparel': 'shirt', 'Accessories': 'watch',
+  'Bags & Purses': 'shopping-bag', 'Shoes & Footwear': 'footprints',
+  'Home Decor': 'home', 'Furniture': 'armchair', 'Kitchen & Dining': 'utensils-crossed',
+  'Art & Prints': 'image', 'Craft Supplies': 'scissors', 'Digital Downloads': 'download',
+  'Paper Goods & Stationery': 'notebook-pen', 'Wedding & Party': 'party-popper',
+  'Toys & Games': 'gamepad-2', 'Baby & Kids': 'baby', 'Beauty & Personal Care': 'sparkles',
+  'Candles & Home Fragrance': 'flame', 'Bath & Body': 'droplet', 'Pet Products': 'paw-print',
+  'Seasonal & Holiday': 'gift', 'Vintage Items': 'clock', 'Collectibles': 'star',
+  'Electronics & Accessories': 'plug', 'Books': 'book-open', 'Patterns & Tutorials': 'file-text',
+  'Other Handmade Goods': 'tag'
+};
 
 function openRdmCategorySheet() {
   const el = document.getElementById('rdmCategorySheet');
@@ -2782,7 +2783,7 @@ function openRdmCategorySheet() {
   try {
     const current = recipe?.category || '';
     document.getElementById('rdmCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
-      const icon = _recipeCategIconMap[cat] || 'tag';
+      const icon = _productCategIconMap[cat] || 'tag';
       return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRdmCategory('${cat.replace(/'/g, "\\'")}')">
           <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span>
         </div>`;
@@ -3631,7 +3632,6 @@ async function aiSaveLine() {
   if (!(_aiDraft.qty > 0)) return;
   const ing = _aiIngredient;
   recipe.components = recipe.components || [];
-  if (!recipe.category) recipe.category = _effectiveCategoryFor(recipe.components);
 
   const newComp = {
     ingredient_id: ing.id,
