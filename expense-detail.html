@@ -474,6 +474,7 @@
   .ec-cat-row i, .ec-cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
   .ec-cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ec-cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   /* Attribute sub-filter (19d) -- cascading chips scoped to whichever
      category is currently selected. */
   .ec-chip { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
@@ -1912,12 +1913,14 @@ const _ecCategoryMap = {
 };
 
 function ecOpenCatSheet() {
-  const cats = [...new Set((ingredients || []).map(i => i.category).filter(Boolean))].sort();
+  const counts = c => (ingredients || []).filter(i => i.category === c).length;
+  const cats = [...new Set((ingredients || []).map(i => i.category).filter(Boolean))]
+    .sort((a, b) => counts(b) - counts(a));
   document.getElementById('ecCatList').innerHTML = cats.map(cat => {
     const icon = _ecCategoryMap[cat] || 'tag';
     const on = _ecCategoryFilter === cat;
     return `<div class="ec-cat-row" aria-pressed="${on}" onclick="ecPickCategory('${cat.replace(/'/g, "\\'")}')">
-        <i data-lucide="${icon}"></i><span class="ec-cat-row-label">${_escHtml(cat)}</span>
+        <i data-lucide="${icon}"></i><span class="ec-cat-row-label">${_escHtml(cat)}</span><span class="ec-cat-row-count">${counts(cat)}</span>
       </div>`;
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();

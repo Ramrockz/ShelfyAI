@@ -1237,8 +1237,8 @@
 
 <!-- Category sheet for #manualModal's #icCatRow above. Separate from
      #catSheet (the ingredient-LIST category filter, further up this file) —
-     different id, different data (no per-category counts), same .cat-row
-     markup/CSS since both are just "pick one category from a list". -->
+     different id, same sort-by-count-descending + .cat-row-count markup as
+     #catSheet, just a plain value-setter here rather than a list filter. -->
 <div class="modal-overlay modal-sheet" id="icCatSheet" onclick="if(event.target===this)closeIcCatSheet()">
   <div class="modal-content" style="max-width:420px">
     <h3 class="sheet-title" style="margin-top:0;">Category</h3>
@@ -4417,9 +4417,11 @@ function renderIcCatValue() {
 }
 function openIcCatSheet() {
   const current = document.getElementById('ing_category').value;
-  document.getElementById('icCatSheetList').innerHTML = CAT_META.map(m => {
+  const counts = c => ingredients.filter(i => i.category === c).length;
+  const sortedCats = [...CAT_META].sort((a, b) => counts(b.label) - counts(a.label));
+  document.getElementById('icCatSheetList').innerHTML = sortedCats.map(m => {
     return `<div class="cat-row${m.label === current ? ' active' : ''}" onclick="selectIngCategory('${m.label.replace(/'/g, "\\'")}'); closeIcCatSheet();">
-        <i data-lucide="${m.icon}"></i><span class="cat-row-label">${m.label}</span>
+        <i data-lucide="${m.icon}"></i><span class="cat-row-label">${m.label}</span><span class="cat-row-count">${counts(m.label)}</span>
       </div>`;
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();

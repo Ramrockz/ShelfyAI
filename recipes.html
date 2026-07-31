@@ -3024,10 +3024,12 @@ function renderRbCatValue() {
 }
 function openRbCatSheet() {
   const current = document.getElementById('recipeCategoryInput')?.value || '';
-  document.getElementById('rbCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
+  const counts = cat => recipes.filter(r => r.category && r.category.toLowerCase() === cat.toLowerCase()).length;
+  const sortedCats = [...PRODUCT_CATEGORIES].sort((a, b) => counts(b) - counts(a));
+  document.getElementById('rbCatList').innerHTML = sortedCats.map(cat => {
     const icon = _recipeCategIconMap[cat] || 'tag';
     return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRbCat('${_escHtml(cat)}')">
-        <i data-lucide="${icon}"></i><span class="cat-row-label">${_escHtml(cat)}</span>
+        <i data-lucide="${icon}"></i><span class="cat-row-label">${_escHtml(cat)}</span><span class="cat-row-count">${counts(cat)}</span>
       </div>`;
   }).join('');
   if (window.lucide) lucide.createIcons();

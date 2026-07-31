@@ -607,6 +607,7 @@
     .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
     .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
     .form-input {
       width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
       border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
@@ -3208,11 +3209,13 @@ function closeAddIngredientModal() {
 }
 
 function aiOpenCatSheet() {
-  document.getElementById('aiCatList').innerHTML = _recipeCategories.map(cat => {
+  const counts = cat => availableIngredients.filter(i => i.category === cat).length;
+  const sortedCats = [..._recipeCategories].sort((a, b) => counts(b) - counts(a));
+  document.getElementById('aiCatList').innerHTML = sortedCats.map(cat => {
     const icon = _recipeCategIconMap[cat] || 'tag';
     const on = _aiCategoryFilter === cat;
     return `<div class="cat-row${on ? ' active' : ''}" onclick="aiPickCategory('${cat.replace(/'/g, "\\'")}')">
-        <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span>
+        <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span><span class="cat-row-count">${counts(cat)}</span>
       </div>`;
   }).join('');
   if (window.lucide) lucide.createIcons();
