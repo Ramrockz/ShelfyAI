@@ -1013,7 +1013,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
-    .ord-total { font-size: 20px; font-weight: 800; letter-spacing: -.01em; flex-shrink: 0; color: var(--success); }
+    .ord-total { font-size: 20px; font-weight: 800; letter-spacing: -.01em; flex-shrink: 0; color: var(--success); cursor: pointer; }
 
     .ord-more-menu {
       display: none; position: fixed; z-index: 10200; right: 16px;
@@ -1289,7 +1289,7 @@
           <div class="ord-meta" id="ordMeta"></div>
           <div id="ordStageStrip"></div>
         </div>
-        <div class="ord-total" id="ordTotalDisplay">$0.00</div>
+        <div class="ord-total" id="ordTotalDisplay" onclick="openOrderFieldSheet('revenue','Revenue')">$0.00</div>
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
@@ -1860,8 +1860,7 @@ function renderOrdInfoRows() {
   if (!el || !orderData) return;
   const rows = [
     ['Channel', _escHtml(orderData.source || 'Website'), "openOrdChannelSheet()"],
-    ['Reference', _escHtml(orderData.order_reference || 'N/A'), "openOrderFieldSheet('order_reference','Reference')"],
-    ['Revenue', `$${parseFloat(orderData.revenue || 0).toFixed(2)}`, "openOrderFieldSheet('revenue','Revenue')"]
+    ['Reference', _escHtml(orderData.order_reference || 'N/A'), "openOrderFieldSheet('order_reference','Reference')"]
   ];
   if (orderData.tracking_number) {
     rows.push(['Tracking', _escHtml(orderData.tracking_number), "openOrderFieldSheet('tracking_number','Tracking number')"]);
@@ -2065,13 +2064,14 @@ async function handleReceiptFiles(files) {
   // Validate all files first
   for (let file of files) {
     if (file.size > maxFileSize) {
+      showNotification(`${file.name} is over the 10MB limit`, 'error');
       continue;
     }
     const hasSpace = await checkStorageLimit(file.size);
-    if (!hasSpace) return;
+    if (!hasSpace) { showNotification('Not enough storage space left for this file', 'error'); return; }
     validFiles.push(file);
   }
-  
+
   if (validFiles.length === 0) return;
   
   try {
@@ -2123,6 +2123,7 @@ async function handleReceiptFiles(files) {
         .eq('profile_id', user.id);
       if (urlError) {
         console.error('receipt_url fallback also failed:', urlError.message);
+        showNotification('Uploaded, but failed to save it to this order: ' + urlError.message, 'error');
         return;
       }
       // Fallback worked — mirror into receipt_urls so display works
@@ -2135,6 +2136,7 @@ async function handleReceiptFiles(files) {
     displayReceiptSection();
   } catch (error) {
     console.error('Error uploading receipts:', error);
+    showNotification('Failed to upload: ' + error.message, 'error');
   }
 }
 
@@ -2170,11 +2172,12 @@ async function deleteReceipt(index) {
     receiptUrls.splice(index, 1);
 
     // Update order record (orders use sales table)
-    await window.supabaseClient
+    const { error: updateError } = await window.supabaseClient
       .from('sales')
       .update({ receipt_urls: receiptUrls.length > 0 ? receiptUrls : null })
       .eq('id', orderId)
       .eq('profile_id', user.id);
+    if (updateError) throw updateError;
 
     orderData.receipt_urls = receiptUrls;
     if (receiptUrls.length === 0) {
@@ -2184,6 +2187,7 @@ async function deleteReceipt(index) {
     displayReceiptSection();
   } catch (error) {
     console.error('Error deleting receipt:', error);
+    showNotification('Failed to delete receipt: ' + error.message, 'error');
   }
 }
 
