@@ -1281,6 +1281,16 @@ function _escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// If the quantity input (or any other field) is still focused when the user
+// taps Swap/Remove/Restock, mobile Safari's first tap just dismisses the
+// keyboard/blurs the input instead of registering the click -- the button
+// only responds on a second tap. Blurring proactively on pointerdown (before
+// that implicit blur-eats-the-click behavior kicks in) makes the same tap's
+// click fire normally.
+function _blurActive() {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
 // --- Product family (parent_id + attributes) ---
 let familyVariants = [];
 let _familyAxesCache = null;
@@ -3648,6 +3658,8 @@ async function aiSaveLine() {
 async function aiRemoveLine() {
   const i = _aiEditIndex;
   if (i == null) return;
+  const name = _aiIngredient?.name || 'this item';
+  if (!confirm(`Remove ${name} from this product?`)) return;
   _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
   await removeIngredientFromRecipe(i);
   aiShowPane('list');
@@ -4170,9 +4182,9 @@ document.addEventListener('keydown', (e) => {
           </div>
         </div>
 
-        <button type="button" class="ai-swap" id="aiRestockBtn" onclick="aiRestock()" hidden>Restock this item</button>
-        <button type="button" class="ai-swap" id="aiSwapBtn" onclick="aiSwap()" hidden>Swap for another item</button>
-        <button type="button" class="ai-remove" id="aiRemoveBtn" onclick="aiRemoveLine()" hidden>Remove from product</button>
+        <button type="button" class="ai-swap" id="aiRestockBtn" onpointerdown="_blurActive()" onclick="aiRestock()" hidden>Restock this item</button>
+        <button type="button" class="ai-swap" id="aiSwapBtn" onpointerdown="_blurActive()" onclick="aiSwap()" hidden>Swap for another item</button>
+        <button type="button" class="ai-remove" id="aiRemoveBtn" onpointerdown="_blurActive()" onclick="aiRemoveLine()" hidden>Remove from product</button>
         <div class="ai-note" id="aiNote"></div>
       </div>
 
