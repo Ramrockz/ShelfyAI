@@ -533,20 +533,6 @@
     flex-wrap: wrap;
   }
 
-  /* Receipt rows — one tap target per receipt (thumbnail + name opens a
-     full viewer, a separate icon button deletes) instead of a grid of large
-     tiles with inline text links, which cramped on narrow screens. */
-  .receipt-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-  .receipt-row { display: flex; align-items: center; gap: 10px; }
-  .receipt-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
-                       background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px;
-                       padding: 8px 12px; cursor: pointer; text-align: left; font-family: inherit; }
-  .receipt-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--bg-panel); }
-  .receipt-row-label { font-size: 14px; font-weight: 600; color: var(--text-main); }
-  .receipt-del-btn { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: transparent;
-                      border: 1px solid rgba(239,68,68,0.3); color: var(--danger); cursor: pointer;
-                      display: flex; align-items: center; justify-content: center; }
-
   @keyframes loading {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
@@ -1427,17 +1413,6 @@
     </div>
   </div>
 
-  <!-- Receipt viewer -->
-  <div class="modal-overlay" id="receiptViewerModal" onclick="if(event.target === this) closeReceiptViewer()">
-    <div class="modal-content" style="max-width: 520px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-      <img id="receiptViewerImg" src="" alt="Receipt" style="width: 100%; max-height: 65vh; object-fit: contain; border-radius: 10px; background: var(--bg-inner);" />
-      <div style="display: flex; gap: 10px;">
-        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeReceiptViewer()">Close</button>
-        <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--accent);" onclick="receiptViewerDownload()">Download</button>
-        <button type="button" class="btn" style="flex: 1; background: transparent; border: 1px solid rgba(239,68,68,0.3); color: var(--danger);" onclick="receiptViewerDelete()">Delete</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Item sheet (mobile pack list) — stepper + remove for one line item -->
@@ -2012,65 +1987,39 @@ function displayReceiptSection() {
     receiptUrls = [orderData.receipt_url];
   }
   
-  const uploadHtml = `
-    <input type="file" id="receiptInput" accept="image/*,.pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)" />
-    <button onclick="document.getElementById('receiptInput').click()" class="receipt-attach-btn">
-      <i data-lucide="${receiptUrls.length ? 'plus' : 'paperclip'}" style="width: 18px; height: 18px;"></i>
-      ${receiptUrls.length ? 'Add More Receipts' : 'Upload Receipts'}
-    </button>`;
-
   if (receiptUrls.length > 0) {
+    // Show existing receipts in grid
     content.innerHTML = `
-      <div class="receipt-list">
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
         ${receiptUrls.map((url, index) => `
-          <div class="receipt-row">
-            <button type="button" class="receipt-row-main" onclick="openReceiptViewer(${index})">
-              <img src="${url}" alt="Receipt ${index + 1}" class="receipt-thumb" loading="lazy" />
-              <span class="receipt-row-label">Receipt ${index + 1}</span>
-            </button>
-            <button type="button" class="receipt-del-btn" onclick="event.stopPropagation(); deleteReceipt(${index})" aria-label="Delete receipt" title="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-            </button>
+          <div style="position: relative; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--bg-inner);">
+            <img src="${url}" alt="Receipt ${index + 1}" onclick="window.open('${url}', '_blank')" style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" title="Click to preview" />
+            <div style="display: flex; gap: 8px; font-size: 12px;">
+              <button onclick="downloadReceipt('${url}', ${index})" style="flex: 1; background: transparent; color: var(--accent); border: none; cursor: pointer; font-weight: 600; padding: 4px 0; text-decoration: none; text-align: center;">Download</button>
+              <button onclick="deleteReceipt(${index})" style="flex: 1; background: transparent; color: var(--danger); border: none; cursor: pointer; font-weight: 600; padding: 4px 0;">Delete</button>
+            </div>
           </div>
         `).join('')}
       </div>
-      ${uploadHtml}
+      <input type="file" id="receiptInput" accept="image/*,.pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)" />
+      <button onclick="document.getElementById('receiptInput').click()" class="receipt-attach-btn">
+        <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+        Add More Receipts
+      </button>
     `;
+    lucide.createIcons();
   } else {
-    content.innerHTML = uploadHtml + `<p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Supported: JPG, PNG, PDF (max 10MB each, multiple files allowed)</p>`;
+    // Show upload button
+    content.innerHTML = `
+      <input type="file" id="receiptInput" accept="image/*,.pdf" multiple style="display: none;" onchange="handleReceiptFiles(this.files)" />
+      <button onclick="document.getElementById('receiptInput').click()" class="receipt-attach-btn">
+        <i data-lucide="paperclip" style="width: 18px; height: 18px;"></i>
+        Upload Receipts
+      </button>
+      <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">Supported: JPG, PNG, PDF (max 10MB each, multiple files allowed)</p>
+    `;
+    lucide.createIcons();
   }
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-// Full-screen preview reached by tapping a receipt row, replacing the old
-// window.open(url, '_blank') -- opening a whole new tab/window to see one
-// image is a clumsy, easy-to-lose-your-place interaction on mobile.
-let _receiptViewerIndex = null;
-function _currentReceiptUrls() {
-  if (orderData.receipt_urls) return typeof orderData.receipt_urls === 'string' ? JSON.parse(orderData.receipt_urls) : orderData.receipt_urls;
-  if (orderData.receipt_url) return [orderData.receipt_url];
-  return [];
-}
-function openReceiptViewer(index) {
-  const url = _currentReceiptUrls()[index];
-  if (!url) return;
-  _receiptViewerIndex = index;
-  document.getElementById('receiptViewerImg').src = url;
-  document.getElementById('receiptViewerModal').classList.add('active');
-}
-function closeReceiptViewer() {
-  document.getElementById('receiptViewerModal')?.classList.remove('active');
-  _receiptViewerIndex = null;
-}
-function receiptViewerDownload() {
-  if (_receiptViewerIndex === null) return;
-  downloadReceipt(_currentReceiptUrls()[_receiptViewerIndex], _receiptViewerIndex);
-}
-function receiptViewerDelete() {
-  if (_receiptViewerIndex === null) return;
-  const index = _receiptViewerIndex;
-  closeReceiptViewer();
-  deleteReceipt(index);
 }
 
 async function checkStorageLimit(fileSize) {
