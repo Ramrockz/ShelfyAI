@@ -152,6 +152,10 @@
   .ai-search svg { color: var(--text-faint, var(--text-muted)); flex-shrink: 0; }
   .ai-search input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 15px; color: var(--text-main); font-family: inherit; }
   .ai-search input::placeholder { color: var(--text-faint, var(--text-muted)); }
+  .ai-filter-btn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border);
+                   background: var(--bg-inner); color: var(--text-muted); display: flex; align-items: center;
+                   justify-content: center; cursor: pointer; }
+  .ai-filter-btn.active { border-color: var(--accent); background: rgba(6,182,212,0.12); color: var(--accent); }
 
   .ai-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .ai-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
@@ -449,7 +453,7 @@
        whole time. Bumping every one of them well clear of anything else
        on the page instead of picking values just barely above 10002. */
     #alertModal, #confirmModal, #rdmDeliveryModal, #rdmRenameSheet,
-    #rdmCategorySheet, #aiUnitSheet {
+    #rdmCategorySheet, #aiUnitSheet, #aiCatSheet {
       z-index: 99999 !important;
     }
 
@@ -3106,6 +3110,7 @@ let _aiDraft = null;       // { qty, unit } being edited in pane 2
 let _aiSwapMode = false;   // true while pane 1 is picking a REPLACEMENT for _aiEditIndex
 let _aiSwapQty = null;     // quantity carried over once that replacement is picked
 let _aiUsageCounts = null; // Map<ingredientId, count of OTHER products using it>, loaded once per modal session
+let _aiCategoryFilter = null; // category name to filter pane 1's pickable items by, or null for all
 
 const AI_UNITS = [
   { u: 'pcs', label: 'pieces' }, { u: 'ea', label: 'each' },
@@ -3174,7 +3179,29 @@ async function openAddIngredientModal() {
 function closeAddIngredientModal() {
   document.getElementById('addIngredientModal').classList.remove('active');
   _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
-  _aiSwapMode = false; _aiSwapQty = null;
+  _aiSwapMode = false; _aiSwapQty = null; _aiCategoryFilter = null;
+  document.getElementById('aiFilterBtn')?.classList.remove('active');
+}
+
+function aiOpenCatSheet() {
+  document.getElementById('aiCatList').innerHTML = _recipeCategories.map(cat => {
+    const icon = _recipeCategIconMap[cat] || 'tag';
+    const on = _aiCategoryFilter === cat;
+    return `<div class="cat-row${on ? ' active' : ''}" onclick="aiPickCategory('${cat.replace(/'/g, "\\'")}')">
+        <i data-lucide="${icon}"></i><span class="cat-row-label">${cat}</span>
+      </div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+  document.getElementById('aiCatSheet').classList.add('active');
+}
+function aiCloseCatSheet() {
+  document.getElementById('aiCatSheet').classList.remove('active');
+}
+function aiPickCategory(cat) {
+  _aiCategoryFilter = _aiCategoryFilter === cat ? null : cat; // tap the active one again to clear
+  aiCloseCatSheet();
+  document.getElementById('aiFilterBtn').classList.toggle('active', !!_aiCategoryFilter);
+  aiRenderList();
 }
 
 function aiShowPane(which) {
@@ -3201,6 +3228,7 @@ function aiRenderList() {
     ? (components[_aiEditIndex]?.ingredient_id || components[_aiEditIndex]?.id)
     : null;
   const usage = _aiUsageCounts || new Map();
+  const matchesCat = ing => !_aiCategoryFilter || ing.category === _aiCategoryFilter;
 
   const rowHtml = (ing) => {
     const isCurrentSwap = swapIngId && ing.id === swapIngId;
@@ -3242,17 +3270,18 @@ function aiRenderList() {
 
   let html = '';
   if (q) {
-    const hits = availableIngredients.filter(i => i.name.toLowerCase().includes(q) || _aiAttrMatch(i, q));
+    const hits = availableIngredients.filter(matchesCat).filter(i => i.name.toLowerCase().includes(q) || _aiAttrMatch(i, q));
     if (hits.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Matches</span><span class="ai-sec-note">${hits.length}</span></div><div class="ai-list">${hits.map(rowHtml).join('')}</div>`;
     if (!_aiSwapMode) html += `<div class="ai-list" style="margin-top:${hits.length ? '10px' : '18px'}">${newRow()}</div>`;
   } else if (_aiSwapMode) {
-    const common = availableIngredients.filter(i => i.id !== swapIngId && !inRecipeIds.has(i.id) && (usage.get(i.id) || 0) >= 2);
-    const rest = availableIngredients.filter(i => !common.includes(i));
+    const pool = availableIngredients.filter(i => matchesCat(i) || i.id === swapIngId);
+    const common = pool.filter(i => i.id !== swapIngId && !inRecipeIds.has(i.id) && (usage.get(i.id) || 0) >= 2);
+    const rest = pool.filter(i => !common.includes(i));
     if (common.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">Often used together</span><span class="ai-sec-note">${common.length}</span></div><div class="ai-list">${common.map(rowHtml).join('')}</div>`;
     html += `<div class="ai-sec-head"><span class="ai-sec-title">All items</span><span class="ai-sec-note">${rest.length}</span></div><div class="ai-list">${rest.map(rowHtml).join('')}</div>`;
   } else {
     const inRecipe = components.map(c => availableIngredients.find(i => i.id === (c.ingredient_id || c.id))).filter(Boolean);
-    const notInRecipe = availableIngredients.filter(i => !inRecipeIds.has(i.id));
+    const notInRecipe = availableIngredients.filter(i => !inRecipeIds.has(i.id) && matchesCat(i));
     const common = notInRecipe.filter(i => (usage.get(i.id) || 0) >= 2);
     const rest = notInRecipe.filter(i => (usage.get(i.id) || 0) < 2);
     if (inRecipe.length) html += `<div class="ai-sec-head"><span class="ai-sec-title">In this product</span><span class="ai-sec-note">$${(parseFloat(recipe.cost) || 0).toFixed(2)} per unit</span></div><div class="ai-list">${inRecipe.map(rowHtml).join('')}</div>`;
@@ -3923,11 +3952,14 @@ document.addEventListener('keydown', (e) => {
           </span>
           <button type="button" class="ai-act" onclick="createNewIngredient()">New</button>
         </div>
-        <div class="ai-find">
-          <label class="ai-search">
+        <div class="ai-find" style="display:flex; gap:8px; align-items:center;">
+          <label class="ai-search" style="flex:1;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="17" height="17"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
             <input id="aiQ" type="search" placeholder="Search your items" oninput="aiRenderList()" autocomplete="off">
           </label>
+          <button type="button" class="ai-filter-btn" id="aiFilterBtn" onclick="aiOpenCatSheet()" aria-label="Filter by category">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+          </button>
         </div>
       </div>
       <div class="ai-scroll" id="aiScroll"></div>
@@ -4029,6 +4061,13 @@ document.addEventListener('keydown', (e) => {
     <label class="drow-edit-label">How this is measured</label>
     <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 12px;" id="aiUnitSheetSub"></p>
     <div id="aiUnitList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay modal-sheet" id="aiCatSheet" onclick="if(event.target===this)aiCloseCatSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label">Filter by category</label>
+    <div id="aiCatList"></div>
   </div>
 </div>
 
