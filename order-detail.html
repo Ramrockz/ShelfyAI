@@ -940,6 +940,24 @@
       border-radius: 12px;
     }
 
+    /* .recipes-section's desktop-only margin-top: 32px (meant to space it
+       from a sibling in the two-column desktop layout) was stacking on top
+       of .main-grid's own 16px flex gap here, inflating the gap above the
+       Items section well past expense-detail's equivalent gap. */
+    .recipes-section {
+      margin-top: 0;
+    }
+
+    /* #revenuePanel's inline padding (kept at 24px for desktop, where this
+       panel sits in the two-column grid) is otherwise unbeatable by a plain
+       class rule -- override with !important here so mobile gets a much
+       tighter top/bottom gap, matching expense-detail's plain (unpadded)
+       cost-display block instead of double-spacing on top of the header's
+       own margin-bottom and the items section's own top padding. */
+    #revenuePanel {
+      padding: 4px 24px !important;
+    }
+
     .form-row {
       grid-template-columns: 1fr;
       gap: 12px;
@@ -1315,7 +1333,7 @@
     </div>
 
     <!-- Revenue Panel (first in DOM = first on mobile) -->
-    <div id="revenuePanel" class="panel" style="padding: 24px 24px 8px;">
+    <div id="revenuePanel" class="panel" style="padding: 24px;">
       <div style="text-align: center; margin-bottom: 8px;">
         <div id="totalRevenue" class="editable-field" onclick="openOrderFieldSheet('revenue','Revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer; margin-bottom: 4px;">-</div>
         <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600;">Total Revenue</div>
