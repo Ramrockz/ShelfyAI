@@ -2236,10 +2236,16 @@ async function confirmDelete() {
 // Escape key listener for modals
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.getElementById('orderModal').classList.contains('active')) {
+    if (document.getElementById('rcmMatchSheet').classList.contains('active')) {
+      closeMatchSheet();
+    } else if (document.getElementById('rcmShotSheet').classList.contains('active')) {
+      closeShotSheet();
+    } else if (document.getElementById('orderModal').classList.contains('active')) {
       closeOrderModal();
     } else if (document.getElementById('deleteModal').classList.contains('active')) {
       closeDeleteModal();
+    } else if (document.getElementById('recipeMappingModal').classList.contains('active')) {
+      closeRecipeMappingModal();
     }
   }
 });
@@ -2363,40 +2369,114 @@ document.addEventListener('keydown', (e) => {
 
 </div>
 
-<!-- Recipe Mapping Modal (AI upload result) -->
+<!-- Recipe Mapping Modal (AI upload result) — "Confirm order items" -->
 <div class="modal-overlay" id="recipeMappingModal">
-  <div class="modal-content" style="max-width: 700px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
-    <!-- Scrollable body -->
-    <div style="flex: 1; overflow-y: auto; padding: 24px 24px 16px; min-height: 0;">
-      <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
-      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
-      <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;"></div>
-      <button type="button" onclick="addMappedItemRow()" style="width:100%;padding:10px;margin-bottom:16px;background:transparent;border:1px dashed var(--border);border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">+ Add Product</button>
-      <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="mapped_customer">Customer Name *</label>
-          <input type="text" id="mapped_customer" placeholder="e.g., John Smith, ABC Company" oninput="document.getElementById('mapped_customer_error').style.display='none';this.style.borderColor='';">
-          <p id="mapped_customer_error" style="display:none;color:var(--danger);font-size:12px;margin:4px 0 0;">Please enter a customer name</p>
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label for="mapped_reference">Order Reference</label>
-            <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
-          </div>
-        </div>
-      </div>
+  <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+    <div class="rcm-head">
+      <button type="button" class="rcm-back" onclick="closeRecipeMappingModal()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="21" height="21"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="rcm-titles">
+        <span class="rcm-title">Confirm order items</span>
+        <span class="rcm-sub" id="rcmSub"></span>
+      </span>
+      <button type="button" class="rcm-act" onclick="addMappedItemRow()">Add</button>
     </div>
-    <!-- Sticky footer: inventory toggle + action buttons always visible -->
-    <div style="flex-shrink: 0; border-top: 1px solid var(--border); padding: 16px 24px; background: var(--bg-panel);">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:4px;">
-        <input type="checkbox" id="mapped_update_inventory" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-        Update inventory when creating this order
-      </label>
-      <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px 26px;">Deduct matched product ingredients from stock</p>
-      <div style="display: flex; gap: 12px;">
-        <button type="button" class="btn" style="flex: 1; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
+
+    <div class="rcm-scroll">
+      <div class="rcm-src" id="rcmSrc" style="display:none">
+        <span class="rcm-src-thumb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 16l-5-5-4.5 5"/></svg>
+        </span>
+        <span class="rcm-src-main">
+          <span class="rcm-src-name" id="rcmSrcName"></span>
+          <span class="rcm-src-meta" id="rcmSrcMeta"></span>
+        </span>
+        <button type="button" class="rcm-src-view" onclick="openShotSheet()">View</button>
       </div>
+
+      <div class="rcm-sec-head"><span class="rcm-sec-title">Order</span></div>
+      <div class="rcm-group">
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Customer *</span>
+          <span class="rcm-frow-val"><input type="text" id="mapped_customer" placeholder="No name read"
+            oninput="document.getElementById('mapped_customer_error').style.display='none';this.style.color='';"></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Order</span>
+          <span class="rcm-frow-val"><input type="text" id="mapped_reference" placeholder="No reference"></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Date</span>
+          <span class="rcm-frow-val"><input type="date" id="mapped_date"></span>
+        </div>
+        <div class="rcm-frow" id="rcmChannelRow" style="display:none">
+          <span class="rcm-frow-key">Channel</span>
+          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmChannelVal"></span></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Total read</span>
+          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmTotalVal"></span></span>
+        </div>
+      </div>
+      <p id="mapped_customer_error" style="display:none;color:var(--danger);font-size:12px;margin:6px 16px 0;">Please enter a customer name</p>
+
+      <div class="rcm-sec-head">
+        <span class="rcm-sec-title">Items</span>
+        <span class="rcm-sec-note" id="rcmItemsNote"></span>
+      </div>
+      <div class="rcm-list" id="mappedItemsList"></div>
+      <div class="rcm-note">Text matching can be wrong — check any item marked in amber before saving.</div>
+
+      <div class="rcm-sec-head">
+        <span class="rcm-sec-title">Inventory after saving</span>
+        <span class="rcm-sec-note" id="rcmImpNote"></span>
+      </div>
+      <div class="rcm-imp" id="rcmImpact"></div>
+    </div>
+
+    <div class="rcm-foot">
+      <button type="button" class="rcm-tog" id="mapped_update_inventory_tog" aria-pressed="true" onclick="toggleMappedUpdateStock()">
+        <span class="rcm-tog-main">
+          <span class="rcm-tog-name">Update inventory</span>
+          <span class="rcm-tog-why" id="rcmTogWhy"></span>
+        </span>
+        <span class="rcm-tog-sw"></span>
+      </button>
+      <div class="rcm-tally">
+        <span class="rcm-tally-l" id="rcmTallyL"></span>
+        <span class="rcm-tally-r" id="rcmTallyR">$0.00</span>
+      </div>
+      <div id="rcmTallyWarn"></div>
+      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Save order</button>
+      <button type="button" class="rcm-ghost" onclick="closeRecipeMappingModal()">Discard this scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product-match sheet — nested on top of #recipeMappingModal -->
+<div class="modal-overlay modal-sheet" id="rcmMatchSheet" onclick="if(event.target===this)closeMatchSheet()">
+  <div class="modal-content">
+    <h2 class="rcm-sheet-title">Which product is this?</h2>
+    <p class="rcm-sheet-sub" id="rcmMatchSub"></p>
+    <div class="rcm-sheet-find">
+      <label class="rcm-sheet-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <input id="rcmMatchQ" type="search" placeholder="Search your products" oninput="renderMatchList()" autocomplete="off">
+      </label>
+    </div>
+    <div class="rcm-sheet-scroll" id="rcmMatchList"></div>
+    <button type="button" class="rcm-sheet-new" id="rcmMatchNew" onclick="createProductFromLine()">+ Create as a new product</button>
+  </div>
+</div>
+
+<!-- View-screenshot sheet -->
+<div class="modal-overlay modal-sheet" id="rcmShotSheet" onclick="if(event.target===this)closeShotSheet()">
+  <div class="modal-content">
+    <h2 class="rcm-sheet-title">What you scanned</h2>
+    <p class="rcm-sheet-sub" id="rcmShotSub"></p>
+    <div class="rcm-shot-body">
+      <div class="rcm-shot" id="rcmShot"></div>
     </div>
   </div>
 </div>
@@ -2450,6 +2530,11 @@ let orderRecipes = [];
 let pendingReceiptUrl = null;
 let mappedOrderData = null;
 let mappedRecipes = [];
+let mappedUpdateStock = true;
+let mappedEditingIndex = null;
+let _rcmMatchToken = 0;
+let _rcmImpactToken = 0;
+let _rcmLastOptions = [];
 
 // --- Method Modal ---
 // Thin wrapper over the shared create-modal.js sheet.
@@ -3208,38 +3293,48 @@ async function matchItemToRecipes(itemData) {
   }
 }
 
+const ICON_RCM_BOX   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/></svg>';
+const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.7-2.5 2-2.5 3.7"/><line x1="12" y1="17.5" x2="12" y2="17.5"/></svg>';
+const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_RCM_CHECK = '<svg class="rcm-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="17" height="17"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
+function _rcmParseDate(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function _rcmFileLabel(url) {
+  if (!url) return '';
+  const tail = url.split('/').pop().split('?')[0];
+  try { return decodeURIComponent(tail.replace(/^\d+_/, '')); } catch (e) { return tail; }
+}
+
 async function showRecipeMappingModal(orderData) {
-  console.log('=== showRecipeMappingModal called ===');
-  console.log('orderData:', JSON.stringify(orderData, null, 2));
-  
   mappedOrderData = orderData;
   mappedRecipes = [];
-  const itemsList = document.getElementById('mappedItemsList');
-  itemsList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Matching products...</div>';
+  mappedUpdateStock = true;
+  document.getElementById('mappedItemsList').innerHTML = '<div class="rcm-note" style="padding:24px 16px;text-align:center;">Matching products…</div>';
   document.getElementById('mapped_customer').value = orderData.customer || '';
   document.getElementById('mapped_reference').value = orderData.order_reference || '';
+  document.getElementById('mapped_date').value = _rcmParseDate(orderData.date);
   document.getElementById('recipeMappingModal').classList.add('active');
-  
+
   // Parse items - handle both single item object and array of items
   let detectedItems = [];
   if (orderData.items && Array.isArray(orderData.items)) {
     detectedItems = orderData.items;
   } else if (orderData.item) {
-    // Handle both single item object and array of items
     detectedItems = Array.isArray(orderData.item) ? orderData.item : [orderData.item];
   } else if (orderData.description) {
-    // Fallback to description as single item
-    detectedItems = [{
-      name: orderData.description,
-      quantity: 1,
-      price: 0
-    }];
+    detectedItems = [{ name: orderData.description, quantity: 1, price: 0 }];
   }
-  
-  console.log('=== Detected Items ===');
-  console.log(JSON.stringify(detectedItems, null, 2));
-  
-  // Match each detected item to recipes
+
   for (const item of detectedItems) {
     const itemData = {
       name: item.name || 'Unknown Item',
@@ -3247,142 +3342,286 @@ async function showRecipeMappingModal(orderData) {
       price: item.price || 0,
       attributes: item.attributes || orderData.attributes || {}
     };
-    console.log('=== Matching item ===');
-    console.log('Item data:', JSON.stringify(itemData, null, 2));
     const matches = await matchItemToRecipes(itemData);
-    console.log('Matches found:', matches.length);
-    console.log('Matches:', JSON.stringify(matches, null, 2));
     const bestMatch = matches.length > 0 ? matches[0].recipe : null;
-    mappedRecipes.push({ 
-      itemData, 
-      selectedRecipe: bestMatch, 
-      matches, 
-      quantity: itemData.quantity || 1 
+    mappedRecipes.push({
+      itemData,
+      selectedRecipe: bestMatch,
+      matches,
+      quantity: itemData.quantity || 1,
+      score: matches.length > 0 ? matches[0].score : 0,
+      confirmed: false
     });
   }
-  
-  console.log('=== Final mappedRecipes ===');
-  console.log(JSON.stringify(mappedRecipes, null, 2));
-  
-  renderMappedItems();
-  updateMappedTotal();
+
+  renderRcmAll();
   hideGlobalLoader();
 }
 
-function renderMappedItems() {
-  const container = document.getElementById('mappedItemsList');
-  container.innerHTML = mappedRecipes.map((mapping, index) => {
-    const item = mapping.itemData;
-    const selected = mapping.selectedRecipe;
-    const matches = mapping.matches || [];
-    // Clean item name by removing quantity prefixes like "x1", "1x", "2x", etc.
-    const cleanName = item.name.replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
-    // Use selected recipe's retail price if available, otherwise use item price
-    const displayPrice = selected ? (selected.retail_price || selected.cost * 1.6 || 0) : (item.price || 0);
-    return `
-      <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
-          <div style="flex:1;">
-            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">${cleanName}</div>
-            <div style="font-size:13px;color:var(--text-muted);">${Object.entries(item.attributes||{}).map(([k,v])=>`${k}: ${v}`).join(', ')||'No attributes'}</div>
-          </div>
-          <div style="display:flex;align-items:start;gap:12px;">
-            <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--accent);">$${displayPrice.toFixed(2)}</div></div>
-            <button type="button" onclick="removeMappedItem(${index})" title="Remove item" style="width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0;flex-shrink:0;">&times;</button>
-          </div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Matched Product:</label>
-            ${selected ? `<button type="button" onclick="clearRecipeMapping(${index})" style="padding:4px 8px;font-size:12px;color:var(--danger);background:transparent;border:1px solid var(--danger);border-radius:4px;cursor:pointer;" onmouseover="this.style.background='var(--danger)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--danger)'">Clear</button>` : ''}
-          </div>
-          <div style="position:relative;">
-            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--text-muted);pointer-events:none;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <input type="text" id="recipeSearchInput_${index}" placeholder="Search products..."
-              value="${selected ? selected.name : ''}" autocomplete="off"
-              oninput="searchRecipesForMapping(${index}, this.value)"
-              onfocus="showMappingRecipeDropdown(${index})"
-              onkeydown="if(event.key==='Escape') hideMappingRecipeDropdown(${index})"
-              style="width:100%;padding:10px 10px 10px 34px;border:1px solid var(--border);border-radius:6px;background:var(--bg-main);color:var(--text-main);font-size:14px;box-sizing:border-box;" />
-            <div id="recipeDropdown_${index}" style="position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;display:none;z-index:100;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-              ${matches.map(m=>`<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'">
-                <div style="font-weight:600;font-size:13px;">${m.recipe.name}</div>
-                <div style="font-size:12px;color:var(--text-muted);">${m.matchReason} (${(m.score*100).toFixed(0)}% match)</div></div>`).join('')}
-              ${matches.length===0?'<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">Loading...</div>':''}
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center;">
-          <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Quantity:</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" onclick="adjustMappedQuantity(${index},-1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">&minus;</button>
-            <span style="font-weight:600;min-width:40px;text-align:center;">${mapping.quantity}</span>
-            <button type="button" onclick="adjustMappedQuantity(${index},1)" style="width:32px;height:32px;border:1px solid var(--border);border-radius:4px;background:var(--bg-panel);color:var(--text-main);cursor:pointer;font-size:16px;">+</button>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-  setTimeout(() => {
-    document.addEventListener('click', handleMappingDropdownClickOutside);
-  }, 100);
+function renderRcmAll() {
+  renderRcmHead();
+  renderRcmSrc();
+  renderRcmHeaderFields();
+  renderRcmLines();
+  renderRcmImpact();
+  renderRcmFoot();
 }
 
-function addMappedItemRow() {
-  mappedRecipes.push({
-    itemData: { name: 'Custom item', quantity: 1, price: 0, attributes: {} },
-    selectedRecipe: null,
-    matches: [],
-    quantity: 1
+function renderRcmHead() {
+  const n = mappedRecipes.length;
+  const vendor = mappedOrderData?.vendor;
+  document.getElementById('rcmSub').textContent = n
+    ? `${n} item${n === 1 ? '' : 's'} read${vendor ? ' · ' + vendor : ''}`
+    : (vendor || '');
+}
+
+function renderRcmSrc() {
+  const el = document.getElementById('rcmSrc');
+  if (!pendingReceiptUrl) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  document.getElementById('rcmSrcName').textContent = _rcmFileLabel(pendingReceiptUrl);
+  const n = mappedRecipes.length;
+  document.getElementById('rcmSrcMeta').textContent = `${n} item${n === 1 ? '' : 's'} read${mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : ''}`;
+}
+
+function renderRcmHeaderFields() {
+  const vendor = mappedOrderData?.vendor;
+  const channelRow = document.getElementById('rcmChannelRow');
+  if (vendor) {
+    channelRow.style.display = '';
+    document.getElementById('rcmChannelVal').textContent = vendor;
+  } else {
+    channelRow.style.display = 'none';
+  }
+  const stated = mappedOrderData?.revenue;
+  const totalEl = document.getElementById('rcmTotalVal');
+  const hasTotal = stated !== undefined && stated !== null && stated !== '';
+  totalEl.textContent = hasTotal ? `$${Number(stated).toFixed(2)}` : 'No total read';
+  totalEl.classList.toggle('empty', !hasTotal);
+}
+
+function _rcmLineState(m) {
+  if (!m.selectedRecipe) return 'none';
+  return (m.confirmed || (m.score || 0) >= 0.8) ? 'ok' : 'todo';
+}
+
+function _rcmLineHTML(m, index) {
+  const st = _rcmLineState(m);
+  const item = m.itemData;
+  const cleanName = _rcmCleanName(item.name) || 'Unknown item';
+  const sel = m.selectedRecipe;
+  const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (item.price || 0);
+  const priceOff = sel && item.price && Math.abs(price - item.price) > 0.005;
+  const why = st === 'ok'
+    ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
+    : st === 'todo' ? 'Not sure this is right — check it'
+    : 'No product matches this line';
+  return `<div class="rcm-line" data-state="${st}">
+    <span class="rcm-line-main">
+      <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
+      <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
+        <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
+        <span class="rcm-match-body">
+          <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
+          <span class="rcm-match-why">${_rcmEsc(why)}</span>
+        </span>
+        <span class="rcm-match-swap">${sel ? 'Change' : 'Pick'}</span>
+      </button>
+    </span>
+    <span class="rcm-line-side">
+      <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+      <span class="rcm-step">
+        <button type="button" onclick="bumpMappedQty(${index},-1)" aria-label="One fewer">${ICON_RCM_MINUS}</button>
+        <span class="rcm-step-qty">${m.quantity}</span>
+        <button type="button" onclick="bumpMappedQty(${index},1)" aria-label="One more">${ICON_RCM_PLUS}</button>
+      </span>
+      <span class="rcm-line-money">$${(price * m.quantity).toFixed(2)}
+        <small>$${price.toFixed(2)} ea${priceOff ? ' · differs' : ''}</small>
+      </span>
+    </span>
+  </div>`;
+}
+
+function renderRcmLines() {
+  const todo = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
+  const note = document.getElementById('rcmItemsNote');
+  note.textContent = todo ? `${todo} need${todo > 1 ? '' : 's'} checking` : `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'}`;
+  todo ? note.setAttribute('data-state', 'todo') : note.removeAttribute('data-state');
+
+  document.getElementById('mappedItemsList').innerHTML = mappedRecipes.length
+    ? mappedRecipes.map((m, i) => _rcmLineHTML(m, i)).join('')
+    : '<div class="rcm-line"><span class="rcm-line-main"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></span></div>';
+}
+
+// An order consumes the items on its products' recipes, never "product
+// stock" — there is no such column. Two lines can hit the same item.
+async function computeRcmImpact() {
+  const use = {};
+  mappedRecipes.forEach(m => {
+    if (!m.selectedRecipe || !m.selectedRecipe.components) return;
+    m.selectedRecipe.components.forEach(comp => {
+      const iid = comp.ingredient_id || comp.id;
+      if (!iid) return;
+      const qty = (parseFloat(comp.quantity) || 0) * m.quantity;
+      use[iid] = Math.round(((use[iid] || 0) + qty) * 100) / 100;
+    });
   });
-  renderMappedItems();
-  updateMappedTotal();
-  // Scroll to the new row
-  const list = document.getElementById('mappedItemsList');
-  if (list) list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const ids = Object.keys(use);
+  if (!ids.length) return { use, ingredients: {} };
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return { use, ingredients: {} };
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, quantity').eq('profile_id', user.id).in('id', ids);
+  const map = {};
+  (ingredients || []).forEach(i => { map[i.id] = i; });
+  return { use, ingredients: map };
+}
+
+async function renderRcmImpact() {
+  const token = ++_rcmImpactToken;
+  const { use, ingredients } = await computeRcmImpact();
+  if (token !== _rcmImpactToken) return; // a newer render superseded this one
+  const ids = Object.keys(use);
+  const impEl = document.getElementById('rcmImpact');
+  impEl.dataset.off = mappedUpdateStock ? '0' : '1';
+  document.getElementById('rcmImpNote').textContent = !ids.length ? ''
+    : mappedUpdateStock ? `${ids.length} item${ids.length === 1 ? '' : 's'} deducted on save`
+    : 'not being deducted';
+
+  if (!ids.length) {
+    impEl.innerHTML = '<div class="rcm-imp-row"><span class="rcm-imp-name">Nothing matched yet</span></div>';
+    return;
+  }
+  impEl.innerHTML = ids.map(iid => {
+    const ing = ingredients[iid];
+    if (!ing) return '';
+    const current = parseFloat(ing.quantity) || 0;
+    const after = Math.round((current - use[iid]) * 100) / 100;
+    const short = after < 0;
+    const unit = ing.unit ? ' ' + _rcmEsc(ing.unit) : '';
+    return `<div class="rcm-imp-row">
+        <span class="rcm-imp-name">${_rcmEsc(ing.name)}</span>
+        <span class="rcm-imp-val"${short ? ' data-state="short"' : ''}>${mappedUpdateStock
+          ? `${current} → ${after}${unit}${short ? ' · short' : ''}`
+          : `${current}${unit} · unchanged`}</span>
+      </div>`;
+  }).join('');
+}
+
+function toggleMappedUpdateStock() {
+  mappedUpdateStock = !mappedUpdateStock;
+  renderRcmFoot();
+  renderRcmImpact();
+}
+
+function renderRcmFoot() {
+  document.getElementById('mapped_update_inventory_tog').setAttribute('aria-pressed', mappedUpdateStock ? 'true' : 'false');
+  document.getElementById('rcmTogWhy').textContent = mappedUpdateStock
+    ? 'Matched products’ recipe items are deducted when you save'
+    : 'Records the sale only — no items are deducted';
+
+  const sum = mappedRecipes.reduce((s, m) => {
+    const sel = m.selectedRecipe;
+    const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (m.itemData.price || 0);
+    return s + price * m.quantity;
+  }, 0);
+  const totalUnits = mappedRecipes.reduce((s, m) => s + m.quantity, 0);
+  document.getElementById('rcmTallyL').textContent = `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'} · ${totalUnits} unit${totalUnits === 1 ? '' : 's'}`;
+  document.getElementById('rcmTallyR').textContent = `$${sum.toFixed(2)}`;
+
+  const noneCount = mappedRecipes.filter(m => _rcmLineState(m) === 'none').length;
+  const lookCount = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
+  const stated = mappedOrderData?.revenue;
+  const hasStated = stated !== undefined && stated !== null && stated !== '';
+  const gap = hasStated ? Math.round((Number(stated) - sum) * 100) / 100 : 0;
+
+  const bits = [];
+  if (noneCount) bits.push(`${noneCount} item${noneCount > 1 ? 's' : ''} need${noneCount > 1 ? '' : 's'} a product`);
+  if (lookCount) bits.push(`${lookCount} ${noneCount ? '' : `item${lookCount > 1 ? 's' : ''} `}need${lookCount > 1 ? '' : 's'} checking`);
+
+  // Only a shaky auto-match (state "todo") blocks saving — a deliberately
+  // unmatched custom line (state "none", e.g. "gift wrap") is a normal,
+  // save-able, zero-stock-impact line, same as before this redesign.
+  const warnEl = document.getElementById('rcmTallyWarn');
+  warnEl.innerHTML = lookCount
+    ? `<div class="rcm-warn">${bits.join(' · ')}</div>`
+    : (hasStated && Math.abs(gap) > 0.005)
+      ? `<div class="rcm-warn">$${Math.abs(gap).toFixed(2)} ${gap > 0 ? 'less than' : 'more than'} the $${Number(stated).toFixed(2)} on the screenshot</div>`
+      : (noneCount ? `<div class="rcm-warn" style="color:var(--text-faint,var(--text-muted))">${bits.join(' · ')}</div>` : '');
+
+  const btn = document.getElementById('rcmSaveBtn');
+  btn.disabled = !mappedRecipes.length || lookCount > 0;
+  btn.textContent = lookCount
+    ? `Confirm ${lookCount} item${lookCount > 1 ? 's' : ''} to save`
+    : mappedUpdateStock ? `Save order · $${sum.toFixed(2)}` : 'Save without updating stock';
+}
+
+function bumpMappedQty(index, delta) {
+  mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
 }
 
 function removeMappedItem(index) {
   mappedRecipes.splice(index, 1);
-  renderMappedItems();
-  updateMappedTotal();
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
 }
 
-function handleMappingDropdownClickOutside(event) {
-  mappedRecipes.forEach((mapping, index) => {
-    const dropdown = document.getElementById(`recipeDropdown_${index}`);
-    const input = document.getElementById(`recipeSearchInput_${index}`);
-    if (dropdown && input && !dropdown.contains(event.target) && !input.contains(event.target)) {
-      hideMappingRecipeDropdown(index);
-    }
+function addMappedItemRow() {
+  mappedRecipes.push({
+    itemData: { name: 'Added by you', quantity: 1, price: 0, attributes: {} },
+    selectedRecipe: null, matches: [], quantity: 1, score: 0, confirmed: false
   });
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  openMatchSheet(mappedRecipes.length - 1);
 }
 
-function showMappingRecipeDropdown(index) {
-  const d = document.getElementById(`recipeDropdown_${index}`);
-  if (!d) return;
-  d.style.display = 'block';
-  const input = document.getElementById(`recipeSearchInput_${index}`);
-  const currentVal = input ? input.value : '';
-  // Always refresh the dropdown when it opens so the list is populated
-  searchRecipesForMapping(index, currentVal);
+// --- Product-match sheet ---
+function openMatchSheet(index) {
+  mappedEditingIndex = index;
+  const m = mappedRecipes[index];
+  const cleanName = _rcmCleanName(m.itemData.name) || 'this item';
+  document.getElementById('rcmMatchSub').textContent = `The screenshot said "${cleanName}" · ${m.quantity} × $${(m.itemData.price || 0).toFixed(2)}`;
+  document.getElementById('rcmMatchQ').value = '';
+  renderMatchList();
+  document.getElementById('rcmMatchSheet').classList.add('active');
 }
-function hideMappingRecipeDropdown(index) {
-  const d = document.getElementById(`recipeDropdown_${index}`);
-  if (d) d.style.display = 'none';
+function closeMatchSheet() {
+  document.getElementById('rcmMatchSheet').classList.remove('active');
+  mappedEditingIndex = null;
 }
 
-async function searchRecipesForMapping(index, searchTerm) {
-  const dropdown = document.getElementById(`recipeDropdown_${index}`);
-  if (!dropdown) return;
-  const preMatches = mappedRecipes[index]?.matches || [];
+function _rcmOptHTML(recipe, selected, likely) {
+  const isSel = !!(selected && selected.id === recipe.id);
+  const price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
+  const compCount = Array.isArray(recipe.components) ? recipe.components.length : 0;
+  return `<button type="button" class="rcm-opt" aria-selected="${isSel}" onclick="pickMatch(${_rcmLastOptions.length - 1})">
+    <span class="rcm-opt-body">
+      <span class="rcm-opt-name">${_rcmEsc(recipe.name)}</span>
+      <span class="rcm-opt-meta">$${price.toFixed(2)}${compCount ? ` · ${compCount} item${compCount === 1 ? '' : 's'} on its recipe` : ' · no recipe yet'}</span>
+    </span>
+    ${likely && !isSel ? '<span class="rcm-opt-tag">likely</span>' : ''}
+    ${isSel ? ICON_RCM_CHECK : ''}
+  </button>`;
+}
 
-  // If there's a search term, or no pre-matches to show, hit the DB
-  const needsDbFetch = searchTerm.trim() || preMatches.length === 0;
+async function renderMatchList() {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const m = mappedRecipes[index];
+  const q = document.getElementById('rcmMatchQ').value.trim();
+  const listEl = document.getElementById('rcmMatchList');
+  const token = ++_rcmMatchToken;
+  _rcmLastOptions = [];
 
-  if (!needsDbFetch) {
-    // Show pre-matched suggestions
-    dropdown.innerHTML = preMatches.map(m => `<div onclick="selectRecipeForMapping(${index},'${m.recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${m.recipe.name}</div><div style="font-size:12px;color:var(--text-muted);">${m.matchReason}</div></div>`).join('');
-    dropdown.style.display = 'block';
+  if (!q) {
+    const opts = (m.matches || []).slice(0, 20);
+    if (!opts.length) {
+      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No suggestions — search your products above.</span></span></div>';
+      return;
+    }
+    listEl.innerHTML = opts.map(o => {
+      _rcmLastOptions.push(o.recipe);
+      return _rcmOptHTML(o.recipe, m.selectedRecipe, o.score >= 0.5);
+    }).join('');
     return;
   }
 
@@ -3391,87 +3630,73 @@ async function searchRecipesForMapping(index, searchTerm) {
     if (!user) return;
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    let query = supabaseClient.from('recipes').select('id, name, cost, retail_price').eq('profile_id', user.id).limit(20);
-    if (searchTerm.trim()) query = query.ilike('name', `%${searchTerm}%`);
+    let query = supabaseClient.from('recipes').select('*').eq('profile_id', user.id).ilike('name', `%${q}%`).limit(25);
     if (storeId) query = query.eq('store_id', storeId);
-    const { data: allRecipes } = await query;
-    // If the user closed the dropdown while fetching, don't re-open it
-    if (dropdown.style.display === 'none') return;
-    if (!allRecipes || allRecipes.length === 0) {
-      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No products found</div>';
-      dropdown.style.display = 'block';
+    const { data: recipes } = await query;
+    if (token !== _rcmMatchToken || mappedEditingIndex !== index) return; // stale response
+    if (!recipes || !recipes.length) {
+      listEl.innerHTML = `<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No product matches "${_rcmEsc(q)}".</span></span></div>`;
       return;
     }
-    dropdown.innerHTML = allRecipes.map(recipe => `<div onclick="selectRecipeForMappingById(${index},'${recipe.id}')" style="padding:10px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg-inner)'" onmouseout="this.style.background='transparent'"><div style="font-weight:600;font-size:13px;">${recipe.name}</div>${recipe.retail_price ? `<div style="font-size:12px;color:var(--text-muted);">€${recipe.retail_price.toFixed(2)}</div>` : ''}</div>`).join('');
-    dropdown.style.display = 'block';
+    listEl.innerHTML = recipes.map(r => {
+      _rcmLastOptions.push(r);
+      return _rcmOptHTML(r, m.selectedRecipe, false);
+    }).join('');
   } catch (error) {
     console.error('Error searching recipes:', error);
-    if (dropdown.style.display !== 'none') {
-      dropdown.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">Search failed. Please try again.</div>';
-      dropdown.style.display = 'block';
+    if (token === _rcmMatchToken) {
+      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">Search failed. Please try again.</span></span></div>';
     }
   }
 }
 
-function selectRecipeForMapping(index, recipeId) {
-  const match = mappedRecipes[index].matches.find(m => m.recipe.id === recipeId);
-  if (match) {
-    mappedRecipes[index].selectedRecipe = match.recipe;
-    document.getElementById(`recipeSearchInput_${index}`).value = match.recipe.name;
+function pickMatch(i) {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const recipe = _rcmLastOptions[i];
+  if (!recipe) return;
+  const m = mappedRecipes[index];
+  m.selectedRecipe = recipe;
+  m.confirmed = true;
+  if (!m.itemData.price) m.itemData.price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
+  closeMatchSheet();
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+}
+
+// Hands off to recipes.html's builder (same pattern as
+// openProductCreateFromOrder) — warns first since this order's matched
+// lines are only in-memory and don't survive the navigation.
+function createProductFromLine() {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const cleanName = _rcmCleanName(mappedRecipes[index].itemData.name);
+  const hasProgress = mappedRecipes.some(r => r.selectedRecipe);
+  if (hasProgress && !confirm("Creating a new product will leave this order — any products you've already matched won't be saved. Continue?")) return;
+  createProductFromOrderSearch(cleanName);
+}
+
+// --- View-original-screenshot sheet ---
+function openShotSheet() {
+  document.getElementById('rcmShotSub').textContent = _rcmFileLabel(pendingReceiptUrl) + (mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : '');
+  const shotEl = document.getElementById('rcmShot');
+  if (!pendingReceiptUrl) {
+    shotEl.innerHTML = '<div class="rcm-shot-empty">No screenshot on file for this order.</div>';
+  } else if (/\.pdf(\?|$)/i.test(pendingReceiptUrl)) {
+    shotEl.innerHTML = `<div class="rcm-shot-empty">This was a PDF. <a href="${_rcmEsc(pendingReceiptUrl)}" target="_blank" rel="noopener">Open it in a new tab</a>.</div>`;
+  } else {
+    shotEl.innerHTML = `<img src="${_rcmEsc(pendingReceiptUrl)}" alt="Uploaded screenshot">`;
   }
-  hideMappingRecipeDropdown(index);
-  renderMappedItems(); // Re-render to update price
-  updateMappedTotal();
+  document.getElementById('rcmShotSheet').classList.add('active');
 }
-
-async function selectRecipeForMappingById(index, recipeId) {
-  try {
-    const { data: recipe } = await supabaseClient.from('recipes').select('*').eq('id', recipeId).single();
-    if (recipe) {
-      mappedRecipes[index].selectedRecipe = recipe;
-      document.getElementById(`recipeSearchInput_${index}`).value = recipe.name;
-    }
-    hideMappingRecipeDropdown(index);
-    renderMappedItems(); // Re-render to update price
-    updateMappedTotal();
-  } catch (error) { console.error('Error selecting recipe:', error); }
-}
-
-function clearRecipeMapping(index) {
-  mappedRecipes[index].selectedRecipe = null;
-  const searchInput = document.getElementById(`recipeSearchInput_${index}`);
-  if (searchInput) searchInput.value = '';
-  hideMappingRecipeDropdown(index);
-  renderMappedItems();
-  updateMappedTotal();
-}
-
-function adjustMappedQuantity(index, delta) {
-  mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
-  renderMappedItems();
-  updateMappedTotal();
-}
-
-function updateMappedTotal() {
-  const totalElement = document.getElementById('mappedTotalRevenue');
-  if (!totalElement) return; // Element removed from modal
-  
-  const total = mappedRecipes.reduce((sum, mapping) => {
-    if (mapping.selectedRecipe) {
-      const recipeCost = parseFloat(mapping.selectedRecipe.cost) || 0;
-      const retailPrice = mapping.selectedRecipe.retail_price || (recipeCost * 1.6);
-      return sum + (retailPrice * mapping.quantity);
-    }
-    return sum + ((mapping.itemData.price || 0) * mapping.quantity);
-  }, 0);
-  totalElement.textContent = `$${total.toFixed(2)}`;
-}
+function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
 function closeRecipeMappingModal() {
   document.getElementById('recipeMappingModal').classList.remove('active');
+  closeMatchSheet();
+  closeShotSheet();
   mappedOrderData = null;
   mappedRecipes = [];
-  document.removeEventListener('click', handleMappingDropdownClickOutside);
+  mappedUpdateStock = true;
 }
 
 async function confirmMappedOrder() {
@@ -3480,7 +3705,7 @@ async function confirmMappedOrder() {
     if (!customer) {
       const inp = document.getElementById('mapped_customer');
       const err = document.getElementById('mapped_customer_error');
-      if (inp) inp.style.borderColor = 'var(--danger)';
+      if (inp) inp.style.color = 'var(--danger)';
       if (err) err.style.display = 'block';
       inp?.focus();
       return;
@@ -3490,15 +3715,13 @@ async function confirmMappedOrder() {
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const items = [], selectedOrderRecipes = [], unmatchedItems = [];
-    mappedRecipes.forEach((mapping, idx) => {
+    mappedRecipes.forEach((mapping) => {
       if (mapping.selectedRecipe) {
         const recipePrice = parseFloat(mapping.selectedRecipe.retail_price) || parseFloat(mapping.selectedRecipe.cost) || 0;
         selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
         items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
       } else {
-        // Use whatever the user typed in the search box, fall back to itemData name
-        const typedName = document.getElementById(`recipeSearchInput_${idx}`)?.value?.trim();
-        const itemName = typedName || mapping.itemData.name || 'Custom item';
+        const itemName = _rcmCleanName(mapping.itemData.name) || 'Custom item';
         items.push({ name: itemName, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
         unmatchedItems.push({ name: itemName, why: 'No product matched this line — no stock was affected' });
       }
@@ -3506,6 +3729,8 @@ async function confirmMappedOrder() {
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const orderReference = document.getElementById('mapped_reference').value || null;
+    const dateVal = document.getElementById('mapped_date').value;
+    const saleDate = dateVal ? new Date(dateVal + 'T12:00:00').toISOString() : new Date().toISOString();
     // Use the URL pre-uploaded during startOrderUpload()'s onImported callback
     const receiptUrls = pendingReceiptUrl ? [pendingReceiptUrl] : null;
     pendingReceiptUrl = null;
@@ -3513,7 +3738,7 @@ async function confirmMappedOrder() {
     const salesRecord = {
       profile_id: user.id,
       store_id: storeId,
-      sale_date: new Date().toISOString(),
+      sale_date: saleDate,
       customer: customer,
       source: 'Image Upload',
       items: items,
@@ -3526,15 +3751,14 @@ async function confirmMappedOrder() {
     };
     const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
     if (error) throw error;
-    const updateInventory = document.getElementById('mapped_update_inventory')?.checked !== false;
     let inventoryChanges = null;
-    if (updateInventory && selectedOrderRecipes.length > 0 && data && data[0]) {
+    if (mappedUpdateStock && selectedOrderRecipes.length > 0 && data && data[0]) {
       inventoryChanges = await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
     closeRecipeMappingModal();
     document.getElementById('manualStep1').style.display = 'none';
     document.getElementById('manualOrderModal').classList.add('active');
-    showOrderSuccessScreen(data[0], updateInventory, inventoryChanges, unmatchedItems);
+    showOrderSuccessScreen(data[0], mappedUpdateStock, inventoryChanges, unmatchedItems);
     await loadOrders();
     render();
   } catch (error) {
