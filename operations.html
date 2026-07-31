@@ -5879,20 +5879,19 @@ async function _getLastUsedRecipes() {
 const ORDER_PICK_ICON_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ORDER_PICK_ICON_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="19" height="19"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
+// Products don't have a stock quantity of their own -- only their component
+// ingredients do. This row used to show "N left" here, but that number was
+// just the smallest raw remaining ingredient quantity (wrong unit, never
+// divided by how much of it one unit actually needs), not a real "how many
+// of this could we build" count. Rather than mix that up with a genuine
+// buildable-count feature, this row just shows price -- no invented
+// per-product quantity.
 function _orderRowHtml(recipe, virtualMap) {
   const picked = orderRecipes.find(r => r.id === recipe.id);
   const qty = picked ? picked.quantity : 0;
   const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
   const nameEsc = escapeHtml(recipe.name);
-  let metaHtml = `$${price.toFixed(2)}`;
-  let state = '';
-  if ((recipe.components || []).length) {
-    const proj = _projectedStatus(recipe, virtualMap);
-    state = proj.state;
-    metaHtml += qty ? ` · <b>${proj.remain}</b> left` : ` · ${proj.remain} left`;
-    if (state === 'short') metaHtml += ` · short ${Math.abs(proj.remain)}`;
-    else if (state === 'out' && qty) metaHtml += ' · none left';
-  }
+  const metaHtml = `$${price.toFixed(2)}`;
   const stepper = qty
     ? `<span class="op-step" onclick="event.stopPropagation()">
         <button type="button" onclick="bumpOrderRecipe('${recipe.id}', -1)" aria-label="One fewer">${ORDER_PICK_ICON_MINUS}</button>
@@ -5904,7 +5903,7 @@ function _orderRowHtml(recipe, virtualMap) {
     <div class="op-row" data-picked="${qty ? 1 : 0}" onclick="bumpOrderRecipe('${recipe.id}', 1)">
       <span class="op-main">
         <span class="op-name">${nameEsc}</span>
-        <span class="op-meta"${state ? ` data-state="${state}"` : ''}>${metaHtml}</span>
+        <span class="op-meta">${metaHtml}</span>
       </span>
       ${stepper}
     </div>`;
@@ -6033,11 +6032,10 @@ async function renderOrderRecipeSections() {
 
   let html = '';
   if (q) {
-    const hits = pool.filter(r => {
-      if ((r.name || '').toLowerCase().includes(q)) return true;
-      if (Array.isArray(r.components)) return r.components.some(c => ((c.ingredient_name || c.name || '')).toLowerCase().includes(q));
-      return false;
-    });
+    // Product name only -- this is a product picker, not an ingredient
+    // picker, so matching against a component's ingredient name (e.g.
+    // typing "wax" and getting every candle back) doesn't make sense here.
+    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q));
     if (hits.length) {
       html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
         <div class="op-list">${hits.map(r => _orderRowHtml(r, virtualMap)).join('')}</div>`;
