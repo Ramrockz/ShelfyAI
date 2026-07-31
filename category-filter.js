@@ -2,30 +2,35 @@
 // Category Filter Mapping System
 // ═══════════════════════════════════════════════════════════════
 
-// Map onboarding categories to system categories
-const CATEGORY_MAPPING = {
-  'Handmade Crafts & Art': ['Wood', 'Paper', 'Colors', 'Tools'],
-  'Jewelry & Accessories': ['Jewelry', 'Boxes', 'Packaging'],
-  'Home Decor': ['Wood', 'Plants', 'Boxes', 'Cards'],
-  'Apparel & Fashion': ['Apparel', 'Spool', 'Rope'],
-  'Beauty & Skincare': ['Boxes', 'Packaging', 'Giveaway'],
-  'Food & Beverage': ['Food', 'Candy', 'Beverage', 'Packaging'],
-  'Stationery & Paper Goods': ['Paper', 'Letter', 'Cards', 'Office Supplies'],
-  'Toys & Games': ['Toys', 'Gaming', 'Giveaway'],
-  'Party Supplies & Gifts': ['Party Supplies', 'Giveaway', 'Cards'],
-  'Electronics & Gadgets': ['Electronics', 'Tools', 'Printing Supplies'],
-  'Tools & Supplies': ['Tools', 'Packaging', 'Boxes'],
-  'Whatever': ['Apparel', 'Wood', 'Boxes', 'Cards', 'Plants', 'Candy', 'Beverage', 'Jewelry', 
-               'Party Supplies', 'Gaming', 'Toys', 'Office Supplies', 'Colors', 'Rope', 'Paper', 
-               'Spool', 'Letter', 'Giveaway', 'Electronics', 'Printing Supplies', 'Tools', 'Packaging', 'Food']
-};
-
-// All system categories
+// All system categories -- a generic inventory-item classification (Raw
+// Material, Component, ...), not a craft-type-specific one. Every business
+// type needs all of these regardless of what it sells (a jewelry shop and
+// a candle shop both have raw materials, components, packaging, ...), so
+// the old per-business-type subsetting no longer has a meaningful basis.
 const ALL_SYSTEM_CATEGORIES = [
-  'Apparel', 'Wood', 'Boxes', 'Cards', 'Plants', 'Candy', 'Beverage', 'Jewelry',
-  'Party Supplies', 'Gaming', 'Toys', 'Office Supplies', 'Colors', 'Rope', 'Paper',
-  'Spool', 'Letter', 'Giveaway', 'Electronics', 'Printing Supplies', 'Tools', 'Packaging', 'Food'
+  'Raw Material', 'Component', 'Base Product', 'Packaging', 'Shipping Supply',
+  'Finished Product', 'Digital Product', 'Equipment', 'Consumable', 'Other'
 ];
+
+// Map onboarding categories to system categories -- every business type maps
+// to the full list now (see comment above ALL_SYSTEM_CATEGORIES). Kept as a
+// per-key mapping rather than collapsing the feature entirely so a future,
+// genuinely business-specific subset can be reintroduced without reworking
+// every call site.
+const CATEGORY_MAPPING = {
+  'Handmade Crafts & Art': ALL_SYSTEM_CATEGORIES,
+  'Jewelry & Accessories': ALL_SYSTEM_CATEGORIES,
+  'Home Decor': ALL_SYSTEM_CATEGORIES,
+  'Apparel & Fashion': ALL_SYSTEM_CATEGORIES,
+  'Beauty & Skincare': ALL_SYSTEM_CATEGORIES,
+  'Food & Beverage': ALL_SYSTEM_CATEGORIES,
+  'Stationery & Paper Goods': ALL_SYSTEM_CATEGORIES,
+  'Toys & Games': ALL_SYSTEM_CATEGORIES,
+  'Party Supplies & Gifts': ALL_SYSTEM_CATEGORIES,
+  'Electronics & Gadgets': ALL_SYSTEM_CATEGORIES,
+  'Tools & Supplies': ALL_SYSTEM_CATEGORIES,
+  'Whatever': ALL_SYSTEM_CATEGORIES
+};
 
 // Get filtered categories based on user's onboarding preferences
 function getPersonalizedCategories(onboardingCategories) {

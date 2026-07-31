@@ -1974,13 +1974,10 @@ let recipeActiveCategoryFilter = null;
 let recipeActiveAttrValueFilters = new Map();
 
 const _rdCategIconMap = {
-  'Apparel':'shirt','Wood':'tree-pine','Boxes':'archive','Cards':'tickets',
-  'Plants':'sprout','Candy':'lollipop','Beverage':'amphora','Jewelry':'gem',
-  'Party Supplies':'party-popper','Gaming':'gamepad-2','Toys':'drum',
-  'Office Supplies':'paperclip','Colors':'palette','Rope':'lasso',
-  'Paper':'origami','Spool':'spool','Letter':'mail','Giveaway':'gift',
-  'Electronics':'plug','Printing Supplies':'printer','Tools':'wrench',
-  'Packaging':'package','Food':'wheat'
+  'Raw Material': 'layers', 'Component': 'puzzle', 'Base Product': 'box',
+  'Packaging': 'package', 'Shipping Supply': 'truck', 'Finished Product': 'package-check',
+  'Digital Product': 'download', 'Equipment': 'wrench', 'Consumable': 'flask-conical',
+  'Other': 'tag'
 };
 
 function renderRecipeCatChips() {
@@ -2722,22 +2719,19 @@ async function removeIngredientFromRecipe(index) {
   if (availableIngredients.length) aiRenderList();
 }
 
-// Same list/icon-map/exclusions as recipes.html's create-product form —
-// a product is a finished good, so categories that only make sense for
-// raw-material ingredients (packaging, thread spools, dye, ...) are hidden.
+// Ingredient categories -- same list as ingredients.html's CAT_META and
+// recipes.html's _recipeCategories, used by this page's ai* ingredient-add
+// picker. Unrelated to PRODUCT_CATEGORIES below (a product's OWN category
+// uses a completely different, general handmade-marketplace taxonomy).
 const _recipeCategories = [
-  'Apparel', 'Wood', 'Boxes', 'Cards', 'Plants', 'Candy', 'Beverage', 'Jewelry',
-  'Party Supplies', 'Gaming', 'Toys', 'Office Supplies', 'Colors', 'Rope', 'Paper',
-  'Spool', 'Letter', 'Giveaway', 'Electronics', 'Printing Supplies', 'Tools', 'Packaging', 'Food'
+  'Raw Material', 'Component', 'Base Product', 'Packaging', 'Shipping Supply',
+  'Finished Product', 'Digital Product', 'Equipment', 'Consumable', 'Other'
 ];
 const _recipeCategIconMap = {
-  'Apparel': 'shirt', 'Wood': 'tree-pine', 'Boxes': 'archive', 'Cards': 'tickets',
-  'Plants': 'sprout', 'Candy': 'lollipop', 'Beverage': 'amphora', 'Jewelry': 'gem',
-  'Party Supplies': 'party-popper', 'Gaming': 'gamepad-2', 'Toys': 'drum',
-  'Office Supplies': 'paperclip', 'Colors': 'palette', 'Rope': 'lasso',
-  'Paper': 'origami', 'Spool': 'spool', 'Letter': 'mail', 'Giveaway': 'gift',
-  'Electronics': 'plug', 'Printing Supplies': 'printer', 'Tools': 'wrench',
-  'Packaging': 'package', 'Food': 'wheat'
+  'Raw Material': 'layers', 'Component': 'puzzle', 'Base Product': 'box',
+  'Packaging': 'package', 'Shipping Supply': 'truck', 'Finished Product': 'package-check',
+  'Digital Product': 'download', 'Equipment': 'wrench', 'Consumable': 'flask-conical',
+  'Other': 'tag'
 };
 // A product is a finished good, not a raw material -- it uses its own
 // general handmade-marketplace taxonomy, independent of _recipeCategories
