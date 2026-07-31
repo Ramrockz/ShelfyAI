@@ -723,6 +723,7 @@
   .ord-more-menu,
   .ord-info-rows,
   .msec,
+  .ord-rev-meta,
   #odCreateBtn,
   #odNotificationBell,
   #odUserAvatar {
@@ -1033,6 +1034,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+    .ord-rev-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
 
     .ord-more-menu {
       display: none; position: fixed; z-index: 10200; right: 16px;
@@ -1313,8 +1315,10 @@
     <!-- Revenue Panel (first in DOM = first on mobile) -->
     <div id="revenuePanel" class="panel" style="padding: 24px;">
       <div style="text-align: center; margin-bottom: 8px;">
-        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 8px;">Total Revenue</div>
-        <div id="totalRevenue" class="editable-field" onclick="openOrderFieldSheet('revenue','Revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer;">-</div>
+        <div id="totalRevenue" class="editable-field" onclick="openOrderFieldSheet('revenue','Revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer; margin-bottom: 4px;">-</div>
+        <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600;">Total Revenue</div>
+        <!-- Mobile-only: item/unit counts, matching expense-detail's #expMeta -->
+        <div class="ord-rev-meta" id="ordRevMeta"></div>
       </div>
     </div>
 
@@ -1380,7 +1384,7 @@
         </div>
         <!-- Mobile-only: replaces itemsSectionHeader above -->
         <div class="msec" id="ordPackHeader">
-          <span class="msec-title">Items</span>
+          <span class="msec-title">Items Sold</span>
         </div>
 
         <!-- Desktop Table -->
@@ -1701,6 +1705,13 @@ function displayOrder() {
 
   // Display items
   const items = Array.isArray(orderData.items) ? orderData.items : [];
+
+  const revMetaEl = document.getElementById('ordRevMeta');
+  if (revMetaEl) {
+    const units = items.reduce((s, i) => s + Math.round(parseFloat(i.quantity || 0)), 0);
+    revMetaEl.textContent = `${items.length} item${items.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}`;
+  }
+
   const tableBody = document.getElementById('itemsTableBody');
   const cardsContainer = document.getElementById('recipesCardsContainer');
   
