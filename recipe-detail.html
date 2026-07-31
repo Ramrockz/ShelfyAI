@@ -3180,7 +3180,20 @@ async function openAddIngredientModal() {
     }
   }
   await _aiLoadUsageCounts();
+  // Entering swap mode from a swiped row (rdmReplaceItem) -- preselect the
+  // category filter from the item being replaced, so picking a like-for-like
+  // substitute doesn't start from every category in the catalog.
+  if (_aiSwapMode && _aiEditIndex != null) {
+    const cat = _aiCategoryFromComponent(_aiEditIndex);
+    if (cat) { _aiCategoryFilter = cat; document.getElementById('aiFilterBtn')?.classList.add('active'); }
+  }
   aiRenderList();
+}
+
+function _aiCategoryFromComponent(index) {
+  const comp = recipe.components?.[index];
+  if (!comp) return null;
+  return availableIngredients.find(i => i.id === (comp.ingredient_id || comp.id))?.category || null;
 }
 
 function closeAddIngredientModal() {
@@ -3497,14 +3510,36 @@ function aiRestock() {
 function aiSwap() {
   _aiSwapMode = true;
   _aiSwapQty = _aiDraft.qty;
+  _aiCategoryFilter = _aiIngredient?.category || null;
+  document.getElementById('aiFilterBtn')?.classList.toggle('active', !!_aiCategoryFilter);
   aiShowPane('list');
   aiRenderList();
 }
-function aiPickReplacement(ingredientId) {
-  const qty = _aiSwapQty;
-  _aiSwapMode = false;
-  _aiSwapQty = qty; // aiOpenLine's else-branch reads this for the new draft's starting quantity
-  aiOpenLine(ingredientId, _aiEditIndex);
+// Picking a replacement commits the swap immediately, carrying over the
+// slot's existing quantity/unit -- no need to land on the full quantity/
+// cost/restock/remove editor just to confirm a straight substitution.
+async function aiPickReplacement(ingredientId) {
+  const ing = availableIngredients.find(i => i.id === ingredientId);
+  const editIndex = _aiEditIndex;
+  if (!ing || editIndex == null) return;
+  const comp = recipe.components[editIndex];
+  const qty = _aiSwapQty || parseFloat(comp?.quantity) || 1;
+  const unit = comp?.unit || ing.unit || '';
+  _aiSwapMode = false; _aiSwapQty = null;
+
+  recipe.components[editIndex] = {
+    ingredient_id: ing.id,
+    ingredient_name: ing.name,
+    quantity: qty,
+    unit: unit,
+    cost: Math.round((parseFloat(ing.cost_per_unit) || 0) * qty * 100) / 100,
+    attributes: ing.custom_attributes || ''
+  };
+  _aiEditIndex = null; _aiIngredient = null; _aiDraft = null;
+
+  await updateRecipeInDatabase();
+  renderRecipe();
+  closeAddIngredientModal();
 }
 
 async function aiSaveLine(next) {
