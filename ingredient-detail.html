@@ -3372,14 +3372,13 @@
 
 
   // === Notification System ===
-  // All notification functions are handled by notifications.js
-  // Page-specific helper for out-of-stock notifications
-  async function createOutOfStockNotification(ingredientId, ingredientName, userId) {
-    // This function is still needed for ingredient-specific logic
-    if (typeof window.createOutOfStockNotification === 'function') {
-      await window.createOutOfStockNotification(ingredientId, ingredientName, userId);
-    }
-  }
+  // All notification functions are handled by notifications.js. This page
+  // used to redeclare createOutOfStockNotification as a thin wrapper that
+  // called window.createOutOfStockNotification -- but a plain top-level
+  // function declaration IS window.createOutOfStockNotification, so that
+  // call was recursing into itself forever (stack overflow) instead of
+  // reaching notifications.js's real implementation. Removed; calls below
+  // now resolve directly to the one true global version.
 
   // Check URL parameters for auto-opening modals
   function checkUrlParameters() {
