@@ -988,9 +988,10 @@
     }
 
     /* Old desktop order-info section is replaced by #ordMobileHeader +
-       #ordInfoRows below — hide it here so both don't show at once. */
+       #ordInfoRows below — hide it here so both don't show at once.
+       #revenuePanel stays visible on mobile too, as the hero total
+       (matching expense-detail's big #expenseCost display). */
     #orderInfoSection { display: none !important; }
-    #revenuePanel { display: none !important; }
     #itemsSectionHeader { display: none !important; }
     #ordPackHeader { display: flex !important; }
 
@@ -1032,7 +1033,6 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
-    .ord-total { font-size: 20px; font-weight: 800; letter-spacing: -.01em; flex-shrink: 0; color: var(--success); cursor: pointer; }
 
     .ord-more-menu {
       display: none; position: fixed; z-index: 10200; right: 16px;
@@ -1301,7 +1301,6 @@
           <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
           <div class="ord-meta" id="ordMeta"></div>
         </div>
-        <div class="ord-total" id="ordTotalDisplay" onclick="openOrderFieldSheet('revenue','Revenue')">$0.00</div>
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
@@ -1315,7 +1314,7 @@
     <div id="revenuePanel" class="panel" style="padding: 24px;">
       <div style="text-align: center; margin-bottom: 8px;">
         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 8px;">Total Revenue</div>
-        <div id="totalRevenue" class="editable-field" onclick="makeEditable('totalRevenue', 'revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer;">-</div>
+        <div id="totalRevenue" class="editable-field" onclick="openOrderFieldSheet('revenue','Revenue')" style="font-size: 48px; font-weight: 800; color: var(--success); line-height: 1; cursor: pointer;">-</div>
       </div>
     </div>
 
@@ -1805,8 +1804,6 @@ function renderOrdMobileHeader() {
   if (!orderData) return;
   const nameEl = document.getElementById('ordCustomerName');
   if (nameEl) nameEl.textContent = orderData.customer || 'Unknown';
-  const totalEl = document.getElementById('ordTotalDisplay');
-  if (totalEl) totalEl.textContent = `$${parseFloat(orderData.revenue || 0).toFixed(2)}`;
   const metaEl = document.getElementById('ordMeta');
   if (metaEl) {
     const items = Array.isArray(orderData.items) ? orderData.items : [];
