@@ -864,6 +864,17 @@
   .ec-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none;
                color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
+  /* Add Item CTA (19c) — same dashed pill used on product detail's item
+     list, so all three detail pages (product/expense/order) end their
+     item list with an identical, clearly-visible "+ Add Item" button
+     instead of a small header link or a menu entry. */
+  .add-item-btn { display: flex; align-items: center; justify-content: center; gap: 8px;
+                  width: 100%; padding: 14px; margin: 16px 0; box-sizing: border-box;
+                  color: var(--accent); background: none; font-size: 15px; font-weight: 600; cursor: pointer;
+                  border: 2px dashed var(--border); border-radius: 12px;
+                  transition: border-color 0.2s, background 0.2s; }
+  .add-item-btn:hover, .add-item-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
     .container { padding: 24px 16px; }
@@ -1282,10 +1293,6 @@
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
-      <button type="button" class="ord-more-item" onclick="closeOrdMoreMenu(); openOrderItemPicker()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Add item</span>
-      </button>
       <button type="button" class="ord-more-item" id="ordMenuRefund" onclick="closeOrdMoreMenu(); showStatusModal('refunded')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
         <span>Refund order</span>
@@ -1367,10 +1374,6 @@
       <div class="form-section recipes-section">
         <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Included Products</h3>
-          <button onclick="openOrderItemPicker()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
-            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-            Add
-          </button>
         </div>
         <!-- Mobile-only: replaces itemsSectionHeader above -->
         <div class="msec" id="ordPackHeader">
@@ -1696,9 +1699,20 @@ function displayOrder() {
   const tableBody = document.getElementById('itemsTableBody');
   const cardsContainer = document.getElementById('recipesCardsContainer');
   
+  const addRowHtml = `<tr><td colspan="5" style="padding:8px 0;border:none;">
+      <button type="button" class="add-item-btn" onclick="openOrderItemPicker()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Item
+      </button>
+    </td></tr>`;
+  const addCardHtml = `<button type="button" class="add-item-btn" onclick="openOrderItemPicker()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Item
+    </button>`;
+
   if (items.length === 0) {
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No products added yet</td></tr>';
-    cardsContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">No products added yet</div>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No products added yet</td></tr>' + addRowHtml;
+    cardsContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">No products added yet</div>' + addCardHtml;
   } else {
     // Desktop table
     tableBody.innerHTML = items.map((item, index) => {
@@ -1731,8 +1745,8 @@ function displayOrder() {
           <td><button onclick="removeRecipeItem(${index})" style="padding: 6px 12px; background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button></td>
         </tr>
       `;
-    }).join('');
-    
+    }).join('') + addRowHtml;
+
     // Mobile: item list row, opens an item sheet for the stepper/remove actions.
     cardsContainer.innerHTML = items.map((item, index) => {
       const itemName = item.name || 'Custom item';
@@ -1748,7 +1762,7 @@ function displayOrder() {
           <span class="pack-qty">&times;${quantity}</span>
           <svg class="pack-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
         </div>`;
-    }).join('');
+    }).join('') + addCardHtml;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 

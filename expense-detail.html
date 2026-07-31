@@ -518,6 +518,17 @@
   .ec-remove { width: 100%; height: 52px; margin-top: 18px; background: none; border: none;
                color: var(--danger); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
+  /* Add Item CTA (19c) — same dashed pill used on product detail's item
+     list, so all three detail pages (product/expense/order) end their
+     item list with an identical, clearly-visible "+ Add Item" button
+     instead of a small header link. */
+  .add-item-btn { display: flex; align-items: center; justify-content: center; gap: 8px;
+                  width: 100%; padding: 14px; margin: 16px 0; box-sizing: border-box;
+                  color: var(--accent); background: none; font-size: 15px; font-weight: 600; cursor: pointer;
+                  border: 2px dashed var(--border); border-radius: 12px;
+                  transition: border-color 0.2s, background 0.2s; }
+  .add-item-btn:hover, .add-item-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
+
   /* Inline editing */
   .editable-field {
     cursor: pointer;
@@ -1047,15 +1058,10 @@
   <div class="section">
     <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h3 class="section-title" style="margin: 0;">Involved Items</h3>
-      <button onclick="openExpenseItemPicker()" class="btn btn-outline" style="font-size: 12px; padding: 6px 12px;">
-        <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-        Add
-      </button>
     </div>
     <!-- Mobile-only: replaces itemsSectionHeader above -->
     <div class="msec" id="expItemsMsec">
       <span class="msec-title">Items bought</span>
-      <button type="button" class="msec-aside" onclick="openExpenseItemPicker()">Add item</button>
     </div>
     <!-- Desktop table -->
     <table class="ingredients-desktop-table">
@@ -1510,9 +1516,20 @@ function displayIngredients() {
 
   const expenseIngredients = expenseData?.ingredients || [];
 
+  const addRowHtml = `<tr><td colspan="4" style="padding:8px 0;border:none;">
+      <button type="button" class="add-item-btn" onclick="openExpenseItemPicker()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Item
+      </button>
+    </td></tr>`;
+  const addCardHtml = `<button type="button" class="add-item-btn" onclick="openExpenseItemPicker()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Item
+    </button>`;
+
   if (expenseIngredients.length === 0) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No items added yet</td></tr>';
-    if (mobileList) mobileList.innerHTML = '<div class="exp-note">No items added yet</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">No items added yet</td></tr>' + addRowHtml;
+    if (mobileList) mobileList.innerHTML = '<div class="exp-note">No items added yet</div>' + addCardHtml;
   } else {
   const rows = expenseIngredients.map((item, index) => {
     const _itemId = item.ingredient_id || item.id;
@@ -1557,7 +1574,7 @@ function displayIngredients() {
           </button>
         </td>
       </tr>
-    `).join('');
+    `).join('') + addRowHtml;
   }
 
   // Mobile: read-only row (name, attributes, qty × unit cost, line total) —
@@ -1575,7 +1592,7 @@ function displayIngredients() {
         <span class="exp-item-total">$${lineTotal}</span>
         <svg class="exp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
       </button>`;
-    }).join('');
+    }).join('') + addCardHtml;
   }
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
