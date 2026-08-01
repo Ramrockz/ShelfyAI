@@ -47,6 +47,7 @@
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
 <script src="import-modal.js"></script>
+<script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
@@ -3501,13 +3502,8 @@ function showImportStatus(message, type) {
   </div>
 
   <!-- Step 3: Success Screen -->
-  <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;text-align:center;">
-    <div style="flex:1;min-height:0;overflow-y:auto;padding:32px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;">
-      <div class="order-success-icon">✓</div>
-      <h2 class="order-success-title" id="successOrderTitle">Order Created!</h2>
-      <div id="successBadgesRow" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
-      <div id="successInvSection"></div>
-    </div>
+  <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;">
+    <div id="successBody" style="flex:1;min-height:0;overflow-y:auto;padding:24px 24px 8px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;"></div>
     <div class="recipe-picker-footer" style="padding:14px 24px;display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" id="successViewBtn" class="btn btn-primary" style="flex:1;min-width:80px;">View</button>
       <button type="button" class="btn" style="flex:1;min-width:80px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="startAnotherOrder()">New</button>
@@ -3517,44 +3513,114 @@ function showImportStatus(message, type) {
 
 </div>
 
-<!-- Recipe Mapping Modal -->
+<!-- Recipe Mapping Modal (AI upload result) — "Confirm order items" -->
 <div class="modal-overlay" id="recipeMappingModal">
-  <div class="modal-content" style="max-width: 700px;">
-    <h3 style="margin-top:0; margin-bottom: 16px;">Confirm Order Items</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Review the detected items and their matched products. You can change the product selection for each item.</p>
-    
-    <div id="mappedItemsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 12px;">
-      <!-- Mapped items will appear here -->
+  <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+    <div class="rcm-head">
+      <button type="button" class="rcm-back" onclick="closeRecipeMappingModal()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="21" height="21"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="rcm-titles">
+        <span class="rcm-title">Confirm order items</span>
+        <span class="rcm-sub" id="rcmSub"></span>
+      </span>
+      <button type="button" class="rcm-act" onclick="addMappedItemRow()">Add</button>
     </div>
 
-    <button type="button" onclick="addManualMappedItem()"
-      style="width: 100%; padding: 10px; background: var(--bg-panel); border: 2px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: all 0.2s;"
-      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-      + Add Product
-    </button>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; font-weight: 700; font-size: 15px;">
-      <span>Estimated Total</span>
-      <span id="mappedTotalRevenue">$0.00</span>
-    </div>
-
-    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-      <div class="form-group" style="margin-bottom: 12px;">
-        <label for="mapped_customer">Customer Name *</label>
-        <input type="text" id="mapped_customer" required placeholder="e.g., John Smith, ABC Company">
+    <div class="rcm-scroll">
+      <div class="rcm-src" id="rcmSrc" style="display:none">
+        <span class="rcm-src-thumb">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="9" r="1.6"/><path d="M21 16l-5-5-4.5 5"/></svg>
+        </span>
+        <span class="rcm-src-main">
+          <span class="rcm-src-name" id="rcmSrcName"></span>
+          <span class="rcm-src-meta" id="rcmSrcMeta"></span>
+        </span>
+        <button type="button" class="rcm-src-view" onclick="openShotSheet()">View</button>
       </div>
-      <div class="form-row">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="mapped_reference">Order Reference</label>
-          <input type="text" id="mapped_reference" placeholder="e.g., ORD-12345">
+
+      <div class="rcm-sec-head"><span class="rcm-sec-title">Order</span></div>
+      <div class="rcm-group">
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Customer *</span>
+          <span class="rcm-frow-val"><input type="text" id="mapped_customer" placeholder="No name read"
+            oninput="document.getElementById('mapped_customer_error').style.display='none';this.style.color='';"></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Order</span>
+          <span class="rcm-frow-val"><input type="text" id="mapped_reference" placeholder="No reference"></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Date</span>
+          <span class="rcm-frow-val"><input type="date" id="mapped_date"></span>
+        </div>
+        <div class="rcm-frow" id="rcmChannelRow" style="display:none">
+          <span class="rcm-frow-key">Channel</span>
+          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmChannelVal"></span></span>
+        </div>
+        <div class="rcm-frow">
+          <span class="rcm-frow-key">Total read</span>
+          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmTotalVal"></span></span>
         </div>
       </div>
+      <p id="mapped_customer_error" style="display:none;color:var(--danger);font-size:12px;margin:6px 16px 0;">Please enter a customer name</p>
+
+      <div class="rcm-sec-head">
+        <span class="rcm-sec-title">Items</span>
+        <span class="rcm-sec-note" id="rcmItemsNote"></span>
+      </div>
+      <div class="rcm-list" id="mappedItemsList"></div>
+      <div class="rcm-note">Text matching can be wrong — check any item marked in amber before saving.</div>
+
+      <div class="rcm-sec-head">
+        <span class="rcm-sec-title">Inventory after saving</span>
+        <span class="rcm-sec-note" id="rcmImpNote"></span>
+      </div>
+      <div class="rcm-imp" id="rcmImpact"></div>
     </div>
 
-    <div style="display: flex; gap: 12px; margin-top: 16px;">
-      <button type="button" class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeRecipeMappingModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" style="flex: 1;" onclick="confirmMappedOrder()">Create Order</button>
+    <div class="rcm-foot">
+      <button type="button" class="rcm-tog" id="mapped_update_inventory_tog" aria-pressed="true" onclick="toggleMappedUpdateStock()">
+        <span class="rcm-tog-main">
+          <span class="rcm-tog-name">Update inventory</span>
+          <span class="rcm-tog-why" id="rcmTogWhy"></span>
+        </span>
+        <span class="rcm-tog-sw"></span>
+      </button>
+      <div class="rcm-tally">
+        <span class="rcm-tally-l" id="rcmTallyL"></span>
+        <span class="rcm-tally-r" id="rcmTallyR">$0.00</span>
+      </div>
+      <div id="rcmTallyWarn"></div>
+      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Save order</button>
+      <button type="button" class="rcm-ghost" onclick="closeRecipeMappingModal()">Discard this scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product-match sheet — nested on top of #recipeMappingModal -->
+<div class="modal-overlay modal-sheet" id="rcmMatchSheet" onclick="if(event.target===this)closeMatchSheet()">
+  <div class="modal-content">
+    <h2 class="rcm-sheet-title">Which product is this?</h2>
+    <p class="rcm-sheet-sub" id="rcmMatchSub"></p>
+    <div class="rcm-sheet-find">
+      <label class="rcm-sheet-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <input id="rcmMatchQ" type="search" placeholder="Search your products" oninput="renderMatchList()" autocomplete="off">
+      </label>
+    </div>
+    <div class="rcm-sheet-scroll" id="rcmMatchList"></div>
+    <button type="button" class="rcm-sheet-new" id="rcmMatchNew" onclick="createProductFromLine()">+ Create as a new product</button>
+  </div>
+</div>
+
+<!-- View-screenshot sheet -->
+<div class="modal-overlay modal-sheet" id="rcmShotSheet" onclick="if(event.target===this)closeShotSheet()">
+  <div class="modal-content">
+    <h2 class="rcm-sheet-title">What you scanned</h2>
+    <p class="rcm-sheet-sub" id="rcmShotSub"></p>
+    <div class="rcm-shot-body">
+      <div class="rcm-shot" id="rcmShot"></div>
     </div>
   </div>
 </div>
@@ -3857,7 +3923,8 @@ function startIngredientUpload() {
 function startOrderUpload() {
   window.ShelfyImportModal.open('order', {
     onManual: openManualOrderModal,
-    onImported: (data) => {
+    onImported: (data, receiptUrl) => {
+      pendingReceiptUrl = receiptUrl;
       showRecipeMappingModal(data);
     }
   });
@@ -3954,26 +4021,21 @@ async function createSalesEntry(orderData) {
 // === Recipe Mapping for Order Uploads ===
 let mappedOrderData = null;
 let mappedRecipes = [];
+let mappedUpdateStock = true;
+let mappedEditingIndex = null;
+let pendingReceiptUrl = null;
+let _rcmMatchToken = 0;
+let _rcmImpactToken = 0;
+let _rcmLastOptions = [];
 
-// Calculate string similarity score (Levenshtein distance based)
 function calculateSimilarity(str1, str2) {
   const s1 = str1.toLowerCase().trim();
   const s2 = str2.toLowerCase().trim();
-  
-  // Exact match
   if (s1 === s2) return 1.0;
-  
-  // Contains check
   if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-  
-  // Simple word overlap
-  const words1 = s1.split(/\s+/);
-  const words2 = s2.split(/\s+/);
+  const words1 = s1.split(/\s+/), words2 = s2.split(/\s+/);
   const commonWords = words1.filter(w => words2.includes(w));
-  if (commonWords.length > 0) {
-    return 0.5 + (commonWords.length / Math.max(words1.length, words2.length)) * 0.3;
-  }
-  
+  if (commonWords.length > 0) return 0.5 + (commonWords.length / Math.max(words1.length, words2.length)) * 0.3;
   return 0;
 }
 
@@ -3981,94 +4043,145 @@ async function matchItemToRecipes(itemData) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return [];
-
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    let _q4 = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
-    if (storeId) _q4 = _q4.eq('store_id', storeId);
-    const { data: recipes, error } = await _q4;
+    let query = supabaseClient.from('recipes').select('*').eq('profile_id', user.id);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { data: recipes, error } = await query;
     if (error) throw error;
-    if (!recipes || recipes.length === 0) return [];
-
-    const itemName = (itemData.name || '').toLowerCase();
-    const itemAttributes = itemData.attributes || {};
-    const attrValues = Object.values(itemAttributes).map(v => String(v).toLowerCase());
-
-    const stopWords = new Set(['für','the','and','or','of','in','mit','und','der','die','das','ein','eine','aus','bei','von','for']);
-
-    function tokenise(str) {
-      return str.toLowerCase().split(/[\s\-\/,&]+/).filter(t => t.length > 1 && !stopWords.has(t));
+    if (!recipes || recipes.length === 0) {
+      console.log('No recipes found for user');
+      return [];
     }
-
-    const itemTokens = tokenise(itemName);
-
-    const scoredRecipes = recipes.map(recipe => {
-      const recipeName = (recipe.name || '').toLowerCase();
-      const recipeTokens = tokenise(recipeName);
-
-      // Name similarity: proportion of item tokens found in recipe name
-      let nameMatches = 0;
-      for (const tok of itemTokens) {
-        if (recipeTokens.some(rt => rt.includes(tok) || tok.includes(rt))) nameMatches++;
+    const itemAttributes = itemData.attributes || {};
+    if (Object.keys(itemAttributes).length === 0) {
+      // Fallback: word-overlap name matching when AI extracts no attributes
+      const searchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+      if (!searchName) return [];
+      const sWords = searchName.split(/[\s\-_,/]+/).filter(w => w.length > 0);
+      const nameMatches = recipes
+        .map(recipe => {
+          const rn = (recipe.name || '').toLowerCase();
+          const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 0);
+          const meaningful = sWords.filter(w => w.length > 1);
+          const forward = meaningful.length > 0
+            ? meaningful.filter(w => rWords.includes(w) || rn.includes(w)).length / meaningful.length
+            : 0;
+          const rMeaningful = rWords.filter(w => w.length > 1);
+          const backward = rMeaningful.length > 0
+            ? rMeaningful.filter(w => sWords.includes(w) || searchName.includes(w)).length / rMeaningful.length
+            : 0;
+          const score = Math.max(forward, backward);
+          return { recipe, score, matchReason: 'Name match' };
+        })
+        .filter(r => r.score >= 0.3)
+        .sort((a, b) => b.score - a.score);
+      return nameMatches;
+    }
+    const allIngredientIds = new Set();
+    recipes.forEach(recipe => {
+      if (recipe.components && Array.isArray(recipe.components)) {
+        recipe.components.forEach(comp => { if (comp.ingredient_id) allIngredientIds.add(comp.ingredient_id); });
       }
-      const nameScore = itemTokens.length > 0 ? nameMatches / itemTokens.length : 0;
-
-      // Attribute bonus: each attribute value appearing in the product name adds 0.1
-      let attrBonus = 0;
-      for (const val of attrValues) {
-        if (val.length > 1 && recipeName.includes(val)) attrBonus += 0.1;
-      }
-
-      const score = Math.min(nameScore + attrBonus, 1);
-      return {
-        recipe,
-        score,
-        matchReason: score >= 0.8 ? 'Perfect match' : score >= 0.5 ? 'Good match' : 'Partial match'
-      };
     });
+    let ingQuery = supabaseClient.from('ingredients').select('id, name, custom_attributes').in('id', Array.from(allIngredientIds));
+    if (storeId) ingQuery = ingQuery.eq('store_id', storeId);
+    const { data: ingredients } = await ingQuery;
+    const ingredientMap = {};
+    if (ingredients) ingredients.forEach(ing => { ingredientMap[ing.id] = ing; });
+    const scoredRecipes = recipes.map(recipe => {
+      if (!recipe.components || recipe.components.length === 0) return { recipe, score: 0, matchReason: 'No ingredients' };
+      let score = 0;
+      for (const comp of recipe.components) {
+        const ingredient = ingredientMap[comp.ingredient_id];
+        if (!ingredient || !ingredient.custom_attributes) continue;
+        try {
+          const ingAttrs = typeof ingredient.custom_attributes === 'string' ? JSON.parse(ingredient.custom_attributes) : ingredient.custom_attributes;
+          const ingAttrsLower = {};
+          Object.entries(ingAttrs).forEach(([key, value]) => { ingAttrsLower[key.toLowerCase()] = value; });
+          let attrMatches = 0, attrTotal = Object.keys(itemAttributes).length;
+          for (const [key, value] of Object.entries(itemAttributes)) {
+            const ingValue = ingAttrsLower[key.toLowerCase()];
+            if (ingValue && ingValue.toString().toLowerCase() === value.toString().toLowerCase()) attrMatches++;
+          }
+          const ingredientScore = attrMatches / attrTotal;
+          if (ingredientScore > score) score = ingredientScore;
+        } catch (e) { console.warn('Error parsing ingredient attributes:', e); }
+      }
+      return { recipe, score, matchReason: score === 1 ? 'Perfect match' : score >= 0.5 ? 'Partial match' : 'Low match' };
+    });
+    const attrMatches = scoredRecipes.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+    if (attrMatches.length > 0) return attrMatches;
 
-    return scoredRecipes
-      .filter(r => r.score >= 0.25)
+    // No ingredient-attribute matches — fall back to name + attribute value matching
+    const searchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+    const attrValues = Object.values(itemData.attributes || {}).flatMap(v =>
+      v.toString().toLowerCase().split(/[\/\-\s]+/)
+    ).filter(v => v.length > 0);
+    if (!searchName && attrValues.length === 0) return [];
+    const sWords = searchName.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+    return recipes
+      .map(recipe => {
+        const rn = (recipe.name || '').toLowerCase();
+        const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+        const forward = sWords.length > 0 ? sWords.filter(w => rWords.includes(w)).length / sWords.length : 0;
+        const backward = rWords.length > 0 ? rWords.filter(w => sWords.includes(w)).length / rWords.length : 0;
+        const nameScore = Math.max(forward, backward);
+        const attrScore = attrValues.length > 0
+          ? attrValues.filter(v => rn.includes(v)).length / attrValues.length
+          : 0;
+        const score = attrValues.length > 0 ? (nameScore * 0.4 + attrScore * 0.6) : nameScore;
+        return { recipe, score, matchReason: 'Name+attribute match' };
+      })
+      .filter(r => r.score >= 0.15)
       .sort((a, b) => b.score - a.score);
-
   } catch (error) {
-    console.error('Error matching products:', error);
+    console.error('Error matching item to recipes:', error);
     return [];
   }
+}
+
+const ICON_RCM_BOX   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/></svg>';
+const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.7-2.5 2-2.5 3.7"/><line x1="12" y1="17.5" x2="12" y2="17.5"/></svg>';
+const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_RCM_CHECK = '<svg class="rcm-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="17" height="17"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
+function _rcmParseDate(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function _rcmFileLabel(url) {
+  if (!url) return '';
+  const tail = url.split('/').pop().split('?')[0];
+  try { return decodeURIComponent(tail.replace(/^\d+_/, '')); } catch (e) { return tail; }
 }
 
 async function showRecipeMappingModal(orderData) {
   mappedOrderData = orderData;
   mappedRecipes = [];
-  
-  const itemsList = document.getElementById('mappedItemsList');
-  itemsList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Matching products...</div>';
-  
-  // Pre-fill form fields
+  mappedUpdateStock = true;
+  document.getElementById('mappedItemsList').innerHTML = '<div class="rcm-note" style="padding:24px 16px;text-align:center;">Matching products…</div>';
   document.getElementById('mapped_customer').value = orderData.customer || '';
   document.getElementById('mapped_reference').value = orderData.order_reference || '';
-  const _statusEl = document.getElementById('mapped_status');
-  if (_statusEl) _statusEl.value = 'processed';
-  
+  document.getElementById('mapped_date').value = _rcmParseDate(orderData.date);
   document.getElementById('recipeMappingModal').classList.add('active');
-  
-  // Parse items - handle both single item object and array of items
+
   let detectedItems = [];
   if (orderData.items && Array.isArray(orderData.items)) {
     detectedItems = orderData.items;
   } else if (orderData.item) {
-    // Handle both single item object and array of items
     detectedItems = Array.isArray(orderData.item) ? orderData.item : [orderData.item];
   } else if (orderData.description) {
-    // Fallback to description as single item
-    detectedItems = [{
-      name: orderData.description,
-      quantity: 1,
-      price: 0
-    }];
+    detectedItems = [{ name: orderData.description, quantity: 1, price: 0 }];
   }
-  
-  // Match each detected item to recipes
+
   for (const item of detectedItems) {
     const itemData = {
       name: item.name || 'Unknown Item',
@@ -4079,348 +4192,389 @@ async function showRecipeMappingModal(orderData) {
     const matches = await matchItemToRecipes(itemData);
     const bestMatch = matches.length > 0 ? matches[0].recipe : null;
     mappedRecipes.push({
-      itemData: itemData,
+      itemData,
       selectedRecipe: bestMatch,
-      matches: matches,
-      quantity: itemData.quantity || 1
+      matches,
+      quantity: itemData.quantity || 1,
+      score: matches.length > 0 ? matches[0].score : 0,
+      confirmed: false
     });
   }
-  
-  renderMappedItems();
-  updateMappedTotal();
+
+  renderRcmAll();
 }
 
-function renderMappedItems() {
-  const container = document.getElementById('mappedItemsList');
-  
-  container.innerHTML = mappedRecipes.map((mapping, index) => {
-    const item = mapping.itemData;
-    const selected = mapping.selectedRecipe;
-    const matches = mapping.matches || [];
-    // Clean item name by removing quantity prefixes like "x1", "1x", "2x", etc.
-    const cleanName = item.name.replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
-    const retailPrice = selected ? (parseFloat(selected.retail_price) || 0) : (item.price || 0);
-    const priceLabel = selected
-      ? (selected.retail_price ? 'Sales price' : 'No sales price set')
-      : 'Receipt price';
-
-    return `
-      <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">${cleanName || '<span style="color:var(--text-muted);font-style:italic;">Custom item</span>'}</div>
-            <div style="font-size: 13px; color: var(--text-muted);">
-              ${Object.entries(item.attributes || {}).map(([k,v]) => `${k}: ${v}`).join(' · ')}
-            </div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 14px; font-weight: 600; color: var(--accent);">$${retailPrice.toFixed(2)}</div>
-            <div style="font-size: 11px; color: var(--text-muted);">${priceLabel}</div>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 12px; position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Matched Product:</label>
-            ${selected ? `<button type="button" onclick="clearMappedRecipe(${index})" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:0;line-height:1;" title="Remove product">×</button>` : ''}
-          </div>
-          <input
-            type="text"
-            id="recipeSearchInput_${index}"
-            placeholder="🔍 Search product..."
-            value="${selected ? selected.name : ''}"
-            autocomplete="off"
-            oninput="searchRecipesForMapping(${index}, this.value)"
-            onfocus="showRecipeDropdown(${index})"
-            onkeydown="if(event.key === 'Escape') hideRecipeDropdown(${index})"
-            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-main); color: var(--text-main); font-size: 14px; box-sizing: border-box;"
-          />
-          <div
-            id="recipeDropdown_${index}"
-            style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 200px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            ${matches.map(m => `
-              <div
-                onclick="selectRecipeForMapping(${index}, '${m.recipe.id}')"
-                style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;"
-                onmouseover="this.style.background='var(--bg-inner)'"
-                onmouseout="this.style.background='transparent'"
-              >
-                <div style="font-weight: 600; font-size: 13px;">${m.recipe.name}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${m.matchReason} (${(m.score * 100).toFixed(0)}%)</div>
-              </div>
-            `).join('')}
-            ${matches.length === 0 ? '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching products found</div>' : ''}
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Quantity:</label>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button type="button" onclick="adjustMappedQuantity(${index}, -1)" style="width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer; font-size: 16px;">−</button>
-            <span style="font-weight: 600; min-width: 40px; text-align: center;">${mapping.quantity}</span>
-            <button type="button" onclick="adjustMappedQuantity(${index}, 1)" style="width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer; font-size: 16px;">+</button>
-          </div>
-          ${selected ? `<span style="font-size: 13px; color: var(--text-muted); margin-left: auto;">Cost: $${(parseFloat(selected.cost) || 0).toFixed(2)}</span>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  // Add click outside handler to close dropdowns
-  setTimeout(() => {
-    document.addEventListener('click', handleRecipeDropdownClickOutside);
-  }, 100);
+function renderRcmAll() {
+  renderRcmHead();
+  renderRcmSrc();
+  renderRcmHeaderFields();
+  renderRcmLines();
+  renderRcmImpact();
+  renderRcmFoot();
 }
 
-function changeMappedRecipe(index, recipeId) {
-  if (recipeId === '') {
-    mappedRecipes[index].selectedRecipe = null;
+function renderRcmHead() {
+  const n = mappedRecipes.length;
+  const vendor = mappedOrderData?.vendor;
+  document.getElementById('rcmSub').textContent = n
+    ? `${n} item${n === 1 ? '' : 's'} read${vendor ? ' · ' + vendor : ''}`
+    : (vendor || '');
+}
+
+function renderRcmSrc() {
+  const el = document.getElementById('rcmSrc');
+  if (!pendingReceiptUrl) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  document.getElementById('rcmSrcName').textContent = _rcmFileLabel(pendingReceiptUrl);
+  const n = mappedRecipes.length;
+  document.getElementById('rcmSrcMeta').textContent = `${n} item${n === 1 ? '' : 's'} read${mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : ''}`;
+}
+
+function renderRcmHeaderFields() {
+  const vendor = mappedOrderData?.vendor;
+  const channelRow = document.getElementById('rcmChannelRow');
+  if (vendor) {
+    channelRow.style.display = '';
+    document.getElementById('rcmChannelVal').textContent = vendor;
   } else {
-    const match = mappedRecipes[index].matches.find(m => m.recipe.id === recipeId);
-    if (match) {
-      mappedRecipes[index].selectedRecipe = match.recipe;
-    }
+    channelRow.style.display = 'none';
   }
-  renderMappedItems();
-  updateMappedTotal();
+  const stated = mappedOrderData?.revenue;
+  const totalEl = document.getElementById('rcmTotalVal');
+  const hasTotal = stated !== undefined && stated !== null && stated !== '';
+  totalEl.textContent = hasTotal ? `$${Number(stated).toFixed(2)}` : 'No total read';
+  totalEl.classList.toggle('empty', !hasTotal);
 }
 
-async function searchRecipesForMapping(index, searchTerm) {
-  const dropdown = document.getElementById(`recipeDropdown_${index}`);
-  
-  if (!searchTerm.trim()) {
-    // Show all attribute matches when empty
-    const matches = mappedRecipes[index].matches || [];
-    dropdown.innerHTML = matches.map(m => `
-      <div 
-        onclick="selectRecipeForMapping(${index}, '${m.recipe.id}')"
-        style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;"
-        onmouseover="this.style.background='var(--bg-inner)'"
-        onmouseout="this.style.background='transparent'"
-      >
-        <div style="font-weight: 600; font-size: 13px;">${m.recipe.name}</div>
-        <div style="font-size: 12px; color: var(--text-muted);">${m.matchReason} (${(m.score * 100).toFixed(0)}% attribute match)</div>
-      </div>
-    `).join('') || '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No matching products found</div>';
-    dropdown.style.display = 'block';
+function _rcmLineState(m) {
+  if (!m.selectedRecipe) return 'none';
+  return (m.confirmed || (m.score || 0) >= 0.8) ? 'ok' : 'todo';
+}
+
+function _rcmLineHTML(m, index) {
+  const st = _rcmLineState(m);
+  const item = m.itemData;
+  const cleanName = _rcmCleanName(item.name) || 'Unknown item';
+  const sel = m.selectedRecipe;
+  const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (item.price || 0);
+  const priceOff = sel && item.price && Math.abs(price - item.price) > 0.005;
+  const why = st === 'ok'
+    ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
+    : st === 'todo' ? 'Not sure this is right — check it'
+    : 'No product matches this line';
+  return `<div class="rcm-line" data-state="${st}">
+    <span class="rcm-line-main">
+      <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
+      <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
+        <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
+        <span class="rcm-match-body">
+          <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
+          <span class="rcm-match-why">${_rcmEsc(why)}</span>
+        </span>
+        <span class="rcm-match-swap">${sel ? 'Change' : 'Pick'}</span>
+      </button>
+    </span>
+    <span class="rcm-line-side">
+      <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+      <span class="rcm-step">
+        <button type="button" onclick="bumpMappedQty(${index},-1)" aria-label="One fewer">${ICON_RCM_MINUS}</button>
+        <span class="rcm-step-qty">${m.quantity}</span>
+        <button type="button" onclick="bumpMappedQty(${index},1)" aria-label="One more">${ICON_RCM_PLUS}</button>
+      </span>
+      <span class="rcm-line-money">$${(price * m.quantity).toFixed(2)}
+        <small>$${price.toFixed(2)} ea${priceOff ? ' · differs' : ''}</small>
+      </span>
+    </span>
+  </div>`;
+}
+
+function renderRcmLines() {
+  const todo = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
+  const note = document.getElementById('rcmItemsNote');
+  note.textContent = todo ? `${todo} need${todo > 1 ? '' : 's'} checking` : `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'}`;
+  todo ? note.setAttribute('data-state', 'todo') : note.removeAttribute('data-state');
+
+  document.getElementById('mappedItemsList').innerHTML = mappedRecipes.length
+    ? mappedRecipes.map((m, i) => _rcmLineHTML(m, i)).join('')
+    : '<div class="rcm-line"><span class="rcm-line-main"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></span></div>';
+}
+
+async function computeRcmImpact() {
+  const use = {};
+  mappedRecipes.forEach(m => {
+    if (!m.selectedRecipe || !m.selectedRecipe.components) return;
+    m.selectedRecipe.components.forEach(comp => {
+      const iid = comp.ingredient_id || comp.id;
+      if (!iid) return;
+      const qty = (parseFloat(comp.quantity) || 0) * m.quantity;
+      use[iid] = Math.round(((use[iid] || 0) + qty) * 100) / 100;
+    });
+  });
+  const ids = Object.keys(use);
+  if (!ids.length) return { use, ingredients: {} };
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!user) return { use, ingredients: {} };
+  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, quantity').eq('profile_id', user.id).in('id', ids);
+  const map = {};
+  (ingredients || []).forEach(i => { map[i.id] = i; });
+  return { use, ingredients: map };
+}
+
+async function renderRcmImpact() {
+  const token = ++_rcmImpactToken;
+  const { use, ingredients } = await computeRcmImpact();
+  if (token !== _rcmImpactToken) return;
+  const ids = Object.keys(use);
+  const impEl = document.getElementById('rcmImpact');
+  impEl.dataset.off = mappedUpdateStock ? '0' : '1';
+  document.getElementById('rcmImpNote').textContent = !ids.length ? ''
+    : mappedUpdateStock ? `${ids.length} item${ids.length === 1 ? '' : 's'} deducted on save`
+    : 'not being deducted';
+
+  if (!ids.length) {
+    impEl.innerHTML = '<div class="rcm-imp-row"><span class="rcm-imp-name">Nothing matched yet</span></div>';
     return;
   }
-  
-  // Search ALL recipes by name
+  impEl.innerHTML = ids.map(iid => {
+    const ing = ingredients[iid];
+    if (!ing) return '';
+    const current = parseFloat(ing.quantity) || 0;
+    const after = Math.round((current - use[iid]) * 100) / 100;
+    const short = after < 0;
+    const unit = ing.unit ? ' ' + _rcmEsc(ing.unit) : '';
+    return `<div class="rcm-imp-row">
+        <span class="rcm-imp-name">${_rcmEsc(ing.name)}</span>
+        <span class="rcm-imp-val"${short ? ' data-state="short"' : ''}>${mappedUpdateStock
+          ? `${current} → ${after}${unit}${short ? ' · short' : ''}`
+          : `${current}${unit} · unchanged`}</span>
+      </div>`;
+  }).join('');
+}
+
+function toggleMappedUpdateStock() {
+  mappedUpdateStock = !mappedUpdateStock;
+  renderRcmFoot();
+  renderRcmImpact();
+}
+
+function renderRcmFoot() {
+  document.getElementById('mapped_update_inventory_tog').setAttribute('aria-pressed', mappedUpdateStock ? 'true' : 'false');
+  document.getElementById('rcmTogWhy').textContent = mappedUpdateStock
+    ? 'Matched products’ recipe items are deducted when you save'
+    : 'Records the sale only — no items are deducted';
+
+  const sum = mappedRecipes.reduce((s, m) => {
+    const sel = m.selectedRecipe;
+    const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (m.itemData.price || 0);
+    return s + price * m.quantity;
+  }, 0);
+  const totalUnits = mappedRecipes.reduce((s, m) => s + m.quantity, 0);
+  document.getElementById('rcmTallyL').textContent = `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'} · ${totalUnits} unit${totalUnits === 1 ? '' : 's'}`;
+  document.getElementById('rcmTallyR').textContent = `$${sum.toFixed(2)}`;
+
+  const noneCount = mappedRecipes.filter(m => _rcmLineState(m) === 'none').length;
+  const lookCount = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
+  const stated = mappedOrderData?.revenue;
+  const hasStated = stated !== undefined && stated !== null && stated !== '';
+  const gap = hasStated ? Math.round((Number(stated) - sum) * 100) / 100 : 0;
+
+  const bits = [];
+  if (noneCount) bits.push(`${noneCount} item${noneCount > 1 ? 's' : ''} need${noneCount > 1 ? '' : 's'} a product`);
+  if (lookCount) bits.push(`${lookCount} ${noneCount ? '' : `item${lookCount > 1 ? 's' : ''} `}need${lookCount > 1 ? '' : 's'} checking`);
+
+  const warnEl = document.getElementById('rcmTallyWarn');
+  warnEl.innerHTML = lookCount
+    ? `<div class="rcm-warn">${bits.join(' · ')}</div>`
+    : (hasStated && Math.abs(gap) > 0.005)
+      ? `<div class="rcm-warn">$${Math.abs(gap).toFixed(2)} ${gap > 0 ? 'less than' : 'more than'} the $${Number(stated).toFixed(2)} on the screenshot</div>`
+      : (noneCount ? `<div class="rcm-warn" style="color:var(--text-faint,var(--text-muted))">${bits.join(' · ')}</div>` : '');
+
+  const btn = document.getElementById('rcmSaveBtn');
+  btn.disabled = !mappedRecipes.length || lookCount > 0;
+  btn.textContent = lookCount
+    ? `Confirm ${lookCount} item${lookCount > 1 ? 's' : ''} to save`
+    : mappedUpdateStock ? `Save order · $${sum.toFixed(2)}` : 'Save without updating stock';
+}
+
+function bumpMappedQty(index, delta) {
+  mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+}
+
+function removeMappedItem(index) {
+  mappedRecipes.splice(index, 1);
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+}
+
+function addMappedItemRow() {
+  mappedRecipes.push({
+    itemData: { name: 'Added by you', quantity: 1, price: 0, attributes: {} },
+    selectedRecipe: null, matches: [], quantity: 1, score: 0, confirmed: false
+  });
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  openMatchSheet(mappedRecipes.length - 1);
+}
+
+// --- Product-match sheet ---
+function openMatchSheet(index) {
+  mappedEditingIndex = index;
+  const m = mappedRecipes[index];
+  const cleanName = _rcmCleanName(m.itemData.name) || 'this item';
+  document.getElementById('rcmMatchSub').textContent = `The screenshot said "${cleanName}" · ${m.quantity} × $${(m.itemData.price || 0).toFixed(2)}`;
+  document.getElementById('rcmMatchQ').value = '';
+  renderMatchList();
+  document.getElementById('rcmMatchSheet').classList.add('active');
+}
+function closeMatchSheet() {
+  document.getElementById('rcmMatchSheet').classList.remove('active');
+  mappedEditingIndex = null;
+}
+
+function _rcmOptHTML(recipe, selected, likely) {
+  const isSel = !!(selected && selected.id === recipe.id);
+  const price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
+  const compCount = Array.isArray(recipe.components) ? recipe.components.length : 0;
+  return `<button type="button" class="rcm-opt" aria-selected="${isSel}" onclick="pickMatch(${_rcmLastOptions.length - 1})">
+    <span class="rcm-opt-body">
+      <span class="rcm-opt-name">${_rcmEsc(recipe.name)}</span>
+      <span class="rcm-opt-meta">$${price.toFixed(2)}${compCount ? ` · ${compCount} item${compCount === 1 ? '' : 's'} on its recipe` : ' · no recipe yet'}</span>
+    </span>
+    ${likely && !isSel ? '<span class="rcm-opt-tag">likely</span>' : ''}
+    ${isSel ? ICON_RCM_CHECK : ''}
+  </button>`;
+}
+
+async function renderMatchList() {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const m = mappedRecipes[index];
+  const q = document.getElementById('rcmMatchQ').value.trim();
+  const listEl = document.getElementById('rcmMatchList');
+  const token = ++_rcmMatchToken;
+  _rcmLastOptions = [];
+
+  if (!q) {
+    const opts = (m.matches || []).slice(0, 20);
+    if (!opts.length) {
+      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No suggestions — search your products above.</span></span></div>';
+      return;
+    }
+    listEl.innerHTML = opts.map(o => {
+      _rcmLastOptions.push(o.recipe);
+      return _rcmOptHTML(o.recipe, m.selectedRecipe, o.score >= 0.5);
+    }).join('');
+    return;
+  }
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
-    
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    let _q5 = supabaseClient
-      .from('recipes')
-      .select('id, name, cost')
-      .eq('profile_id', user.id);
-    if (storeId) _q5 = _q5.eq('store_id', storeId);
-    _q5 = _q5.ilike('name', `%${searchTerm}%`).limit(10);
-    const { data: allRecipes, error } = await _q5;
-    
-    if (error) throw error;
-    
-    if (!allRecipes || allRecipes.length === 0) {
-      dropdown.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">No products found</div>';
-      dropdown.style.display = 'block';
+    let query = supabaseClient.from('recipes').select('*').eq('profile_id', user.id).ilike('name', `%${q}%`).limit(25);
+    if (storeId) query = query.eq('store_id', storeId);
+    const { data: recipes } = await query;
+    if (token !== _rcmMatchToken || mappedEditingIndex !== index) return;
+    if (!recipes || !recipes.length) {
+      listEl.innerHTML = `<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No product matches "${_rcmEsc(q)}".</span></span></div>`;
       return;
     }
-    
-    // Check which searched recipes are attribute matches
-    const matches = mappedRecipes[index].matches || [];
-    const matchIds = new Set(matches.map(m => m.recipe.id));
-    
-    dropdown.innerHTML = allRecipes.map(recipe => {
-      const isMatch = matchIds.has(recipe.id);
-      const matchInfo = isMatch ? matches.find(m => m.recipe.id === recipe.id) : null;
-      
-      return `
-        <div 
-          onclick="selectRecipeForMappingById(${index}, '${recipe.id}')"
-          style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.2s;"
-          onmouseover="this.style.background='var(--bg-inner)'"
-          onmouseout="this.style.background='transparent'"
-        >
-          <div style="font-weight: 600; font-size: 13px;">${recipe.name}</div>
-          <div style="font-size: 12px; color: var(--text-muted);">
-            ${isMatch ? `${matchInfo.matchReason} (${(matchInfo.score * 100).toFixed(0)}% attribute match)` : 'No attribute match'}
-          </div>
-        </div>
-      `;
+    listEl.innerHTML = recipes.map(r => {
+      _rcmLastOptions.push(r);
+      return _rcmOptHTML(r, m.selectedRecipe, false);
     }).join('');
-    
-    dropdown.style.display = 'block';
   } catch (error) {
     console.error('Error searching recipes:', error);
-    dropdown.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px;">Error searching recipes</div>';
-    dropdown.style.display = 'block';
-  }
-}
-
-function showRecipeDropdown(index) {
-  const dropdown = document.getElementById(`recipeDropdown_${index}`);
-  if (dropdown) {
-    dropdown.style.display = 'block';
-  }
-}
-
-function hideRecipeDropdown(index) {
-  const dropdown = document.getElementById(`recipeDropdown_${index}`);
-  if (dropdown) {
-    dropdown.style.display = 'none';
-  }
-}
-
-function clearMappedRecipe(index) {
-  mappedRecipes[index].selectedRecipe = null;
-  renderMappedItems();
-  updateMappedTotal();
-}
-
-function addManualMappedItem() {
-  mappedRecipes.push({
-    itemData: { name: '', attributes: {}, price: 0, quantity: 1 },
-    selectedRecipe: null,
-    matches: [],
-    quantity: 1
-  });
-  renderMappedItems();
-  updateMappedTotal();
-}
-
-function selectRecipeForMapping(index, recipeId) {
-  const match = mappedRecipes[index].matches.find(m => m.recipe.id === recipeId);
-  if (match) {
-    mappedRecipes[index].selectedRecipe = match.recipe;
-    document.getElementById(`recipeSearchInput_${index}`).value = match.recipe.name;
-  }
-  hideRecipeDropdown(index);
-  renderMappedItems(); // Re-render to update price
-  updateMappedTotal();
-}
-
-async function selectRecipeForMappingById(index, recipeId) {
-  try {
-    // Fetch the full recipe
-    const { data: recipe, error } = await supabaseClient
-      .from('recipes')
-      .select('*')
-      .eq('id', recipeId)
-      .single();
-    
-    if (error) throw error;
-    
-    if (recipe) {
-      mappedRecipes[index].selectedRecipe = recipe;
-      document.getElementById(`recipeSearchInput_${index}`).value = recipe.name;
+    if (token === _rcmMatchToken) {
+      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">Search failed. Please try again.</span></span></div>';
     }
-    
-    hideRecipeDropdown(index);
-    renderMappedItems(); // Re-render to update price
-    updateMappedTotal();
-  } catch (error) {
-    console.error('Error selecting recipe:', error);
   }
 }
 
-function handleRecipeDropdownClickOutside(event) {
-  mappedRecipes.forEach((mapping, index) => {
-    const dropdown = document.getElementById(`recipeDropdown_${index}`);
-    const input = document.getElementById(`recipeSearchInput_${index}`);
-    
-    if (dropdown && input && 
-        !dropdown.contains(event.target) && 
-        !input.contains(event.target)) {
-      hideRecipeDropdown(index);
-    }
-  });
+function pickMatch(i) {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const recipe = _rcmLastOptions[i];
+  if (!recipe) return;
+  const m = mappedRecipes[index];
+  m.selectedRecipe = recipe;
+  m.confirmed = true;
+  if (!m.itemData.price) m.itemData.price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
+  closeMatchSheet();
+  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
 }
 
-function adjustMappedQuantity(index, delta) {
-  mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
-  renderMappedItems();
-  updateMappedTotal();
+function createProductFromLine() {
+  const index = mappedEditingIndex;
+  if (index === null) return;
+  const cleanName = _rcmCleanName(mappedRecipes[index].itemData.name);
+  const hasProgress = mappedRecipes.some(r => r.selectedRecipe);
+  if (hasProgress && !confirm("Creating a new product will leave this order — any products you've already matched won't be saved. Continue?")) return;
+  createProductFromOrderSearch(cleanName);
 }
 
-function updateMappedTotal() {
-  const total = mappedRecipes.reduce((sum, mapping) => {
-    if (mapping.selectedRecipe) {
-      const recipeCost = parseFloat(mapping.selectedRecipe.cost) || 0;
-      const retailPrice = parseFloat(mapping.selectedRecipe.retail_price) || 0;
-      return sum + (retailPrice * mapping.quantity);
-    } else {
-      // Use item price if no recipe matched
-      return sum + ((mapping.itemData.price || 0) * mapping.quantity);
-    }
-  }, 0);
-  
-  const totalEl = document.getElementById('mappedTotalRevenue');
-  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+function openShotSheet() {
+  document.getElementById('rcmShotSub').textContent = _rcmFileLabel(pendingReceiptUrl) + (mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : '');
+  const shotEl = document.getElementById('rcmShot');
+  if (!pendingReceiptUrl) {
+    shotEl.innerHTML = '<div class="rcm-shot-empty">No screenshot on file for this order.</div>';
+  } else if (/\.pdf(\?|$)/i.test(pendingReceiptUrl)) {
+    shotEl.innerHTML = `<div class="rcm-shot-empty">This was a PDF. <a href="${_rcmEsc(pendingReceiptUrl)}" target="_blank" rel="noopener">Open it in a new tab</a>.</div>`;
+  } else {
+    shotEl.innerHTML = `<img src="${_rcmEsc(pendingReceiptUrl)}" alt="Uploaded screenshot">`;
+  }
+  document.getElementById('rcmShotSheet').classList.add('active');
 }
+function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
 function closeRecipeMappingModal() {
   document.getElementById('recipeMappingModal').classList.remove('active');
+  closeMatchSheet();
+  closeShotSheet();
   mappedOrderData = null;
   mappedRecipes = [];
-  document.removeEventListener('click', handleRecipeDropdownClickOutside);
+  mappedUpdateStock = true;
 }
 
 async function confirmMappedOrder() {
   try {
     const customer = document.getElementById('mapped_customer').value.trim();
     if (!customer) {
-      showNotification('Please enter a customer name', 'error');
+      const inp = document.getElementById('mapped_customer');
+      const err = document.getElementById('mapped_customer_error');
+      if (inp) inp.style.color = 'var(--danger)';
+      if (err) err.style.display = 'block';
+      inp?.focus();
       return;
     }
-    
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Not authenticated');
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-    // Build items and order recipes arrays
-    const items = [];
-    const orderRecipes = [];
-    
-    mappedRecipes.forEach(mapping => {
+    const items = [], selectedOrderRecipes = [], unmatchedItems = [];
+    mappedRecipes.forEach((mapping) => {
       if (mapping.selectedRecipe) {
-        // Add as recipe
-        orderRecipes.push({
-          id: mapping.selectedRecipe.id,
-          name: mapping.selectedRecipe.name,
-          quantity: mapping.quantity,
-          price: mapping.selectedRecipe.retail_price || (parseFloat(mapping.selectedRecipe.cost) || 0) * 1.6
-        });
-        
-        items.push({
-          name: mapping.selectedRecipe.name,
-          quantity: mapping.quantity,
-          price: mapping.selectedRecipe.retail_price || (parseFloat(mapping.selectedRecipe.cost) || 0) * 1.6
-        });
+        const recipePrice = parseFloat(mapping.selectedRecipe.retail_price) || parseFloat(mapping.selectedRecipe.cost) || 0;
+        selectedOrderRecipes.push({ id: mapping.selectedRecipe.id, name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
+        items.push({ name: mapping.selectedRecipe.name, quantity: mapping.quantity, price: recipePrice });
       } else {
-        // Add as custom item (no recipe)
-        items.push({
-          name: mapping.itemData.name,
-          quantity: mapping.quantity,
-          price: mapping.itemData.price || 0
-        });
+        const itemName = _rcmCleanName(mapping.itemData.name) || 'Custom item';
+        items.push({ name: itemName, quantity: mapping.quantity, price: mapping.itemData.price || 0 });
+        unmatchedItems.push({ name: itemName, why: 'No product matched this line — no stock was affected' });
       }
     });
-    
     const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const totalRevenue = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-    
-    // Get order reference from form
     const orderReference = document.getElementById('mapped_reference').value || null;
-    
-    // Create sales record
+    const dateVal = document.getElementById('mapped_date').value;
+    const saleDate = dateVal ? new Date(dateVal + 'T12:00:00').toISOString() : new Date().toISOString();
+    const receiptUrls = pendingReceiptUrl ? [pendingReceiptUrl] : null;
+    pendingReceiptUrl = null;
+
     const salesRecord = {
       profile_id: user.id,
       store_id: storeId,
-      sale_date: new Date().toISOString(),
+      sale_date: saleDate,
       customer: customer,
       source: 'Image Upload',
       items: items,
@@ -4428,31 +4582,20 @@ async function confirmMappedOrder() {
       revenue: totalRevenue,
       order_reference: orderReference,
       status: 'processed',
-      custom_attributes: mappedOrderData.attributes || {}
+      custom_attributes: mappedOrderData?.attributes || {},
+      ...(receiptUrls ? { receipt_urls: receiptUrls } : {})
     };
-    
-    // Insert into database
-    const { data, error } = await supabaseClient
-      .from('sales')
-      .insert([salesRecord])
-      .select();
-    
+    const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
     if (error) throw error;
-
-    // Update inventory if recipes were selected
     let inventoryChanges = null;
-    if (orderRecipes.length > 0 && data && data[0]) {
-      inventoryChanges = await updateInventoryForOrder(orderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
+    if (mappedUpdateStock && selectedOrderRecipes.length > 0 && data && data[0]) {
+      inventoryChanges = await updateInventoryForOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
-
     closeRecipeMappingModal();
-
-    // Show the same success screen as manual order entry, confirming the inventory update
     document.getElementById('manualStep1').style.display = 'none';
     document.getElementById('manualStep2').style.display = 'none';
     document.getElementById('manualOrderModal').classList.add('active');
-    showOrderSuccessScreen(data[0], orderRecipes.length > 0, inventoryChanges);
-
+    showOrderSuccessScreen(data[0], mappedUpdateStock, inventoryChanges, unmatchedItems);
   } catch (error) {
     console.error('Error creating order:', error);
     showNotification('Failed to create order: ' + error.message, 'error');
@@ -5801,69 +5944,148 @@ async function _populateCustomerSuggestions() {
   } catch (e) { /* silently ignore */ }
 }
 
-function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges) {
+function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmatchedItems) {
   document.getElementById('manualStep2').style.display = 'none';
   const step3 = document.getElementById('manualStep3');
   step3.style.display = 'flex';
-
   const viewBtn = document.getElementById('successViewBtn');
-  if (viewBtn) viewBtn.onclick = () => window.location.href = '/order-detail?id=' + order.id;
+  if (viewBtn) viewBtn.onclick = () => { window.location.href = '/order-detail?id=' + order.id; };
 
-  // Title with reference
-  const ref = order.order_reference || ('Order #' + order.id);
-  document.getElementById('successOrderTitle').textContent = 'Order ' + ref + ' Created!';
-
-  // Badges row: inventory badge + stock chips all in one row
-  const badgesRow = document.getElementById('successBadgesRow');
-  let badgesHtml = '';
-  if (inventoryUpdated) {
-    badgesHtml += '<span class="order-success-badge inv-updated">✓ Inventory Updated</span>';
-  }
-  // Pre-calculate stock counts so we can add chips in same row
-  if (inventoryUpdated && inventoryChanges && inventoryChanges.length > 0) {
-    const oosCount = inventoryChanges.filter(i => i.status === 'out_of_stock').length;
-    const lowCount = inventoryChanges.filter(i => i.status === 'low_stock').length;
-    if (oosCount) badgesHtml += `<span class="inv-warning-tag oos">⚠ ${oosCount} Out of Stock</span>`;
-    if (lowCount) badgesHtml += `<span class="inv-warning-tag low">↓ ${lowCount} Running Low</span>`;
-  }
-  badgesRow.innerHTML = badgesHtml;
-
-  const sectionEl = document.getElementById('successInvSection');
-  sectionEl.innerHTML = '';
-
-  if (!inventoryUpdated || !inventoryChanges || inventoryChanges.length === 0) return;
-
-  // Sort: out_of_stock → low_stock → ok
+  const changes = (inventoryUpdated && inventoryChanges) ? inventoryChanges : [];
   const priority = { out_of_stock: 0, low_stock: 1, ok: 2 };
-  const sorted = [...inventoryChanges].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
+  const sorted = [...changes].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
+  const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.oldQty - c.newQty), 0);
+  const soldItems = Array.isArray(order.items) ? order.items : [];
+  const soldUnits = soldItems.reduce((s, it) => s + (parseFloat(it.quantity) || 0), 0);
 
-  // Ingredient change rows (clickable → ingredient-detail)
-  const rowsHtml = sorted.map((item, idx) => {
-    const s = item.status === 'out_of_stock' ? 'oos' : item.status === 'low_stock' ? 'low' : 'ok';
-    const unit = '';
-    const fmt = v => v % 1 === 0 ? String(v) : v.toFixed(2);
-    const pillHtml = s === 'oos'
-      ? '<span class="inv-change-pill oos">OUT OF STOCK</span>'
-      : s === 'low'
-      ? '<span class="inv-change-pill low">LOW</span>'
-      : '';
-    const detailUrl = item.id ? `/ingredient-detail?id=${encodeURIComponent(item.id)}` : null;
-    const nameEl = detailUrl
-      ? `<a class="inv-change-name" href="${detailUrl}" target="_blank" rel="noopener" onclick="event.ctrlKey||event.metaKey||event.button===1?null:window.open('${detailUrl}','_blank');event.preventDefault();">${escapeHtml(item.name)}</a>`
-      : `<span class="inv-change-name">${escapeHtml(item.name)}</span>`;
-    return `<div class="inv-change-row" style="animation-delay:${idx * 0.04}s">
-      <div class="inv-change-dot ${s}"></div>
-      ${nameEl}
-      <div class="inv-change-qty">
-        <span class="old">${fmt(item.oldQty)}${unit}</span>
-        <span class="arrow">→</span>
-        <span class="new-${s}">${fmt(item.newQty)}${unit}</span>
-      </div>
-      ${pillHtml}
-    </div>`;
+  const rows = sorted.map(c => ({
+    name: c.name,
+    from: c.oldQty,
+    to: c.newQty,
+    unit: c.unit,
+    href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
+    state: c.status === 'out_of_stock' ? 'out' : c.status === 'low_stock' ? 'low' : '',
+    why: (c.status === 'low_stock' && c.minStock) ? `Alert level ${ShelfyInventoryImpact.fmt(c.minStock)}` : null
+  }));
+
+  const body = document.getElementById('successBody');
+  ShelfyInventoryImpact.render(body, {
+    title: 'Order from ' + (order.customer || 'Customer') + ' created',
+    sub: [order.source, order.order_reference].filter(Boolean).join(' · ') || null,
+    figs: [
+      [`$${(parseFloat(order.revenue) || 0).toFixed(2)}`, 'order total'],
+      [`${soldUnits} unit${soldUnits === 1 ? '' : 's'}`, 'sold'],
+      ...(changes.length ? [[`−${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'items used']] : [])
+    ],
+    secTitle: 'Inventory updated',
+    secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
+    rows,
+    emptyText: inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.',
+    // "Not in inventory" is folded into the unified "Needs attention"
+    // section rendered below instead of the shared renderer's own version.
+    unmatched: [],
+    note: inventoryUpdated
+      ? 'Stock was deducted when this order was created. Editing the order later does not re-run it.'
+      : null,
+    undo: (inventoryUpdated && changes.length) ? {
+      label: 'Put this stock back',
+      onClick: (btn) => undoOrderStock(changes, btn)
+    } : null
+  });
+
+  renderOrderSoldSection(body, soldItems);
+  renderOrderNeedsAttention(body, changes, unmatchedItems || []);
+}
+
+// Reverses exactly the deduction just shown — the change list already has
+// each ingredient's pre-order quantity, so this is a direct restore rather
+// than re-deriving anything from ingredient_history.
+async function undoOrderStock(changes, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Restoring…'; }
+  try {
+    await Promise.all(changes.map(c =>
+      supabaseClient.from('ingredients').update({ quantity: c.oldQty }).eq('id', c.id)
+    ));
+    if (btn) { btn.textContent = 'Stock restored'; }
+    showNotification('Stock put back', 'success');
+  } catch (error) {
+    console.error('Error restoring stock:', error);
+    if (btn) { btn.disabled = false; btn.textContent = 'Put this stock back'; }
+    showNotification('Failed to restore stock: ' + error.message, 'error');
+  }
+}
+
+function renderOrderSoldSection(body, items) {
+  if (!items.length) return;
+  const head = body.querySelector('.ii-head');
+  if (!head) return;
+  const rows = items.map(it => {
+    const qty = parseFloat(it.quantity) || 1;
+    const price = parseFloat(it.price) || 0;
+    return `<div class="ii-sold-row">
+        <span class="ii-sold-qty">${qty} ×</span>
+        <span class="ii-sold-main">
+          <span class="ii-sold-name">${_rcmEsc(it.name || 'Item')}</span>
+          <span class="ii-sold-why">$${price.toFixed(2)} each</span>
+        </span>
+        <span class="ii-sold-money">$${(qty * price).toFixed(2)}</span>
+      </div>`;
   }).join('');
+  head.insertAdjacentHTML('afterend', `<div class="ii-sec">
+      <div class="ii-sec-head"><span class="ii-sec-title">Sold</span><span class="ii-sec-note">${items.length} product${items.length === 1 ? '' : 's'}</span></div>
+      <div class="ii-list">${rows}</div>
+    </div>`);
+}
 
-  sectionEl.innerHTML = '<div class="inv-changes-list">' + rowsHtml + '</div>';
+// Reorder hands off to ingredient-detail.html's own real reorder screen
+// (?openReorder=true, already supported there) rather than building a new
+// one here. "Add item" reuses the existing seed-and-navigate pattern.
+function renderOrderNeedsAttention(body, changes, unmatchedItems) {
+  const flagged = changes.filter(c => c.status === 'out_of_stock' || c.status === 'low_stock');
+  if (!flagged.length && !unmatchedItems.length) return;
+
+  const rows = flagged.map(c => ({
+    name: c.name,
+    state: c.status === 'out_of_stock' ? 'short' : 'low',
+    why: c.status === 'out_of_stock'
+      ? `Out of stock${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`
+      : `${ShelfyInventoryImpact.fmt(c.newQty)}${c.unit ? ' ' + _rcmEsc(c.unit) : ''} left${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`,
+    action: 'Reorder',
+    onAction: () => { window.location.href = '/ingredient-detail?id=' + encodeURIComponent(c.id) + '&openReorder=true'; }
+  })).concat(unmatchedItems.map(u => ({
+    name: u.name,
+    state: 'low',
+    why: u.why || 'No product matched this line',
+    action: 'Add item',
+    onAction: () => {
+      sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({ name: u.name, text: `From "${u.name}" on this order — check the details before saving.` }));
+      window.location.href = '/ingredients';
+    }
+  })));
+
+  const invSec = body.querySelector('.ii-sec');
+  const rowsHtml = rows.map((r, i) => `<div class="ii-un">
+      <span class="ii-un-main">
+        <span class="ii-un-name">${_rcmEsc(r.name)}</span>
+        <span class="ii-un-why" data-state="${r.state}">${_rcmEsc(r.why)}</span>
+      </span>
+      <button type="button" class="ii-un-btn" data-need-idx="${i}">${_rcmEsc(r.action)}</button>
+    </div>`).join('');
+  const html = `<div class="ii-sec">
+      <div class="ii-sec-head"><span class="ii-sec-title">Needs attention</span><span class="ii-sec-note">${rows.length} to sort out</span></div>
+      <div class="ii-list">${rowsHtml}</div>
+    </div>`;
+  if (invSec) invSec.insertAdjacentHTML('afterend', html);
+  else body.insertAdjacentHTML('beforeend', html);
+
+  body.querySelectorAll('.ii-un-btn[data-need-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = rows[parseInt(btn.dataset.needIdx, 10)];
+      if (!r) return;
+      btn.disabled = true;
+      r.onAction();
+    });
+  });
 }
 
 function startAnotherOrder() {
@@ -6032,12 +6254,12 @@ async function updateInventoryForOrder(orderRecipes, userId, saleId = null, orde
     
     const { data: ingredients, error: ingredientsError } = await supabaseClient
       .from('ingredients')
-      .select('id, quantity, name, unit')
+      .select('id, quantity, name, unit, min_stock')
       .eq('profile_id', userId)
       .in('id', ingredientIds);
-    
+
     if (ingredientsError) throw ingredientsError;
-    
+
     // Track changes for success screen
     const changesSummary = [];
 
@@ -6047,13 +6269,14 @@ async function updateInventoryForOrder(orderRecipes, userId, saleId = null, orde
       const deduction = ingredientDeductions[ingredient.id] || 0;
       const oldQuantity = parseFloat(ingredient.quantity) || 0;
       const newQuantity = Math.max(0, oldQuantity - deduction);
-      
+      const minStock = parseFloat(ingredient.min_stock) || 0;
+
       // Update quantity
       const updateResult = await supabaseClient
         .from('ingredients')
         .update({ quantity: newQuantity })
         .eq('id', ingredient.id);
-      
+
       // Create history entry for quantity change
       try {
         await supabaseClient
@@ -6071,12 +6294,16 @@ async function updateInventoryForOrder(orderRecipes, userId, saleId = null, orde
       } catch (historyError) {
         console.error('Error creating history entry:', historyError);
       }
-      
-      // Determine stock status
+
+      // Low/out matches orders.html's definition: out at zero, low at/below
+      // min_stock, falling back to the old percentage heuristic for items
+      // with no min_stock set.
       let status = 'ok';
       if (newQuantity === 0 && oldQuantity > 0) {
         status = 'out_of_stock';
         await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
+      } else if (minStock > 0 && newQuantity <= minStock) {
+        status = 'low_stock';
       } else if (newQuantity > 0 && oldQuantity > 0 && newQuantity <= oldQuantity * 0.25 && oldQuantity >= 4) {
         status = 'low_stock';
       }
@@ -6088,7 +6315,8 @@ async function updateInventoryForOrder(orderRecipes, userId, saleId = null, orde
         unit: ingredient.unit || '',
         oldQty: oldQuantity,
         newQty: newQuantity,
-        status
+        status,
+        minStock
       });
 
       return updateResult;
@@ -6258,7 +6486,13 @@ document.addEventListener('keydown', (e) => {
     // Close modals in order of priority (most specific first)
     // The shared create-modal.js sheet (ingredient/expense/order methods)
     // has its own Escape listener, so it isn't handled here.
-    if (document.getElementById('manualEntryModal').classList.contains('active')) {
+    if (document.getElementById('rcmMatchSheet').classList.contains('active')) {
+      closeMatchSheet();
+    } else if (document.getElementById('rcmShotSheet').classList.contains('active')) {
+      closeShotSheet();
+    } else if (document.getElementById('recipeMappingModal').classList.contains('active')) {
+      closeRecipeMappingModal();
+    } else if (document.getElementById('manualEntryModal').classList.contains('active')) {
       closeManualEntryModal();
     } else if (document.getElementById('manualOrderModal').classList.contains('active')) {
       closeManualOrderModal();
