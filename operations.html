@@ -1921,7 +1921,7 @@
     <div class="mobile-hero-sub">Deducts items from your stock</div>
     <div class="mobile-mini-actions">
       <button type="button" onclick="openMethodModal()">New item</button>
-      <button type="button" onclick="openRecipeBuilder()">New product</button>
+      <button type="button" onclick="goToNewProduct()">New product</button>
       <button type="button" onclick="openExpenseChoiceModal()">New expense</button>
     </div>
   </div>
@@ -5879,6 +5879,15 @@ function bumpOrderRecipe(id, delta) {
 // pattern as ingredients.html's seedManualModal for unmatched receipt
 // lines) — warn first since anything already picked here doesn't survive
 // the navigation.
+// The dashboard's "New product" mini-action hands off to recipes.html's own
+// builder (same shelfy_open_create pattern recipe-detail.html's "+" button
+// already uses) instead of opening operations.html's own separate, older
+// #recipeBuilderOverlay copy.
+function goToNewProduct() {
+  sessionStorage.setItem('shelfy_open_create', 'true');
+  window.location.href = '/recipes';
+}
+
 function openProductCreateFromOrder() {
   if (orderRecipes.length && !confirm("Creating a new product will leave this order — the products you've already picked won't be saved. Continue?")) return;
   sessionStorage.setItem('shelfy_seed_product', JSON.stringify({ name: '' }));
