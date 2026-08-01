@@ -841,384 +841,215 @@
   })();
 </script>
 
-<div class="settings-container">
-  
-  <div class="settings-header">
-    <h1>Settings</h1>
-    <p>Manage your account preferences and application settings</p>
+<div class="settings-container" style="max-width: 480px;">
+
+  <!-- 26a: identity -->
+  <div class="st-who">
+    <button class="st-who-av" id="stAvatar" onclick="document.getElementById('avatarInput').click()" aria-label="Change avatar">
+      <span id="avatarInitial">U</span>
+      <small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="11" height="11"><path d="M4 20h16"/><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/></svg></small>
+    </button>
+    <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+    <span class="st-who-main">
+      <span class="st-who-name" id="userEmail">Loading…</span>
+      <span class="st-who-mail" id="stAvatarHint">Tap your initials to change your photo</span>
+    </span>
+    <span class="st-who-plan" id="tierBadge">Free</span>
+  </div>
+  <div class="st-note" id="avatarRemoveNote" style="display:none">
+    <button type="button" style="background:none;border:none;color:var(--accent-deep,var(--accent));font-size:11.5px;font-weight:700;padding:0;cursor:pointer;font-family:inherit;" onclick="removeAvatar()">Remove photo</button>
   </div>
 
-  <!-- Profile Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-      </svg>
-      Profile
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Avatar</h3>
-        <p>Upload a profile picture or use your initials</p>
-      </div>
-      <div class="avatar-upload">
-        <div class="current-avatar" id="avatarPreview">
-          <span id="avatarInitial">U</span>
-        </div>
-        <div class="avatar-buttons">
-          <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
-          <button class="btn btn-primary" onclick="document.getElementById('avatarInput').click()">Upload Photo</button>
-          <button class="btn btn-secondary" onclick="removeAvatar()">Remove</button>
-        </div>
-      </div>
-    </div>
+  <!-- 26b: the scan pool, two sources -->
+  <div class="st-sec-head">
+    <span class="st-sec-title">AI scans</span>
+    <span class="st-sec-note">shared by items, orders, expenses</span>
+  </div>
+  <div class="st-pool" id="stPool"></div>
+  <div class="st-note" id="stPoolNote"></div>
 
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Email Address</h3>
-        <p id="userEmail">Loading...</p>
-      </div>
+  <!-- 26c: storage -->
+  <div class="st-sec-head"><span class="st-sec-title">Receipt storage</span></div>
+  <div class="st-storage" id="stStorage"></div>
+
+  <!-- 26d: plan -->
+  <div class="st-sec-head"><span class="st-sec-title">Plan</span></div>
+  <div class="st-list" id="stPlanRows"></div>
+  <!-- Populated by the existing loadSubscriptionInfo()/updateSubscriptionUI() (below, unchanged) when the
+       user has an active paid subscription -- real Stripe customer-portal link, just needed a home. -->
+  <div class="st-list" id="upgradeRow" style="display:none;margin-top:10px;"></div>
+
+  <!-- 26e: stores -->
+  <div class="st-sec-head">
+    <span class="st-sec-title">Stores</span>
+    <span class="st-sec-note" id="stStoreNote"></span>
+  </div>
+  <div class="st-list" id="stStoreRows"></div>
+
+  <!-- 26f: appearance -->
+  <div class="st-sec-head"><span class="st-sec-title">Appearance</span></div>
+  <div class="st-list">
+    <div class="st-row" style="cursor:default" onclick="event.preventDefault()">
+      <span class="st-row-main">
+        <span class="st-row-name">Theme</span>
+        <span class="st-row-why">Applies on every device you sign in on</span>
+      </span>
+      <span class="st-seg">
+        <button type="button" id="lightThemeOption" aria-pressed="true" onclick="setTheme('light')">Light</button>
+        <button type="button" id="darkThemeOption" aria-pressed="false" onclick="setTheme('dark')">Dark</button>
+      </span>
     </div>
+    <button type="button" class="st-row" id="personalizedCategoriesToggle" aria-pressed="true" onclick="togglePersonalizedCategoriesSetting()">
+      <span class="st-row-main">
+        <span class="st-row-name">Personalized categories</span>
+        <span class="st-row-why">Show only item/expense categories relevant to your business</span>
+      </span>
+      <span class="st-sw"></span>
+    </button>
   </div>
 
-  <!-- Subscription & Usage Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-      </svg>
-      Subscription & Usage
-    </h2>
-    
-    <div class="plan-card">
-      <div class="plan-card-info">
-        <span class="tier-badge free" id="tierBadge">Free</span>
-        <p class="plan-card-sub">Your current plan</p>
-      </div>
-      <a href="/pricing" class="plan-upgrade-btn" id="upgradeBtn">Upgrade</a>
-    </div>
+  <!-- 26g: notifications -->
+  <div class="st-sec-head"><span class="st-sec-title">Notifications</span></div>
+  <div class="st-list">
+    <button type="button" class="st-row" id="notificationsToggle" aria-pressed="true" onclick="toggleNotificationsEnabled()">
+      <span class="st-row-main">
+        <span class="st-row-name">Notifications</span>
+        <span class="st-row-why">Master switch for everything below</span>
+      </span>
+      <span class="st-sw"></span>
+    </button>
+    <button type="button" class="st-row st-sub" id="lowStockRow" aria-pressed="true" onclick="toggleLowStockAlerts()">
+      <span class="st-row-main">
+        <span class="st-row-name">Low stock</span>
+        <span class="st-row-why">An item dropped under its alert level</span>
+      </span>
+      <span class="st-sw" id="lowStockToggle"></span>
+    </button>
+    <button type="button" class="st-row st-sub" id="outOfStockRow" aria-pressed="true" onclick="toggleOutOfStockAlerts()">
+      <span class="st-row-main">
+        <span class="st-row-name">Out of stock</span>
+        <span class="st-row-why">An item hit zero</span>
+      </span>
+      <span class="st-sw" id="outOfStockToggle"></span>
+    </button>
+    <button type="button" class="st-row st-sub" id="aiLimitRow" aria-pressed="true" onclick="toggleAILimitAlerts()">
+      <span class="st-row-main">
+        <span class="st-row-name">AI limit reached</span>
+        <span class="st-row-why">No scans left this month</span>
+      </span>
+      <span class="st-sw" id="aiLimitToggle"></span>
+    </button>
+  </div>
+  <div class="st-note" id="alertNote"></div>
 
-    <div class="tier-features">
-      <h4>AI Scans this month <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(items, orders &amp; expenses)</span></h4>
-      <p style="font-size: 12px; color: var(--text-muted); margin: 8px 0 12px 0;" id="scanResetDate">Resets on ...</p>
-      <div class="tier-feature-list">
-        <div class="usage-item">
-          <div class="usage-header">
-            <span class="usage-label" id="scanUsage">0 / 20 used</span>
-            <span class="usage-count" id="scanPercent"></span>
-          </div>
-          <div class="usage-bar">
-            <div class="usage-bar-fill" id="scanBar" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tier-features" style="margin-top:16px;">
-      <h4>Receipt Storage <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(for uploaded receipts)</span></h4>
-      <div class="tier-feature-list">
-        <div class="usage-item">
-          <div class="usage-header">
-            <span class="usage-label" id="storageUsage">0 MB / 100 MB used</span>
-            <span class="usage-count" id="storagePercent"></span>
-          </div>
-          <div class="usage-bar">
-            <div class="usage-bar-fill" id="storageBar" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tier-features" style="margin-top:16px;">
-      <h4>Stores <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">on your plan</span></h4>
-      <div class="tier-feature-list">
-        <div class="usage-item">
-          <div class="usage-header">
-            <span class="usage-label" id="storeUsageLabel">Loading...</span>
-            <span class="usage-count" style="font-size:11px; color:var(--accent); font-weight:600; cursor:pointer;" onclick="openStoreModal && openStoreModal(true)">Manage</span>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- 26h: history and reports + download your data -->
+  <div class="st-sec-head"><span class="st-sec-title">History and reports</span></div>
+  <div class="st-list">
+    <button type="button" class="st-row" onclick="window.location.href='/change-log'">
+      <span class="st-row-main">
+        <span class="st-row-name">Inventory change history</span>
+        <span class="st-row-why">Every stock movement, and what caused it</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button type="button" class="st-row" onclick="window.location.href='/analytics'">
+      <span class="st-row-main">
+        <span class="st-row-name">Analytics</span>
+        <span class="st-row-why">Revenue, dead stock, reorder predictions</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button type="button" class="st-row" onclick="window.location.href='/expenses'">
+      <span class="st-row-main">
+        <span class="st-row-name">Expenses</span>
+        <span class="st-row-why">Spend by category, month over month</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 
-  <!-- Security Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-      </svg>
-      Security
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Password</h3>
-        <p>Change your account password</p>
-      </div>
-      <button class="btn btn-secondary" onclick="openChangePasswordModal()">Change Password</button>
-    </div>
+  <div class="st-sec-head">
+    <span class="st-sec-title">Download your data</span>
+    <span class="st-sec-note">CSV</span>
+  </div>
+  <div class="st-list">
+    <button type="button" class="st-row" onclick="downloadIngredients(event)">
+      <span class="st-row-main"><span class="st-row-name">Items</span><span class="st-row-why">Stock, costs, suppliers</span></span>
+      <span class="st-row-val">.csv</span>
+    </button>
+    <button type="button" class="st-row" onclick="downloadOrders(event)">
+      <span class="st-row-main"><span class="st-row-name">Orders</span><span class="st-row-why">Orders and their product lines</span></span>
+      <span class="st-row-val">.csv</span>
+    </button>
+    <button type="button" class="st-row" onclick="downloadExpenses(event)">
+      <span class="st-row-main"><span class="st-row-name">Expenses</span><span class="st-row-why">Expenses with itemised lines</span></span>
+      <span class="st-row-val">.csv</span>
+    </button>
+    <button type="button" class="st-row" onclick="downloadChangeLogs(event)">
+      <span class="st-row-main"><span class="st-row-name">Change log</span><span class="st-row-why">Every inventory movement</span></span>
+      <span class="st-row-val">.csv</span>
+    </button>
   </div>
 
-  <!-- Appearance Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
-      </svg>
-      Appearance
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Default Theme</h3>
-        <p>Choose your preferred color theme</p>
-      </div>
-      <div class="theme-options">
-        <div class="theme-option" id="lightThemeOption" onclick="setDefaultTheme('light')">
-          <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-          Light
-        </div>
-        <div class="theme-option" id="darkThemeOption" onclick="setDefaultTheme('dark')">
-          <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px; fill: currentColor;">
-            <path d="M264 480A232 232 0 0132 248c0-94 54-178.28 137.61-214.67a16 16 0 0121.06 21.06C181.07 76.43 176 104.66 176 136c0 110.28 89.72 200 200 200 31.34 0 59.57-5.07 81.61-14.67a16 16 0 0121.06 21.06C442.28 426 358 480 264 480z"/>
-          </svg>
-          Dark
-        </div>
-      </div>
-    </div>
+  <!-- 26i: help -->
+  <div class="st-sec-head"><span class="st-sec-title">Help</span></div>
+  <div class="st-list">
+    <button type="button" class="st-row" onclick="window.location.href='/docs'">
+      <span class="st-row-main">
+        <span class="st-row-name">Quick guide</span>
+        <span class="st-row-why">How items, products, orders and expenses fit together</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button type="button" class="st-row" onclick="retakeOnboarding()">
+      <span class="st-row-main">
+        <span class="st-row-name">Retake onboarding</span>
+        <span class="st-row-why">Walk through setup again</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 
-  <!-- Preferences Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-      </svg>
-      Preferences
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Personalized Categories</h3>
-        <p>Show only product categories relevant to your business</p>
-      </div>
-      <div class="toggle-switch" id="personalizedCategoriesToggle" onclick="togglePersonalizedCategoriesSetting()"></div>
+  <!-- Account -->
+  <div class="st-sec-head"><span class="st-sec-title">Account</span></div>
+  <div class="st-list">
+    <div class="st-row">
+      <span class="st-row-main"><span class="st-row-name">Email</span></span>
+      <span class="st-row-val" id="userEmailVal">Loading…</span>
     </div>
-
+    <button type="button" class="st-row" onclick="openChangePasswordModal()">
+      <span class="st-row-main"><span class="st-row-name">Password</span></span>
+      <span class="st-row-val">Change</span>
+    </button>
+    <button type="button" class="st-row" onclick="logout()">
+      <span class="st-row-main"><span class="st-row-name">Sign out</span></span>
+    </button>
   </div>
 
-  <!-- Notifications Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-      </svg>
-      Notifications
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Enable Notifications</h3>
-        <p>Receive notifications about your inventory</p>
-      </div>
-      <div class="toggle-switch" id="notificationsToggle" onclick="toggleNotificationsEnabled()"></div>
-    </div>
-
-    <div class="settings-row" id="lowStockRow">
-      <div class="settings-label">
-        <h3>Low Stock Alerts</h3>
-        <p>Get notified when items are below minimum stock</p>
-      </div>
-      <div class="toggle-switch" id="lowStockToggle" onclick="toggleLowStockAlerts()"></div>
-    </div>
-
-    <div class="settings-row" id="outOfStockRow">
-      <div class="settings-label">
-        <h3>Out of Stock Alerts</h3>
-        <p>Get notified when items run out of stock</p>
-      </div>
-      <div class="toggle-switch" id="outOfStockToggle" onclick="toggleOutOfStockAlerts()"></div>
-    </div>
-
-    <div class="settings-row" id="aiLimitRow">
-      <div class="settings-label">
-        <h3>AI Limit Reached Alerts</h3>
-        <p>Get notified when you reach your monthly AI extraction limit</p>
-      </div>
-      <div class="toggle-switch" id="aiLimitToggle" onclick="toggleAILimitAlerts()"></div>
-    </div>
+  <!-- 26j: danger zone — each row states exactly what it destroys -->
+  <div class="st-sec-head"><span class="st-sec-title">Danger zone</span></div>
+  <div class="st-list">
+    <button type="button" class="st-row danger" onclick="openDeleteDataModal()">
+      <span class="st-row-main">
+        <span class="st-row-name">Delete all data</span>
+        <span class="st-row-why">Items, products, orders and expenses. Your account stays.</span>
+      </span>
+    </button>
+    <button type="button" class="st-row danger" onclick="openDeleteFilesModal()">
+      <span class="st-row-main">
+        <span class="st-row-name">Delete all files</span>
+        <span class="st-row-why" id="deleteFilesWhy">Receipts and screenshots</span>
+      </span>
+    </button>
+    <button type="button" class="st-row danger" onclick="openDeleteAccountModal()">
+      <span class="st-row-main">
+        <span class="st-row-name">Delete account</span>
+        <span class="st-row-why">Everything, permanently. Cancels your subscription.</span>
+      </span>
+    </button>
   </div>
+  <div class="st-note">ShelfyAI 2.4.1</div>
 
-  <!-- Navigate Section — Expenses/Analytics moved here once their bottom-nav tabs folded into More -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-      </svg>
-      Navigate
-    </h2>
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Expenses</h3>
-        <p>Track and review your business expenses</p>
-      </div>
-      <button class="btn btn-secondary" onclick="window.location.href='/expenses'">Open</button>
-    </div>
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Analytics</h3>
-        <p>Sales trends, profit margins, and reorder predictions</p>
-      </div>
-      <button class="btn btn-secondary" onclick="window.location.href='/analytics'">Open</button>
-    </div>
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Quick Guide</h3>
-        <p>How-to guides and frequently asked questions</p>
-      </div>
-      <button class="btn btn-secondary" onclick="window.location.href='/docs'">Open</button>
-    </div>
-  </div>
-
-  <!-- Change Logs Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      Change Logs
-    </h2>
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Inventory Change History</h3>
-        <p>View every quantity change — manual edits, orders, expenses, and restocks.</p>
-      </div>
-      <button class="btn btn-secondary" onclick="window.location.href='/change-log'">View</button>
-    </div>
-  </div>
-
-  <!-- Data Export Section -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-      </svg>
-      Data Export
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Download Ingredients</h3>
-        <p>Export all ingredients data as CSV</p>
-      </div>
-      <button class="btn btn-secondary" onclick="downloadIngredients(event)">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        Download CSV
-      </button>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Download Orders</h3>
-        <p>Export all orders data as CSV</p>
-      </div>
-      <button class="btn btn-secondary" onclick="downloadOrders(event)">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        Download CSV
-      </button>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Download Expenses</h3>
-        <p>Export all expenses data as CSV</p>
-      </div>
-      <button class="btn btn-secondary" onclick="downloadExpenses(event)">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        Download CSV
-      </button>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Download Change Logs</h3>
-        <p>Export all inventory change history as CSV</p>
-      </div>
-      <button class="btn btn-secondary" onclick="downloadChangeLogs(event)">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 6px;">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        Download CSV
-      </button>
-    </div>
-  </div>
-
-  <!-- Onboarding -->
-  <div class="settings-section">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-      </svg>
-      Onboarding
-    </h2>
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Retake Onboarding</h3>
-        <p>Go through the setup questionnaire again</p>
-      </div>
-      <button class="btn btn-secondary" onclick="retakeOnboarding()">Retake</button>
-    </div>
-  </div>
-
-  <!-- Danger Zone -->
-  <div class="settings-section danger-zone">
-    <h2>
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-      </svg>
-      Danger Zone
-    </h2>
-    
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Delete All Data</h3>
-        <p>Remove all ingredients, products, expenses, and orders</p>
-      </div>
-      <button class="btn btn-danger" onclick="openDeleteDataModal()">Delete All Data</button>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Delete All Files</h3>
-        <p>Permanently delete all uploaded receipt images</p>
-      </div>
-      <button class="btn btn-danger" onclick="openDeleteFilesModal()">Delete All Files</button>
-    </div>
-
-    <div class="settings-row">
-      <div class="settings-label">
-        <h3>Delete Account</h3>
-        <p>Permanently delete your account and all associated data</p>
-      </div>
-      <button class="btn btn-danger" onclick="openDeleteAccountModal()">Delete Account</button>
-    </div>
-  </div>
-
-</div>
-
-<!-- Save Button Bar -->
-<div class="save-button-bar" id="saveButtonBar">
-  <span class="save-button-bar-text">You have unsaved changes</span>
-  <button class="btn-discard" onclick="discardChanges()">Discard</button>
-  <button class="btn-save" onclick="saveAllSettings()">Save Changes</button>
 </div>
 
 <!-- Change Password Modal -->
@@ -1282,6 +1113,16 @@
   </div>
 </div>
 
+<!-- Shared bottom sheet: Plan / Scan packs / Stores -->
+<div class="modal-overlay modal-sheet" id="stSheet" onclick="if(event.target===this)closeStSheet()">
+  <div class="modal-content">
+    <h2 class="st-sheet-title" id="stSheetTitle">—</h2>
+    <p class="st-sheet-sub" id="stSheetSub"></p>
+    <div id="stSheetList"></div>
+    <button type="button" class="st-sheet-new" id="stSheetNew" hidden></button>
+  </div>
+</div>
+
 <script>
 // Get or create user settings
 async function getOrCreateUserSettings(userId) {
@@ -1322,6 +1163,26 @@ async function getOrCreateUserSettings(userId) {
   return settings;
 }
 
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const CHEV = '<svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>';
+const mb = b => (b / 1048576) >= 1024 ? (b / 1073741824).toFixed(1) + ' GB' : Math.round(b / 1048576) + ' MB';
+
+// One shape for the scan pool -- monthlyUsed/monthlyLimit is a real,
+// meaningful ratio; bonusScans (from user_settings.bonus_scans, already
+// fetched by getOrCreateUserSettings()'s select('*')) is only ever shown as
+// a count, never a fake proportional segment, since there's no stored
+// "total ever bought" to compute a bonus-pool percentage against.
+let ST = { tier: 'free', monthlyLimit: 5, monthlyUsed: 0, bonusScans: 0, resetsOn: '' };
+const PLAN_META = {
+  free:    { label: 'Free',    scans: 5,   storageMB: 10  },
+  starter: { label: 'Starter', scans: 100, storageMB: 50  },
+  pro:     { label: 'Pro',     scans: 300, storageMB: 250 }
+};
+function monthlyLeft() { return Math.max(0, ST.monthlyLimit - ST.monthlyUsed); }
+function bonusLeft()   { return ST.bonusScans || 0; }
+function scansLeft()   { return monthlyLeft() + bonusLeft(); }
+
 // Load user settings
 async function loadSettings() {
   try {
@@ -1329,83 +1190,37 @@ async function loadSettings() {
     if (!user) return;
 
     // Display email
-    document.getElementById('userEmail').textContent = user.email;
-    
+    $('userEmail').textContent = user.email;
+    $('userEmailVal').textContent = user.email;
+
     // Load settings from database
     const settings = await getOrCreateUserSettings(user.id);
     if (!settings) return;
 
     // Load avatar
-    const avatarPreview = document.getElementById('avatarPreview');
-    const avatarInitial = document.getElementById('avatarInitial');
-    
     if (settings.avatar_url) {
-      avatarPreview.innerHTML = `<img src="${settings.avatar_url}" alt="Avatar">`;
-      avatarPreview.style.backgroundColor = '#ffffff';
-      avatarPreview.style.backgroundImage = 'none';
+      $('stAvatar').innerHTML = `<img src="${settings.avatar_url}" alt="Avatar">`;
+      $('avatarRemoveNote').style.display = '';
     } else {
-      avatarPreview.innerHTML = '';
-      avatarPreview.style.backgroundImage = 'url(/default_avatar.png)';
-      avatarPreview.style.backgroundSize = 'cover';
-      avatarPreview.style.backgroundPosition = 'center';
-      avatarPreview.style.backgroundColor = '';
+      $('stAvatar').innerHTML = '<span id="avatarInitial">U</span>';
+      $('avatarRemoveNote').style.display = 'none';
     }
 
-    // Load theme preference
-    updateThemeButtons(settings.theme || 'light');
-    currentTheme = settings.theme || 'light';
+    // Load theme preference (visual state only -- theme.js already applied
+    // the actual data-theme attribute before this script ever runs)
+    updateThemeButtons(document.documentElement.getAttribute('data-theme') || settings.theme || 'light');
 
-    // Load notification settings
-    const notificationsToggle = document.getElementById('notificationsToggle');
-    const lowStockToggle = document.getElementById('lowStockToggle');
-    const outOfStockToggle = document.getElementById('outOfStockToggle');
-    const aiLimitToggle = document.getElementById('aiLimitToggle');
-    
-    // Clear all toggles first
-    notificationsToggle.classList.remove('active');
-    lowStockToggle.classList.remove('active');
-    outOfStockToggle.classList.remove('active');
-    aiLimitToggle.classList.remove('active');
-    
-    // Set toggles based on settings
-    const notificationsEnabled = settings.notifications_enabled;
-    if (notificationsEnabled) {
-      notificationsToggle.classList.add('active');
-    }
-    if (settings.low_stock_notifications) {
-      lowStockToggle.classList.add('active');
-    }
-    if (settings.out_of_stock_notifications) {
-      outOfStockToggle.classList.add('active');
-    }
-    if (settings.ai_limit_notifications) {
-      aiLimitToggle.classList.add('active');
-    }
-    
-    // Update sub-options state
-    updateNotificationSubOptions(notificationsEnabled);
-    
-    // Load personalized categories setting
-    const personalizedCategoriesToggle = document.getElementById('personalizedCategoriesToggle');
-    if (personalizedCategoriesToggle) {
-      personalizedCategoriesToggle.classList.remove('active');
-      if (settings.personalized_categories_enabled !== false) {
-        personalizedCategoriesToggle.classList.add('active');
-      }
-    }
-    
-    // Store original settings for discard functionality
-    originalSettings = {
-      theme: settings.theme || 'light',
-      notifications_enabled: settings.notifications_enabled || false,
-      low_stock_notifications: settings.low_stock_notifications || false,
-      out_of_stock_notifications: settings.out_of_stock_notifications || false,
-      ai_limit_notifications: settings.ai_limit_notifications || false,
-      personalized_categories_enabled: settings.personalized_categories_enabled !== false
-    };
+    // Load notification settings (instant-apply from here on, not a batch save)
+    SET.notifications = settings.notifications_enabled !== false;
+    SET.lowStock = settings.low_stock_notifications !== false;
+    SET.outOfStock = settings.out_of_stock_notifications !== false;
+    SET.aiLimit = settings.ai_limit_notifications !== false;
+    SET.categories = settings.personalized_categories_enabled !== false;
+    renderAlerts();
+    setRowPressed('personalizedCategoriesToggle', SET.categories);
 
-    // Load tier information
-    loadTierInformation(settings);
+    // Load tier information (also renders the scan pool, storage, plan, stores)
+    await loadTierInformation(settings);
 
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -1439,40 +1254,23 @@ async function loadTierInformation(settings) {
       supabaseClient.from('user_settings').update({ tier }).eq('user_id', user.id);
     }
   }
-  
-  console.log('Loading tier information:', tier);
-  
+
   // Define scan limits (unified pool: ingredients + orders + expenses)
   // Must match api/extract-receipt.js's scanLimits -- this is the source of
   // truth for enforcement, this is just the display.
   const scanLimits = { free: 5, starter: 100, pro: 300 };
-  const scanLimit = scanLimits[tier] ?? 5;
 
-  // Store limit info
-  const storeLimits = { free: 1, starter: 5, pro: Infinity };
-  const storeLimit = storeLimits[tier] ?? 1;
-  const storeLimitLabel = document.getElementById('storeUsageLabel');
-  if (storeLimitLabel) {
-    try {
-      const { data: stores } = await supabaseClient.from('stores').select('id', { count: 'exact' }).eq('owner_id', user.id);
-      const count = stores ? stores.length : 0;
-      const limitText = storeLimit === Infinity ? 'Unlimited' : storeLimit;
-      storeLimitLabel.textContent = `${count} / ${limitText} store${storeLimit !== 1 ? 's' : ''} used`;
-    } catch { storeLimitLabel.textContent = storeLimit === Infinity ? 'Unlimited stores' : `Up to ${storeLimit} store${storeLimit !== 1 ? 's' : ''}`; }
-  }
-
-  // Update tier badge
-  const tierBadge = document.getElementById('tierBadge');
-  tierBadge.className = `tier-badge ${tier}`;
-  tierBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
-  console.log('Updated tier badge to:', tier);
+  ST.tier = tier;
+  ST.monthlyLimit = scanLimits[tier] ?? 5;
+  // The real display bug this redesign fixes: bonus_scans was never fetched
+  // here at all, so a maker who bought a scan pack saw a plain "used / limit"
+  // number that didn't reflect what they'd paid for.
+  ST.bonusScans = settings?.bonus_scans || 0;
 
   // Fetch this month's actual usage from the database
   const now = new Date();
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
   let totalScans = 0;
-
   if (user) {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const { data: usageRecords, error } = await supabaseClient
@@ -1487,57 +1285,104 @@ async function loadTierInformation(settings) {
         sum + (r.ingredient_count || 0) + (r.order_count || 0) + (r.expense_count || 0), 0);
     }
   }
+  ST.monthlyUsed = totalScans;
 
-  // Update combined scan usage display
-  const scanUsageEl = document.getElementById('scanUsage');
-  if (scanUsageEl) {
-    scanUsageEl.textContent = `${totalScans} / ${scanLimit} used`;
-  }
-  const pct = scanLimit > 0 ? Math.round((totalScans / scanLimit) * 100) : 0;
-  const scanPercentEl = document.getElementById('scanPercent');
-  if (scanPercentEl) {
-    scanPercentEl.textContent = `${pct}%`;
-  }
-  updateUsageBar('scanBar', totalScans, scanLimit);
-
-  // Calculate and display reset date (first day of next month)
+  // Reset date (first day of next month)
   const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const resetDateFormatted = `${String(resetDate.getDate()).padStart(2, '0')}-${String(resetDate.getMonth() + 1).padStart(2, '0')}-${resetDate.getFullYear()}`;
-  const scanResetDateEl = document.getElementById('scanResetDate');
-  if (scanResetDateEl) {
-    scanResetDateEl.textContent = `Resets on ${resetDateFormatted}`;
-  }
+  ST.resetsOn = `${String(resetDate.getDate()).padStart(2, '0')}-${String(resetDate.getMonth() + 1).padStart(2, '0')}-${resetDate.getFullYear()}`;
 
-  // Load storage usage
+  renderWho();
+  renderPool();
+  renderPlanRows();
+  await renderStoreRows();
   await loadStorageStats(tier);
+}
 
-  // Hide upgrade button when on pro
-  const upgradeBtn = document.getElementById('upgradeBtn');
-  if (upgradeBtn && tier === 'pro') {
-    upgradeBtn.style.display = 'none';
-  }
+function renderWho() {
+  const badge = $('tierBadge');
+  badge.textContent = ST.tier.charAt(0).toUpperCase() + ST.tier.slice(1);
+  badge.dataset.paid = ST.tier !== 'free' ? '1' : '0';
+}
+
+function renderPool() {
+  const mL = monthlyLeft(), bL = bonusLeft(), total = scansLeft();
+  const mUsedPct = ST.monthlyLimit > 0 ? Math.min(100, Math.round((ST.monthlyUsed / ST.monthlyLimit) * 100)) : 0;
+  $('stPool').innerHTML = `
+    <div class="st-pool-top">
+      <span class="st-pool-big">${total}</span>
+      <span class="st-pool-unit">scan${total === 1 ? '' : 's'} left</span>
+      <span class="st-pool-reset">resets ${esc(ST.resetsOn)}</span>
+    </div>
+    <div class="st-pool-track">
+      <span class="st-pool-seg" style="flex:1"><i style="width:${mUsedPct}%;background:var(--accent)"></i></span>
+    </div>
+    <div class="st-pool-keys">
+      <span class="st-pool-key"><i style="background:var(--accent)"></i><b>${mL}</b> of ${ST.monthlyLimit} monthly</span>
+      ${bL ? `<span class="st-pool-key"><i style="background:var(--accent-ink,var(--accent))"></i><b>${bL}</b> bought, never expire</span>` : ''}
+    </div>
+    ${total === 0 ? '<div class="st-pool-low">None left — manual entry still works</div>'
+      : total <= 2 ? `<div class="st-pool-low">${total} left</div>` : ''}
+    <div class="st-pool-buy">
+      <button type="button" class="st-buy-primary" onclick="openStSheet('packs')">${bL ? 'Buy more scans' : 'Buy a scan pack'}</button>
+      ${ST.tier !== 'pro' ? `<button type="button" class="st-buy-second" onclick="window.location.href='/pricing'">Upgrade plan</button>` : ''}
+    </div>`;
+  $('stPoolNote').textContent = bL
+    ? 'Monthly scans are used first; bought scans never expire and carry over.'
+    : 'Bought scans are added on top of your monthly allowance and never expire.';
+}
+
+function renderPlanRows() {
+  const meta = PLAN_META[ST.tier] || PLAN_META.free;
+  $('stPlanRows').innerHTML = `
+    <button type="button" class="st-row" onclick="window.location.href='/pricing'">
+      <span class="st-row-main"><span class="st-row-name">${esc(meta.label)} plan</span>
+      <span class="st-row-why">${meta.scans} scans · ${meta.storageMB} MB storage</span></span>
+      <span class="st-row-tag"${ST.tier !== 'free' ? ' data-paid="1"' : ''}>${ST.tier === 'pro' ? 'Top plan' : 'Change'}</span>
+    </button>
+    <button type="button" class="st-row" onclick="openStSheet('packs')">
+      <span class="st-row-main"><span class="st-row-name">Scan packs</span>
+      <span class="st-row-why">${bonusLeft()} bought scan${bonusLeft() === 1 ? '' : 's'} left</span></span>
+      <span class="st-row-tag">Buy more</span>
+    </button>`;
+}
+
+// Stores — real count/limit query (same as before); management itself stays
+// in the existing store-modal.js sheet rather than being rebuilt here.
+async function renderStoreRows() {
+  $('stStoreRows').innerHTML = `
+    <button type="button" class="st-row" onclick="openStoreModal && openStoreModal(true)">
+      <span class="st-row-main"><span class="st-row-name">Manage stores</span><span class="st-row-why">Rename, delete, switch</span></span>
+      ${CHEV}
+    </button>
+    <button type="button" class="st-row" onclick="switchAccount()">
+      <span class="st-row-main"><span class="st-row-name">Switch account</span><span class="st-row-why">Use a different ShelfyAI login</span></span>
+      ${CHEV}
+    </button>`;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+    const storeLimits = { free: 1, starter: 5, pro: Infinity };
+    const limit = storeLimits[ST.tier] ?? 1;
+    const { data: stores } = await supabaseClient.from('stores').select('id', { count: 'exact' }).eq('owner_id', user.id);
+    const count = stores ? stores.length : 0;
+    $('stStoreNote').textContent = limit === Infinity ? `${count} store${count === 1 ? '' : 's'}` : `${count} of ${limit} on ${PLAN_META[ST.tier].label}`;
+  } catch (e) { /* keep default note */ }
 }
 
 async function loadStorageStats(tier) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
-
-    // Get user's storage stats
     const { data: settings } = await supabaseClient
       .from('user_settings')
       .select('storage_used_bytes, storage_limit_bytes')
       .eq('user_id', user.id)
       .single();
-
     if (!settings) {
-      // If no storage data yet, show defaults based on tier
       const storageLimits = { free: 10485760, starter: 52428800, pro: 262144000 }; // 10MB, 50MB, 250MB
-      const limitBytes = storageLimits[tier] || 10485760;
-      updateStorageDisplay(0, limitBytes);
+      updateStorageDisplay(0, storageLimits[tier] || 10485760);
       return;
     }
-
     updateStorageDisplay(settings.storage_used_bytes || 0, settings.storage_limit_bytes || 10485760);
   } catch (error) {
     console.error('Error loading storage stats:', error);
@@ -1545,48 +1390,64 @@ async function loadStorageStats(tier) {
 }
 
 function updateStorageDisplay(usedBytes, limitBytes) {
-  const usedMB = (usedBytes / 1048576).toFixed(1);
-  const limitMB = limitBytes > 0 ? `${(limitBytes / 1048576).toFixed(0)} MB` : '0 MB';
-  
-  const percentUsed = limitBytes > 0 ? ((usedBytes / limitBytes) * 100).toFixed(1) : 0;
-
-  const storageUsageEl = document.getElementById('storageUsage');
-  if (storageUsageEl) {
-    storageUsageEl.textContent = `${usedMB} MB / ${limitMB} used`;
-  }
-
-  const storagePercentEl = document.getElementById('storagePercent');
-  if (storagePercentEl) {
-    storagePercentEl.textContent = `${percentUsed}%`;
-  }
-
-  const storageBar = document.getElementById('storageBar');
-  if (storageBar) {
-    storageBar.style.width = `${percentUsed}%`;
-    
-    // Change color based on usage
-    storageBar.classList.remove('warning', 'danger');
-    if (percentUsed >= 90) {
-      storageBar.classList.add('danger');
-    } else if (percentUsed >= 75) {
-      storageBar.classList.add('warning');
-    }
-  }
+  const pct = limitBytes > 0 ? Math.min(100, Math.round((usedBytes / limitBytes) * 100)) : 0;
+  const st = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
+  $('stStorage').innerHTML = `
+    <div class="st-storage-top"><span class="st-storage-l">${mb(usedBytes)} of ${mb(limitBytes)}</span><span class="st-storage-r">${pct}% used</span></div>
+    <div class="st-storage-track"><i style="width:${pct}%"${st ? ` data-state="${st}"` : ''}></i></div>
+    <div class="st-storage-why"${st ? ' data-state="warn"' : ''}>${
+      pct >= 100 ? 'Full — new receipt uploads will be refused. Delete files or upgrade.'
+      : st === 'warn' ? `${mb(Math.max(0, limitBytes - usedBytes))} left. Receipts and order screenshots you upload.`
+      : 'Receipts and order screenshots you upload.'}</div>`;
+  const whyEl = $('deleteFilesWhy');
+  if (whyEl) whyEl.textContent = `Receipts and screenshots — frees ${mb(usedBytes)}`;
 }
 
-function updateUsageBar(barId, used, limit) {
-  const bar = document.getElementById(barId);
-  if (!bar) return;
-  
-  const percentage = (used / limit) * 100;
-  bar.style.width = percentage + '%';
-  
-  // Update color based on usage
-  bar.classList.remove('warning', 'danger');
-  if (percentage >= 90) {
-    bar.classList.add('danger');
-  } else if (percentage >= 70) {
-    bar.classList.add('warning');
+// --- Shared bottom sheet: Scan packs (Plan/Stores link out to real,
+// existing destinations instead -- /pricing and store-modal.js) ---
+function stOptHTML(name, meta, tag, fn) {
+  return `<button type="button" class="st-opt" onclick="${fn}">
+      <span class="st-opt-body"><span class="st-opt-name">${esc(name)}</span>${meta ? `<span class="st-opt-meta">${esc(meta)}</span>` : ''}</span>
+      ${tag ? `<span class="st-opt-tag">${esc(tag)}</span>` : ''}
+    </button>`;
+}
+let ST_SCANPACK = { configured: true, scanCount: 50, priceFormatted: null };
+function openStSheet(kind) {
+  if (kind === 'packs') {
+    $('stSheetTitle').textContent = 'Scan packs';
+    $('stSheetSub').textContent = `${bonusLeft()} bought scan${bonusLeft() === 1 ? '' : 's'} left. They never expire and are spent after your monthly allowance.`;
+    $('stSheetList').innerHTML =
+      stOptHTML(`Buy ${ST_SCANPACK.scanCount} scans`, ST_SCANPACK.priceFormatted || 'One-off payment', null, 'buyScanPack()') +
+      (typeof openCustomerPortal === 'function' ? stOptHTML('Purchase history', 'Manage billing and past purchases', null, 'openCustomerPortal()') : '');
+    $('stSheetNew').hidden = true;
+  }
+  $('stSheet').classList.add('active');
+}
+function closeStSheet() { $('stSheet').classList.remove('active'); }
+
+async function loadScanPackPrice() {
+  try {
+    const res = await fetch('/api/scan-pack-price');
+    const data = await res.json();
+    ST_SCANPACK = { configured: !!data.configured, scanCount: data.scanCount || 50, priceFormatted: data.priceFormatted || null };
+  } catch (err) { console.error('Error loading scan pack price:', err); }
+}
+
+async function buyScanPack() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { window.location.href = '/login?redirect=settings'; return; }
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type: 'scan_pack' })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const stripe = Stripe(data.publishableKey);
+    await stripe.redirectToCheckout({ sessionId: data.sessionId });
+  } catch (err) {
+    alert('Failed to start checkout: ' + err.message);
   }
 }
 
@@ -1639,7 +1500,8 @@ async function handleAvatarUpload(event) {
 
   try { sessionStorage.setItem('shelfy_user_avatar', avatarData); } catch (e) {}
 
-  document.getElementById('avatarPreview').innerHTML = `<img src="${avatarData}" alt="Avatar">`;
+  $('stAvatar').innerHTML = `<img src="${avatarData}" alt="Avatar">`;
+  $('avatarRemoveNote').style.display = '';
 }
 
 async function removeAvatar() {
@@ -1660,13 +1522,9 @@ async function removeAvatar() {
   
   // Update cache for instant header refresh on next page
   sessionStorage.setItem('shelfy_user_avatar', 'null');
-  
-  const avatarPreview = document.getElementById('avatarPreview');
-  avatarPreview.innerHTML = '';
-  avatarPreview.style.backgroundImage = 'url(/default_avatar.png)';
-  avatarPreview.style.backgroundSize = 'cover';
-  avatarPreview.style.backgroundPosition = 'center';
-  avatarPreview.style.backgroundColor = '';
+
+  $('stAvatar').innerHTML = '<span id="avatarInitial">U</span>';
+  $('avatarRemoveNote').style.display = 'none';
 }
 
 // Password functions
@@ -1717,233 +1575,70 @@ async function changePassword() {
   }
 }
 
-// Theme functions
-function setDefaultTheme(theme) {
-  currentTheme = theme;
+// Theme -- reuses theme.js's own toggleTheme(), which already applies the
+// attribute, persists to localStorage, and writes user_settings.theme.
+function setTheme(theme) {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  if (theme !== current && typeof toggleTheme === 'function') toggleTheme();
   updateThemeButtons(theme);
-  
-  // Apply theme immediately
-  if (theme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    const checkbox = document.getElementById('theme-checkbox');
-    if (checkbox) checkbox.checked = true;
-  } else {
-    document.documentElement.setAttribute('data-theme', 'light');
-    const checkbox = document.getElementById('theme-checkbox');
-    if (checkbox) checkbox.checked = false;
-  }
-  
-  markSettingsChanged();
 }
-
 function updateThemeButtons(theme) {
-  const lightBtn = document.getElementById('lightThemeOption');
-  const darkBtn = document.getElementById('darkThemeOption');
-  
-  lightBtn.classList.remove('active');
-  darkBtn.classList.remove('active');
-  
-  if (theme === 'dark') {
-    darkBtn.classList.add('active');
-  } else {
-    lightBtn.classList.add('active');
-  }
+  $('lightThemeOption').setAttribute('aria-pressed', theme === 'dark' ? 'false' : 'true');
+  $('darkThemeOption').setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
 }
 
-// Track if settings have changed
-let hasUnsavedChanges = false;
-let originalSettings = {};
-let currentTheme = 'light';
+// Every toggle below persists immediately (no separate Save/Discard step) --
+// each is a single-column user_settings update.
+let SET = { notifications: true, lowStock: true, outOfStock: true, aiLimit: true, categories: true };
 
-function markSettingsChanged() {
-  hasUnsavedChanges = true;
-  const saveBar = document.getElementById('saveButtonBar');
-  if (saveBar) {
-    saveBar.classList.add('visible');
-  }
+function setRowPressed(id, on) {
+  const el = $(id);
+  if (el) el.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+function renderAlerts() {
+  setRowPressed('notificationsToggle', SET.notifications);
+  setRowPressed('lowStockRow', SET.notifications && SET.lowStock);
+  setRowPressed('outOfStockRow', SET.notifications && SET.outOfStock);
+  setRowPressed('aiLimitRow', SET.notifications && SET.aiLimit);
+  $('alertNote').textContent = SET.notifications ? '' : 'Notifications are off, so the three below are paused — their settings are kept.';
 }
 
-function hideSettingsChanged() {
-  hasUnsavedChanges = false;
-  const saveBar = document.getElementById('saveButtonBar');
-  if (saveBar) {
-    saveBar.classList.remove('visible');
-  }
-}
-
-// Notification functions
-function toggleNotificationsEnabled() {
-  const toggle = document.getElementById('notificationsToggle');
-  toggle.classList.toggle('active');
-  
-  const isEnabled = toggle.classList.contains('active');
-  updateNotificationSubOptions(isEnabled);
-  
-  markSettingsChanged();
-}
-
-function updateNotificationSubOptions(enabled) {
-  const lowStockRow = document.getElementById('lowStockRow');
-  const outOfStockRow = document.getElementById('outOfStockRow');
-  const aiLimitRow = document.getElementById('aiLimitRow');
-  const lowStockToggle = document.getElementById('lowStockToggle');
-  const outOfStockToggle = document.getElementById('outOfStockToggle');
-  const aiLimitToggle = document.getElementById('aiLimitToggle');
-  
-  if (enabled) {
-    lowStockRow.classList.remove('disabled');
-    outOfStockRow.classList.remove('disabled');
-    aiLimitRow.classList.remove('disabled');
-    lowStockToggle.classList.remove('disabled');
-    outOfStockToggle.classList.remove('disabled');
-    aiLimitToggle.classList.remove('disabled');
-  } else {
-    lowStockRow.classList.add('disabled');
-    outOfStockRow.classList.add('disabled');
-    aiLimitRow.classList.add('disabled');
-    lowStockToggle.classList.add('disabled');
-    outOfStockToggle.classList.add('disabled');
-    aiLimitToggle.classList.add('disabled');
-  }
-}
-
-function toggleLowStockAlerts() {
-  const mainToggle = document.getElementById('notificationsToggle');
-  if (!mainToggle.classList.contains('active')) return;
-  
-  const toggle = document.getElementById('lowStockToggle');
-  toggle.classList.toggle('active');
-  markSettingsChanged();
-}
-
-function toggleOutOfStockAlerts() {
-  const mainToggle = document.getElementById('notificationsToggle');
-  if (!mainToggle.classList.contains('active')) return;
-  
-  const toggle = document.getElementById('outOfStockToggle');
-  toggle.classList.toggle('active');
-  markSettingsChanged();
-}
-
-function toggleAILimitAlerts() {
-  const mainToggle = document.getElementById('notificationsToggle');
-  if (!mainToggle.classList.contains('active')) return;
-  
-  const toggle = document.getElementById('aiLimitToggle');
-  toggle.classList.toggle('active');
-  markSettingsChanged();
-}
-
-function togglePersonalizedCategoriesSetting() {
-  const toggle = document.getElementById('personalizedCategoriesToggle');
-  toggle.classList.toggle('active');
-  markSettingsChanged();
-}
-
-async function saveAllSettings() {
+async function _persistSettings(fields) {
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
-
-  const settings = {
-    theme: currentTheme,
-    notifications_enabled: document.getElementById('notificationsToggle').classList.contains('active'),
-    low_stock_notifications: document.getElementById('lowStockToggle').classList.contains('active'),
-    out_of_stock_notifications: document.getElementById('outOfStockToggle').classList.contains('active'),
-    ai_limit_notifications: document.getElementById('aiLimitToggle').classList.contains('active'),
-    personalized_categories_enabled: document.getElementById('personalizedCategoriesToggle').classList.contains('active')
-  };
-
-  // Save to database
-  const { error } = await supabaseClient
-    .from('user_settings')
-    .update(settings)
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('Error saving notification settings:', error);
-    
-    // Check if it's a column doesn't exist error
-    if (error.message && error.message.includes('ai_limit_notifications')) {
-      alert('Database migration needed: Please run add-ai-limit-notifications.sql in your Supabase SQL editor first.');
-    } else {
-      alert('Failed to save settings: ' + (error.message || 'Unknown error'));
-    }
-  } else {
-    // Update original settings
-    originalSettings = {...settings};
-    hideSettingsChanged();
-    
-    // Apply personalized categories changes immediately
-    if (typeof togglePersonalizedCategories === 'function') {
-      togglePersonalizedCategories(settings.personalized_categories_enabled);
-    }
-    
-    // Show success message
-    const saveBar = document.getElementById('saveButtonBar');
-    const text = saveBar.querySelector('.save-button-bar-text');
-    if (text) {
-      text.textContent = 'Settings saved successfully!';
-      setTimeout(() => {
-        text.textContent = 'You have unsaved changes';
-      }, 2000);
-    }
-  }
+  const { error } = await supabaseClient.from('user_settings').update(fields).eq('user_id', user.id);
+  if (error) console.error('Error saving settings:', error);
 }
 
-function discardChanges() {
-  // Restore theme
-  currentTheme = originalSettings.theme || 'light';
-  updateThemeButtons(currentTheme);
-  if (currentTheme === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    const checkbox = document.getElementById('theme-checkbox');
-    if (checkbox) checkbox.checked = true;
+// The master switch pauses the three, it doesn't erase their values. Tapping
+// a paused sub means "I want this one" — turn the master back on and switch
+// it on, rather than doing nothing.
+function _tog(key) {
+  if (key === 'notifications') {
+    SET.notifications = !SET.notifications;
+  } else if (!SET.notifications) {
+    SET.notifications = true;
+    SET[key] = true;
   } else {
-    document.documentElement.setAttribute('data-theme', 'light');
-    const checkbox = document.getElementById('theme-checkbox');
-    if (checkbox) checkbox.checked = false;
+    SET[key] = !SET[key];
   }
-  
-  // Restore notification settings
-  const notificationsToggle = document.getElementById('notificationsToggle');
-  const lowStockToggle = document.getElementById('lowStockToggle');
-  const outOfStockToggle = document.getElementById('outOfStockToggle');
-  const aiLimitToggle = document.getElementById('aiLimitToggle');
-  
-  if (originalSettings.notifications_enabled) {
-    notificationsToggle.classList.add('active');
-  } else {
-    notificationsToggle.classList.remove('active');
-  }
-  
-  if (originalSettings.low_stock_notifications) {
-    lowStockToggle.classList.add('active');
-  } else {
-    lowStockToggle.classList.remove('active');
-  }
-  
-  if (originalSettings.out_of_stock_notifications) {
-    outOfStockToggle.classList.add('active');
-  } else {
-    outOfStockToggle.classList.remove('active');
-  }
-  
-  if (originalSettings.ai_limit_notifications) {
-    aiLimitToggle.classList.add('active');
-  } else {
-    aiLimitToggle.classList.remove('active');
-  }
-  
-  // Restore personalized categories setting
-  const personalizedCategoriesToggle = document.getElementById('personalizedCategoriesToggle');
-  if (originalSettings.personalized_categories_enabled) {
-    personalizedCategoriesToggle.classList.add('active');
-  } else {
-    personalizedCategoriesToggle.classList.remove('active');
-  }
-  
-  updateNotificationSubOptions(originalSettings.notifications_enabled);
-  hideSettingsChanged();
+  renderAlerts();
+  const fieldMap = { lowStock: 'low_stock_notifications', outOfStock: 'out_of_stock_notifications', aiLimit: 'ai_limit_notifications' };
+  const payload = key === 'notifications'
+    ? { notifications_enabled: SET.notifications }
+    : { notifications_enabled: SET.notifications, [fieldMap[key]]: SET[key] };
+  _persistSettings(payload);
+}
+function toggleNotificationsEnabled() { _tog('notifications'); }
+function toggleLowStockAlerts() { _tog('lowStock'); }
+function toggleOutOfStockAlerts() { _tog('outOfStock'); }
+function toggleAILimitAlerts() { _tog('aiLimit'); }
+
+function togglePersonalizedCategoriesSetting() {
+  SET.categories = !SET.categories;
+  setRowPressed('personalizedCategoriesToggle', SET.categories);
+  _persistSettings({ personalized_categories_enabled: SET.categories });
+  if (typeof togglePersonalizedCategories === 'function') togglePersonalizedCategories(SET.categories);
 }
 
 // Data Export Functions
@@ -2278,16 +1973,6 @@ async function deleteAllData() {
   }
 }
 
-// Delete account functions
-function openDeleteAccountModal() {
-  document.getElementById('deleteAccountModal').classList.add('active');
-  document.getElementById('deleteAccountConfirm').value = '';
-}
-
-function closeDeleteAccountModal() {
-  document.getElementById('deleteAccountModal').classList.remove('active');
-}
-
 // Delete files functions
 function openDeleteFilesModal() {
   document.getElementById('deleteFilesModal').classList.add('active');
@@ -2407,14 +2092,7 @@ document.querySelectorAll('.modal-overlay').forEach(modal => {
 
 // Load settings on page load
 loadSettings();
-
-// Ensure save button bar is hidden on page load
-document.addEventListener('DOMContentLoaded', function() {
-  const saveBar = document.getElementById('saveButtonBar');
-  if (saveBar) {
-    saveBar.classList.remove('visible');
-  }
-});
+loadScanPackPrice();
 </script>
 
 
@@ -2508,12 +2186,12 @@ function updateSubscriptionUI(subscription) {
       billingText = `<strong>${planName} Plan - ${price}</strong> • Next payment: <strong>${new Date(subscription.current_period_end).toLocaleDateString()}</strong>`;
     }
     
+    upgradeRow.style.display = '';
     upgradeRow.innerHTML = `
-      <div class="settings-label">
-        <h3>Manage Subscription</h3>
-        <p>${billingText}</p>
-      </div>
-      <button class="btn btn-secondary" onclick="openCustomerPortal()">Manage Billing</button>
+      <button type="button" class="st-row" onclick="openCustomerPortal()">
+        <span class="st-row-main"><span class="st-row-name">Manage subscription</span><span class="st-row-why">${billingText}</span></span>
+        <span class="st-row-val">Manage</span>
+      </button>
     `;
   }
 }
