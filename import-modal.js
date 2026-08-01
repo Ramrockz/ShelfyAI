@@ -375,5 +375,62 @@
     if (sheetEl) sheetEl.classList.remove('active');
   }
 
-  window.ShelfyImportModal = { open: open, close: close };
+  // Bare hidden inputs used only by quickStart() -- separate from the
+  // sheet's own #aimFileInput/#aimCameraInput so a cancelled native picker
+  // here never touches the sheet's file state or fires its listeners.
+  var quickFileInput = null, quickCameraInput = null;
+  var quickEntity = null, quickOpts = null;
+
+  function ensureQuickInputs() {
+    if (quickFileInput) return;
+    quickFileInput = document.createElement('input');
+    quickFileInput.type = 'file';
+    quickFileInput.accept = 'image/png,image/jpeg,image/jpg,.pdf';
+    quickFileInput.style.display = 'none';
+    document.body.appendChild(quickFileInput);
+    quickFileInput.addEventListener('change', function (e) {
+      var f = e.target.files[0];
+      quickFileInput.value = '';
+      if (f && quickEntity) open(quickEntity, quickOpts).then(function () { setFile(f); });
+    });
+
+    quickCameraInput = document.createElement('input');
+    quickCameraInput.type = 'file';
+    quickCameraInput.accept = 'image/*';
+    quickCameraInput.capture = 'environment';
+    quickCameraInput.style.display = 'none';
+    document.body.appendChild(quickCameraInput);
+    quickCameraInput.addEventListener('change', function (e) {
+      var f = e.target.files[0];
+      quickCameraInput.value = '';
+      if (f && quickEntity) open(quickEntity, quickOpts).then(function () { setFile(f); });
+    });
+  }
+
+  // The FAB's one-tap shortcut: go straight to the native camera/gallery
+  // picker with the sheet still hidden, same as the pre-shared-component
+  // behavior -- cancelling the picker leaves nothing open. The sheet only
+  // appears once a file actually comes back, already on the quote/CTA step
+  // (no drop-zone tap needed). Desktop has no camera and no meaningfully
+  // different "gallery" flow, so BOTH modes fall back to the sheet's own
+  // screen-capture path there, which needs the sheet visible up front for
+  // its async "Capturing…" status -- matching the pre-shared-component
+  // behavior of both expenses.html's and orders.html's old FABs.
+  function quickStart(entityType, mode, opts) {
+    opts = opts || {};
+    if (!KINDS[entityType]) { console.error('[ShelfyImportModal] Unknown entity type:', entityType); return; }
+
+    if (!isMobileUA()) {
+      open(entityType, opts);
+      captureScreen();
+      return;
+    }
+
+    ensureQuickInputs();
+    quickEntity = entityType;
+    quickOpts = opts;
+    (mode === 'camera' ? quickCameraInput : quickFileInput).click();
+  }
+
+  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart };
 })();

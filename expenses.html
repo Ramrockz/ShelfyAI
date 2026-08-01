@@ -1840,7 +1840,10 @@ function closeMethodSelectionModal() {
 // scan-cost quote and the actual /api/extract-receipt call. This page only
 // needs to say what to do with the result.
 function startReceiptScan() {
-  window.ShelfyImportModal.open('expense', {
+  // Quick CTA on purpose -- straight to the camera (mobile) or screen
+  // capture (desktop), no picker sheet shown first. Cancelling leaves
+  // nothing open; the sheet only appears once a file actually comes back.
+  window.ShelfyImportModal.quickStart('expense', 'camera', {
     onImported: (data, receiptUrl) => {
       pendingExpenseReceiptUrl = receiptUrl;
       showIngredientMappingModal(data);

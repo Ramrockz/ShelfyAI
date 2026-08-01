@@ -2555,7 +2555,11 @@ function closeOrderMethodModal() {
 
 // Primary FAB action — also used by the method menu's "upload" choice.
 function startOrderUpload() {
-  window.ShelfyImportModal.open('order', {
+  // Quick CTA on purpose -- straight to the plain file/gallery picker on
+  // mobile (matching this button's "Upload file" label, not a camera-first
+  // "Scan" shortcut), or screen capture on desktop. Cancelling leaves
+  // nothing open; the sheet only appears once a file comes back.
+  window.ShelfyImportModal.quickStart('order', 'file', {
     onImported: (data, receiptUrl) => {
       pendingReceiptUrl = receiptUrl;
       showRecipeMappingModal(data);
