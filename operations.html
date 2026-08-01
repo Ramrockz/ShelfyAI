@@ -299,6 +299,11 @@
   #healthOut { background: var(--danger); }
   #healthLow { background: var(--warning); }
   #healthOk  { background: var(--success); }
+  .stock-health-keys { display: none; gap: 18px; margin-top: 12px; }
+  .stock-health-key { display: flex; align-items: center; gap: 7px; }
+  .stock-health-key i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .stock-health-key b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }
+  .stock-health-key span { font-size: 13px; color: var(--text-muted); }
 
   .status-cards-grid {
     display: grid;
@@ -881,19 +886,14 @@
       margin-bottom: 24px;
     }
     
-    .status-cards-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-    
-    .status-card {
-      padding: 14px 16px;
-    }
-    
-    .status-card-count {
-      font-size: 28px;
-    }
-    
+    /* The bar + key legend already carry the counts on mobile -- the two
+       big digit cards would just repeat them, so they're hidden here only
+       (desktop keeps the cards exactly as before). */
+    .status-cards-grid { display: none !important; }
+    #healthOk { background: #cbd5e1; }
+    [data-theme="dark"] #healthOk { background: #475569; }
+    .stock-health-keys { display: flex; }
+
     /* Show mobile hero, convert action cards to horizontal scroll strip */
     .mobile-hero-action {
       display: block;
@@ -907,6 +907,13 @@
       color: var(--text-muted);
       margin: 6px 0 0;
     }
+    .mobile-mini-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .mobile-mini-actions button {
+      flex: 1; height: 40px; border-radius: 11px; border: 1px solid var(--border-hair, var(--border));
+      background: var(--bg-panel); color: var(--text-main);
+      font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; font-family: inherit; cursor: pointer;
+    }
+    .mobile-mini-actions button:active { background: var(--bg-inner); }
 
     /* Hide setup-only action cards on mobile */
     .core-actions { display: none !important; }
@@ -1866,6 +1873,10 @@
         <span id="healthLow" style="width:0%"></span>
         <span id="healthOk"  style="width:100%"></span>
       </div>
+      <!-- Mobile-only key legend -- the two big digit cards below are hidden
+           on mobile in favor of this, since the bar already carries the
+           colour; desktop keeps the cards as-is. -->
+      <div class="stock-health-keys" id="stockHealthKeys"></div>
     </div>
     <div class="status-cards-grid">
       <div class="status-card out-of-stock" onclick="filterInventory('out-of-stock')">
@@ -1890,6 +1901,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
       Process Order
     </button>
+    <div class="mobile-hero-sub">Deducts items from your stock</div>
+    <div class="mobile-mini-actions">
+      <button type="button" onclick="openMethodModal()">New item</button>
+      <button type="button" onclick="openRecipeBuilder()">New product</button>
+      <button type="button" onclick="openExpenseChoiceModal()">New expense</button>
+    </div>
   </div>
 
   <section class="core-actions">
@@ -2501,16 +2518,27 @@ function resolveConfirm(result) {
   function stockAlertRow(ing, isOut) {
     return `
           <div class="stock-alert-row" onclick="window.location.href='/ingredient-detail?id=${ing.id}'">
-            <span class="stock-pill ${isOut ? 'out' : 'low'}" style="margin-left:0;">${isOut ? 'Out' : 'Low'}</span>
+            <span class="stock-alert-dot" style="background:${isOut ? 'var(--danger)' : 'var(--warning)'}"></span>
             <span class="stock-alert-name">${ing.name}</span>
             <span class="stock-alert-qty">${parseFloat(ing.quantity) || 0} ${ing.unit || ''}${ing.min_stock ? ' · need ' + ing.min_stock : ''}</span>
             ${ing.reorder_pending
               ? `<span class="stock-alert-pending">On the way</span>`
-              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); markReorder('${ing.id}')">Reorder</button>`}
+              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); markReorder('${ing.id}', this)">Reorder</button>`}
           </div>`;
   }
 
-  async function markReorder(ingredientId) {
+  // Optimistic: swap the button for the pending pill immediately (btn is the
+  // clicked element, passed straight through so no re-render/re-fetch of the
+  // whole list is needed to reflect the change). The real write still
+  // happens the same way as before; on failure the row is put back.
+  async function markReorder(ingredientId, btn) {
+    let pill = null;
+    if (btn) {
+      pill = document.createElement('span');
+      pill.className = 'stock-alert-pending';
+      pill.textContent = 'On the way';
+      btn.replaceWith(pill);
+    }
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
@@ -2522,11 +2550,24 @@ function resolveConfirm(result) {
       if (error) throw error;
       localStorage.removeItem('shelfy_cache_ops_inventory');
       localStorage.removeItem('shelfy_cache_ops_inbound');
-      loadInventoryStatus();
       loadInboundStatus();
+      // Keep the in-memory dashboard ingredient list consistent with the
+      // optimistic UI so a later showMoreStockAlerts()/re-render doesn't
+      // silently revert this row.
+      if (window._dashIngredients) {
+        const ing = window._dashIngredients.find(i => i.id === ingredientId);
+        if (ing) ing.reorder_pending = true;
+      }
     } catch (e) {
       console.error('Reorder failed:', e);
       showNotification?.('Could not mark as reordered', 'error');
+      if (pill) {
+        const btn2 = document.createElement('button');
+        btn2.className = 'stock-alert-reorder';
+        btn2.textContent = 'Reorder';
+        btn2.onclick = (ev) => { ev.stopPropagation(); markReorder(ingredientId, btn2); };
+        pill.replaceWith(btn2);
+      }
     }
   }
 
@@ -2553,6 +2594,14 @@ function resolveConfirm(result) {
     const totalEl = document.getElementById('stockHealthTotal');
     if (totalEl) totalEl.textContent = total ? total + ' items' : '';
 
+    // Mobile key legend -- same counts as the two big digit cards, just
+    // shown inline next to the bar instead of as separate cards.
+    const keysEl = document.getElementById('stockHealthKeys');
+    if (keysEl) {
+      keysEl.innerHTML = (outItems.length ? `<span class="stock-health-key"><i style="background:var(--danger)"></i><b>${outItems.length}</b><span>out of stock</span></span>` : '')
+        + (lowItems.length ? `<span class="stock-health-key"><i style="background:var(--warning)"></i><b>${lowItems.length}</b><span>low</span></span>` : '');
+    }
+
     const alertsEl = document.getElementById('mobileStockAlerts');
     if (alertsEl) {
       if (outItems.length === 0 && lowItems.length === 0) {
@@ -2560,13 +2609,13 @@ function resolveConfirm(result) {
       } else {
         const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])];
         const isMobile = window.innerWidth <= 768;
-        const PAGE = 10;
-        const visible = isMobile ? allItems : allItems.slice(0, PAGE);
-        const remaining = isMobile ? 0 : allItems.length - PAGE;
+        const PAGE = isMobile ? 5 : 10;
+        const visible = allItems.slice(0, PAGE);
+        const remaining = allItems.length - PAGE;
         let html = `<p class="stock-alert-section-title">Needs Restocking</p>`;
         html += `<div id="stockAlertRows">${visible.map(([i, isOut]) => stockAlertRow(i, isOut)).join('')}</div>`;
         if (remaining > 0) {
-          html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">Show ${remaining} more</button>`;
+          html += `<button id="stockAlertShowMore" onclick="showMoreStockAlerts()" style="margin-top:8px;width:100%;padding:8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">See all ${allItems.length}</button>`;
           window._stockAlertAll = allItems;
         }
         alertsEl.innerHTML = html;
