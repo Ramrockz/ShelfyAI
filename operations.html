@@ -977,18 +977,32 @@
       gap: 12px;
     }
     
-    /* Recipe builder */
+    /* Recipe builder — a modern bottom sheet on mobile (was a flush,
+       square-cornered full-screen panel); internal layout/functionality
+       below is unchanged, only the outer shell moved to match the rest of
+       the app's sheets. */
+    .recipe-overlay { align-items: flex-end; }
     .recipe-builder {
       width: 100%;
-      height: 100vh;
-      max-height: 100vh;
+      height: auto;
+      max-height: 92vh;
       overflow-y: auto;
       padding: 0;
+      padding-bottom: env(safe-area-inset-bottom);
       grid-template-columns: 1fr;
-      border-radius: 0;
+      border-radius: 20px 20px 0 0;
       gap: 0;
+      transform: translateY(30px);
+      transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
     }
-    
+    .recipe-overlay.active .recipe-builder { transform: translateY(0); }
+    .recipe-builder::before {
+      content: ''; display: block; width: 36px; height: 4px;
+      background: rgba(128,128,128,0.3); border-radius: 2px;
+      margin: 12px auto 4px;
+    }
+
     .recipe-panel {
       padding: 20px 16px;
       max-height: none;
@@ -1002,8 +1016,11 @@
       gap: 12px;
       display: flex;
       flex-direction: column;
-      height: 100%;
-      overflow-y: auto;
+      /* .recipe-builder (the outer sheet) now owns the scroll itself, since
+         it moved from a fixed 100vh to an auto/max-height sheet -- height:100%
+         + its own overflow-y here would fight that with a nested scroll. */
+      height: auto;
+      overflow-y: visible;
     }
     
     .recipe-grid {
