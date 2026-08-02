@@ -450,6 +450,124 @@
       font-size: 16px;
     }
   }
+
+  /* ================= 25d — mobile-only landing redesign =================
+     Problem-first narrative replaces the tabbed demo/USP grid/testimonial
+     grid on phones only; desktop keeps all of the above untouched. The
+     device mock below reuses ingredients.html's real search/chips/rail/row
+     layout so it reads as the actual app, not an invented screen. */
+  .ld-mobile { display: none; }
+
+  .ld-hero { padding: 42px 20px 30px; }
+  .ld-hero h1 { margin: 0; font-size: 35px; line-height: 1.08; font-weight: 800; letter-spacing: -.035em; color: var(--text-main); }
+  .ld-hero h1 em { font-style: normal; color: var(--accent-deep, var(--accent)); }
+  .ld-lede { margin-top: 15px; font-size: 16.5px; line-height: 1.55; color: var(--text-muted); }
+  .ld-cta { display: block; width: 100%; height: 52px; margin-top: 24px; border: none; border-radius: 14px;
+            background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 700;
+            letter-spacing: -.01em; text-align: center; line-height: 52px; text-decoration: none; }
+  .ld-cta:active { background: var(--accent-ink, var(--accent)); }
+  .ld-cta-note { margin-top: 12px; font-size: 13px; color: var(--text-faint, var(--text-muted)); text-align: center; }
+  .ld-cta-note a { font-weight: 600; color: var(--accent-deep, var(--accent)); text-decoration: none; }
+
+  .ld-showcase { padding: 8px 0 34px; }
+  .ld-device { width: 288px; margin: 0 auto; padding: 9px; border-radius: 34px; background: #111827;
+               box-shadow: 0 22px 44px rgba(15,23,42,.28); }
+  .ld-screen { border-radius: 26px; overflow: hidden; background: var(--bg-main);
+               display: flex; flex-direction: column; height: 500px; }
+  .ld-s-top { flex-shrink: 0; display: flex; align-items: center; gap: 6px; height: 44px;
+              padding: 0 6px 0 13px; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ld-s-top b { flex: 1; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main); }
+  .ld-s-ic { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
+  .ld-s-av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #8b5cf6); }
+  .ld-s-filters { flex-shrink: 0; padding: 10px 12px 9px; background: var(--bg-panel);
+                  border-bottom: 1px solid var(--border-hair, var(--border)); display: flex; flex-direction: column; gap: 8px; }
+  .ld-s-search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px;
+                 border-radius: 10px; background: var(--bg-inner); color: var(--text-muted); font-size: 12.5px; }
+  .ld-s-chips { display: flex; gap: 5px; }
+  .ld-s-chip { height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px;
+               border-radius: 99px; font-size: 11px; font-weight: 700; background: var(--bg-panel);
+               border: 1px solid var(--border); color: var(--text-muted); }
+  .ld-s-chip[data-on="1"] { background: var(--text-main); border-color: var(--text-main); color: var(--bg-panel); }
+  .ld-s-chip i { width: 5px; height: 5px; border-radius: 50%; }
+  .ld-s-list { flex: 1; overflow: hidden; background: var(--bg-main); }
+  .ld-s-rail { padding: 11px 13px 5px; font-size: 9.5px; font-weight: 800; letter-spacing: .08em;
+               text-transform: uppercase; color: var(--text-muted); }
+  .ld-s-row { display: flex; align-items: center; gap: 9px; height: 56px; padding: 0 10px 0 13px;
+              background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border)); }
+  .ld-s-bar { width: 3px; height: 30px; border-radius: 2px; flex-shrink: 0; margin-left: -7px; }
+  .ld-s-txt { flex: 1; min-width: 0; }
+  .ld-s-name { display: block; font-size: 13px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main);
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-s-meta { display: block; font-size: 10.5px; line-height: 1.3; color: var(--text-muted); margin-top: 2px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-s-step { display: flex; align-items: center; gap: 1px; flex-shrink: 0; }
+  .ld-s-step span { width: 28px; height: 28px; border-radius: 8px; background: var(--bg-inner);
+                     color: var(--text-muted); font-size: 15px; font-weight: 600; line-height: 28px; text-align: center; }
+  .ld-s-step span.ld-plus { background: var(--accent-glow, rgba(6,182,212,.11)); color: var(--accent-deep, var(--accent)); }
+  .ld-s-qty { min-width: 26px; text-align: center; font-size: 15px; font-weight: 800; color: var(--text-main); }
+  .ld-s-nav { flex-shrink: 0; display: flex; height: 46px; background: var(--bg-panel); border-top: 1px solid var(--border); }
+  .ld-s-nav div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                  gap: 2px; color: var(--text-muted); }
+  .ld-s-nav div[data-on="1"] { color: var(--accent); }
+  .ld-s-nav small { font-size: 8px; font-weight: 600; }
+  .ld-caption { margin: 18px 24px 0; font-size: 13.5px; line-height: 1.55; color: var(--text-muted); text-align: center; }
+  .ld-caption b { color: var(--text-main); font-weight: 700; }
+
+  .ld-sec { padding: 46px 20px; }
+  .ld-sec.ld-tint { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
+  .ld-kick { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--accent-ink, var(--accent)); }
+  .ld-sec h2 { margin: 10px 0 0; font-size: 26px; line-height: 1.18; font-weight: 800; letter-spacing: -.03em; color: var(--text-main); }
+  .ld-sec .ld-lede { font-size: 15.5px; }
+
+  .ld-pain { display: flex; flex-direction: column; gap: 1px; margin-top: 22px; border-radius: 16px; overflow: hidden; background: var(--border-hair, var(--border)); }
+  .ld-pain-i { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; padding: 15px 16px;
+               background: var(--bg-panel); font-size: 14.5px; line-height: 1.5; }
+  .ld-pain-i > i { display: flex; width: 18px; height: 18px; margin-top: 2px; }
+  .ld-pain-i b { display: block; font-weight: 700; color: var(--text-main); }
+  .ld-pain-i span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 13.5px; }
+  .ld-pain-sum { margin-top: 18px; font-size: 15px; line-height: 1.55; font-weight: 600; color: var(--text-main); }
+
+  .ld-steps { margin-top: 24px; }
+  .ld-step { display: grid; grid-template-columns: 30px 1fr; gap: 14px; }
+  .ld-step-rail { display: flex; flex-direction: column; align-items: center; }
+  .ld-step-n { width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px; background: var(--accent-glow, rgba(6,182,212,.11));
+               color: var(--accent-ink, var(--accent)); font-size: 13.5px; font-weight: 800;
+               display: flex; align-items: center; justify-content: center; }
+  .ld-step-l { flex: 1; width: 2px; margin: 5px 0; background: var(--border-hair, var(--border)); border-radius: 2px; }
+  .ld-step-b { padding-bottom: 24px; }
+  .ld-step:last-child .ld-step-b { padding-bottom: 0; }
+  .ld-step-b b { font-size: 16px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); }
+  .ld-step-b p { margin-top: 5px; font-size: 14.5px; line-height: 1.55; color: var(--text-muted); }
+
+  .ld-gains { display: flex; flex-direction: column; gap: 11px; margin-top: 22px; }
+  .ld-gain { padding: 17px 18px; border-radius: 15px; background: var(--bg-main); border: 1px solid var(--border-hair, var(--border)); }
+  .ld-gain b { display: block; font-size: 16px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); }
+  .ld-gain p { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--text-muted); }
+
+  .ld-quote { margin-top: 22px; padding: 20px; border-radius: 16px; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border)); }
+  .ld-quote p { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--text-main); }
+  .ld-quote div { margin-top: 13px; font-size: 13px; color: var(--text-muted); }
+  .ld-quote div b { color: var(--text-main); font-weight: 700; }
+
+  .ld-close { margin: 0 20px; padding: 30px 22px; border-radius: 22px; background: #0f172a; color: #fff; text-align: center; }
+  .ld-close h2 { margin: 0; font-size: 25px; line-height: 1.2; font-weight: 800; letter-spacing: -.03em; }
+  .ld-close p { margin-top: 11px; font-size: 14.5px; line-height: 1.55; color: rgba(255,255,255,.68); }
+  .ld-close .ld-cta { background: var(--accent); color: #04222a; }
+  .ld-close .ld-cta:active { background: #22d3ee; }
+  .ld-close .ld-cta-note { color: rgba(255,255,255,.5); }
+  .ld-close .ld-cta-note a { color: #67e8f9; }
+
+  .ld-foot { margin-top: 44px; padding: 24px 20px calc(28px + env(safe-area-inset-bottom));
+             background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border)); }
+  .ld-foot img { height: 26px; width: auto; display: block; opacity: .75; }
+  .ld-foot-links { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 18px; font-size: 13.5px; }
+  .ld-foot-links a { color: var(--text-muted); text-decoration: none; }
+  .ld-foot small { display: block; margin-top: 20px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+
+  @media (max-width: 768px) {
+    .ld-mobile { display: block; }
+    .ld-desktop-only { display: none !important; }
+  }
 </style>
 
 <!-- JSON-LD Structured Data -->
@@ -516,14 +634,14 @@
 <nav class="navbar">
   <a href="/" class="logo"><img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="logo-light" style="height:44px;width:auto;"><img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="logo-dark" style="height:44px;width:auto;"></a>
   
-  <div class="nav-links" id="navLinks">
+  <div class="nav-links ld-desktop-only" id="navLinks">
     <a href="/" class="nav-link" data-page="index">Home</a>
     <a href="/pricing" class="nav-link" data-page="pricing">Pricing</a>
     <a href="/docs" class="nav-link" data-page="docs">Quick Start</a>
   </div>
-  
+
   <div class="nav-actions">
-    <div class="theme-toggle-wrapper">
+    <div class="theme-toggle-wrapper ld-desktop-only">
       <span class="theme-toggle-label">
         <img src="https://cdn-icons-png.flaticon.com/512/66/66275.png" alt="Light" width="18" height="18" style="display: block;">
       </span>
@@ -536,13 +654,13 @@
       </span>
     </div>
     <a href="/login" class="btn-signin" id="authButton">Log In</a>
-    <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <button class="hamburger ld-desktop-only" onclick="toggleMobileMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
   </div>
 </nav>
 
-<section class="section-container hero">
+<section class="section-container hero ld-desktop-only">
   <div class="hero-text">
     <h1>Cause we're lazy</h1>
     <p class="sub">Keeping your inventory up to date is annoying. Not anymore! ShelfyAI helps you manage your inventory effortlessly.</p>
@@ -580,8 +698,172 @@
   </div>
 </section>
 
+<!-- 25d mobile-only redesign: problem-first narrative replaces the tabbed
+     demo panel, USP grid and testimonial grid on phones. Desktop above is
+     untouched. -->
+<section class="ld-hero ld-mobile">
+  <h1>Know what's on the shelf <em>without counting it</em>.</h1>
+  <p class="ld-lede">If you make things to sell, your stock lives in your head and in a spreadsheet you last touched in March. ShelfyAI keeps the count for you — so you know what you can build today, what you're about to run out of, and what each product really costs to make.</p>
+  <a href="/login" class="ld-cta">Start tracking</a>
+  <p class="ld-cta-note">Takes about ten minutes to set up.</p>
+</section>
+
+<section class="ld-showcase ld-mobile">
+  <div class="ld-device">
+    <div class="ld-screen">
+
+      <div class="ld-s-top">
+        <b>Inventory</b>
+        <span class="ld-s-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+        <span class="ld-s-ic"><span class="ld-s-av"></span></span>
+      </div>
+
+      <div class="ld-s-filters">
+        <div class="ld-s-search">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Search items
+        </div>
+        <div class="ld-s-chips">
+          <span class="ld-s-chip" data-on="1">All 24</span>
+          <span class="ld-s-chip"><i style="background:var(--danger)"></i>Out 1</span>
+          <span class="ld-s-chip"><i style="background:var(--warning)"></i>Low 2</span>
+        </div>
+      </div>
+
+      <div class="ld-s-list">
+        <div class="ld-s-rail">Out of stock</div>
+        <div class="ld-s-row">
+          <span class="ld-s-bar" style="background:var(--danger)"></span>
+          <span class="ld-s-txt"><span class="ld-s-name">Clear Varnish</span><span class="ld-s-meta">Blocks 2 products · Finishes</span></span>
+          <span class="ld-s-step"><span>−</span><span class="ld-s-qty" style="color:var(--danger)">0</span><span class="ld-plus">+</span></span>
+        </div>
+
+        <div class="ld-s-rail">Low on stock</div>
+        <div class="ld-s-row">
+          <span class="ld-s-bar" style="background:var(--warning)"></span>
+          <span class="ld-s-txt"><span class="ld-s-name">Oak Planks</span><span class="ld-s-meta">Min 25 · €6.10 each</span></span>
+          <span class="ld-s-step"><span>−</span><span class="ld-s-qty" style="color:var(--warning)">12</span><span class="ld-plus">+</span></span>
+        </div>
+        <div class="ld-s-row">
+          <span class="ld-s-bar" style="background:var(--warning)"></span>
+          <span class="ld-s-txt"><span class="ld-s-name">Brass Hinges</span><span class="ld-s-meta">Min 40 · €0.90 each</span></span>
+          <span class="ld-s-step"><span>−</span><span class="ld-s-qty" style="color:var(--warning)">18</span><span class="ld-plus">+</span></span>
+        </div>
+
+        <div class="ld-s-rail">In stock</div>
+        <div class="ld-s-row">
+          <span class="ld-s-bar" style="background:var(--success)"></span>
+          <span class="ld-s-txt"><span class="ld-s-name">M8 Steel Bolts</span><span class="ld-s-meta">Min 100 · €0.14 each</span></span>
+          <span class="ld-s-step"><span>−</span><span class="ld-s-qty">482</span><span class="ld-plus">+</span></span>
+        </div>
+      </div>
+
+      <div class="ld-s-nav">
+        <div><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg><small>Today</small></div>
+        <div data-on="1"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><small>Inventory</small></div>
+        <div><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg><small>Products</small></div>
+        <div><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><small>Orders</small></div>
+        <div><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg><small>More</small></div>
+      </div>
+
+    </div>
+  </div>
+  <p class="ld-caption">Your shelf, sorted by what needs you. <b>Out first, low next, healthy out of the way.</b></p>
+</section>
+
+<section class="ld-sec ld-tint ld-mobile">
+  <div class="ld-kick">The problem</div>
+  <h2>Stock only ever tells the truth on the day you count it.</h2>
+  <div class="ld-pain">
+    <div class="ld-pain-i">
+      <i style="color:var(--danger)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></i>
+      <span><b>You start a batch and can't finish it.</b><span>One part is gone and the customer already has a date.</span></span>
+    </div>
+    <div class="ld-pain-i">
+      <i style="color:var(--warning)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></i>
+      <span><b>You buy what you already had.</b><span>Three boxes of it, on the shelf you didn't check.</span></span>
+    </div>
+    <div class="ld-pain-i">
+      <i style="color:var(--text-muted)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></i>
+      <span><b>You price on last year's costs.</b><span>Materials went up, the price didn't, and the margin quietly went to zero.</span></span>
+    </div>
+    <div class="ld-pain-i">
+      <i style="color:var(--text-muted)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></i>
+      <span><b>The update never happens.</b><span>Keeping the sheet current is a second job, and it loses to the first one every week.</span></span>
+    </div>
+  </div>
+  <p class="ld-pain-sum">Every one of those comes from the same place: nothing changes unless you type it in.</p>
+</section>
+
+<section class="ld-sec ld-mobile">
+  <div class="ld-kick">How it works</div>
+  <h2>Type it in once. After that, send paper.</h2>
+  <div class="ld-steps">
+    <div class="ld-step">
+      <div class="ld-step-rail"><div class="ld-step-n">1</div><div class="ld-step-l"></div></div>
+      <div class="ld-step-b">
+        <b>Count what's there today</b>
+        <p>Add your materials and what you have of each. This is the only manual entry in the whole thing.</p>
+      </div>
+    </div>
+    <div class="ld-step">
+      <div class="ld-step-rail"><div class="ld-step-n">2</div><div class="ld-step-l"></div></div>
+      <div class="ld-step-b">
+        <b>Photograph the receipt, paste the order</b>
+        <p>A photo, a PDF or a link from your shop. Every line comes back read and matched to items you already have.</p>
+      </div>
+    </div>
+    <div class="ld-step">
+      <div class="ld-step-rail"><div class="ld-step-n">3</div><div class="ld-step-l"></div></div>
+      <div class="ld-step-b">
+        <b>Check it before it saves</b>
+        <p>You see the quantities and prices it found and correct anything wrong. Nothing moves behind your back.</p>
+      </div>
+    </div>
+    <div class="ld-step">
+      <div class="ld-step-rail"><div class="ld-step-n">4</div></div>
+      <div class="ld-step-b">
+        <b>The count keeps itself</b>
+        <p>Purchases add stock, orders take it away, and the cost of everything you make follows along.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="ld-sec ld-tint ld-mobile">
+  <div class="ld-kick">What changes</div>
+  <h2>Three questions you stop guessing at.</h2>
+  <div class="ld-gains">
+    <div class="ld-gain">
+      <b>"Can I make this today?"</b>
+      <p>Each product shows how many you could build right now from what's actually on the shelf, and which material is stopping you.</p>
+    </div>
+    <div class="ld-gain">
+      <b>"What do I need to order?"</b>
+      <p>Anything below the minimum you set surfaces at the top of the list, before it becomes a customer problem.</p>
+    </div>
+    <div class="ld-gain">
+      <b>"Am I making money on this?"</b>
+      <p>Cost per product is rebuilt from the last price you actually paid for each material, not the price you remember.</p>
+    </div>
+  </div>
+  <div class="ld-quote">
+    <p>"I used to spend three hours a week on the spreadsheet. Now I photograph the receipts and it's done."</p>
+    <div><b>Sarah Martinez</b> · Sweet Delights Bakery</div>
+  </div>
+</section>
+
+<section class="ld-sec ld-mobile" style="padding-bottom: 0;">
+  <div class="ld-close">
+    <h2>Your stock is already out of date.</h2>
+    <p>Set it straight once, and let the receipts keep it there.</p>
+    <a href="/login" class="ld-cta">Start tracking</a>
+    <p class="ld-cta-note">Already have an account? <a href="/login">Log in</a></p>
+  </div>
+</section>
+
 <!-- Why ShelfyAI Section -->
-<section class="usp-section">
+<section class="usp-section ld-desktop-only">
   <h2>Why ShelfyAI?</h2>
   
   <div class="usp-grid">
@@ -612,7 +894,7 @@
 </section>
 
 <!-- Testimonials Section -->
-<section class="section-container" style="padding-top: 80px; padding-bottom: 100px; background: var(--bg-inner);">
+<section class="section-container ld-desktop-only" style="padding-top: 80px; padding-bottom: 100px; background: var(--bg-inner);">
   <div style="max-width: 1100px; margin: 0 auto;">
     <h2 style="ftestimonial-section">
   <h2>What other lazy people say</h2>
@@ -944,7 +1226,7 @@ async function submitFeedback() {
 }
 </script>
 
-<footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
+<footer class="ld-desktop-only" style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
     <div class="footer-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 32px;">
       <div>
@@ -980,6 +1262,18 @@ async function submitFeedback() {
   </div>
 </footer>
 
+<footer class="ld-foot ld-mobile">
+  <img src="ShelfyAI%20logo.svg" alt="ShelfyAI">
+  <div class="ld-foot-links">
+    <a href="/docs">Quick start</a>
+    <a href="/pricing">Plans</a>
+    <a href="/blog">Blog</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/imprint">Imprint</a>
+  </div>
+  <small>© 2026 ShelfyAI. All rights reserved.</small>
+</footer>
 
 </body>
 </html>
