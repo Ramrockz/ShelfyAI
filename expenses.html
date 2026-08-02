@@ -3396,16 +3396,22 @@ async function confirmIngredientMapping() {
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
     // Update inventory if toggle is on
+    // item.price is the LINE total (see mappedItems construction above and
+    // the readonly "Price" field in renderDetectedItems, which auto-fills as
+    // cost_per_unit * qty) -- divide by quantity everywhere a genuine
+    // per-unit cost_per_unit is needed, and never re-multiply it by qty
+    // again when summing a total.
     if (updateInventory) {
       for (const item of mappedItems) {
         if (item.ingredientId && item.quantity > 0) {
           const ing = allIngredientsCache.find(i => i.id === item.ingredientId);
           if (ing) {
+            const unitCost = item.price != null ? item.price / item.quantity : ing.cost_per_unit;
             await supabaseClient
               .from('ingredients')
-              .update({ 
+              .update({
                 quantity: (ing.quantity || 0) + item.quantity,
-                cost_per_unit: item.price || ing.cost_per_unit
+                cost_per_unit: unitCost
               })
               .eq('id', item.ingredientId);
           }
@@ -3415,11 +3421,8 @@ async function confirmIngredientMapping() {
 
     // Save expense
     const d = pendingExpenseData;
-    const totalAmount = mappedItems.reduce((sum, item) => {
-      const price = item.price || 0;
-      const qty = item.quantity || 0;
-      return sum + (price * qty);
-    }, 0) || (d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null);
+    const totalAmount = mappedItems.reduce((sum, item) => sum + (item.price || 0), 0)
+      || (d.amount ? parseFloat(String(d.amount).match(/[\d.]+/)?.[0]) : null);
 
     const vendor = d.vendor || '';
     const expenseDate = document.getElementById('expenseDateInput')?.value || new Date().toISOString().split('T')[0];
@@ -3432,7 +3435,7 @@ async function confirmIngredientMapping() {
         ingredient_name: item.ingredientName,
         quantity_added: item.quantity,
         unit: allIngredientsCache.find(i => i.id === item.ingredientId)?.unit || '',
-        cost_per_unit: item.price || 0
+        cost_per_unit: item.quantity > 0 ? (item.price || 0) / item.quantity : (item.price || 0)
       }));
 
     const receiptUrl = pendingExpenseReceiptUrl || null;

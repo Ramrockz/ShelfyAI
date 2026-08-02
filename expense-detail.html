@@ -1437,10 +1437,36 @@ function displayExpense() {
     dateEl.textContent = new Date(rawDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
+  // expenseData.amount is a stored column that can drift from what the
+  // itemized lines actually add up to (see _ecCalcTotal below) -- when there
+  // are real line items, trust their sum instead, and self-heal the stored
+  // column so every other view (expenses list, analytics, CSV) sees it too.
+  const _items = Array.isArray(expenseData.ingredients) ? expenseData.ingredients : [];
+  if (_items.length > 0) {
+    const _computed = _ecCalcTotal(_items);
+    if (Math.abs(_computed - (parseFloat(expenseData.amount) || 0)) > 0.01) {
+      expenseData.amount = _computed;
+      _healExpenseAmount(_computed);
+    }
+  }
+
   const costEl = document.getElementById('expenseCost');
   if (costEl) costEl.textContent = `$${parseFloat(expenseData.amount || 0).toFixed(2)}`;
 
   syncMobileHeaderControls();
+}
+
+async function _healExpenseAmount(amount) {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+    let q = window.supabaseClient.from('expenses').update({ amount }).eq('id', expenseId).eq('profile_id', user.id);
+    if (storeId) q = q.eq('store_id', storeId);
+    await q;
+  } catch (e) {
+    console.error('Failed to self-heal expense amount:', e);
+  }
 }
 
 // Mobile: the real .navbar (and the notification/user dropdowns living
