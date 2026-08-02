@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v268';
+const CACHE_NAME = 'shelfy-v269';
 
 const STATIC_ASSETS = [
   '/',
@@ -36,9 +36,15 @@ const STATIC_ASSETS = [
   '/pwa-install.js',
   '/cookie-consent.js',
   '/offline-sync.js',
-  '/favicon.png',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/favicon-32.png',
+  '/favicon-16.png',
+  '/favicon-512.png',
+  '/apple-touch-icon-180.png',
+  '/shelfy-appicon-192.png',
+  '/shelfy-appicon-512.png',
+  '/shelfy-appicon.svg',
+  '/shelfy-mark-ink.svg',
+  '/shelfy-mark-white.svg',
   '/manifest.json',
   '/loading_screen.json',
   // CDN scripts needed for offline rendering
