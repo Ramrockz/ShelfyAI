@@ -31,7 +31,7 @@
     var banner = document.createElement('div');
     banner.id = 'pwa-banner';
     banner.innerHTML =
-      '<img src="/favicon.png" alt="ShelfyAI">' +
+      '<img src="/shelfy-appicon.svg" alt="ShelfyAI">' +
       '<div class="pwa-text">' +
         '<div class="pwa-title">Install ShelfyAI</div>' +
         '<div class="pwa-sub">' + subtitle + '</div>' +

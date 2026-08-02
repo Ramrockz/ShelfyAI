@@ -340,8 +340,8 @@ function createChatWidget() {
     <div class="chat-window" id="chatWindow">
       <div class="chat-header">
         <div class="chat-header-title">
-          <img src="ShelfyAI%20logo.svg" alt="ShelfyAI" class="chat-logo-light" style="height:32px;width:auto;">
-          <img src="shelfyai%20logo_dark.svg" alt="ShelfyAI" class="chat-logo-dark" style="height:32px;width:auto;">
+          <img src="/shelfy-mark-white.svg" alt="" style="height:24px;width:auto;">
+          <span>ShelfyAI</span>
         </div>
         <button class="chat-close-btn" onclick="toggleChat()">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
