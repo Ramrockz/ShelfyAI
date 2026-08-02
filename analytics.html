@@ -171,7 +171,89 @@
     height: 20px;
   }
 
+  /* ── Mobile analytics redesign (analytics-24b) ── desktop keeps the
+     existing KPI grid / doughnuts / tables entirely unchanged; mobile gets
+     a parallel set of elements below, populated from the exact same
+     computed data, shown instead of the desktop ones via the media query
+     at the bottom of this block. ── */
+  .an-plan { display: none; flex-shrink: 0; height: 26px; padding: 0 10px; border-radius: 8px;
+             background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-ink, var(--accent));
+             font-size: 12px; font-weight: 800; align-items: center; margin-left: 10px; }
+  .an-mobile { display: none; }
+  .an-hero { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px;
+             padding: 18px 16px 16px; margin-bottom: 16px; }
+  .an-hero-l { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+               color: var(--text-muted); }
+  .an-hero-v { font-size: 34px; font-weight: 800; letter-spacing: -.035em; line-height: 1.05; margin-top: 5px;
+               font-variant-numeric: tabular-nums; color: var(--success); }
+  .an-hero-v[data-state="down"] { color: var(--danger); }
+  .an-hero-d { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-top: 5px; }
+  .an-kpis { display: flex; margin-top: 15px; border: 1px solid var(--border); border-radius: 12px;
+             overflow: hidden; }
+  .an-kpis > div { flex: 1; min-width: 0; padding: 9px 11px; }
+  .an-kpis > div + div { border-left: 1px solid var(--border); }
+  .an-kpis label { display: block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
+                   text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+  .an-kpis span { font-size: 15px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .an-mread { display: none; align-items: baseline; gap: 10px; padding: 11px 4px 0; margin-top: 8px;
+              border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted);
+              font-variant-numeric: tabular-nums; }
+  .an-mread[data-on="1"] { display: flex; }
+  .an-mread b { font-size: 13px; font-weight: 800; letter-spacing: -.01em; color: var(--text-main); }
+  .an-mread i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 5px; }
+  .an-mread .out { margin-left: auto; }
+  .an-mread-clear { background: none; border: none; color: var(--accent-deep, var(--accent));
+                    font-size: 12px; font-weight: 700; padding: 0 0 0 8px; cursor: pointer; }
+  .an-rank { padding: 4px 0 6px; }
+  .an-r { display: block; width: 100%; padding: 9px 0; background: none; border: none; text-align: left;
+          border-top: 1px solid var(--border); }
+  .an-rank .an-r:first-child { border-top: none; }
+  .an-r-top { display: flex; align-items: baseline; gap: 8px; }
+  .an-r-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .an-r-val { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .an-r-pct { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); font-variant-numeric: tabular-nums;
+              min-width: 32px; text-align: right; }
+  .an-r-track { height: 6px; border-radius: 99px; background: var(--bg-inner); margin-top: 7px; overflow: hidden; }
+  .an-r-track > i { display: block; height: 100%; border-radius: 99px; }
+  .an-fc-say { font-size: 12.5px; color: var(--text-muted); margin-top: 11px; padding-top: 11px;
+               border-top: 1px solid var(--border); }
+  .an-fc-say b { color: var(--text-main); font-weight: 800; }
+  .an-lrow { display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 9px 12px 9px 4px;
+             border-top: 1px solid var(--border); }
+  .an-mobile .an-lrow:first-child { border-top: none; }
+  .an-l-no { flex-shrink: 0; width: 20px; font-size: 12.5px; font-weight: 800; color: var(--text-ghost, #cbd5e1);
+             font-variant-numeric: tabular-nums; }
+  .an-l-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .an-l-name { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.01em;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .an-l-why { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px;
+              font-variant-numeric: tabular-nums; }
+  .an-l-why[data-state="warn"] { color: var(--warning); font-weight: 600; }
+  .an-l-why[data-state="bad"]  { color: var(--danger); font-weight: 600; }
+  .an-l-val { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .an-l-val b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+  .an-l-val small { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px; }
+  .an-l-act { flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--border);
+              background: var(--bg-panel); color: var(--accent-ink, var(--accent)); font-size: 12.5px; font-weight: 700; }
+  .an-l-act:active { background: var(--bg-inner); }
+  .an-tot { display: flex; align-items: baseline; gap: 8px; padding: 11px 4px; font-size: 12.5px; color: var(--text-muted); }
+  .an-tot b { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--danger); font-variant-numeric: tabular-nums; }
+  .an-more { display: block; width: 100%; padding: 12px 4px; text-align: left; background: none;
+             border: none; border-top: 1px solid var(--border); color: var(--accent-deep, var(--accent));
+             font-size: 13.5px; font-weight: 700; }
+  .an-pay-list { margin-top: 20px; border: 1px solid var(--border); border-radius: 14px;
+                 background: var(--bg-panel); overflow: hidden; text-align: left; }
+  .an-pay-i { display: flex; gap: 11px; padding: 13px 14px; border-top: 1px solid var(--border); }
+  .an-pay-list .an-pay-i:first-child { border-top: none; }
+  .an-pay-i svg { flex-shrink: 0; color: var(--accent-deep, var(--accent)); margin-top: 1px; }
+  .an-pay-i b { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; }
+  .an-pay-i span { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
   @media (max-width: 768px) {
+    .an-plan { display: inline-flex; }
+    .an-desktop-only { display: none !important; }
+    .an-mobile { display: block; }
     .analytics-main {
       padding: 12px 12px calc(12px + 60px + env(safe-area-inset-bottom));
     }
@@ -326,7 +408,8 @@
         </svg>
         <h2>Analytics is a paid feature</h2>
         <p>Upgrade to Starter or Pro to access revenue charts, expense breakdowns, forecasts, and your top selling products.</p>
-        <a href="/pricing" class="btn-upgrade">View Plans</a>
+        <div class="an-pay-list" id="anPayList"></div>
+        <a href="/pricing" class="btn-upgrade" style="margin-top:20px;">View Plans</a>
       </div>
     </div>
 
@@ -334,16 +417,17 @@
     <div id="analyticsContent" style="display:none;">
 
       <!-- Date range pills -->
-      <div class="range-pills">
+      <div class="range-pills" style="align-items:center;">
         <button class="range-pill" data-period="30d" onclick="selectPeriod('30d')">Last 30 days</button>
         <button class="range-pill active" data-period="3m" onclick="selectPeriod('3m')">Last 3 months</button>
         <button class="range-pill" data-period="6m" onclick="selectPeriod('6m')">Last 6 months</button>
         <button class="range-pill" data-period="12m" onclick="selectPeriod('12m')">Last 12 months</button>
         <button class="range-pill" data-period="all" onclick="selectPeriod('all')">All time</button>
+        <span class="an-plan" id="anPlan">Starter</span>
       </div>
 
-      <!-- KPI cards -->
-      <div class="kpi-grid">
+      <!-- KPI cards (desktop) -->
+      <div class="kpi-grid an-desktop-only">
         <div class="kpi-card">
           <div class="kpi-label">Revenue</div>
           <div class="kpi-value" id="kpiRevenue">—</div>
@@ -362,14 +446,32 @@
         </div>
       </div>
 
-      <!-- Revenue vs Expenses over time -->
-      <div class="chart-card">
-        <h3>Revenue vs Expenses</h3>
-        <canvas id="revExpChart"></canvas>
+      <!-- Net profit hero (mobile) -->
+      <div class="an-hero an-mobile">
+        <div class="an-hero-l">Net profit</div>
+        <div class="an-hero-v" id="anHeroV">—</div>
+        <div class="an-hero-d" id="anHeroD"></div>
+        <div class="an-kpis">
+          <div><label>Revenue</label><span id="anKRev">—</span></div>
+          <div><label>Spend</label><span id="anKExp">—</span></div>
+          <div><label>Orders</label><span id="anKOrd">—</span></div>
+        </div>
       </div>
 
-      <!-- Channel + Category side by side -->
-      <div class="charts-row">
+      <!-- Revenue vs Expenses over time -- shared Chart.js canvas, both
+           screen sizes; tapping a bar/point filters everything below to
+           that month (mobile shows a small readout row for the tapped
+           month, desktop just re-renders its KPIs/lists). -->
+      <div class="chart-card">
+        <h3>Revenue vs Expenses <small class="an-mobile" style="font-weight:400;margin-top:2px;">tap a month to filter</small></h3>
+        <canvas id="revExpChart"></canvas>
+        <div class="an-mread" id="anMRead"></div>
+      </div>
+
+      <!-- Channel + Category: doughnuts on desktop, ranked bars on mobile
+           (a legend under an 8-slice doughnut is unreadable at phone
+           width; the underlying data is identical either way). -->
+      <div class="charts-row an-desktop-only">
         <div class="chart-card">
           <h3>Revenue by Channel</h3>
           <canvas id="channelChart"></canvas>
@@ -379,29 +481,50 @@
           <canvas id="categoryChart"></canvas>
         </div>
       </div>
+      <div class="chart-card an-mobile">
+        <h3>Where revenue came from <small id="anChNote" style="font-weight:400;"></small></h3>
+        <div class="an-rank" id="anChRank"></div>
+      </div>
+      <div class="chart-card an-mobile">
+        <h3>Where money went <small id="anCatNote" style="font-weight:400;"></small></h3>
+        <div class="an-rank" id="anCatRank"></div>
+      </div>
 
       <!-- Forecast -->
       <div class="chart-card">
         <h3>Revenue Forecast <small>— 3 month projection</small></h3>
         <canvas id="forecastChart"></canvas>
+        <div class="an-fc-say" id="anFcSay"></div>
       </div>
 
       <!-- Top Selling Products -->
-      <div class="chart-card">
+      <div class="chart-card an-desktop-only">
         <h3>Top Selling Products</h3>
         <div id="topProductsList"></div>
       </div>
+      <div class="chart-card an-mobile">
+        <h3>Top products <small id="anTpNote" style="font-weight:400;"></small></h3>
+        <div id="anTpRows"></div>
+      </div>
 
       <!-- Reorder Predictions -->
-      <div class="chart-card">
+      <div class="chart-card an-desktop-only">
         <h3>Reorder Predictions <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— based on usage over last 6 months</small></h3>
         <div id="reorderList"></div>
       </div>
+      <div class="chart-card an-mobile">
+        <h3>Running out <small style="font-weight:400;">from usage over 6 months</small></h3>
+        <div id="anRoRows"></div>
+      </div>
 
       <!-- Dead Stock -->
-      <div class="chart-card">
+      <div class="chart-card an-desktop-only">
         <h3>Dead Stock <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— no usage in the last 6 months</small></h3>
         <div id="deadStockList"></div>
+      </div>
+      <div class="chart-card an-mobile">
+        <h3>Dead stock <small style="font-weight:400;">unused for 6+ months</small></h3>
+        <div id="anDsRows"></div>
       </div>
 
     </div>
@@ -442,9 +565,18 @@
 let allSales = [], allExpenses = [], allIngredients = [], allIngHistory = [];
 let currentPeriod = '3m';
 let chartRevExp = null, chartChannel = null, chartCategory = null, chartForecast = null;
+// Mobile-only interactive state -- month narrows the hero/mini-stats/ranked
+// bars/top-products the same way the period pills do, just one step finer.
+// Running-out/dead-stock are always the full 6-month usage window regardless
+// of period or month, same as today's desktop behavior.
+let selectedMonth = null;
+let tpExpanded = false, roExpanded = false, dsExpanded = false;
 
 const CHART_COLORS = ['#06b6d4','#8b5cf6','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#84cc16','#f97316','#64748b'];
 const PERIOD_DAYS  = { '30d': 30, '3m': 90, '6m': 180, '12m': 365 };
+const anEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const anMoney = n => (n < 0 ? '-€' : '€') + Math.abs(n).toFixed(2);
+const anShort = n => Math.abs(n) >= 1000 ? '€' + (n / 1000).toFixed(1) + 'k' : '€' + Math.round(n);
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadAnalytics();
@@ -471,10 +603,13 @@ async function loadAnalytics() {
     }
 
     if (tier === 'free') {
+      renderPaywallFeatures();
       document.getElementById('analyticsPaywall').style.display = 'block';
       document.getElementById('analyticsContent').style.display = 'none';
       return;
     }
+    const planBadge = document.getElementById('anPlan');
+    if (planBadge) planBadge.textContent = tier === 'pro' ? 'Pro' : 'Starter';
 
     let _qs = supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id);
     if (storeId) _qs = _qs.eq('store_id', storeId);
@@ -513,10 +648,24 @@ async function loadAnalytics() {
 
 function selectPeriod(period) {
   currentPeriod = period;
+  selectedMonth = null;
   document.querySelectorAll('.range-pill').forEach(p =>
     p.classList.toggle('active', p.dataset.period === period)
   );
   renderAnalytics();
+}
+
+function renderPaywallFeatures() {
+  const el = document.getElementById('anPayList');
+  if (!el) return;
+  const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="20 6 9 17 4 12"/></svg>';
+  el.innerHTML = [
+    ['Profit, not just revenue', 'What you kept after materials, fees and shipping'],
+    ['Where the money went', 'Revenue by channel, spend by category'],
+    ['Running out', 'Which items your usage says to reorder, and when'],
+    ['Dead stock', 'Cash sitting on the shelf, unused for months'],
+    ['3-month forecast', 'A trend line through your own history']
+  ].map(([t, s]) => `<div class="an-pay-i">${tick}<span><b>${anEsc(t)}</b><span>${anEsc(s)}</span></span></div>`).join('');
 }
 
 function filterByPeriod(records, dateField) {
@@ -565,9 +714,15 @@ function renderAnalytics() {
   const sales    = filterByPeriod(allSales, 'sale_date');
   const expenses = filterByPeriod(allExpenses, 'expense_date');
 
+  // A tapped month (mobile chart click) narrows KPIs/ranks/top-products the
+  // same way the period pills do, one step finer -- reorder/dead-stock are
+  // never month-scoped, same as today (always the full 6-month usage window).
+  const salesIn    = selectedMonth ? sales.filter(s => (s.sale_date || '').slice(0, 7) === selectedMonth) : sales;
+  const expensesIn = selectedMonth ? expenses.filter(e => (e.expense_date || '').slice(0, 7) === selectedMonth) : expenses;
+
   // KPIs
-  const totalRev  = sales.reduce((s, r) => s + (parseFloat(r.revenue) || 0), 0);
-  const totalExp  = expenses.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+  const totalRev  = salesIn.reduce((s, r) => s + (parseFloat(r.revenue) || 0), 0);
+  const totalExp  = expensesIn.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const netProfit = totalRev - totalExp;
 
   document.getElementById('kpiRevenue').textContent  = '€' + totalRev.toFixed(2);
@@ -575,30 +730,33 @@ function renderAnalytics() {
   const profitEl = document.getElementById('kpiProfit');
   profitEl.textContent = (netProfit >= 0 ? '+' : '') + '€' + netProfit.toFixed(2);
   profitEl.style.color  = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
-  document.getElementById('kpiOrders').textContent = sales.length;
+  document.getElementById('kpiOrders').textContent = salesIn.length;
+  renderMobileHero(totalRev, totalExp, netProfit, salesIn.length);
 
-  // Monthly buckets
+  // Monthly buckets — always the full (unfiltered-by-month) period, so the
+  // chart itself keeps showing every month even while one is selected
   const revMap = bucketByMonth(sales, 'sale_date', 'revenue');
   const expMap = bucketByMonth(expenses, 'expense_date', 'amount');
   const months = [...new Set([...Object.keys(revMap), ...Object.keys(expMap)])].sort();
   const revValues = months.map(m => revMap[m] || 0);
   const expValues = months.map(m => expMap[m] || 0);
   const labels    = months.map(fmtMonth);
+  if (selectedMonth && !months.includes(selectedMonth)) selectedMonth = null;
 
   // Channel & category
   const channelMap = {}, catMap = {};
-  sales.forEach(s => {
+  salesIn.forEach(s => {
     const ch = s.source || 'Other';
     channelMap[ch] = (channelMap[ch] || 0) + (parseFloat(s.revenue) || 0);
   });
-  expenses.forEach(e => {
+  expensesIn.forEach(e => {
     const c = e.category || 'Other';
     catMap[c] = (catMap[c] || 0) + (parseFloat(e.amount) || 0);
   });
 
   // Top products
   const productMap = {};
-  sales.forEach(s => {
+  salesIn.forEach(s => {
     (s.items || []).forEach(item => {
       if (!item.name) return;
       if (!productMap[item.name]) productMap[item.name] = { units: 0, revenue: 0 };
@@ -620,11 +778,75 @@ function renderAnalytics() {
     return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   });
 
-  renderRevExpChart(labels, revValues, expValues);
+  renderRevExpChart(labels, revValues, expValues, months, revMap, expMap);
   renderDoughnut('channelChart',  channelMap, 'chartChannel');
   renderDoughnut('categoryChart', catMap,     'chartCategory');
+  renderRankBars('anChRank', 'anChNote', channelMap, 'channels', totalRev, 'var(--accent)');
+  renderRankBars('anCatRank', 'anCatNote', catMap, 'categories', totalExp, 'var(--spend, var(--warning))');
   renderForecastChart(last6.map(fmtMonth), fInput, fLabels, fValues);
-  renderTopProducts(productMap);
+  renderForecastCaption(fInput, fValues);
+  renderTopProducts(productMap, totalRev);
+}
+
+function setMonth(key) {
+  selectedMonth = selectedMonth === key ? null : key;
+  renderAnalytics();
+}
+
+// 28d — ranked bars instead of doughnuts on mobile: a legend under an
+// 8-slice doughnut is unreadable at phone width, and the question a maker
+// actually has ("which is biggest, by how much") is what a ranked bar
+// answers directly. Uses the exact same channelMap/catMap the doughnuts do.
+function renderRankBars(listId, noteId, map, noun, total, color) {
+  const listEl = document.getElementById(listId);
+  const noteEl = document.getElementById(noteId);
+  if (!listEl) return;
+  const rows = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  if (noteEl) noteEl.textContent = rows.length ? `${rows.length} ${noun}` : '';
+  if (!rows.length) {
+    listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No data for this period</p>';
+    return;
+  }
+  const max = rows[0][1];
+  listEl.innerHTML = rows.map(([name, v]) => `
+    <div class="an-r">
+      <span class="an-r-top">
+        <span class="an-r-name">${anEsc(name)}</span>
+        <span class="an-r-val">${anShort(v)}</span>
+        <span class="an-r-pct">${Math.round((v / (total || 1)) * 100)}%</span>
+      </span>
+      <span class="an-r-track"><i style="width:${Math.max(2, Math.round((v / max) * 100))}%;background:${color}"></i></span>
+    </div>`).join('');
+}
+
+function renderForecastCaption(hist, proj) {
+  const el = document.getElementById('anFcSay');
+  if (!el || !hist.length || !proj.length) { if (el) el.innerHTML = ''; return; }
+  const avgHist = hist.reduce((a, b) => a + b, 0) / hist.length;
+  const avgProj = proj.reduce((a, b) => a + b, 0) / proj.length;
+  const dir = avgProj > avgHist * 1.03 ? 'up' : avgProj < avgHist * .97 ? 'down' : 'flat';
+  el.innerHTML = `At the current trend, about <b>${anShort(avgProj)} a month</b> —
+    ${dir === 'flat' ? 'roughly level with' : dir === 'up' ? 'above' : 'below'}
+    your ${anShort(avgHist)} average. A straight line through the last ${hist.length} months, nothing more.`;
+}
+
+// 28b — profit leads on mobile; revenue is a vanity number, what's left is
+// the number a maker actually acts on.
+function renderMobileHero(rev, exp, net, orders) {
+  const v = document.getElementById('anHeroV');
+  const d = document.getElementById('anHeroD');
+  if (!v || !d) return;
+  v.textContent = (net >= 0 ? '+' : '') + anMoney(net);
+  net < 0 ? v.setAttribute('data-state', 'down') : v.removeAttribute('data-state');
+  const marg = rev ? Math.round((net / rev) * 100) : null;
+  d.textContent = selectedMonth
+    ? `${fmtMonth(selectedMonth)} only · ${marg === null ? 'no revenue' : marg + '% of revenue kept'}`
+    : marg === null ? 'No revenue in this range'
+    : `${marg}% of revenue kept`;
+  const rEl = document.getElementById('anKRev'), eEl = document.getElementById('anKExp'), oEl = document.getElementById('anKOrd');
+  if (rEl) rEl.textContent = anShort(rev);
+  if (eEl) eEl.textContent = anShort(exp);
+  if (oEl) oEl.textContent = orders;
 }
 
 const chartRefs = {};
@@ -633,22 +855,30 @@ function destroyChart(key) {
   if (chartRefs[key]) { chartRefs[key].destroy(); chartRefs[key] = null; }
 }
 
-function renderRevExpChart(labels, revValues, expValues) {
+function renderRevExpChart(labels, revValues, expValues, monthKeys, revMap, expMap) {
   destroyChart('revExp');
+  renderMonthReadout(null, monthKeys, revMap, expMap);
   if (!labels.length) return;
+  monthKeys = monthKeys || [];
+  const selIdx = selectedMonth ? monthKeys.indexOf(selectedMonth) : -1;
+  const barColor = (base) => labels.map((_, i) => selIdx === -1 || i === selIdx ? base : base.replace(/[\d.]+\)$/, '0.25)'));
   chartRefs['revExp'] = new Chart(
     document.getElementById('revExpChart').getContext('2d'), {
       type: 'bar',
       data: {
         labels,
         datasets: [
-          { label: 'Revenue',  data: revValues, backgroundColor: 'rgba(6,182,212,0.85)',  borderRadius: 6 },
-          { label: 'Expenses', data: expValues, backgroundColor: 'rgba(245,158,11,0.85)', borderRadius: 6 }
+          { label: 'Revenue',  data: revValues, backgroundColor: barColor('rgba(6,182,212,0.85)'),  borderRadius: 6 },
+          { label: 'Expenses', data: expValues, backgroundColor: barColor('rgba(245,158,11,0.85)'), borderRadius: 6 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        onClick: (evt, els) => {
+          if (!els.length || !monthKeys.length) return;
+          setMonth(monthKeys[els[0].index]);
+        },
         plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 14 } } },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
@@ -657,6 +887,21 @@ function renderRevExpChart(labels, revValues, expValues) {
       }
     }
   );
+  if (selIdx !== -1) renderMonthReadout(selectedMonth, monthKeys, revMap, expMap);
+}
+
+// 28d — tapping a bar on mobile shows an exact readout beneath the chart;
+// desktop already has axis tooltips, so this stays hidden there via the
+// .an-mread[data-on] CSS gate.
+function renderMonthReadout(monthKey, monthKeys, revMap, expMap) {
+  const el = document.getElementById('anMRead');
+  if (!el) return;
+  if (!monthKey) { el.removeAttribute('data-on'); el.innerHTML = ''; return; }
+  const rev = (revMap && revMap[monthKey]) || 0;
+  const exp = (expMap && expMap[monthKey]) || 0;
+  el.setAttribute('data-on', '1');
+  el.innerHTML = `<b>${anEsc(fmtMonth(monthKey))}</b> — revenue ${anMoney(rev)}, expenses ${anMoney(exp)}, net ${anMoney(rev - exp)}
+    <a href="#" onclick="event.preventDefault();setMonth('${monthKey}')" style="color:var(--accent);margin-left:8px">clear</a>`;
 }
 
 function renderDoughnut(canvasId, map, refKey) {
@@ -744,30 +989,56 @@ function renderForecastChart(histLabels, histValues, fLabels, fValues) {
   );
 }
 
-function renderTopProducts(productMap) {
+function renderTopProducts(productMap, totalRev) {
   const sorted = Object.entries(productMap)
     .sort((a, b) => b[1].revenue - a[1].revenue)
     .slice(0, 10);
   const el = document.getElementById('topProductsList');
+  if (el) {
+    if (!sorted.length) {
+      el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No product data for this period</p>';
+    } else {
+      el.innerHTML = `<div class="table-scroll">
+        <table class="top-products-table">
+          <thead>
+            <tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th></tr>
+          </thead>
+          <tbody>
+            ${sorted.map(([name, d], i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${name}</td>
+                <td>${d.units}</td>
+                <td>€${d.revenue.toFixed(2)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table></div>`;
+    }
+  }
+
+  const rowsEl = document.getElementById('anTpRows');
+  const noteEl = document.getElementById('anTpNote');
+  if (!rowsEl) return;
   if (!sorted.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No product data for this period</p>';
+    rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No product data for this period</p>';
+    if (noteEl) noteEl.innerHTML = '';
     return;
   }
-  el.innerHTML = `<div class="table-scroll">
-    <table class="top-products-table">
-      <thead>
-        <tr><th>#</th><th>Product</th><th>Units</th><th>Revenue</th></tr>
-      </thead>
-      <tbody>
-        ${sorted.map(([name, d], i) => `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${name}</td>
-            <td>${d.units}</td>
-            <td>€${d.revenue.toFixed(2)}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table></div>`;
+  const shown = tpExpanded ? sorted : sorted.slice(0, 5);
+  rowsEl.innerHTML = shown.map(([name, d], i) => `
+    <div class="an-lrow">
+      <span class="an-l-no">${i + 1}</span>
+      <span class="an-l-main">
+        <span class="an-l-name">${anEsc(name)}</span>
+        <span class="an-l-why">${d.units} sold · €${(d.units ? d.revenue / d.units : 0).toFixed(2)} each</span>
+      </span>
+      <span class="an-l-val">${anShort(d.revenue)}<br><span class="an-r-pct">${Math.round((d.revenue / (totalRev || 1)) * 100)}%</span></span>
+    </div>`).join('');
+  if (noteEl) {
+    noteEl.innerHTML = sorted.length > 5
+      ? `<a href="#" class="an-more" onclick="event.preventDefault();tpExpanded=!tpExpanded;renderAnalytics();">${tpExpanded ? 'Show less' : `Show all ${sorted.length}`}</a>`
+      : '';
+  }
 }
 
 function renderReorderPredictions() {
@@ -801,8 +1072,11 @@ function renderReorderPredictions() {
     .filter(p => p && (p.daysLeft <= 60 || p.belowMin))
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
+  const rowsEl = document.getElementById('anRoRows');
+
   if (!predictions.length) {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">All stock levels look healthy based on current usage</p>';
+    if (rowsEl) rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">All stock levels look healthy</p>';
     return;
   }
 
@@ -826,6 +1100,22 @@ function renderReorderPredictions() {
         }).join('')}
       </tbody>
     </table></div>`;
+
+  if (!rowsEl) return;
+  const shown = roExpanded ? predictions : predictions.slice(0, 5);
+  rowsEl.innerHTML = shown.map(p => {
+    const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days left';
+    const isRed = p.daysLeft <= 14 || p.belowMin;
+    return `<div class="an-lrow">
+      <span class="an-l-main">
+        <span class="an-l-name">${anEsc(p.name)}</span>
+        <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${daysText} · ${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
+      </span>
+      <a href="/ingredient-detail?id=${p.id}" class="an-l-act">Open</a>
+    </div>`;
+  }).join('') + (predictions.length > 5
+    ? `<a href="#" class="an-more" onclick="event.preventDefault();roExpanded=!roExpanded;renderReorderPredictions();">${roExpanded ? 'Show less' : `Show all ${predictions.length}`}</a>`
+    : '');
 }
 
 function renderDeadStock() {
@@ -862,8 +1152,11 @@ function renderDeadStock() {
     }))
     .sort((a, b) => b.tiedUpValue - a.tiedUpValue);
 
+  const rowsEl = document.getElementById('anDsRows');
+
   if (!dead.length) {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No dead stock — everything has been used in the last 6 months</p>';
+    if (rowsEl) rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No dead stock</p>';
     return;
   }
 
@@ -886,6 +1179,23 @@ function renderDeadStock() {
         </tr>`).join('')}
       </tbody>
     </table></div>`;
+
+  if (!rowsEl) return;
+  const shown = dsExpanded ? dead : dead.slice(0, 5);
+  let running = 0;
+  rowsEl.innerHTML = shown.map(ing => {
+    running += ing.tiedUpValue;
+    return `<div class="an-lrow">
+      <span class="an-l-main">
+        <span class="an-l-name">${anEsc(ing.name)}</span>
+        <span class="an-l-why">${parseFloat(ing.quantity).toFixed(1)} ${anEsc(ing.unit || '')} sitting unused</span>
+      </span>
+      <span class="an-l-val">€${ing.tiedUpValue.toFixed(2)}</span>
+      <a href="/ingredient-detail?id=${ing.id}" class="an-l-act">Open</a>
+    </div>`;
+  }).join('') + `<div class="an-tot">Total tied up: <b>€${totalTiedUp.toFixed(2)}</b></div>` + (dead.length > 5
+    ? `<a href="#" class="an-more" onclick="event.preventDefault();dsExpanded=!dsExpanded;renderDeadStock();">${dsExpanded ? 'Show less' : `Show all ${dead.length}`}</a>`
+    : '');
 }
 </script>
 
