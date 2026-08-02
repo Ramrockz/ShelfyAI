@@ -2430,8 +2430,21 @@ async function saveQuickIngredient(e) {
 // on any of the paths that change quantity/remove a line -- it only ever
 // changed via the manual "editField('amount', ...)" sheet, so the hero
 // number silently drifted from what the itemized lines actually add up to.
+//
+// The per-unit fallback here must match displayIngredients()'s exact chain
+// (stored cost_per_unit -> stored price -> the live matched ingredient's
+// current cost_per_unit) -- older expenses saved a line with cost_per_unit:0
+// (the ingredient had no cost recorded yet at import time), which
+// displayIngredients() silently bridges via the live ingredient lookup, but
+// this function previously stopped at the stored 0 and summed to $0.
 function _ecCalcTotal(lines) {
-  return lines.reduce((sum, i) => sum + (parseFloat(i.quantity_added || i.quantity || 0) * parseFloat(i.cost_per_unit ?? i.price ?? 0)), 0);
+  return lines.reduce((sum, i) => {
+    const itemId = i.ingredient_id || i.id;
+    const matched = ingredients.find(ing => ing.id === itemId);
+    const qty = parseFloat(i.quantity_added || i.quantity || 0);
+    const unitCost = parseFloat(i.cost_per_unit || i.price || matched?.cost_per_unit || 0);
+    return sum + (qty * unitCost);
+  }, 0);
 }
 function _ecSyncTotalCostDisplay() {
   const costEl = document.getElementById('expenseCost');
