@@ -851,25 +851,19 @@
   .stock-all-ok { display: flex; align-items: center; gap: 10px; padding: 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--success); }
 
   /* ---------- PENDING DELIVERIES ---------- */
-  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
-  .delivery-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-muted); }
-  .delivery-info { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
-  .delivery-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
-  .delivery-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .delivery-qty-badge { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
-  .delivery-qty-badge.out { background: rgba(239,68,68,0.12); color: var(--danger); }
-  .delivery-qty-badge.low { background: rgba(245,158,11,0.12); color: var(--warning); }
-  .delivery-qty-badge.ok { background: rgba(16,185,129,0.1); color: var(--success); }
-  .delivery-source-link { font-size: 12px; color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 3px; opacity: 0.85; }
-  .delivery-source-link:hover { opacity: 1; text-decoration: underline; }
-  .delivery-actions { display: flex; gap: 6px; flex-shrink: 0; }
-  .delivery-btn { padding: 6px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: opacity 0.15s, transform 0.1s; }
-  @media (hover: hover) and (pointer: fine) {
-    .delivery-btn:hover { opacity: 0.85; transform: scale(1.08); }
-    .delivery-btn:active { transform: scale(0.94); }
-  }
-  .delivery-btn.confirm { background: rgba(16,185,129,0.15); color: var(--success); }
-  .delivery-btn.cancel { background: rgba(239,68,68,0.12); color: var(--danger); }
+  .pd-h { display: flex; align-items: baseline; gap: 8px; }
+  .pd-h-count { margin-left: auto; font-size: 11.5px; font-weight: 700; letter-spacing: 0;
+                text-transform: none; color: var(--text-faint, var(--text-muted)); }
+  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
+  .delivery-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
+  .delivery-info { flex: 1; min-width: 0; overflow: hidden; }
+  .delivery-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
+  .delivery-sub { display: block; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .delivery-chip { flex-shrink: 0; display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px;
+                   font-size: 9px; font-weight: 700; line-height: 1.4; text-transform: uppercase; letter-spacing: .05em; }
+  .delivery-chip[data-state="eta"]  { background: rgba(6,182,212,0.12); color: var(--accent-deep, var(--accent)); }
+  .delivery-chip[data-state="late"] { background: rgba(245,158,11,0.14); color: var(--warning); }
+  .delivery-chev { flex-shrink: 0; opacity: 0.4; }
   .delivery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 20px; gap: 10px; color: var(--text-muted); font-size: 14px; }
   .delivery-empty img { width: 160px; height: auto; opacity: 0.9; }
   @media (hover: hover) and (pointer: fine) {
@@ -932,13 +926,6 @@
       border-left: none;
       border-right: none;
     }
-
-    /* Delivery rows: wrap buttons onto their own line so they're always reachable */
-    .delivery-row { flex-wrap: wrap; align-items: flex-start; }
-    .delivery-icon { margin-top: 3px; }
-    .delivery-info { flex: 1; }
-    .delivery-actions { flex: 0 0 100%; display: flex; gap: 8px; padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--border); }
-    .delivery-actions .delivery-btn { flex: 1; height: 36px; font-size: 13px; }
 
     /* Modal adjustments */
     .modal-content,
@@ -1949,7 +1936,7 @@
 
   <div class="ops-grid">
     <div class="panel" id="deliveriesPanel">
-      <h2>Pending Deliveries</h2>
+      <h2 class="pd-h">Pending Deliveries<span class="pd-h-count" id="deliveriesCount"></span></h2>
       <div id="inboundContainer">
         <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;">
           Loading...
@@ -2647,11 +2634,13 @@ function resolveConfirm(result) {
 
 
   // Load inbound status (pending deliveries)
+  const DELIVERY_TRUCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>';
+
   function _renderInboundStatus(pendingOrders) {
     const container = document.getElementById('inboundContainer');
     if (!container) return;
     const panel = document.getElementById('deliveriesPanel');
-    const h = panel ? panel.querySelector('h2') : null;
+    const countEl = document.getElementById('deliveriesCount');
 
     if (!pendingOrders || pendingOrders.length === 0) {
       if (panel) panel.style.display = '';
@@ -2660,33 +2649,41 @@ function resolveConfirm(result) {
           <img src="/no_pending_deliveries.png" alt="No pending deliveries" />
           <span>No pending deliveries</span>
         </div>`;
-      if (h) h.textContent = 'Pending Deliveries';
+      if (countEl) countEl.textContent = '';
       return;
     }
 
     if (panel) panel.style.display = '';
-    if (h) h.textContent = `Pending Deliveries · ${pendingOrders.length}`;
+    if (countEl) countEl.textContent = `${pendingOrders.length} order${pendingOrders.length === 1 ? '' : 's'}`;
+    const today = new Date().toISOString().split('T')[0];
     container.innerHTML = pendingOrders.map(item => {
       const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
-      let dateLabel = '';
+      let chip = '';
       if (orderBase) {
         const eta = new Date(orderBase + 'T00:00:00');
         if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery));
-        dateLabel = eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const etaDate = eta.toISOString().split('T')[0];
+        chip = etaDate < today
+          ? '<span class="delivery-chip" data-state="late">Late</span>'
+          : `<span class="delivery-chip" data-state="eta">${eta.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
       }
+      // reorder_quantity/reorder_supplier_id are only populated by the current
+      // Place Reorder flow -- older pending deliveries (or ones logged through
+      // completeReorder()'s receipt-scan path) may not have them, so this
+      // degrades to whichever half is actually known instead of showing blanks.
+      const subParts = [];
+      if (item.reorder_quantity) subParts.push(`${item.reorder_quantity} ${item.unit || 'units'}`);
+      if (item.suppliers?.name) subParts.push(escapeHtml(item.suppliers.name));
+      const sub = subParts.join(' · ');
       return `
-        <div class="delivery-row">
-          <div class="delivery-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </div>
-          <div class="delivery-info" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
-            <div class="delivery-name">${escapeHtml(item.name)}</div>
-            ${dateLabel ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${dateLabel}</div>` : ''}
-          </div>
-          <div class="delivery-actions">
-            <button class="delivery-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')">Cancel</button>
-            <button class="delivery-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')">Received</button>
-          </div>
+        <div class="delivery-row" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
+          <span class="delivery-icon">${DELIVERY_TRUCK_ICON}</span>
+          <span class="delivery-info">
+            <span class="delivery-name">${escapeHtml(item.name)}</span>
+            ${sub ? `<span class="delivery-sub">${sub}</span>` : ''}
+          </span>
+          ${chip}
+          <svg class="delivery-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
         </div>`;
     }).join('');
   }
@@ -2708,7 +2705,7 @@ function resolveConfirm(result) {
 
       let _q2 = supabaseClient
         .from('ingredients')
-        .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at')
+        .select('id, name, unit, quantity, source_url, reorder_date, estimated_delivery, updated_at, reorder_quantity, reorder_supplier_id, suppliers(name)')
         .eq('profile_id', user.id);
       if (storeId) _q2 = _q2.eq('store_id', storeId);
       _q2 = _q2.eq('reorder_pending', true)
@@ -2727,50 +2724,6 @@ function resolveConfirm(result) {
     }
   }
 
-  async function confirmOpsDelivery(ingredientId) {
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabaseClient
-        .from('ingredients')
-        .update({ reorder_pending: false })
-        .eq('id', ingredientId)
-        .eq('profile_id', user.id);
-
-      if (error) throw error;
-
-      loadInboundStatus();
-      loadInventoryStatus();
-
-      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
-      if (upload) window.location.href = '/expenses';
-    } catch (error) {
-      console.error('Error confirming delivery:', error);
-    }
-  }
-
-  async function cancelDelivery(ingredientId) {
-    
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabaseClient
-        .from('ingredients')
-        .update({ reorder_pending: false })
-        .eq('id', ingredientId)
-        .eq('profile_id', user.id);
-
-      if (error) throw error;
-
-      loadInboundStatus();
-      loadInventoryStatus();
-    } catch (error) {
-      console.error('Error canceling delivery:', error);
-      showAlert('Failed to cancel delivery');
-    }
-  }
 
   // Load data when page loads
   if (typeof window.supabaseClient !== 'undefined') {

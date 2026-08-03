@@ -2272,7 +2272,8 @@
 
       if (q) {
         const { error } = await supabaseClient.from('ingredients').update({
-          reorder_pending: true, reorder_date: today, estimated_delivery: s.lead || null
+          reorder_pending: true, reorder_date: today, estimated_delivery: s.lead || null,
+          reorder_quantity: q, reorder_supplier_id: s.supplierId
         }).eq('id', currentIngredient.id);
         if (error) throw error;
         currentIngredient.reorder_pending = true;
@@ -2287,7 +2288,8 @@
           .eq('ingredient_id', id).eq('supplier_id', s.supplierId).limit(1);
         const row = rows?.[0];
         await supabaseClient.from('ingredients').update({
-          reorder_pending: true, reorder_date: today, estimated_delivery: row?.lead_time_days || null
+          reorder_pending: true, reorder_date: today, estimated_delivery: row?.lead_time_days || null,
+          reorder_quantity: pickedQty, reorder_supplier_id: s.supplierId
         }).eq('id', id);
         if (row) await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', row.id);
       }
