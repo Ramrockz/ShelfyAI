@@ -362,9 +362,15 @@
     background: var(--accent-hover, var(--accent));
   }
   
-  /* Exclude search wrapper inputs from general input styling */
-  input:not(.search-wrapper input):not(.nav-search-input), 
-  textarea, 
+  /* Exclude search wrapper inputs and the New-item form's own .ic-input
+     fields from general input styling -- input:not(...):not(...) computes
+     higher specificity than a plain .ic-input class, so without this
+     exclusion its margin-bottom/padding/border/background/border-radius
+     silently won over .ic-input's borderless, row-based design, adding an
+     extra ~12px gap under every field in #manualModal and boxing each one
+     in a border that was never intended to be there. */
+  input:not(.search-wrapper input):not(.nav-search-input):not(.ic-input),
+  textarea,
   select { width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-main); font-size: 14px; }
 
   .form-group {
