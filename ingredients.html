@@ -1581,9 +1581,14 @@ loadIngredients().then(() => {
 
   // The "+" create button on ingredient-detail.html can't open this page's
   // create-modal directly (it's a different document) — it hands off here.
-  if (sessionStorage.getItem('shelfy_open_create')) {
+  // A value of 'manual' (from operations.html's dashboard, where the user
+  // already picked Manual from its own picker) skips straight to the form;
+  // any other truthy value (ingredient-detail.html's generic "+") shows the
+  // method picker like before.
+  const _openCreate = sessionStorage.getItem('shelfy_open_create');
+  if (_openCreate) {
     sessionStorage.removeItem('shelfy_open_create');
-    openModal();
+    if (_openCreate === 'manual') openManualIngredientModal(); else openModal();
   }
 });
 

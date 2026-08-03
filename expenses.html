@@ -1391,9 +1391,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // The "+" create button on expense-detail.html can't open this page's
   // create flow directly (it's a different document) — it hands off here.
-  if (sessionStorage.getItem('shelfy_open_create')) {
+  // A value of 'manual' (from operations.html's dashboard, where the user
+  // already picked Manual from its own picker) skips straight to the form;
+  // any other truthy value (expense-detail.html's generic "+") shows the
+  // method picker like before.
+  const _openCreate = sessionStorage.getItem('shelfy_open_create');
+  if (_openCreate) {
     sessionStorage.removeItem('shelfy_open_create');
-    openMethodSelectionModal();
+    if (_openCreate === 'manual') openAddExpenseModal(); else openMethodSelectionModal();
   }
 });
 

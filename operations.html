@@ -2086,8 +2086,10 @@ async function openExpenseChoiceModal() {
         // Hand off to expenses.html's real, actively-maintained #expenseModal
         // instead of operations.html's own older #expenseModal copy (same
         // shelfy_open_create pattern as goToNewProduct()/the ingredient fix
-        // above).
-        sessionStorage.setItem('shelfy_open_create', 'true');
+        // above). 'manual' (not the generic '1'/'true' other pages use)
+        // tells expenses.html's handler to skip its method picker and open
+        // the form directly -- the user already chose Manual here.
+        sessionStorage.setItem('shelfy_open_create', 'manual');
         window.location.href = '/expenses';
       } else if (method === 'upload') {
         // Pre-existing behavior: the scan result here maps into the
@@ -2878,7 +2880,11 @@ async function openMethodModal() {
         if (addingIngredientFromRecipe) {
           openManualEntryModal();
         } else {
-          sessionStorage.setItem('shelfy_open_create', 'true');
+          // 'manual' (not the generic '1'/'true' other pages use) tells
+          // ingredients.html's handler to skip its method picker and open
+          // the form directly -- the user already chose Manual here, so
+          // asking again on arrival would undo that choice.
+          sessionStorage.setItem('shelfy_open_create', 'manual');
           window.location.href = '/ingredients';
         }
       } else if (method === 'url') {
