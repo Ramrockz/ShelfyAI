@@ -71,6 +71,7 @@
   window.handleSwitchGoogleLogin = async function() {
     try {
       await window.supabaseClient.auth.signOut();
+      if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
       const { error } = await window.supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
       if (error) throw error;
     } catch (e) { alert('Google sign-in failed: ' + e.message); }
@@ -86,6 +87,7 @@
       await window.supabaseClient.auth.signOut();
       sessionStorage.removeItem('shelfy_user_email'); sessionStorage.removeItem('shelfy_user_avatar');
       localStorage.removeItem('shelfy_store_id'); localStorage.removeItem('shelfy_store_name');
+      if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
       window.currentStoreId = null; window.currentStoreName = null;
       const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
       if (error) throw error;
@@ -104,6 +106,7 @@
       await window.supabaseClient.auth.signOut();
       sessionStorage.removeItem('shelfy_user_email'); sessionStorage.removeItem('shelfy_user_avatar');
       localStorage.removeItem('shelfy_store_id'); localStorage.removeItem('shelfy_store_name');
+      if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
       window.currentStoreId = null; window.currentStoreName = null;
       const { error } = await window.supabaseClient.auth.signUp({ email, password });
       if (error) throw error;

@@ -64,6 +64,23 @@ let currentPage = window.location.pathname.split('/').pop() || window.location.h
 // Remove .html extension if present
 currentPage = currentPage.replace('.html', '');
 
+// Every page's own "instant load from local cache before the real fetch"
+// optimization (orders.html/sales.html/ingredients.html/recipes.html/
+// expenses.html/operations.html) stores its data under a flat, unscoped
+// localStorage key -- not scoped to a user or store id. Neither logout()
+// nor switch-account-modal.js's account-switch flows ever cleared these,
+// so the NEXT account to sign in on the same browser would briefly render
+// the PREVIOUS account's real cached data (orders, ingredients, etc.) on
+// page load, before the fresh, correctly-scoped Supabase fetch overwrote
+// it moments later. Shared here so logout() and every switch-account path
+// clear the same list instead of each maintaining its own copy.
+function clearShelfyDataCaches() {
+  ['shelfy_cache_orders', 'shelfy_cache_sales', 'shelfy_cache_ingredients',
+   'shelfy_cache_recipes', 'shelfy_cache_recipes_ingredients', 'shelfy_cache_expenses',
+   'shelfy_cache_ops_inventory', 'shelfy_cache_ops_inbound'
+  ].forEach(k => localStorage.removeItem(k));
+}
+
 // Logout function
 async function logout() {
   try {
@@ -73,6 +90,7 @@ async function logout() {
     localStorage.removeItem('shelfy_user_tier');
     localStorage.removeItem('shelfy_store_id');
     localStorage.removeItem('shelfy_store_name');
+    clearShelfyDataCaches();
     window.currentStoreId   = null;
     window.currentStoreName = null;
     

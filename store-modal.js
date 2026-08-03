@@ -207,6 +207,11 @@ function switchStore(storeId, storeName) {
   if (storeId === _getStoreId()) { closeStoreModal(); return; }
   localStorage.setItem('shelfy_store_id', storeId);
   localStorage.setItem('shelfy_store_name', storeName);
+  // Every page's own "instant load from local cache" optimization keys its
+  // cache flatly (not scoped per store), so without this the reload below
+  // would briefly render the PREVIOUS store's real orders/ingredients/etc.
+  // before the fresh, newly store-scoped fetch overwrote it moments later.
+  if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
   window.location.reload();
 }
 
@@ -320,6 +325,7 @@ async function _doDeleteStore() {
     if (storeId === _getStoreId()) {
       localStorage.removeItem('shelfy_store_id');
       localStorage.removeItem('shelfy_store_name');
+      if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
       window.currentStoreId = null;
       window.currentStoreName = null;
       window.location.reload();
