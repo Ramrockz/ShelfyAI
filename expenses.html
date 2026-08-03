@@ -1071,7 +1071,6 @@
           <div class="ec-field">
             <label class="ec-label" for="expense_date">Date</label>
             <input class="ec-input" type="date" id="expense_date" required oninput="onExpenseEdit()">
-            <div class="ec-chips" id="ecDates"></div>
           </div>
         </div>
 
@@ -1963,22 +1962,6 @@ function setExpenseVendor(name) {
   onExpenseEdit();
 }
 
-function _isoDate(d) { return d.toISOString().slice(0, 10); }
-function renderExpenseDateChips() {
-  const box = document.getElementById('ecDates');
-  if (!box) return;
-  const current = document.getElementById('expense_date').value;
-  const today = new Date();
-  const shift = n => { const d = new Date(today); d.setDate(d.getDate() - n); return _isoDate(d); };
-  const opts = [['Today', _isoDate(today)], ['Yesterday', shift(1)], ['2 days ago', shift(2)]];
-  box.innerHTML = opts.map(([label, d]) =>
-    `<button type="button" class="ec-chip" aria-pressed="${d === current}" onclick="setExpenseDate('${d}')">${label}</button>`
-  ).join('');
-}
-function setExpenseDate(d) {
-  document.getElementById('expense_date').value = d;
-  onExpenseEdit();
-}
 
 // Line-item helpers — each line shows its own stock impact (21c), same
 // grammar as inventory-impact.js and the order-products picker.
@@ -2441,7 +2424,6 @@ function renderExpenseReconcile() {
 // One re-render entry point for every field/line change.
 function onExpenseEdit() {
   renderExpenseVendorChips();
-  renderExpenseDateChips();
   renderExpenseLines();
   renderExpenseReconcile();
 

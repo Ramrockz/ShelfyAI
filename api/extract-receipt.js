@@ -219,9 +219,13 @@ module.exports = async (req, res) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AgentQL API error:', errorText);
-      return res.status(response.status).json({ 
-        error: 'Failed to extract data from receipt',
-        details: errorText 
+      // This return happens before the usage-increment RPC further down,
+      // so a failure here never counts against the user's monthly scan
+      // limit -- say so explicitly since "did this use up my scan?" is the
+      // natural worry after seeing this message.
+      return res.status(response.status).json({
+        error: "Couldn't read this photo — try a clearer, well-lit shot, or enter it manually. This didn't use one of your scans.",
+        details: errorText
       });
     }
 

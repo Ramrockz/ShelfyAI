@@ -590,10 +590,13 @@
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
-    /* Keep bottom nav above all builder overlays */
-    #bottom-nav { z-index: 10005 !important; }
-    /* Delete modal must sit above bottom nav */
-    #deleteRecipeModal { z-index: 10010 !important; }
+    /* Bottom nav previously sat ABOVE the builder overlay here (z-index
+       10005 vs .recipe-overlay's 10000) -- the opposite of every other
+       Create/Edit sheet in the app, where the shared .modal-overlay
+       (z-index 9999) already sits above the bottom nav (9000) by default.
+       Since #rbCreateBtn/.rb-foot lives at the very bottom of this sheet,
+       the nav bar was rendering directly on top of it, hiding the Create
+       button entirely. Removed so this matches the standard behavior. */
 
     /* Prevent builder content from hiding behind bottom nav */
     .recipe-panel-left { padding-bottom: 76px !important; }

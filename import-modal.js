@@ -428,6 +428,10 @@
         if (response.status === 429) {
           throw new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
         }
+        // errorData.details (when present) is the raw AgentQL error -- not
+        // shown to the user, but logged so a report of "it just failed,
+        // no idea why" is actually diagnosable afterward.
+        if (errorData.details) console.error('[ShelfyImportModal] Extraction failed, server details:', errorData.details);
         throw new Error(errorData.error || 'Failed to extract data from this file');
       }
 
