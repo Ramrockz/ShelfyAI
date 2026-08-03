@@ -89,7 +89,13 @@ module.exports = async (req, res) => {
     console.log('User authenticated:', user.id);
 
     // Parse multipart form data first to get context
-    const form = new IncomingForm({ maxFileSize: 10 * 1024 * 1024 }); // 10MB limit
+    // 4MB, not 10MB: Vercel's serverless functions reject request bodies over
+    // ~4.5MB at the platform layer before this code runs at all, so a 10MB
+    // ceiling here was unreachable dead code -- files between 4.5MB and
+    // 10MB were rejected upstream with no JSON body, surfacing to the client
+    // as a generic, undiagnosable failure. Matches import-modal.js's own
+    // client-side limit (which now also compresses images before upload).
+    const form = new IncomingForm({ maxFileSize: 4 * 1024 * 1024 });
     
     const [fields, files] = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {

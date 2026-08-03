@@ -54,7 +54,15 @@
   function cost()        { return usable() ? 1 : 0; }
   function affordable()  { return scansLeft() === null || cost() <= scansLeft(); }
 
-  function isMobileUA() { return /android|iphone|ipad|ipod/i.test(navigator.userAgent); }
+  function isMobileUA() {
+    // iPadOS 13+ reports a desktop "Macintosh" UA by default, with no way to
+    // tell it apart from a real Mac except that iPads are touch-capable and
+    // Macs aren't (maxTouchPoints > 1 -- 1 is used by some trackpads/mice).
+    // Without this, "Take Photo" on an iPad fell into the desktop
+    // screen-capture branch, which iPadOS Safari doesn't support at all.
+    return /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
 
   function ensureSheet() {
     if (sheetEl) return sheetEl;
@@ -85,6 +93,10 @@
           '<input type="file" id="aimCameraInput" accept="image/*" capture="environment" style="display:none;">' +
         '</div>' +
         '<div id="aimFileWrap"></div>' +
+        '<div class="aim-error" id="aimError" style="display:none;">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          '<span id="aimErrorText"></span>' +
+        '</div>' +
         '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
         '<div class="aim-quote" id="aimQuote"></div>' +
         '<div class="aim-note" id="aimNote"></div>' +
@@ -145,20 +157,66 @@
     return sheetEl;
   }
 
+  // Vercel's serverless functions reject request bodies over ~4.5MB at the
+  // platform layer, before extract-receipt.js's own code (and its more
+  // helpful error responses) ever runs -- so a file allowed through here at
+  // up to 10MB could still fail with zero useful detail on the other end.
+  // 4MB leaves headroom for multipart overhead plus the context field.
+  var MAX_FILE_BYTES = 4 * 1024 * 1024;
+
   function validate(f) {
     var okType = /^(image\/png|image\/jpeg|image\/jpg)$/.test(f.type) || /\.pdf$/i.test(f.name);
     if (!okType) return 'Please choose a PNG, JPG, or PDF file';
-    if (f.size > 10 * 1024 * 1024) return 'File size must be less than 10MB';
+    if (f.size > MAX_FILE_BYTES) return 'File size must be less than 4MB' + (/\.pdf$/i.test(f.name) ? ' — try a lower-resolution scan' : '');
     return null;
   }
 
+  // Photos straight from a phone camera are full sensor resolution (often
+  // 3-8MB+, more for high-detail subjects like a receipt full of small
+  // text) -- this is THE reason "Take Photo" tended to fail specifically on
+  // mobile: desktop's equivalent (captureScreen(), below) produces a small
+  // PNG, so it never hit this. Downscale + re-encode client-side so a normal
+  // phone photo just works instead of silently exceeding the server's
+  // request-size limit. PDFs pass through untouched (can't be shrunk this
+  // way); non-image/PDF files are rejected by validate() regardless.
+  var MAX_DIM = 1800;
+  var JPEG_QUALITY = 0.85;
+
+  function compressImage(raw) {
+    return new Promise(function (resolve) {
+      if (!/^image\//.test(raw.type)) { resolve(raw); return; } // PDFs etc.
+      var img = new Image();
+      var url = URL.createObjectURL(raw);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, MAX_DIM / Math.max(w, h));
+        if (scale >= 1 && raw.size <= MAX_FILE_BYTES) { resolve(raw); return; } // already fine as-is
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(w * scale));
+        canvas.height = Math.max(1, Math.round(h * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(function (blob) {
+          resolve(blob ? new File([blob], raw.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : raw);
+        }, 'image/jpeg', JPEG_QUALITY);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(raw); }; // fall back to the original if it won't decode
+      img.src = url;
+    });
+  }
+
+  var processingFile = false;
+
   function setFile(raw) {
-    var err = validate(raw);
-    if (err) { errorMsg = err; render(); return; }
-    if (file) replaced = file.name;
-    errorMsg = null;
-    file = { raw: raw, name: raw.name, sizeMB: raw.size / 1048576, isPdf: /\.pdf$/i.test(raw.name) };
-    render();
+    processingFile = true; errorMsg = null; render();
+    compressImage(raw).then(function (processed) {
+      processingFile = false;
+      var err = validate(processed);
+      if (err) { errorMsg = err; render(); return; }
+      if (file) replaced = file.name;
+      file = { raw: processed, name: processed.name, sizeMB: processed.size / 1048576, isPdf: /\.pdf$/i.test(processed.name) };
+      render();
+    });
   }
   function clearFile() { file = null; replaced = null; errorMsg = null; render(); }
 
@@ -264,20 +322,31 @@
     return 'Buy 50 scans';
   }
 
+  function renderError() {
+    var el = document.getElementById('aimError');
+    if (!el) return;
+    if (errorMsg) {
+      document.getElementById('aimErrorText').textContent = errorMsg;
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
   function renderFoot() {
     var k = KINDS[currentEntity];
-    document.getElementById('aimTallyL').textContent = errorMsg ? errorMsg
+    document.getElementById('aimTallyL').textContent = processingFile ? 'Preparing photo…'
       : !file ? 'No file yet'
       : running ? 'Reading…'
       : file.name;
-    document.getElementById('aimTallyR').textContent = file && !running ? cost() + ' scan' : '';
+    document.getElementById('aimTallyR').textContent = file && !running && !processingFile ? cost() + ' scan' : '';
     var cta = document.getElementById('aimCta');
-    cta.disabled = running || !usable() || !affordable();
-    cta.textContent = running ? 'Reading…' : !usable() ? 'Read this file' : !affordable() ? 'Not enough scans' : 'Read this file · ' + cost() + ' scan';
+    cta.disabled = running || processingFile || !usable() || !affordable();
+    cta.textContent = running ? 'Reading…' : processingFile ? 'Preparing…' : !usable() ? 'Read this file' : !affordable() ? 'Not enough scans' : 'Read this file · ' + cost() + ' scan';
     document.getElementById('aimManual').textContent = 'Enter this ' + k.manualLabel + ' by hand instead';
   }
 
-  function render() { renderHead(); renderDrop(); renderFile(); renderQuote(); renderFoot(); }
+  function render() { renderHead(); renderDrop(); renderFile(); renderError(); renderQuote(); renderFoot(); }
 
   function startFakeProgress() {
     fakePct = 4;
@@ -312,7 +381,19 @@
 
       if (!response.ok) {
         var errorData;
-        try { errorData = await response.json(); } catch (e) { errorData = { error: 'Failed to process' }; }
+        try {
+          errorData = await response.json();
+        } catch (parseErr) {
+          // A non-JSON body means the platform rejected the request before
+          // extract-receipt.js's own code (and its normal JSON error
+          // responses) ever ran -- most commonly a 413 (request too large).
+          // Logged here since this is the one failure mode the server-side
+          // logs can't show anything for either.
+          console.error('[ShelfyImportModal] Non-JSON error response — status:', response.status, 'body parse error:', parseErr);
+          errorData = { error: response.status === 413
+            ? 'This file is too large for the server to accept. Try again — it should compress automatically now — or use a smaller photo.'
+            : 'Failed to process (unexpected server response, status ' + response.status + ')' };
+        }
         if (response.status === 429) {
           throw new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
         }
@@ -343,6 +424,7 @@
     } catch (err) {
       stopFakeProgress();
       running = false;
+      console.error('[ShelfyImportModal] Upload/extract failed:', err);
       errorMsg = err.message || 'Something went wrong';
       render();
     }
