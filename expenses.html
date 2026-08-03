@@ -195,9 +195,15 @@
   }
   /* The generic !important above was silently overriding both steps'
      intended widths (inline max-width loses to a class !important
-     regardless of specificity) — same bug class found in orders.html. */
-  #expenseStep1 { max-width: 460px !important; }
-  #expenseStep2 { max-width: 520px !important; }
+     regardless of specificity) — same bug class found in orders.html.
+     Desktop only -- on mobile the shared .modal-sheet convention (see
+     #expenseModal's class) governs width instead; an ID selector's
+     !important would win over it on specificity regardless of the media
+     query otherwise. */
+  @media (min-width: 769px) {
+    #expenseStep1 { max-width: 460px !important; }
+    #expenseStep2 { max-width: 520px !important; }
+  }
 
   /* Custom scrollbar for modal on desktop */
   .modal-content::-webkit-scrollbar {
@@ -714,26 +720,6 @@
              letter-spacing: -.01em; cursor: pointer; }
   .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
 
-  /* New-expense form, mobile: full-screen like recipes.html's "New product"
-     builder, matching the same fix applied to ingredients.html's #manualModal.
-     Two IDs (#expenseModal #expenseStep1) is needed to beat both the
-     unconditional "#expenseStep1 { max-width: 460px !important; }" above and
-     the generic shared mobile .modal-content rule further down. */
-  @media (max-width: 768px) {
-    #expenseModal { align-items: stretch !important; }
-    #expenseModal #expenseStep1 {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: 100% !important;
-      max-height: none !important;
-      border-radius: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-  }
-
   /* Item picker, as a sheet — positioned within the modal overlay itself */
   .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
               display: none; align-items: flex-end; justify-content: center; }
@@ -1045,7 +1031,7 @@
 </div>
 
 <!-- Add/Edit Expense Modal -->
-<div class="modal-overlay" id="expenseModal">
+<div class="modal-overlay modal-sheet" id="expenseModal">
   <div class="modal-content ec-modal" id="expenseStep1" style="max-width: 460px; padding: 0; display: flex; flex-direction: column; max-height: 90vh;">
     <div class="ec-head">
       <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Cancel">&times;</button>
@@ -1198,7 +1184,7 @@
 
 
 <!-- Ingredient Mapping Modal -->
-<div class="modal-overlay" id="ingredientMappingModal">
+<div class="modal-overlay modal-sheet" id="ingredientMappingModal">
   <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
     <h3 style="margin-top:0; margin-bottom: 8px;">Match Detected Items</h3>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Match detected items to your inventory and set quantities.</p>

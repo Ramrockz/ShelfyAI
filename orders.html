@@ -532,8 +532,13 @@
     overflow: hidden !important;
   }
   /* Step 1's new single-column picker (14b) is narrower than the shared
-     shell above, which step 2 still needs the full width of. */
-  #manualStep1 { max-width: 460px !important; }
+     shell above, which step 2 still needs the full width of. Desktop only --
+     on mobile the shared .modal-sheet convention (see #manualOrderModal's
+     class) governs width instead, an ID selector's !important would win
+     over it on specificity regardless of the media query otherwise. */
+  @media (min-width: 769px) {
+    #manualStep1 { max-width: 460px !important; }
+  }
   /* Step 2 shrinks to content, no blank space */
   #manualStep2 { height: auto !important; }
   /* Inventory toggle switch */
@@ -640,25 +645,6 @@
              letter-spacing: -.01em; cursor: pointer; }
   .op-cont:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
 
-  /* Product picker (#manualStep1), mobile: full-screen like recipes.html's
-     "New product" builder, matching the same fix applied to ingredients.html's
-     #manualModal. Two IDs is needed to beat .recipe-picker-modal .modal-content,
-     the unconditional "#manualStep1 { max-width: 460px !important; }" above,
-     and the generic shared mobile .modal-content rule further down. */
-  @media (max-width: 768px) {
-    #manualOrderModal { align-items: stretch !important; }
-    #manualOrderModal #manualStep1 {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: 100% !important;
-      max-height: none !important;
-      border-radius: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-  }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
@@ -712,8 +698,11 @@
   .flatpickr-input { cursor: pointer !important; }
 
   /* Order success screen (styling lives in inventory-impact.js's shared
-     .ii-* classes in styles.css) */
-  #manualStep3 { max-width: 520px !important; }
+     .ii-* classes in styles.css). Desktop only -- see #manualStep1 above
+     for why mobile can't have this compete with .modal-sheet. */
+  @media (min-width: 769px) {
+    #manualStep3 { max-width: 520px !important; }
+  }
 
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 768px) {
@@ -2274,7 +2263,7 @@ document.addEventListener('keydown', (e) => {
 </script>
 
 <!-- Manual Order Creation Modal (2-step recipe picker) -->
-<div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
+<div class="modal-overlay recipe-picker-modal modal-sheet" id="manualOrderModal">
 
   <!-- Step 1: Product Picker (14b reference) -->
   <div class="modal-content op-modal" id="manualStep1" style="padding:0; display:flex; flex-direction:column;">
@@ -2391,7 +2380,7 @@ document.addEventListener('keydown', (e) => {
 </div>
 
 <!-- Recipe Mapping Modal (AI upload result) — "Confirm order items" -->
-<div class="modal-overlay" id="recipeMappingModal">
+<div class="modal-overlay modal-sheet" id="recipeMappingModal">
   <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
     <div class="rcm-head">
       <button type="button" class="rcm-back" onclick="closeRecipeMappingModal()" aria-label="Close">
