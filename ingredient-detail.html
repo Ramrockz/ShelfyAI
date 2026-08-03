@@ -478,13 +478,6 @@
                   padding: 0; color: var(--text-main); -webkit-appearance: none; appearance: none; }
   .ro-qty-value::-webkit-inner-spin-button, .ro-qty-value::-webkit-outer-spin-button {
     -webkit-appearance: none; display: none; }
-  .ro-qty-status { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-top: 6px; text-align: center; }
-  .ro-qty-hints { display: flex; justify-content: center; gap: 7px; margin-top: 16px; flex-wrap: wrap; }
-  .ro-qty-hint { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border);
-                 background: var(--bg-app, var(--bg-main)); color: var(--text-muted); font-size: 12.5px; font-weight: 700; }
-  .ro-qty-hint[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: var(--bg-panel); }
-  .ro-qty-hint small { font-weight: 600; opacity: .7; margin-left: 5px; }
-
   .ro-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
   .ro-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
   .ro-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-muted); }
@@ -1478,11 +1471,9 @@
         <button class="ro-qty-btn" aria-label="One fewer" onclick="roStepQty(-1)">&minus;</button>
         <span class="ro-qty-center">
           <input class="ro-qty-value" id="roQty" type="number" inputmode="numeric" value="0" onchange="roRenderAll()">
-          <span class="ro-qty-status" id="roQtyStatus"></span>
         </span>
         <button class="ro-qty-btn plus" aria-label="One more" onclick="roStepQty(1)">+</button>
       </div>
-      <div class="ro-qty-hints" id="roHints"></div>
     </div>
 
     <div class="ro-sec-head"><span class="ro-sec-title">Supplier</span></div>
@@ -1972,15 +1963,31 @@
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-      const supplierRow = { profile_id: user.id, name };
-      if (storeId) supplierRow.store_id = storeId;
-      const { data: sup, error: supErr } = await supabaseClient
-        .from('suppliers').insert([supplierRow]).select().single();
-      if (supErr) throw supErr;
+
+      // Reuse an existing supplier with the same name instead of always
+      // inserting a new one -- otherwise every ingredient materialized from
+      // the same vendor's URL ends up with its own separate supplier row,
+      // and "ship together" (which matches by supplier_id) never finds them.
+      let supplierId = null;
+      let _supQ = supabaseClient.from('suppliers').select('id').eq('profile_id', user.id).ilike('name', name);
+      if (storeId) _supQ = _supQ.eq('store_id', storeId);
+      const { data: existingSup, error: findErr } = await _supQ.limit(1);
+      if (findErr) throw findErr;
+
+      if (existingSup && existingSup.length) {
+        supplierId = existingSup[0].id;
+      } else {
+        const supplierRow = { profile_id: user.id, name };
+        if (storeId) supplierRow.store_id = storeId;
+        const { data: sup, error: supErr } = await supabaseClient
+          .from('suppliers').insert([supplierRow]).select().single();
+        if (supErr) throw supErr;
+        supplierId = sup.id;
+      }
 
       const { error: isErr } = await supabaseClient.from('ingredient_suppliers').insert([{
         ingredient_id: currentIngredient.id,
-        supplier_id: sup.id,
+        supplier_id: supplierId,
         profile_id: user.id,
         price: parseFloat(currentIngredient.cost_per_unit) || 0,
         lead_time_days: currentIngredient.estimated_delivery || null,
@@ -2007,26 +2014,9 @@
     return Math.max(topUp, min, 1);
   }
 
-  function roHints() {
-    const stock = parseFloat(currentIngredient?.quantity) || 0;
-    const min = parseFloat(currentIngredient?.min_stock) || 0;
-    const topUp = Math.max(0, min - stock);
-    const hints = [];
-    if (topUp > 0) hints.push({ n: topUp, label: 'Top up to min' });
-    return hints;
-  }
-
   function roEtaLabel(days) {
     const d = new Date(Date.now() + (parseInt(days, 10) || 0) * 86400000);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  function renderRoQty() {
-    const q = roQty();
-    document.getElementById('roQtyStatus').textContent = 'units';
-    document.getElementById('roHints').innerHTML = roHints().map(h =>
-      `<button class="ro-qty-hint" aria-pressed="${h.n === q}" onclick="roSetQty(${h.n})">${h.label}<small>${h.n}</small></button>`
-    ).join('');
   }
 
   function renderRoSupplier() {
@@ -2146,7 +2136,7 @@
     cont.textContent = lines ? `Place reorder · $${total.toFixed(2)}` : 'Place reorder';
   }
 
-  function roRenderAll() { renderRoQty(); renderRoSupplier(); renderRoAlso(); renderRoTally(); }
+  function roRenderAll() { renderRoSupplier(); renderRoAlso(); renderRoTally(); }
   function roSetQty(n) { document.getElementById('roQty').value = Math.max(0, n); roRenderAll(); }
   function roStepQty(d) { roSetQty(roQty() + d); }
   function roBump(id, d) {
