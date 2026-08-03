@@ -1725,6 +1725,9 @@ function closeMethodModal() {
 }
 
 function closeManualModal() {
+  // If this form was pre-filled from a scan the user never actually saved,
+  // give the scan back rather than let it silently count against them.
+  if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('manualModal').classList.remove('active');
   // Clear form
   document.getElementById('ing_name').value = '';
@@ -4190,6 +4193,7 @@ async function saveIngredient(event) {
       await loadIngredients();
     }
 
+    if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeManualModal();
 
   } catch (error) {

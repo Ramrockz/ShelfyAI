@@ -3388,6 +3388,9 @@ async function saveQuickIngredient(e) {
 }
 
 function closeIngredientMappingModal() {
+  // If this review came from a scan the user never actually saved, give
+  // the scan back rather than let it silently count against them.
+  if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('ingredientMappingModal').classList.remove('active');
   pendingExpenseData = null;
   mappedItems = [];
@@ -3462,6 +3465,7 @@ async function confirmIngredientMapping() {
 
     if (error) throw error;
 
+    if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeIngredientMappingModal();
     await loadExpenses();
   } catch (err) {

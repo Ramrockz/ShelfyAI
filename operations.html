@@ -2964,6 +2964,9 @@ async function openManualEntryModal() {
 }
 
 function closeManualEntryModal() {
+  // If this form was pre-filled from a scan the user never actually saved,
+  // give the scan back rather than let it silently count against them.
+  if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('manualEntryModal').classList.remove('active');
   document.getElementById('ingredientForm').reset();
   // Clear custom attributes
@@ -3095,6 +3098,7 @@ async function saveIngredient(event) {
 
     if (error) throw error;
 
+    if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeManualEntryModal();
     if (addingIngredientFromRecipe) {
       addingIngredientFromRecipe = false;
@@ -4621,6 +4625,9 @@ function openShotSheet() {
 function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
 function closeRecipeMappingModal() {
+  // If this review came from a scan the user never actually saved, give
+  // the scan back rather than let it silently count against them.
+  if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('recipeMappingModal').classList.remove('active');
   closeMatchSheet();
   closeShotSheet();
@@ -4684,6 +4691,7 @@ async function confirmMappedOrder() {
     if (mappedUpdateStock && selectedOrderRecipes.length > 0 && data && data[0]) {
       inventoryChanges = await updateInventoryForOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
+    if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeRecipeMappingModal();
     document.getElementById('manualStep1').style.display = 'none';
     document.getElementById('manualStep2').style.display = 'none';

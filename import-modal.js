@@ -39,6 +39,37 @@
   var errorMsg = null;
   var fakePct = 0, fakeTimer = null;
   var scanPackPrice = null;
+  // Entity type of the most recent scan whose result hasn't been saved or
+  // discarded yet, or null. The monthly scan counter is incremented
+  // server-side the moment AgentQL is actually called (extract-receipt.js) —
+  // that has to stay, it's what caps real AgentQL cost, not just a UX
+  // throttle. But if the user then discards the result without saving
+  // anything, refundScan() gives the count back as a courtesy (the AgentQL
+  // cost is already spent either way; this only affects what the user's
+  // remaining quota looks like). Pages call confirmScanUsed() on an actual
+  // successful save, or refundScan() when the review/mapping modal is
+  // closed without one -- see ingredients.html/expenses.html/orders.html/
+  // operations.html's saveXxx()/closeXxxModal() pairs.
+  var lastScanEntity = null;
+  var REFUND_RPC = { ingredient: 'decrement_ingredient_usage', order: 'decrement_order_usage', expense: 'decrement_expense_usage' };
+
+  function confirmScanUsed() { lastScanEntity = null; }
+
+  function refundScan() {
+    if (!lastScanEntity) return;
+    var entity = lastScanEntity;
+    lastScanEntity = null;
+    var rpcName = REFUND_RPC[entity];
+    var sb = window.supabaseClient;
+    if (!rpcName || !sb) return;
+    sb.auth.getSession().then(function (r) {
+      var uid = r && r.data && r.data.session && r.data.session.user && r.data.session.user.id;
+      if (!uid) return;
+      sb.rpc(rpcName, { p_user_id: uid }).then(function (res) {
+        if (res && res.error) console.error('[ShelfyImportModal] refundScan RPC error:', res.error);
+      });
+    }).catch(function (e) { console.error('[ShelfyImportModal] refundScan failed:', e); });
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -419,6 +450,7 @@
       stopFakeProgress();
       var data = result.data;
       var cb = currentOpts.onImported;
+      lastScanEntity = currentEntity;
       close();
       if (cb) cb(data, receiptUrl);
     } catch (err) {
@@ -514,5 +546,5 @@
     (mode === 'camera' ? quickCameraInput : quickFileInput).click();
   }
 
-  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart };
+  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart, confirmScanUsed: confirmScanUsed, refundScan: refundScan };
 })();

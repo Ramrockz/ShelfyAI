@@ -29,13 +29,11 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="auth.js"></script>
 <script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
@@ -682,20 +680,6 @@
   @media (max-width: 768px) {
     .recipe-picker-modal .modal-content { height: auto !important; max-height: 95vh !important; }
   }
-
-  /* â”€â”€ Flatpickr theme overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  .flatpickr-calendar { background: var(--bg-panel) !important; border: 1px solid var(--border) !important; border-radius: 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important; font-family: inherit !important; }
-  .flatpickr-months .flatpickr-month, .flatpickr-weekdays, span.flatpickr-weekday { background: var(--bg-panel) !important; color: var(--text-muted) !important; }
-  .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; background: transparent !important; }
-  .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
-  .flatpickr-day:hover { background: var(--bg-main) !important; border-color: var(--accent) !important; }
-  .flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
-  .flatpickr-day.today { border-color: var(--accent) !important; }
-  .flatpickr-day.today:hover { background: rgba(6,182,212,0.12) !important; }
-  .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: var(--text-muted) !important; opacity: 0.35; }
-  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--text-main) !important; }
-  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
-  .flatpickr-input { cursor: pointer !important; }
 
   /* Order success screen (styling lives in inventory-impact.js's shared
      .ii-* classes in styles.css). Desktop only -- see #manualStep1 above
@@ -2329,7 +2313,7 @@ document.addEventListener('keydown', (e) => {
           </div>
           <div class="form-group">
             <label for="new_order_date">Order Date <span style="color:var(--danger);">*</span></label>
-            <input type="text" id="new_order_date" readonly placeholder="Select date...">
+            <input type="date" id="new_order_date">
           </div>
         </div>
         <div class="form-group">
@@ -2830,14 +2814,9 @@ function proceedToOrderDetails() {
   document.getElementById('manualStep2').style.display = 'flex';
   updateOrderTotal();
   _updateStatusRestriction();
-  // Default date to today -- go through flatpickr's own API (not a direct
-  // .value assignment) so its internal selected-date state doesn't desync
-  // from what's actually displayed, which otherwise forces a second click
-  // before a new date picked in the calendar actually takes effect.
+  // Default date to today
   const dateEl = document.getElementById('new_order_date');
-  if (dateEl && !dateEl.value && window._orderDatePicker) {
-    window._orderDatePicker.setDate(new Date(), true);
-  }
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
   // Recipe summary rows
   document.getElementById('step2RecipeSummary').innerHTML =
     orderRecipes.map((r, i) => `<div style="display:flex;align-items:center;padding:11px 16px;${i < orderRecipes.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
@@ -2875,24 +2854,18 @@ function openManualOrderModal() {
   const invToggle = document.getElementById('order_update_inventory');
   if (refEl) refEl.value = '';
   if (invToggle) invToggle.checked = true;
-  if (window._orderDatePicker) window._orderDatePicker.setDate(new Date(), true);
-  else {
-    const dateEl = document.getElementById('new_order_date');
-    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-  }
+  const dateEl = document.getElementById('new_order_date');
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   _populateCustomerSuggestionsOrders();
   document.getElementById('orderRecipeSearchInput').value = '';
   updatePickerFooter();
   document.getElementById('manualOrderModal').classList.add('active');
-  
+
   // Initialize Lucide icons in modal
   if (typeof lucide !== 'undefined' && lucide.createIcons) {
     lucide.createIcons();
   }
-  
-  if (!window._orderDatePicker) {
-    window._orderDatePicker = flatpickr('#new_order_date', { dateFormat: 'Y-m-d', defaultDate: new Date(), allowInput: false, disableMobile: true });
-  }
+
   if (orderRecipeCache) {
     renderOrderRecipeSections(null);
   } else {
@@ -3112,7 +3085,8 @@ function startAnotherOrder() {
   const refEl  = document.getElementById('new_order_reference');
   if (custEl) custEl.value = lastCustomer;
   if (refEl)  refEl.value = '';
-  if (window._orderDatePicker) window._orderDatePicker.setDate(new Date(), true);
+  const dateEl3 = document.getElementById('new_order_date');
+  if (dateEl3) dateEl3.value = new Date().toISOString().split('T')[0];
   const invToggle = document.getElementById('order_update_inventory');
   if (invToggle) invToggle.checked = true;
   document.getElementById('manualStep1').style.display = 'flex';
@@ -3784,6 +3758,9 @@ function openShotSheet() {
 function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
 function closeRecipeMappingModal() {
+  // If this review came from a scan the user never actually saved, give
+  // the scan back rather than let it silently count against them.
+  if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('recipeMappingModal').classList.remove('active');
   closeMatchSheet();
   closeShotSheet();
@@ -3848,6 +3825,7 @@ async function confirmMappedOrder() {
     if (mappedUpdateStock && selectedOrderRecipes.length > 0 && data && data[0]) {
       inventoryChanges = await updateInventoryForNewOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
     }
+    if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeRecipeMappingModal();
     document.getElementById('manualStep1').style.display = 'none';
     document.getElementById('manualOrderModal').classList.add('active');
