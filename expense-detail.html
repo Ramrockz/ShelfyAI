@@ -704,6 +704,26 @@
       background: transparent; color: var(--text-main); cursor: pointer;
     }
 
+    /* ⋯ menu — matches ingredient/order/recipe-detail.html's shared
+       anchored-popover convention (<prefix>-more-menu/-item) instead of the
+       old full-screen modal-sheet. */
+    .exp-more-menu {
+      display: none; position: fixed; z-index: 10200; right: 16px;
+      top: calc(env(safe-area-inset-top, 0px) + 64px);
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 6px; min-width: 190px;
+    }
+    .exp-more-menu.open { display: block; }
+    .exp-more-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 10px 12px; border: none; background: none; border-radius: 10px;
+      color: var(--text-main); font-family: inherit; font-size: 14px; font-weight: 600;
+      text-align: left; cursor: pointer;
+    }
+    .exp-more-item:active { background: var(--bg-inner); }
+    .exp-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
+    .exp-more-item-danger, .exp-more-item-danger svg { color: var(--danger); }
+
     .exp-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
 
     /* Section headings (Pack list-style pattern, reused from the other
@@ -743,8 +763,6 @@
     .stock-to { font-size: 15px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
 
     /* Item / field sheets */
-    .sheet-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; }
-    .sheet-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
     .sheet-qty { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; }
     .sheet-qty button {
       width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--border);
@@ -762,14 +780,6 @@
       font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
       color: var(--text-muted); margin: 8px 0 0;
     }
-    .sheet-act {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      width: 100%; height: 50px; margin-top: 8px; padding: 0 14px; border-radius: 12px;
-      border: 1px solid var(--border); background: var(--bg-inner);
-      font-size: 15px; font-weight: 700; text-align: left; color: var(--text-main); cursor: pointer; font-family: inherit;
-    }
-    .sheet-act .val { font-weight: 600; color: var(--text-muted); }
-    .sheet-act.danger { color: var(--danger); border-color: rgba(239,68,68,.35); }
     .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
                        text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
     .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
@@ -1028,17 +1038,20 @@
   <div class="detail-header" style="margin-bottom: 24px;">
     <div class="header-title">
       <h1 id="expenseNumber" style="margin: 0;">Expense #—</h1>
-      <div id="expenseDate" style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-top: 4px;"></div>
+      <div id="expenseDate" onclick="editField('expense_date','Date')" style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-top: 4px; cursor: pointer;"></div>
     </div>
     <div class="header-actions">
       <button class="detail-cta-btn" onclick="copyExpense()">Copy</button>
       <button class="detail-cta-btn" style="color: var(--danger);" onclick="showDeleteModal()">Delete</button>
     </div>
     <!-- Mobile-only: create button, bell, avatar share this row with the
-         title. Copy/Delete/Amount/Date move into the ⋯ menu. The real
-         .navbar (with its own bell/avatar) is hidden on mobile — the bell
-         and avatar here reuse the real .notification-bell/.user-avatar
-         classes so they render identically, badge included. -->
+         title. Delete moves into the ⋯ menu; Amount/Date are edited by
+         tapping the hero cost / the date text directly, and Duplicate is
+         desktop-only (Copy above) since it's not itemized-flow-critical.
+         The real .navbar (with its own bell/avatar) is hidden on mobile —
+         the bell and avatar here reuse the real
+         .notification-bell/.user-avatar classes so they render
+         identically, badge included. -->
     <div class="exp-header-actions">
       <button id="expCreateBtn" onclick="createNewExpense()" aria-label="Create expense">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
@@ -1052,7 +1065,7 @@
       <button onclick="toggleUserMenu(); event.stopPropagation();" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;flex-shrink:0;">
         <div id="expUserAvatar" class="user-avatar">U</div>
       </button>
-      <button class="exp-more-btn" id="expMoreBtn" onclick="openExpenseMenu()" aria-label="More actions">
+      <button class="exp-more-btn" id="expMoreBtn" onclick="toggleExpMoreMenu(); event.stopPropagation();" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="20" height="20"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
       </button>
     </div>
@@ -1122,24 +1135,16 @@
   </div>
 </div>
 
-<!-- Expense menu (mobile) — Amount/Date edit + Duplicate/Delete -->
-<div class="modal-overlay modal-sheet" id="expenseMenu" onclick="if(event.target===this)closeExpenseMenu()">
-  <div class="modal-content">
-    <h2 class="sheet-title" id="menuTitle">Expense</h2>
-    <p class="sheet-sub">Edit what the receipt says</p>
-    <button type="button" class="sheet-act" onclick="editField('amount','Amount')">
-      <span>Amount</span><span class="val" id="menuAmount"></span>
-    </button>
-    <button type="button" class="sheet-act" onclick="editField('expense_date','Date')">
-      <span>Date</span><span class="val" id="menuDate"></span>
-    </button>
-    <button type="button" class="sheet-act" onclick="closeExpenseMenu(); copyExpense();">
-      <span>Duplicate expense</span>
-    </button>
-    <button type="button" class="sheet-act danger" onclick="closeExpenseMenu(); showDeleteModal();">
-      <span>Delete expense</span>
-    </button>
-  </div>
+<!-- Expense menu (mobile) — matches ingredient/order/recipe-detail.html's
+     shared <prefix>-more-menu anchored popover instead of a bespoke
+     full-screen sheet. Amount/Date/Duplicate moved out (hero cost + date
+     text are directly tappable; Duplicate is desktop-only via Copy above),
+     leaving just Delete, same as order-detail.html's #ordMoreMenu. -->
+<div class="exp-more-menu" id="expenseMenu">
+  <button type="button" class="exp-more-item exp-more-item-danger" onclick="closeExpMoreMenu(); showDeleteModal();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+    <span>Delete expense</span>
+  </button>
 </div>
 
 <!-- One-field sheet (mobile) — Amount / Date -->
@@ -1648,26 +1653,33 @@ function renderExpMeta() {
   el.textContent = `${items.length} item${items.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''} in`;
 }
 
-// ---- Expense menu — Amount/Date edit + Duplicate/Delete ----
-function openExpenseMenu() {
-  document.getElementById('menuTitle').textContent = document.getElementById('expenseNumber')?.textContent || 'Expense';
-  document.getElementById('menuAmount').textContent = `$${parseFloat(expenseData?.amount || 0).toFixed(2)}`;
-  const raw = expenseData?.expense_date || expenseData?.created_at;
-  document.getElementById('menuDate').textContent = raw
-    ? new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '—';
-  document.getElementById('expenseMenu').classList.add('active');
+// ---- ⋯ menu — Delete ----
+function toggleExpMoreMenu() {
+  const menu = document.getElementById('expenseMenu');
+  const btn = document.getElementById('expMoreBtn');
+  if (!menu || !btn) return;
+  if (menu.classList.contains('open')) { closeExpMoreMenu(); return; }
+  menu.classList.add('open');
+  btn.setAttribute('aria-expanded', 'true');
 }
-function closeExpenseMenu() {
-  document.getElementById('expenseMenu')?.classList.remove('active');
+function closeExpMoreMenu() {
+  document.getElementById('expenseMenu')?.classList.remove('open');
+  document.getElementById('expMoreBtn')?.setAttribute('aria-expanded', 'false');
 }
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('expenseMenu');
+  const btn = document.getElementById('expMoreBtn');
+  if (menu?.classList.contains('open') && !menu.contains(e.target) && !btn?.contains(e.target)) {
+    closeExpMoreMenu();
+  }
+});
 
 // ---- One-field sheet — Amount / Date ----
 let _editingExpField = null;
 
 function editField(field, label) {
   _editingExpField = field;
-  closeExpenseMenu();
+  closeExpMoreMenu();
   document.getElementById('fieldSheetLabel').textContent = label;
   const input = document.getElementById('fieldSheetInput');
   if (field === 'expense_date') {
