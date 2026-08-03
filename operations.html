@@ -854,7 +854,12 @@
   .pd-h { display: flex; align-items: baseline; gap: 8px; }
   .pd-h-count { margin-left: auto; font-size: 11.5px; font-weight: 700; letter-spacing: 0;
                 text-transform: none; color: var(--text-faint, var(--text-muted)); }
-  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease; }
+  .delivery-swipe { position: relative; overflow: hidden; border-radius: 10px; margin-bottom: 6px; }
+  .delivery-actions { position: absolute; top: 0; bottom: 0; right: 0; display: flex; }
+  .delivery-swipe-btn { width: 48px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .delivery-swipe-btn.cancel  { background: var(--danger); color: #fff; }
+  .delivery-swipe-btn.confirm { background: var(--success); color: #fff; }
+  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; touch-action: pan-y; will-change: transform; transition: border-color 0.15s ease, background 0.15s ease; }
   .delivery-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
   .delivery-info { flex: 1; min-width: 0; overflow: hidden; }
   .delivery-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
@@ -2635,6 +2640,8 @@ function resolveConfirm(result) {
 
   // Load inbound status (pending deliveries)
   const DELIVERY_TRUCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>';
+  const DELIVERY_CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>';
+  const DELIVERY_X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
   function _renderInboundStatus(pendingOrders) {
     const container = document.getElementById('inboundContainer');
@@ -2676,16 +2683,145 @@ function resolveConfirm(result) {
       if (item.suppliers?.name) subParts.push(escapeHtml(item.suppliers.name));
       const sub = subParts.join(' · ');
       return `
-        <div class="delivery-row" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
-          <span class="delivery-icon">${DELIVERY_TRUCK_ICON}</span>
-          <span class="delivery-info">
-            <span class="delivery-name">${escapeHtml(item.name)}</span>
-            ${sub ? `<span class="delivery-sub">${sub}</span>` : ''}
-          </span>
-          ${chip}
-          <svg class="delivery-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="delivery-swipe">
+          <div class="delivery-actions">
+            <button class="delivery-swipe-btn cancel" onclick="event.stopPropagation(); cancelDelivery('${item.id}')" aria-label="Cancel">${DELIVERY_X_ICON}</button>
+            <button class="delivery-swipe-btn confirm" onclick="event.stopPropagation(); confirmOpsDelivery('${item.id}')" aria-label="Accept">${DELIVERY_CHECK_ICON}</button>
+          </div>
+          <div class="delivery-row" data-id="${item.id}" onclick="window.location.href='/ingredient-detail?id=${item.id}'">
+            <span class="delivery-icon">${DELIVERY_TRUCK_ICON}</span>
+            <span class="delivery-info">
+              <span class="delivery-name">${escapeHtml(item.name)}</span>
+              ${sub ? `<span class="delivery-sub">${sub}</span>` : ''}
+            </span>
+            ${chip}
+            <svg class="delivery-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>`;
     }).join('');
+  }
+
+  // ---------- Pending-delivery row swipe-to-reveal (Accept/Cancel) ----------
+  (function initDeliverySwipe() {
+    const REVEAL    = 96;   // total action width — must equal 2 × .delivery-swipe-btn width
+    const THRESHOLD = 40;   // px of travel that commits the open/close
+    const RUBBER    = 0.24; // 0 = hard stop at both ends, 1 = no resistance
+    const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
+
+    const list = document.getElementById('inboundContainer');
+    if (!list) return;
+
+    let open = null;      // the .delivery-row currently revealed
+    let drag = null;
+    let noClickUntil = 0; // swallow the click that follows a real drag
+
+    const setX = (row, x, animate) => {
+      row.style.transition = animate ? EASE : 'none';
+      row.style.transform  = 'translateX(' + x + 'px)';
+    };
+
+    const close = (animate = true) => {
+      if (!open) return;
+      setX(open, 0, animate);
+      open = null;
+    };
+
+    list.addEventListener('pointerdown', e => {
+      const row = e.target.closest('.delivery-row');
+      if (!row) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      drag = { row, x: e.clientX, y: e.clientY, id: e.pointerId,
+               base: open === row ? -REVEAL : 0, axis: null, cur: null };
+      try { row.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    list.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.axis) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;     // still a tap
+        drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        if (drag.axis === 'y') { drag = null; return; }       // hand it to the scroller
+      }
+      let x = drag.base + dx;
+      if (x > 0)       x = x * RUBBER;
+      if (x < -REVEAL) x = -REVEAL - (-REVEAL - x) * RUBBER;
+      drag.cur = x;
+      setX(drag.row, x, false);
+    });
+
+    const end = e => {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      const d = drag;
+      drag = null;
+      if (!d.axis) return;                                    // a tap: let click handle it
+      noClickUntil = Date.now() + 300;
+      const x = d.cur === null ? d.base : d.cur;
+      const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
+      if (open && open !== d.row) close();
+      if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+      else        { setX(d.row, 0, true); if (open === d.row) open = null; }
+    };
+    list.addEventListener('pointerup', end);
+    list.addEventListener('pointercancel', end);
+
+    // Tapping an open row closes it instead of navigating
+    list.addEventListener('click', e => {
+      if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
+      if (!open || e.target.closest('.delivery-actions')) return;
+      if (e.target.closest('.delivery-row') === open) {
+        e.stopPropagation(); e.preventDefault();
+        close();
+      }
+    }, true);
+
+    // Any scroll closes the open row
+    window.addEventListener('scroll', () => close(), { passive: true });
+    list.addEventListener('scroll',   () => close(), { passive: true });
+  })();
+
+  async function confirmOpsDelivery(ingredientId) {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: false })
+        .eq('id', ingredientId)
+        .eq('profile_id', user.id);
+
+      if (error) throw error;
+
+      loadInboundStatus();
+      loadInventoryStatus();
+
+      const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
+      if (upload) window.location.href = '/expenses';
+    } catch (error) {
+      console.error('Error confirming delivery:', error);
+    }
+  }
+
+  async function cancelDelivery(ingredientId) {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ reorder_pending: false })
+        .eq('id', ingredientId)
+        .eq('profile_id', user.id);
+
+      if (error) throw error;
+
+      loadInboundStatus();
+      loadInventoryStatus();
+    } catch (error) {
+      console.error('Error canceling delivery:', error);
+      showAlert('Failed to cancel delivery');
+    }
   }
 
   async function loadInboundStatus() {
@@ -3669,7 +3805,13 @@ function startExpenseUpload() {
   // Pre-existing behavior: the scan result maps into the ingredient form
   // fields, not a dedicated expense form — kept as-is.
   window.ShelfyImportModal.open('ingredient', {
-    onManual: openAddExpenseModal,
+    // Hand off to expenses.html's real #expenseModal instead of opening
+    // operations.html's own older copy locally, same as the 'manual' method
+    // branch in openExpenseChoiceModal() above already does.
+    onManual: () => {
+      sessionStorage.setItem('shelfy_open_create', 'manual');
+      window.location.href = '/expenses';
+    },
     onImported: async (data) => {
       openManualEntryModal();
       _applyExtractedIngredientFields(data);
