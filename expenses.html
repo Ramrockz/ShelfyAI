@@ -642,8 +642,6 @@
   .ec-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
   .ec-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ec-scan { height: 40px; padding: 0 12px; background: none; border: none;
-             color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; }
 
   .ec-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
@@ -1034,12 +1032,11 @@
 <div class="modal-overlay modal-sheet" id="expenseModal">
   <div class="modal-content ec-modal" id="expenseStep1" style="max-width: 460px; padding: 0; display: flex; flex-direction: column; max-height: 90vh;">
     <div class="ec-head">
-      <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Cancel">&times;</button>
       <span class="ec-titles">
         <span class="ec-title" id="modalTitle">New expense</span>
         <span class="ec-sub">Vendor, amount, date — items are optional</span>
       </span>
-      <button type="button" class="ec-scan" onclick="closeExpenseModal(); startReceiptScan();">Scan</button>
+      <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Close">&times;</button>
     </div>
 
     <!-- novalidate: native required-field validation runs before the submit
