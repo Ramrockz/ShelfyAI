@@ -46,6 +46,7 @@
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
 <script src="import-modal.js"></script>
+<script src="url-import-modal.js"></script>
 <script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
@@ -2824,7 +2825,7 @@ async function openMethodModal() {
           window.location.href = '/ingredients';
         }
       } else if (method === 'url') {
-        openUrlImportModal();
+        startIngredientUrlImport();
       } else if (method === 'image') {
         startIngredientUpload();
       } else if (method === 'csv') {
@@ -2903,6 +2904,7 @@ function closeManualEntryModal() {
   // If this form was pre-filled from a scan the user never actually saved,
   // give the scan back rather than let it silently count against them.
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
+  if (window.ShelfyUrlImportModal) window.ShelfyUrlImportModal.refundScan();
   document.getElementById('manualEntryModal').classList.remove('active');
   document.getElementById('ingredientForm').reset();
   // Clear custom attributes
@@ -3035,6 +3037,7 @@ async function saveIngredient(event) {
     if (error) throw error;
 
     if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
+    if (window.ShelfyUrlImportModal) window.ShelfyUrlImportModal.confirmScanUsed();
     closeManualEntryModal();
     if (addingIngredientFromRecipe) {
       addingIngredientFromRecipe = false;
@@ -3052,291 +3055,75 @@ async function saveIngredient(event) {
   }
 }
 
-// URL Import Modal Functions
-function openUrlImportModal() {
-  const urlInput = document.getElementById('ing_source_url').value;
-  if (urlInput) {
-    document.getElementById('importUrl').value = urlInput;
-  }
-  document.getElementById('urlImportModal').classList.add('active');
-  document.getElementById('importStatus').style.display = 'none';
-}
-
-function closeUrlImportModal() {
-  document.getElementById('urlImportModal').classList.remove('active');
-  document.getElementById('importUrl').value = '';
-  document.getElementById('importStatus').style.display = 'none';
-}
-
-async function processUrlImport() {
-  const url = document.getElementById('importUrl').value.trim();
-  
-  if (!url) {
-    showImportStatus('Please enter a URL', 'error');
-    return;
-  }
-  
-  // Validate URL format
-  try {
-    new URL(url);
-  } catch (e) {
-    showImportStatus('Please enter a valid URL', 'error');
-    return;
-  }
-  
-  const processBtn = document.getElementById('processUrlBtn');
-  const originalText = processBtn.textContent;
-  processBtn.textContent = 'Processing...';
-  processBtn.disabled = true;
-  
-  try {
-    showImportStatus('Extracting data from URL...', 'info');
-    
-    // Get user session for authentication
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (!session) {
-      throw new Error('You must be logged in to use this feature');
-    }
-    
-    console.log('[URL Import] Calling API with URL:', url);
-    const response = await fetch('/api/extract-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({ url })
-    });
-    
-    console.log('[URL Import] Response status:', response.status);
-    console.log('[URL Import] Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('[URL Import] Error response:', responseText);
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch (e) {
-        errorData = { error: responseText || 'Failed to extract data from URL' };
-      }
-      
-      // If limit reached, update cache and create notification
-      if (response.status === 429) {
-        console.log('[URL Import] 429 error detected - AI limit reached');
-        await checkAIUsage();
-        
-        // Create AI limit notification
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        console.log('[URL Import] Session for notification:', session?.user?.id);
-        if (session && typeof createAILimitNotification === 'function') {
-          console.log('[URL Import] Calling createAILimitNotification');
-          await createAILimitNotification(session.user.id, aiUsageStatus?.tier || 'free');
-        } else {
-          console.log('[URL Import] createAILimitNotification not available or no session');
-        }
-        
-        throw new Error(`${errorData.error || 'Daily limit reached'}. Limit resets at midnight.`);
-      }
-      
-      throw new Error(errorData.error || 'Failed to extract data from URL');
-    }
-    
-    const result = await response.json();
-    console.log('[URL Import] Full API response:', result);
-    console.log('[URL Import] Extracted data:', result.data);
-    console.log('[URL Import] Raw AgentQL data:', result.rawData);
-    
-    if (result.success && result.data) {
-      // Close URL import modal and open manual entry modal
-      closeUrlImportModal();
+function startIngredientUrlImport() {
+  window.ShelfyUrlImportModal.open({
+    onManual: openManualEntryModal,
+    onImported: async (data) => {
       await openManualEntryModal();
-      
-      // Wait for modal to be fully rendered
+      // Wait for the modal to be fully rendered before touching its fields.
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Populate form fields with extracted data
-      if (result.data.name) {
+
+      if (data.name) {
         // Build name with attributes (color, size, etc.)
-        let fullName = result.data.name;
+        let fullName = data.name;
         const attributes = [];
-        
-        if (result.data.color) attributes.push(result.data.color);
-        if (result.data.size) attributes.push(result.data.size);
-        
-        // Combine name with attributes using bullet separator
-        if (attributes.length > 0) {
-          fullName = `${result.data.name} • ${attributes.join(' • ')}`;
-        }
-        
+        if (data.color) attributes.push(data.color);
+        if (data.size) attributes.push(data.size);
+        if (attributes.length > 0) fullName = `${data.name} • ${attributes.join(' • ')}`;
         document.getElementById('ing_name').value = fullName;
       }
-      
-      // Handle price and quantity - calculate cost per unit
-      let costPerUnit = null;
-      if (result.data.price && result.data.quantity && result.data.quantity > 0) {
-        // Calculate cost per unit = total price / quantity
-        costPerUnit = result.data.price / result.data.quantity;
-        document.getElementById('ing_cost').value = costPerUnit.toFixed(2);
-      } else if (result.data.price) {
-        // If no quantity, just use the price as-is
-        document.getElementById('ing_cost').value = result.data.price;
+
+      // Price and quantity — calculate cost per unit
+      if (data.price && data.quantity && data.quantity > 0) {
+        document.getElementById('ing_cost').value = (data.price / data.quantity).toFixed(2);
+      } else if (data.price) {
+        document.getElementById('ing_cost').value = data.price;
       }
-      
-      if (result.data.quantity) {
-        document.getElementById('ing_quantity').value = result.data.quantity;
-      }
-      
-      // Handle unit - set default to "pcs" if null or "null"
+      if (data.quantity) document.getElementById('ing_quantity').value = data.quantity;
+
       const unitSelect = document.getElementById('ing_unit');
-      if (result.data.unit && result.data.unit !== 'null') {
-        // Try to match the unit to the dropdown options
-        const unitLower = result.data.unit.toLowerCase();
-        // Map common units
+      if (data.unit && data.unit !== 'null') {
         const unitMap = {
-          'pieces': 'pcs',
-          'piece': 'pcs',
-          'stück': 'pcs',
-          'stückzahl': 'pcs',
-          'blatt': 'pcs',
-          'sheets': 'pcs',
-          'sheet': 'pcs',
-          'kilograms': 'kg',
-          'kilogram': 'kg',
-          'liters': 'l',
-          'liter': 'l'
+          pieces: 'pcs', piece: 'pcs', stück: 'pcs', stückzahl: 'pcs', blatt: 'pcs', sheets: 'pcs', sheet: 'pcs',
+          kilograms: 'kg', kilogram: 'kg', liters: 'l', liter: 'l'
         };
-        const mappedUnit = unitMap[unitLower] || result.data.unit;
-        unitSelect.value = mappedUnit;
+        unitSelect.value = unitMap[data.unit.toLowerCase()] || data.unit;
       } else {
-        // Default to pieces if unit is null or "null"
         unitSelect.value = 'pcs';
       }
-      if (result.data.sku) {
-        document.getElementById('ing_sku').value = result.data.sku;
-      }
-      if (result.data.estimated_delivery) {
-        document.getElementById('ing_estimated_delivery').value = result.data.estimated_delivery;
-      }
-      if (result.data.product_category) {
-        document.getElementById('ing_category').value = result.data.product_category;
-      }
-      if (result.data.vendor || result.data.shipping_time) {
-        // Set source URL (vendor/shipping info will be in custom attributes or other fields)
-        document.getElementById('ing_source_url').value = url;
-      }
-      
-      // Add extracted attributes as custom attributes
+
+      if (data.sku) document.getElementById('ing_sku').value = data.sku;
+      if (data.estimated_delivery) document.getElementById('ing_estimated_delivery').value = data.estimated_delivery;
+      if (data.product_category) selectIngCategory(data.product_category);
+      if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+
       const container = document.getElementById('customAttributes');
-      if (result.data.color) {
+      if (data.color) {
         const row = document.createElement('div');
         row.style.cssText = 'display: flex; gap: 8px;';
         row.innerHTML = `
           <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${result.data.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${escapeHtml(data.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
         `;
         container.appendChild(row);
       }
-      if (result.data.size) {
+      if (data.size) {
         const row = document.createElement('div');
         row.style.cssText = 'display: flex; gap: 8px;';
         row.innerHTML = `
           <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${result.data.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+          <input type="text" value="${escapeHtml(data.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
           <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
         `;
         container.appendChild(row);
       }
-      
-      showImportStatus('Data imported successfully!', 'success');
-      
-      // Check if user just reached their daily limit
-      console.log('[URL Import] Checking AI usage after successful extraction');
-      const usageResult = await checkAIUsage();
-      console.log('[URL Import] AI usage result:', usageResult);
-      console.log('[URL Import] aiUsageStatus:', aiUsageStatus);
-      
-      if (aiUsageStatus && aiUsageStatus.limitReached) {
-        console.log('[URL Import] User just reached their limit, creating notification');
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        console.log('[URL Import] Session:', session?.user?.id);
-        console.log('[URL Import] createAILimitNotification available:', typeof createAILimitNotification);
-        if (session && typeof createAILimitNotification === 'function') {
-          console.log('[URL Import] Calling createAILimitNotification with userId:', session.user.id, 'tier:', aiUsageStatus.tier);
-          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
-          console.log('[URL Import] Notification creation completed');
-        } else {
-          console.log('[URL Import] Cannot create notification - session or function missing');
-        }
-      } else {
-        console.log('[URL Import] Limit not reached yet. Used:', aiUsageStatus?.used, 'Limit:', aiUsageStatus?.limit);
-      }
-    } else {
-      showImportStatus('No data could be extracted from the URL', 'error');
+
+      await _notifyIfIngredientLimitReached();
     }
-    
-  } catch (error) {
-    console.error('URL import error:', error);
-    showImportStatus(error.message || 'Failed to import data from URL', 'error');
-  } finally {
-    processBtn.textContent = originalText;
-    processBtn.disabled = false;
-  }
+  });
 }
 
-function showImportStatus(message, type) {
-  const statusDiv = document.getElementById('importStatus');
-  statusDiv.style.display = 'block';
-  
-  // Show loader animation if extracting
-  if (message.toLowerCase().includes('extracting')) {
-    // Hide form elements
-    const urlModal = document.getElementById('urlImportModal');
-    const modalContent = urlModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
-      formElements.forEach(el => {
-        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
-          el.style.display = 'none';
-        }
-      });
-    }
-    
-    showGlobalLoader();
-  } else {
-    hideGlobalLoader();
-    // Show form elements again
-    const urlModal = document.getElementById('urlImportModal');
-    const modalContent = urlModal?.querySelector('.modal-content');
-    if (modalContent) {
-      const formElements = modalContent.querySelectorAll('h3, .form-group, button, div[style*="flex"]');
-      formElements.forEach(el => {
-        if (el.id !== 'importStatus' && !el.closest('#importStatus')) {
-          el.style.display = '';
-        }
-      });
-    }
-    
-    statusDiv.textContent = message;
-    statusDiv.style.textAlign = 'left';
-    statusDiv.style.padding = '12px';
-    statusDiv.style.border = 'none';
-    statusDiv.style.marginTop = '16px';
-    
-    if (type === 'error') {
-      statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-      statusDiv.style.color = 'var(--danger)';
-    } else if (type === 'success') {
-      statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-      statusDiv.style.color = 'var(--success)';
-    } else {
-      statusDiv.style.background = 'rgba(59, 130, 246, 0.1)';
-      statusDiv.style.color = '#3b82f6';
-    }
-  }
-}
 </script>
 
 <!-- Manual Entry Form Modal -->
@@ -3704,25 +3491,6 @@ function showImportStatus(message, type) {
       <h3>Thank you!</h3>
       <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
       <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- URL Import Modal -->
-<div class="modal-overlay modal-sheet" id="urlImportModal">
-  <div class="modal-content" style="max-width: 500px;">
-    <h3 style="margin: 0 0 20px 0;">Import from URL</h3>
-    
-    <div class="form-group">
-      <label for="importUrl">Product URL</label>
-      <input type="url" id="importUrl" placeholder="https://supplier.com/product" style="width: 100%;">
-    </div>
-    
-    <div id="importStatus" style="display: none; margin-top: 16px; font-size: 13px;"></div>
-    
-    <div style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="btn btn-secondary" onclick="closeUrlImportModal()" style="flex: 1;">Cancel</button>
-      <button class="btn btn-primary" onclick="processUrlImport()" id="processUrlBtn" style="flex: 1;">Process</button>
     </div>
   </div>
 </div>
@@ -6531,8 +6299,6 @@ document.addEventListener('keydown', (e) => {
       closeFeedback();
     } else if (document.getElementById('csvImportModal') && document.getElementById('csvImportModal').classList.contains('active')) {
       if (typeof closeCSVImport === 'function') closeCSVImport();
-    } else if (document.getElementById('urlImportModal').classList.contains('active')) {
-      closeUrlImportModal();
     } else if (document.getElementById('quantityModal').classList.contains('active')) {
       closeQuantityModal();
     } else if (document.getElementById('recipeBuilderOverlay').classList.contains('active')) {
