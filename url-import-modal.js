@@ -324,7 +324,17 @@
 
   function close() {
     clearInterval(fakeTimer); fakeTimer = null;
-    if (sheetEl) sheetEl.classList.remove('active');
+    if (!sheetEl) return;
+    // No fade here -- close() also runs right before opening a *different*
+    // modal (manual()/go()'s onImported handoff), and .modal-overlay's own
+    // ~200ms opacity transition otherwise left this sheet briefly visible
+    // on top of whatever opens next (it's appended to <body> at runtime, so
+    // it ties-or-beats any static page modal on z-index/DOM order). A hard,
+    // same-frame hide avoids that overlap.
+    sheetEl.style.transition = 'none';
+    sheetEl.classList.remove('active');
+    void sheetEl.offsetWidth;
+    sheetEl.style.transition = '';
   }
 
   window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan };
