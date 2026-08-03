@@ -2042,8 +2042,6 @@ function render() {
             const visibleGroups = activeAvailFilter === 'all'
               ? groups
               : groups.filter(g => g.tally[activeAvailFilter] > 0 || (g.orphan && g.worst === activeAvailFilter));
-            const favGroups = visibleGroups.filter(g => g.head.is_favorite);
-            const otherGroups = visibleGroups.filter(g => !g.head.is_favorite);
 
             const pip = (n, kind) => n
               ? `<span class="prod-pip ${kind}">${n}</span>` : '';
@@ -2053,6 +2051,8 @@ function render() {
               const sub = g.variants.length
                 ? `${g.members.length} variants · $${price.toFixed(2)}`
                 : `Single product · $${price.toFixed(2)}`;
+              const starClass = g.head.is_favorite ? 'favorited' : '';
+              const starIcon = g.head.is_favorite ? '★' : '☆';
               return `<div class="prod-swipe">
                 <div class="prod-actions">
                   <button class="prod-act prod-act-dup" onclick="duplicateRecipe('${g.head.id}')" aria-label="Duplicate">
@@ -2068,6 +2068,7 @@ function render() {
                     <span class="prod-group-sub">${sub}</span>
                   </span>
                   <span class="prod-group-tail">
+                    <span class="star-icon ${starClass}" style="font-size:16px;" onclick="event.stopPropagation(); toggleRecipeFavorite('${g.head.id}')">${starIcon}</span>
                     ${g.variants.length
                       ? pip(g.tally.red, 'red') + pip(g.tally.orange, 'amber') + pip(g.tally.green, 'green')
                       : `<span class="prod-pip ${g.worst === 'red' ? 'red' : g.worst === 'orange' ? 'amber' : 'green'}">${
@@ -2078,19 +2079,19 @@ function render() {
               </div>`;
             };
 
-            // Group the un-favorited tail by category once the list isn't already
-            // narrowed by search or an active category/availability filter — a
-            // filter means the user knows what they want, so collapsing would hide it.
+            // Category grouping now covers every product, favorited or not --
+            // favorites used to be pulled into their own flat, unlabeled
+            // section above the categories, which just read as "favoriting
+            // broke grouping" since nothing marked why they were different.
+            // groupRow() above now shows a star instead, so favorite status
+            // is still visible without needing to segregate the row.
             const canCatGroup = !q && !productCategoryFilter && activeAvailFilter === 'all';
-            const catGrouped = canCatGroup ? _groupFamiliesByCategory(otherGroups) : null;
+            const catGrouped = canCatGroup ? _groupFamiliesByCategory(visibleGroups) : null;
 
-            const entries = [
-              ...favGroups.map(g => ({ type: 'fam', g })),
-              ...(catGrouped
-                ? [...catGrouped.catGroups.map(cg => ({ type: 'cat', cg })),
-                   ...catGrouped.loose.map(g => ({ type: 'fam', g }))]
-                : otherGroups.map(g => ({ type: 'fam', g })))
-            ];
+            const entries = catGrouped
+              ? [...catGrouped.catGroups.map(cg => ({ type: 'cat', cg })),
+                 ...catGrouped.loose.map(g => ({ type: 'fam', g }))]
+              : visibleGroups.map(g => ({ type: 'fam', g }));
             const shown = entries.slice(0, cardsToShow);
 
             const totalVariants = visibleGroups.reduce((n, g) => n + g.members.length, 0);
