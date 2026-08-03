@@ -816,6 +816,11 @@ input[type="number"] {
     max-width: 100% !important;
     border-radius: 20px 20px 0 0 !important;
     margin: 0 !important;
+    /* The base .modal-content rule (and most pages' own local override of
+       it) sets border:1px solid without !important -- nothing here reset
+       it before, so a full-bleed sheet still showed a thin border tracing
+       its left/right/top edges. */
+    border: none !important;
     max-height: 75vh !important;
     padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) !important;
     transform: translateY(30px) !important;
