@@ -118,6 +118,16 @@
                  box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
   .drow-more { font-size: 12px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
 
+  /* Disable-alert toggle (desktop form-group + mobile .drow mirror) */
+  .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+                   background-color: var(--border); transition: 0.3s; border-radius: 34px; }
+  .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px;
+                           background-color: #fff; transition: 0.3s; border-radius: 50%; }
+  .toggle-switch input:checked + .toggle-slider { background-color: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+
   .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
                      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
   .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
@@ -1376,6 +1386,17 @@
           </div>
         </div>
 
+        <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+          <div>
+            <label for="alert_disabled" style="display:block; margin-bottom:2px;">Disable alert</label>
+            <div style="font-size:12px; color:var(--text-muted);">Keeps the Low/Out badge on this item, but leaves it out of the dashboard's restock alerts.</div>
+          </div>
+          <label class="toggle-switch" style="margin:0; flex-shrink:0;">
+            <input type="checkbox" id="alert_disabled" onchange="autoSave()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
         <div class="form-group">
           <label>Category</label>
           <input type="hidden" id="category">
@@ -1713,11 +1734,12 @@
     if (mobileNameDisplay) mobileNameDisplay.textContent = ing.name || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
     document.getElementById('category').value = ing.category || '';
-    document.getElementById('min_stock').value = ing.min_stock || '';
+    document.getElementById('min_stock').value = ing.min_stock != null ? ing.min_stock : '';
     document.getElementById('sku').value = ing.sku || '';
     document.getElementById('estimated_delivery').value = ing.estimated_delivery || '';
     document.getElementById('source_url').value = ing.source_url || '';
     document.getElementById('notes').value = ing.notes || '';
+    document.getElementById('alert_disabled').checked = !!ing.alert_disabled;
 
     updateCatChips();
 
@@ -2800,9 +2822,32 @@
     const el = document.getElementById('detailRows');
     if (!el) return;
     el.innerHTML = DETAIL_ROWS_TOP.map(_renderDetailRow).join('')
+      + alertToggleRow()
       + catRow() + attrRow()
       + DETAIL_ROWS_BOTTOM.map(_renderDetailRow).join('');
     if (window.lucide) lucide.createIcons();
+  }
+
+  // Mirrors the desktop form's real #alert_disabled checkbox -- this row is
+  // just a read/toggle view onto it, same relationship catRow() has with
+  // the real #category hidden input.
+  function alertToggleRow() {
+    const on = !!document.getElementById('alert_disabled')?.checked;
+    return `<div class="drow" onclick="toggleAlertDisabled()">
+        <span class="drow-label">Disable alert</span>
+        <span class="toggle-switch" style="margin:0; pointer-events:none;">
+          <input type="checkbox" ${on ? 'checked' : ''} tabindex="-1">
+          <span class="toggle-slider"></span>
+        </span>
+      </div>`;
+  }
+
+  function toggleAlertDisabled() {
+    const el = document.getElementById('alert_disabled');
+    if (!el) return;
+    el.checked = !el.checked;
+    autoSave();
+    renderDetailRows();
   }
 
   // This used to be built from the chip grid's own data-lucide attributes
@@ -3093,6 +3138,15 @@
     if (menuLabel) menuLabel.textContent = isFavorite ? 'Remove from favorites' : 'Mark as favorite';
   }
 
+  // parseFloat(...) || null turns a genuine 0 into null (0 is falsy) --
+  // that's why "Alert below" set to 0 silently reverted. This preserves 0
+  // while still treating a cleared/empty field as "no alert".
+  function _numOrNull(v) {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = parseFloat(v);
+    return Number.isNaN(n) ? null : n;
+  }
+
   async function saveAllChanges() {
     if (!currentIngredient) return;
 
@@ -3101,12 +3155,13 @@
       unit: currentIngredient?.unit || '',
       cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
       category: document.getElementById('category').value,
-      min_stock: parseFloat(document.getElementById('min_stock').value) || null,
+      min_stock: _numOrNull(document.getElementById('min_stock').value),
       sku: document.getElementById('sku').value || '',
       estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
       source_url: document.getElementById('source_url').value || '',
       notes: document.getElementById('notes').value || '',
-      custom_attributes: Object.keys(customAttributes).length > 0 ? JSON.stringify(customAttributes) : null
+      custom_attributes: Object.keys(customAttributes).length > 0 ? JSON.stringify(customAttributes) : null,
+      alert_disabled: !!document.getElementById('alert_disabled')?.checked
     };
 
     try {
@@ -3221,6 +3276,7 @@
           type: currentIngredient.type,
           min_stock: currentIngredient.min_stock,
           estimated_delivery: currentIngredient.estimated_delivery,
+          alert_disabled: currentIngredient.alert_disabled || false,
           notes: currentIngredient.notes || '',
           sku: currentIngredient.sku || '',
           source_url: sourceUrl || '',
@@ -3258,12 +3314,13 @@
         unit: currentIngredient.unit || '',
         cost_per_unit: parseFloat(document.getElementById('cost_per_unit')?.value ?? currentIngredient.cost_per_unit) || 0,
         category: document.getElementById('category')?.value || currentIngredient.category || '',
-        min_stock: parseFloat(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock) || null,
+        min_stock: _numOrNull(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock),
         estimated_delivery: parseInt(document.getElementById('estimated_delivery')?.value ?? currentIngredient.estimated_delivery) || null,
         sku: document.getElementById('sku')?.value ?? currentIngredient.sku ?? '',
         source_url: document.getElementById('source_url')?.value ?? currentIngredient.source_url ?? '',
         notes: document.getElementById('notes')?.value ?? currentIngredient.notes ?? '',
         custom_attributes: currentIngredient.custom_attributes || null,
+        alert_disabled: document.getElementById('alert_disabled')?.checked ?? currentIngredient.alert_disabled ?? false,
         profile_id: user.id,
         store_id: storeId
       };

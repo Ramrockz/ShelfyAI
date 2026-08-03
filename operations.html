@@ -2600,8 +2600,11 @@ function resolveConfirm(result) {
   }
 
   function _renderInventoryStatus(ingredients) {
-    const outItems = ingredients.filter(i => (parseFloat(i.quantity) || 0) === 0);
-    const lowItems = ingredients.filter(i => {
+    // alert_disabled is an opt-out from the dashboard's restock alerts only
+    // -- it doesn't touch the Low/Out badges shown on the item elsewhere.
+    const alertable = ingredients.filter(i => !i.alert_disabled);
+    const outItems = alertable.filter(i => (parseFloat(i.quantity) || 0) === 0);
+    const lowItems = alertable.filter(i => {
       const qty = parseFloat(i.quantity) || 0;
       const min = parseFloat(i.min_stock) || 0;
       return qty > 0 && min > 0 && qty < min;
@@ -2674,7 +2677,7 @@ function resolveConfirm(result) {
 
       let _q1 = supabaseClient
         .from('ingredients')
-        .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at, unit')
+        .select('id, name, quantity, min_stock, reorder_pending, created_at, updated_at, unit, alert_disabled')
         .eq('profile_id', user.id);
       if (storeId) _q1 = _q1.eq('store_id', storeId);
       const { data: ingredients, error } = await _q1;
