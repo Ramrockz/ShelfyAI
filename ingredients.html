@@ -427,19 +427,25 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ic-close { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
               background: none; border: none; color: var(--text-muted); font-size: 22px; line-height: 1; }
-  .ic-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px; }
+  /* No horizontal padding here (unlike the old design) -- .ic-group's white
+     background needs to reach the true edges the same way expenses.html's
+     .ec-group does (it has no ambient .ec-scroll padding either), otherwise
+     the grey --bg-inner shell shows through as a permanent side gutter that
+     reads as a leftover border once the modal is full-screen. Each child
+     below carries its own horizontal inset instead. */
+  .ic-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  .ic-seed { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 11px 13px;
+  .ic-seed { display: flex; align-items: flex-start; gap: 10px; margin: 14px 20px 0; padding: 11px 13px;
              border-radius: 12px; background: var(--bg-inner); }
   .ic-seed svg { color: var(--text-muted); flex-shrink: 0; margin-top: 1px; }
   .ic-seed-t { font-size: 12.5px; color: var(--text-muted); }
   .ic-seed-t b { color: var(--text-main); font-weight: 700; }
 
   .ic-glabel { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
-               color: var(--text-muted); padding: 0 0 8px; }
+               color: var(--text-muted); padding: 0 20px 8px; }
   .ic-group { margin-top: 18px; background: var(--bg-panel);
               border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border)); }
-  .ic-field { padding: 12px 2px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .ic-field { padding: 12px 20px; border-top: 1px solid var(--border-hair, var(--border)); }
   .ic-group .ic-field:first-child { border-top: none; }
   .ic-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
   .ic-input { width: 100%; height: 34px; margin-top: 2px; border: none; background: none; outline: none;
@@ -461,7 +467,7 @@
   .ic-unit[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
 
   .ic-more { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px;
-             padding: 0 2px; background: var(--bg-panel); border: none; text-align: left;
+             padding: 0 20px; background: var(--bg-panel); border: none; text-align: left;
              border-top: 1px solid var(--border-hair, var(--border)); border-bottom: 1px solid var(--border-hair, var(--border));
              margin-top: 18px; }
   .ic-more-t { flex: 1; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
@@ -473,7 +479,7 @@
   .ic-optional[data-open="1"] { display: block; }
   .ic-optional .ic-group { margin-top: 0; border-top: none; }
 
-  .ic-note { padding: 14px 0 20px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
+  .ic-note { padding: 14px 20px 20px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
 
   .ic-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
              padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); }
@@ -484,9 +490,6 @@
              background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
              letter-spacing: -.01em; cursor: pointer; }
   .ic-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
-  .ic-again { display: block; width: 100%; height: 42px; background: none; border: none;
-              color: var(--accent-deep, var(--accent)); font-size: 13px; font-weight: 700; cursor: pointer; }
-  .ic-again:disabled { color: var(--text-ghost, #cbd5e1); cursor: default; }
 
   /* New-item form, mobile: full-screen like recipes.html's "New product"
      builder (.recipe-overlay/.recipe-builder) instead of a small centered
@@ -1218,7 +1221,7 @@
         </div>
 
         <button type="button" class="ic-more" id="icMoreBtn" aria-expanded="false" onclick="toggleIcMore()">
-          <span class="ic-more-t">Source &amp; codes</span>
+          <span class="ic-more-t">More details</span>
           <span class="ic-more-n" id="icMoreN">Optional</span>
           <span class="ic-more-c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg></span>
         </button>
@@ -1256,7 +1259,6 @@
       <div class="ic-foot">
         <div class="ic-value" id="icValue"></div>
         <button type="submit" class="ic-save" id="icSave">Save item</button>
-        <button type="button" class="ic-again" id="icAgain" onclick="saveIngredient(null, true)">Save and add another</button>
       </div>
     </form>
   </div>
@@ -1814,9 +1816,7 @@ function onIngredientEdit() {
   }
   const disabled = !name;
   const saveBtn = document.getElementById('icSave');
-  const againBtn = document.getElementById('icAgain');
   if (saveBtn) saveBtn.disabled = disabled;
-  if (againBtn) againBtn.disabled = disabled;
   renderIcMoreCount();
 }
 
@@ -4073,29 +4073,12 @@ function closeIcCatSheet() {
 // Clears everything item-specific for "Save and add another" while keeping
 // unit/category/delivery/source — the fields that stay constant across a
 // batch of items from the same receipt or supplier.
-function resetForAnotherIngredient() {
-  document.getElementById('ing_name').value = '';
-  document.getElementById('ing_quantity').value = '';
-  document.getElementById('ing_cost').value = '';
-  document.getElementById('ing_min_stock').value = '';
-  document.getElementById('ing_sku').value = '';
-  document.getElementById('ing_notes').value = '';
-  document.getElementById('customAttributes').innerHTML = '';
-  setIcSeed(null);
-  document.getElementById('ing_name').focus();
-  onIngredientEdit();
-}
-
-async function saveIngredient(event, again) {
+async function saveIngredient(event) {
   if (event) event.preventDefault();
 
-  // Disable both actions immediately so the user gets instant feedback.
+  // Disable immediately so the user gets instant feedback.
   const saveBtn = document.getElementById('icSave');
-  const againBtn = document.getElementById('icAgain');
-  const activeBtn = again ? againBtn : saveBtn;
-  if (saveBtn) saveBtn.disabled = true;
-  if (againBtn) againBtn.disabled = true;
-  if (activeBtn) activeBtn.textContent = 'Saving…';
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
 
   try {
 
@@ -4221,18 +4204,13 @@ async function saveIngredient(event, again) {
       await loadIngredients();
     }
 
-    if (again) {
-      resetForAnotherIngredient();
-    } else {
-      closeManualModal();
-    }
+    closeManualModal();
 
   } catch (error) {
     console.error('Error saving ingredient:', error);
     showAlert(error.message || 'Failed to save item', 'Error');
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save item'; }
-    if (againBtn) { againBtn.disabled = false; againBtn.textContent = 'Save and add another'; }
   }
 }
 
