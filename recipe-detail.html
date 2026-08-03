@@ -112,23 +112,25 @@
      winning the tie, silently resetting this back to 10000. An ID selector
      has higher specificity and can't lose that tie regardless of order. */
   #addIngredientModal { z-index: 99999 !important; }
-  /* !important on every property here: this page's generic mobile
-     ".modal-content, .modal-content-custom, ... { width/max-width/margin/
-     max-height/padding/transform: ... !important }" rule (for the desktop-
-     style .recipe-overlay modals) otherwise wins over a plain, non-!important
-     override at the same "mobile media query" cascade position -- it was
-     silently squashing this screen's sizing back down to a small centered
-     card with 24px/20px padding instead of the intended full-bleed layout. */
+  /* Layout-only properties, kept unconditional (both mobile and desktop) --
+     the two-pane flow's own head/scroll/foot flex layout depends on these
+     regardless of screen size. Sizing (width/height/border-radius/etc) is
+     desktop-only below; mobile now gets the shared .modal-sheet half-sheet
+     treatment (styles.css) instead of this page's own full-screen override. */
   .ai-overlay .modal-content {
-    display: flex !important; flex-direction: column !important; padding: 0 !important;
-    width: 100% !important; max-width: 480px !important; margin: 0 !important;
-    height: 640px !important; max-height: 88vh !important; overflow: hidden !important;
-    position: relative !important; transform: none !important; border-radius: 20px !important;
+    display: flex !important; flex-direction: column !important;
+    overflow: hidden !important; position: relative !important;
   }
-  @media (max-width: 768px) {
+  /* Higher specificity than .modal-overlay.modal-sheet .modal-content (which
+     forces 20px of padding on every sheet) -- this screen's head/scroll/foot
+     need to reach the true edges themselves, same reason ic-modal (New item)
+     uses padding:0. */
+  .modal-overlay.ai-overlay.modal-sheet .modal-content { padding: 0 !important; }
+  @media (min-width: 769px) {
     .ai-overlay .modal-content {
-      max-width: 100% !important; height: 100% !important; max-height: 100% !important;
-      border-radius: 0 !important; margin: 0 !important;
+      width: 100% !important; max-width: 480px !important; margin: 0 !important;
+      height: 640px !important; max-height: 88vh !important;
+      transform: none !important; border-radius: 20px !important;
     }
   }
   /* Only one pane is ever visible at a time, so plain display:none/flex in
@@ -4123,7 +4125,7 @@ document.addEventListener('keydown', (e) => {
 <!-- Add/edit item screen — replaces the old add-ingredient modal + item-editor
      sheet with one two-pane flow (pick an item, then say how much one unit
      needs). See openAddIngredientModal()/aiOpenLine() below. -->
-<div class="modal-overlay ai-overlay" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()">
+<div class="modal-overlay ai-overlay modal-sheet" id="addIngredientModal" onclick="if(event.target === this) closeAddIngredientModal()">
   <div class="modal-content">
 
     <div class="ai-pane" id="aiPaneList" data-on="1">

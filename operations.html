@@ -2551,52 +2551,8 @@ function resolveConfirm(result) {
             </span>
             ${ing.reorder_pending
               ? `<span class="stock-alert-pending">On the way</span>`
-              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); markReorder('${ing.id}', this)">Reorder</button>`}
+              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); window.location.href='/ingredient-detail?id=${ing.id}&openReorder=true'">Reorder</button>`}
           </div>`;
-  }
-
-  // Optimistic: swap the button for the pending pill immediately (btn is the
-  // clicked element, passed straight through so no re-render/re-fetch of the
-  // whole list is needed to reflect the change). The real write still
-  // happens the same way as before; on failure the row is put back.
-  async function markReorder(ingredientId, btn) {
-    let pill = null;
-    if (btn) {
-      pill = document.createElement('span');
-      pill.className = 'stock-alert-pending';
-      pill.textContent = 'On the way';
-      btn.replaceWith(pill);
-    }
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const { error } = await supabaseClient
-        .from('ingredients')
-        .update({ reorder_pending: true, reorder_date: new Date().toISOString().split('T')[0] })
-        .eq('id', ingredientId)
-        .eq('profile_id', user.id);
-      if (error) throw error;
-      localStorage.removeItem('shelfy_cache_ops_inventory');
-      localStorage.removeItem('shelfy_cache_ops_inbound');
-      loadInboundStatus();
-      // Keep the in-memory dashboard ingredient list consistent with the
-      // optimistic UI so a later showMoreStockAlerts()/re-render doesn't
-      // silently revert this row.
-      if (window._dashIngredients) {
-        const ing = window._dashIngredients.find(i => i.id === ingredientId);
-        if (ing) ing.reorder_pending = true;
-      }
-    } catch (e) {
-      console.error('Reorder failed:', e);
-      showNotification?.('Could not mark as reordered', 'error');
-      if (pill) {
-        const btn2 = document.createElement('button');
-        btn2.className = 'stock-alert-reorder';
-        btn2.textContent = 'Reorder';
-        btn2.onclick = (ev) => { ev.stopPropagation(); markReorder(ingredientId, btn2); };
-        pill.replaceWith(btn2);
-      }
-    }
   }
 
   function _renderInventoryStatus(ingredients) {

@@ -458,12 +458,34 @@
 
 
 
-  /* ---------- Place reorder screen (full-screen mobile overlay) ---------- */
+  /* ---------- Place reorder screen (full-screen on desktop, half-sheet
+     on mobile via .ro-card below) ---------- */
   .ro-screen {
     display: none; position: fixed; inset: 0; z-index: 10100;
     flex-direction: column; background: var(--bg-app, var(--bg-main));
   }
   .ro-screen.active { display: flex; }
+  /* Plain pass-through wrapper on desktop (still fills .ro-screen exactly
+     like before this was introduced); mobile below turns it into the actual
+     bottom-sheet panel, with .ro-screen becoming its dim backdrop instead. */
+  .ro-card { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  @media (max-width: 768px) {
+    .ro-screen { background: rgba(15,23,42,.42); justify-content: flex-end; }
+    .ro-card {
+      height: auto; max-height: 75vh; border-radius: 20px 20px 0 0; overflow: hidden;
+      background: var(--bg-app, var(--bg-main));
+      box-shadow: 0 -8px 24px -12px rgba(0,0,0,0.35);
+      transform: translateY(30px);
+      transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
+      padding-top: 10px;
+    }
+    .ro-card::before {
+      content: ''; display: block; flex-shrink: 0;
+      width: 36px; height: 4px; background: rgba(128,128,128,0.3);
+      border-radius: 2px; margin: 0 auto 8px;
+    }
+    .ro-screen.active .ro-card { transform: translateY(0); }
+  }
   .ro-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
   .ro-bar { min-height: calc(52px + env(safe-area-inset-top, 0px)); display: flex; align-items: center;
             gap: 4px; padding: env(safe-area-inset-top, 0px) 8px 0; box-sizing: border-box; }
@@ -1474,6 +1496,7 @@
      create-ingredient-suppliers-tables.sql) instead of the single
      source_url/cost_per_unit/estimated_delivery fields it used to read. -->
 <div class="ro-screen" id="roScreen">
+  <div class="ro-card">
   <div class="ro-head">
     <div class="ro-bar">
       <button class="ro-back" onclick="closeReorderScreen()" aria-label="Back">
@@ -1530,6 +1553,7 @@
     </div>
     <div id="roWarn"></div>
     <button class="ro-cont" id="roCont" onclick="placeReorder()">Place reorder</button>
+  </div>
   </div>
 
   <div class="ro-sheet" id="roSupSheet" onclick="if(event.target===this)closeRoSupplierSheet()">
