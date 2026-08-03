@@ -3008,10 +3008,25 @@ async function saveIngredient(event) {
   }
 }
 
+// Dashboard entry: hand off to ingredients.html's real, actively-maintained
+// #manualModal instead of operations.html's own older #manualEntryModal
+// copy (same reasoning/pattern as the 'manual' method branch in
+// openMethodModal() above) -- unless a recipe is mid-build, where
+// navigating away would lose it, so that case still uses the local modal.
 function startIngredientUrlImport() {
   window.ShelfyUrlImportModal.open({
-    onManual: openManualEntryModal,
+    onManual: () => {
+      if (addingIngredientFromRecipe) { openManualEntryModal(); return; }
+      sessionStorage.setItem('shelfy_open_create', 'manual');
+      window.location.href = '/ingredients';
+    },
     onImported: async (data) => {
+      if (!addingIngredientFromRecipe) {
+        sessionStorage.setItem('shelfy_scan_prefill', JSON.stringify({ kind: 'url', data }));
+        window.location.href = '/ingredients';
+        return;
+      }
+
       await openManualEntryModal();
       // Wait for the modal to be fully rendered before touching its fields.
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -3663,10 +3678,23 @@ function startExpenseUpload() {
   });
 }
 
+// Dashboard entry: hand off to ingredients.html's real, actively-maintained
+// #manualModal instead of operations.html's own older #manualEntryModal
+// copy, same reasoning as startIngredientUrlImport() above -- unless a
+// recipe is mid-build, where navigating away would lose it.
 function startIngredientUpload() {
   window.ShelfyImportModal.open('ingredient', {
-    onManual: openManualEntryModal,
+    onManual: () => {
+      if (addingIngredientFromRecipe) { openManualEntryModal(); return; }
+      sessionStorage.setItem('shelfy_open_create', 'manual');
+      window.location.href = '/ingredients';
+    },
     onImported: async (data) => {
+      if (!addingIngredientFromRecipe) {
+        sessionStorage.setItem('shelfy_scan_prefill', JSON.stringify({ kind: 'receipt', data }));
+        window.location.href = '/ingredients';
+        return;
+      }
       openManualEntryModal();
       _applyExtractedIngredientFields(data);
       await _notifyIfIngredientLimitReached();

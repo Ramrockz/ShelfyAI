@@ -55,6 +55,14 @@
 
   function confirmScanUsed() { lastScanEntity = null; }
 
+  // A scan taken on a *different* page (operations.html's dashboard, which
+  // hands the draft off via sessionStorage instead of prefilling its own
+  // modal for the non-recipe-in-progress case) has no way to have set
+  // lastScanEntity on THIS page's instance of this module, since each page
+  // load gets a fresh closure. Called once the hand-off's draft has been
+  // applied here, so refundScan() still works if the user then discards it.
+  function markPending(entity) { lastScanEntity = entity; }
+
   function refundScan() {
     if (!lastScanEntity) return;
     var entity = lastScanEntity;
@@ -560,5 +568,5 @@
     (mode === 'camera' ? quickCameraInput : quickFileInput).click();
   }
 
-  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart, confirmScanUsed: confirmScanUsed, refundScan: refundScan };
+  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending };
 })();

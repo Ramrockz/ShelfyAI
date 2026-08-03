@@ -1553,6 +1553,28 @@ loadIngredients().then(() => {
     sessionStorage.removeItem('shelfy_open_create');
     if (_openCreate === 'manual') openManualIngredientModal(); else openModal();
   }
+
+  // A successful scan on operations.html's dashboard (URL or PDF/Image
+  // import) hands its draft off here the same way, instead of prefilling
+  // its own older #manualEntryModal copy -- see startIngredientUrlImport()/
+  // startIngredientUpload() there.
+  const scanPrefillRaw = sessionStorage.getItem('shelfy_scan_prefill');
+  if (scanPrefillRaw) {
+    sessionStorage.removeItem('shelfy_scan_prefill');
+    try {
+      const { kind, data } = JSON.parse(scanPrefillRaw);
+      openManualIngredientModal();
+      setTimeout(() => {
+        if (kind === 'url') {
+          applyUrlScanToManualModal(data);
+          if (window.ShelfyUrlImportModal) window.ShelfyUrlImportModal.markPending();
+        } else if (kind === 'receipt') {
+          applyReceiptScanToManualModal(data);
+          if (window.ShelfyImportModal) window.ShelfyImportModal.markPending('ingredient');
+        }
+      }, 100);
+    } catch (e) { console.error('Error applying scan prefill:', e); }
+  }
 });
 
 // Event delegation for star icon clicks
@@ -1598,6 +1620,77 @@ function openManualIngredientModal() {
   document.getElementById('manualModal').classList.add('active');
 }
 
+async function _notifyIfIngredientLimitReached() {
+  await checkAIUsage();
+  if (aiUsageStatus && aiUsageStatus.limitReached) {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (session && typeof createAILimitNotification === 'function') {
+      await createAILimitNotification(session.user.id, aiUsageStatus.tier);
+    }
+  }
+}
+
+// Shared by startIngredientUpload()'s local onImported and the
+// shelfy_scan_prefill hand-off consumed on page load (dashboard redirects
+// here instead of prefilling its own older #manualEntryModal copy) --
+// #manualModal must already be open and rendered before calling this.
+function applyReceiptScanToManualModal(data) {
+  const item = (data.item && data.item[0]) || {};
+
+  if (item.name || data.description) {
+    document.getElementById('ing_name').value = item.name || data.description;
+  }
+  if (item.price || data.amount) {
+    const price = item.price || data.amount;
+    const priceMatch = String(price).match(/[\d.]+/);
+    if (priceMatch) document.getElementById('ing_cost').value = priceMatch[0];
+  }
+  if (item.quantity) {
+    document.getElementById('ing_quantity').value = item.quantity;
+  }
+  // Unit — map to the chip list's exact strings so the right chip highlights.
+  if (item.unit) {
+    const rawUnit = item.unit.toLowerCase();
+    const unitMap = {
+      'kilograms': 'kg', 'kg': 'kg',
+      'grams': 'g', 'g': 'g',
+      'liters': 'L', 'l': 'L',
+      'milliliters': 'ml', 'ml': 'ml',
+      'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
+      'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
+      'ounces': 'oz', 'oz': 'oz',
+      'meters': 'm', 'm': 'm'
+    };
+    setManualItemUnit(unitMap[rawUnit] || rawUnit);
+  }
+  if (item.SKU) document.getElementById('ing_sku').value = item.SKU;
+  if (item.product_category) selectIngCategory(item.product_category);
+  if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
+  if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+
+  const container = document.getElementById('customAttributes');
+  if (item.attributes?.color) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${escapeHtml(item.attributes.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+    `;
+    container.appendChild(row);
+  }
+  if (item.attributes?.size) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${escapeHtml(item.attributes.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+    `;
+    container.appendChild(row);
+  }
+}
+
 function startIngredientUpload() {
   window.ShelfyImportModal.open('ingredient', {
     onManual: openManualIngredientModal,
@@ -1605,71 +1698,60 @@ function startIngredientUpload() {
       openManualIngredientModal();
       // Wait for modal to be fully rendered before touching its fields.
       await new Promise(resolve => setTimeout(resolve, 100));
-
-      const item = (data.item && data.item[0]) || {};
-
-      if (item.name || data.description) {
-        document.getElementById('ing_name').value = item.name || data.description;
-      }
-      if (item.price || data.amount) {
-        const price = item.price || data.amount;
-        const priceMatch = String(price).match(/[\d.]+/);
-        if (priceMatch) document.getElementById('ing_cost').value = priceMatch[0];
-      }
-      if (item.quantity) {
-        document.getElementById('ing_quantity').value = item.quantity;
-      }
-      // Unit — map to the chip list's exact strings so the right chip highlights.
-      if (item.unit) {
-        const rawUnit = item.unit.toLowerCase();
-        const unitMap = {
-          'kilograms': 'kg', 'kg': 'kg',
-          'grams': 'g', 'g': 'g',
-          'liters': 'L', 'l': 'L',
-          'milliliters': 'ml', 'ml': 'ml',
-          'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
-          'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
-          'ounces': 'oz', 'oz': 'oz',
-          'meters': 'm', 'm': 'm'
-        };
-        setManualItemUnit(unitMap[rawUnit] || rawUnit);
-      }
-      if (item.SKU) document.getElementById('ing_sku').value = item.SKU;
-      if (item.product_category) selectIngCategory(item.product_category);
-      if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
-      if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
-
-      const container = document.getElementById('customAttributes');
-      if (item.attributes?.color) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${item.attributes.color}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-      if (item.attributes?.size) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${item.attributes.size}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-
-      await checkAIUsage();
-      if (aiUsageStatus && aiUsageStatus.limitReached) {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && typeof createAILimitNotification === 'function') {
-          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
-        }
-      }
+      applyReceiptScanToManualModal(data);
+      await _notifyIfIngredientLimitReached();
     }
   });
+}
+
+// Shared by startIngredientUrlImport()'s local onImported and the
+// shelfy_scan_prefill hand-off consumed on page load. See
+// applyReceiptScanToManualModal() above for why this is a standalone
+// function instead of staying inline.
+function applyUrlScanToManualModal(data) {
+  if (data.name) {
+    // Build name with attributes (color, size, etc.)
+    let fullName = data.name;
+    const attributes = [];
+    if (data.color) attributes.push(data.color);
+    if (data.size) attributes.push(data.size);
+    if (attributes.length > 0) fullName = `${data.name} &bull; ${attributes.join(' &bull; ')}`;
+    document.getElementById('ing_name').value = fullName;
+  }
+
+  // Price and quantity — calculate cost per unit
+  if (data.price && data.quantity && data.quantity > 0) {
+    document.getElementById('ing_cost').value = (data.price / data.quantity).toFixed(2);
+  } else if (data.price) {
+    document.getElementById('ing_cost').value = data.price;
+  }
+  if (data.quantity) document.getElementById('ing_quantity').value = data.quantity;
+  if (data.sku) document.getElementById('ing_sku').value = data.sku;
+  if (data.estimated_delivery) document.getElementById('ing_estimated_delivery').value = data.estimated_delivery;
+  if (data.product_category) selectIngCategory(data.product_category);
+  if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+
+  const container = document.getElementById('customAttributes');
+  if (data.color) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${escapeHtml(data.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+    `;
+    container.appendChild(row);
+  }
+  if (data.size) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; gap: 8px;';
+    row.innerHTML = `
+      <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <input type="text" value="${escapeHtml(data.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+    `;
+    container.appendChild(row);
+  }
 }
 
 function startIngredientUrlImport() {
@@ -1679,58 +1761,8 @@ function startIngredientUrlImport() {
       openManualIngredientModal();
       // Wait for the modal to be fully rendered before touching its fields.
       await new Promise(resolve => setTimeout(resolve, 100));
-
-      if (data.name) {
-        // Build name with attributes (color, size, etc.)
-        let fullName = data.name;
-        const attributes = [];
-        if (data.color) attributes.push(data.color);
-        if (data.size) attributes.push(data.size);
-        if (attributes.length > 0) fullName = `${data.name} &bull; ${attributes.join(' &bull; ')}`;
-        document.getElementById('ing_name').value = fullName;
-      }
-
-      // Price and quantity — calculate cost per unit
-      if (data.price && data.quantity && data.quantity > 0) {
-        document.getElementById('ing_cost').value = (data.price / data.quantity).toFixed(2);
-      } else if (data.price) {
-        document.getElementById('ing_cost').value = data.price;
-      }
-      if (data.quantity) document.getElementById('ing_quantity').value = data.quantity;
-      if (data.sku) document.getElementById('ing_sku').value = data.sku;
-      if (data.estimated_delivery) document.getElementById('ing_estimated_delivery').value = data.estimated_delivery;
-      if (data.product_category) selectIngCategory(data.product_category);
-      if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
-
-      const container = document.getElementById('customAttributes');
-      if (data.color) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${escapeHtml(data.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-      if (data.size) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${escapeHtml(data.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-        `;
-        container.appendChild(row);
-      }
-
-      await checkAIUsage();
-      if (aiUsageStatus && aiUsageStatus.limitReached) {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && typeof createAILimitNotification === 'function') {
-          await createAILimitNotification(session.user.id, aiUsageStatus.tier);
-        }
-      }
+      applyUrlScanToManualModal(data);
+      await _notifyIfIngredientLimitReached();
     }
   });
 }

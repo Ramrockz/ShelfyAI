@@ -34,6 +34,14 @@
 
   function confirmScanUsed() { lastScanUsed = false; }
 
+  // A scan taken on a *different* page (operations.html's dashboard, which
+  // hands the draft off via sessionStorage instead of prefilling its own
+  // modal -- see startIngredientUrlImport() there) has no way to have set
+  // lastScanUsed on THIS page's instance of this module, since each page
+  // load gets a fresh closure. Called once the hand-off's draft has been
+  // applied here, so refundScan() still works if the user then discards it.
+  function markPending() { lastScanUsed = true; }
+
   function refundScan() {
     if (!lastScanUsed) return;
     lastScanUsed = false;
@@ -337,5 +345,5 @@
     sheetEl.style.transition = '';
   }
 
-  window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan };
+  window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending };
 })();
