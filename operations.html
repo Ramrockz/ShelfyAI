@@ -32,13 +32,11 @@
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
 <link rel="stylesheet" href="onboarding-modal.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="auth.js"></script>
 <script src="/offline-sync.js"></script>
 <script src="theme.js"></script>
@@ -1438,6 +1436,11 @@
     padding: 0 !important;
     overflow: hidden !important;
   }
+  /* Higher specificity than .modal-overlay.modal-sheet .modal-content
+     (which forces 20px of padding on every mobile sheet) -- this picker's
+     head/scroll/foot need to reach the true edges themselves, same reason
+     ic-modal (New item) uses padding:0. */
+  .modal-overlay.recipe-picker-modal.modal-sheet .modal-content { padding: 0 !important; }
   .recipe-picker-header {
     display: flex;
     align-items: center;
@@ -1628,32 +1631,6 @@
     .recipe-picker-search .search-icon { left: 32px; }
     .recipe-picker-body { flex: 1; min-height: 0; }
   }
-
-  /* ── Flatpickr theme overrides ─────────────────────────────────── */
-  .flatpickr-calendar {
-    background: var(--bg-panel) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
-    font-family: inherit !important;
-  }
-  .flatpickr-months .flatpickr-month,
-  .flatpickr-weekdays,
-  span.flatpickr-weekday { background: var(--bg-panel) !important; color: var(--text-muted) !important; }
-  .flatpickr-current-month .flatpickr-monthDropdown-months,
-  .flatpickr-current-month input.cur-year { color: var(--text-main) !important; background: transparent !important; }
-  .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
-  .flatpickr-day:hover { background: var(--bg-main) !important; border-color: var(--accent) !important; }
-  .flatpickr-day.selected, .flatpickr-day.selected:hover {
-    background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important;
-  }
-  .flatpickr-day.today { border-color: var(--accent) !important; }
-  .flatpickr-day.today:hover { background: rgba(6,182,212,0.12) !important; }
-  .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: var(--text-muted) !important; opacity: 0.35; }
-  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--text-main) !important; }
-  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--accent) !important; }
-  .numInput, .numInputWrapper { color: var(--text-main) !important; }
-  .flatpickr-input { cursor: pointer !important; }
 
   /* ── Order Success Screen ──────────────────────────────────────── */
   #manualStep3 { max-width: 520px; }
@@ -3458,7 +3435,7 @@ function showImportStatus(message, type) {
 </div>
 
 <!-- Manual Order Creation Modal -->
-<div class="modal-overlay recipe-picker-modal" id="manualOrderModal">
+<div class="modal-overlay recipe-picker-modal modal-sheet" id="manualOrderModal">
 
   <!-- Step 1: Product Picker -->
   <div class="modal-content op-modal" id="manualStep1" style="padding:0; display:flex; flex-direction:column;">
@@ -3526,7 +3503,7 @@ function showImportStatus(message, type) {
           </div>
           <div class="form-group">
             <label for="new_order_date">Order Date <span style="color:var(--danger);">*</span></label>
-            <input type="text" id="new_order_date" readonly placeholder="Select date...">
+            <input type="date" id="new_order_date">
           </div>
         </div>
         <div class="form-row">
@@ -3570,7 +3547,7 @@ function showImportStatus(message, type) {
 </div>
 
 <!-- Recipe Mapping Modal (AI upload result) — "Confirm order items" -->
-<div class="modal-overlay" id="recipeMappingModal">
+<div class="modal-overlay modal-sheet" id="recipeMappingModal">
   <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
     <div class="rcm-head">
       <button type="button" class="rcm-back" onclick="closeRecipeMappingModal()" aria-label="Close">
@@ -5539,18 +5516,8 @@ let orderRecipeCache = null;
 let orderFavoriteIds = new Set();
 let orderStockMap = {};
 let orderMinMap = {};
-let orderDatePicker = null;
 let orderPickerFilters = { cats: new Set() };
 let orderPickerAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter (only shown when exactly one category is active)
-
-document.addEventListener('DOMContentLoaded', () => {
-  orderDatePicker = flatpickr('#new_order_date', {
-    dateFormat: 'Y-m-d',
-    defaultDate: new Date(),
-    allowInput: false,
-    disableMobile: true
-  });
-});
 
 async function loadOrderRecipeData() {
   const { data: { user } } = await supabaseClient.auth.getUser();
@@ -5902,10 +5869,7 @@ function proceedToOrderDetails() {
   _updateStatusRestriction();
   // Default date to today
   const dateEl = document.getElementById('new_order_date');
-  if (dateEl && !dateEl.value) {
-    if (orderDatePicker) orderDatePicker.setDate(new Date(), true);
-    else dateEl.value = new Date().toISOString().split('T')[0];
-  }
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
   // Recipe summary rows
   document.getElementById('step2RecipeSummary').innerHTML =
     orderRecipes.map((r, i) => `<div style="display:flex;align-items:center;padding:9px 14px;${i < orderRecipes.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
@@ -5961,8 +5925,7 @@ function openManualOrderModal() {
   const refEl  = document.getElementById('new_order_reference');
   const dateEl = document.getElementById('new_order_date');
   if (refEl)  refEl.value  = '';
-  if (orderDatePicker) orderDatePicker.setDate(new Date(), true);
-  else if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const invToggle = document.getElementById('order_update_inventory');
   if (invToggle) invToggle.checked = true;
   // Populate customer autocomplete from recent sales
@@ -6168,8 +6131,7 @@ function startAnotherOrder() {
   const dateEl = document.getElementById('new_order_date');
   if (custEl)  custEl.value  = '';
   if (refEl)   refEl.value   = '';
-  if (orderDatePicker) orderDatePicker.setDate(new Date(), true);
-  else if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const invToggle = document.getElementById('order_update_inventory');
   if (invToggle) invToggle.checked = true;
   // Autofill customer if we had one
