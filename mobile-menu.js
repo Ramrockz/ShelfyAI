@@ -73,7 +73,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const FLICK_VELOCITY = 0.5; // px/ms
 
   function getContent(overlay) {
-    return overlay.querySelector('.modal-content, .modal-content-custom');
+    // .rb-sheet: recipe-builder's ("New product") bottom sheet -- it
+    // predates the shared .modal-overlay/.modal-sheet convention and isn't
+    // built on .modal-content, so it needs its own selector here too.
+    return overlay.querySelector('.modal-content, .modal-content-custom, .rb-sheet');
   }
   function scrollableAncestor(el, stopAt) {
     while (el && el !== stopAt && el !== document.body) {
@@ -91,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   document.addEventListener('touchstart', function (e) {
-    const overlay = e.target.closest('.modal-overlay.modal-sheet.active');
+    const overlay = e.target.closest('.modal-overlay.modal-sheet.active, .recipe-overlay.active');
     if (!overlay || e.touches.length !== 1) { reset(); return; }
     const content = getContent(overlay);
     if (!content) { reset(); return; }
@@ -126,7 +129,15 @@ document.addEventListener('DOMContentLoaded', function() {
       const velocity = delta / elapsed;
       const sheet = sheetEl;
       reset();
-      if (delta > CLOSE_PX || velocity > FLICK_VELOCITY) sheet.classList.remove('active');
+      if (delta > CLOSE_PX || velocity > FLICK_VELOCITY) {
+        // Most sheets' own close functions are just classList.remove('active')
+        // one-liners, but a few (recipe-builder) also reset real form/filter
+        // state on close -- data-close-fn names that function so swiping
+        // doesn't leave it stale for the next open, instead of every sheet
+        // needing to know about swipe-to-close individually.
+        const fn = sheet.dataset.closeFn && window[sheet.dataset.closeFn];
+        if (typeof fn === 'function') fn(); else sheet.classList.remove('active');
+      }
     } else {
       reset();
     }
