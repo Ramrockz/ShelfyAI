@@ -714,6 +714,23 @@
              letter-spacing: -.01em; cursor: pointer; }
   .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
 
+  /* New-expense form, mobile: full-screen like recipes.html's "New product"
+     builder, matching the same fix applied to ingredients.html's #manualModal.
+     Two IDs (#expenseModal #expenseStep1) is needed to beat both the
+     unconditional "#expenseStep1 { max-width: 460px !important; }" above and
+     the generic shared mobile .modal-content rule further down. */
+  @media (max-width: 768px) {
+    #expenseModal { align-items: stretch !important; }
+    #expenseModal #expenseStep1 {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+    }
+  }
+
   /* Item picker, as a sheet — positioned within the modal overlay itself */
   .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
               display: none; align-items: flex-end; justify-content: center; }
