@@ -2011,10 +2011,8 @@
     const stock = parseFloat(currentIngredient?.quantity) || 0;
     const min = parseFloat(currentIngredient?.min_stock) || 0;
     const topUp = Math.max(0, min - stock);
-    const suggested = roSuggestedQty();
-    const hints = [{ n: suggested, label: 'Suggested' }];
-    if (topUp && topUp !== suggested) hints.push({ n: topUp, label: 'Top up to min' });
-    hints.push({ n: suggested * 2, label: 'Double it' });
+    const hints = [];
+    if (topUp > 0) hints.push({ n: topUp, label: 'Top up to min' });
     return hints;
   }
 
@@ -2025,10 +2023,7 @@
 
   function renderRoQty() {
     const q = roQty();
-    const stock = parseFloat(currentIngredient?.quantity) || 0;
-    document.getElementById('roQtyStatus').innerHTML = q
-      ? `units · ${stock} &rarr; <b>${stock + q}</b> in stock`
-      : 'units';
+    document.getElementById('roQtyStatus').textContent = 'units';
     document.getElementById('roHints').innerHTML = roHints().map(h =>
       `<button class="ro-qty-hint" aria-pressed="${h.n === q}" onclick="roSetQty(${h.n})">${h.label}<small>${h.n}</small></button>`
     ).join('');
