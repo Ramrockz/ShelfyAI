@@ -2083,7 +2083,12 @@ async function openExpenseChoiceModal() {
     onUsage: (status) => { expenseAIUsageStatus = status; },
     onSelect: (method) => {
       if (method === 'manual') {
-        openAddExpenseModal();
+        // Hand off to expenses.html's real, actively-maintained #expenseModal
+        // instead of operations.html's own older #expenseModal copy (same
+        // shelfy_open_create pattern as goToNewProduct()/the ingredient fix
+        // above).
+        sessionStorage.setItem('shelfy_open_create', 'true');
+        window.location.href = '/expenses';
       } else if (method === 'upload') {
         // Pre-existing behavior: the scan result here maps into the
         // ingredient form fields, not a dedicated expense form — kept as-is.
@@ -2863,7 +2868,19 @@ async function openMethodModal() {
     onUsage: (status) => { aiUsageStatus = status; },
     onSelect: (method) => {
       if (method === 'manual') {
-        openManualEntryModal();
+        // Dashboard entry: hand off to ingredients.html's real, actively-
+        // maintained #manualModal instead of operations.html's own older
+        // #manualEntryModal copy (same shelfy_open_create pattern as
+        // goToNewProduct()). The recipe-builder's inline "add ingredient"
+        // flow (openMethodModalFromRecipe) needs to stay in-page instead --
+        // navigating away would lose the in-progress recipe -- so it keeps
+        // opening the old modal directly.
+        if (addingIngredientFromRecipe) {
+          openManualEntryModal();
+        } else {
+          sessionStorage.setItem('shelfy_open_create', 'true');
+          window.location.href = '/ingredients';
+        }
       } else if (method === 'url') {
         openUrlImportModal();
       } else if (method === 'image') {
