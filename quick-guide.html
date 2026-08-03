@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Quick Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Eight steps to get your ShelfyAI shelf set up right, each with a screenshot of the real screen." />
+
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/apple-touch-icon-180.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+
+<style>
+/* Quick Guide — real page (adapted from the quick-guide-30b.html mockup).
+   Differences from the mockup, deliberately:
+   - No live iframe-cloning of other mockup files for thumbnails; each step
+     uses a real screenshot from /quick-guide-screenshots (the real screens,
+     captured once, not regenerated live).
+   - No fake progress bar — this is reference content, not a tracked
+     checklist.
+   - A real, responsive page (normal document flow), not a fixed 390x800
+     phone frame — a single centered reading column works at any width for
+     a linear step-by-step guide. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; background: var(--bg-main); color: var(--text-main);
+  font: 400 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent-deep, var(--accent)); text-decoration: none; }
+a:hover { color: var(--accent-ink, var(--accent)); }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+
+.qg-wrap { max-width: 640px; margin: 0 auto; padding-bottom: 40px; }
+
+/* header */
+.qg-head { position: sticky; top: 0; z-index: 20; min-height: 56px; display: flex; align-items: center; gap: 4px;
+           padding: 0 8px; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
+.qg-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+           border: none; background: none; color: var(--text-main); border-radius: 50%; }
+.qg-back:hover { background: var(--bg-inner); }
+.qg-head b { flex: 1; text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.qg-done { height: 34px; flex-shrink: 0; padding: 0 12px; border: none; background: none;
+           color: var(--accent-ink, var(--accent)); font-size: 15px; font-weight: 700; }
+
+/* intro */
+.qg-intro { background: var(--bg-panel); padding: 24px 20px 22px;
+            border-bottom: 1px solid var(--border-hair, var(--border)); }
+.qg-intro h1 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 800;
+               letter-spacing: -.03em; text-wrap: balance; }
+.qg-intro p { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: var(--text-muted);
+              text-wrap: pretty; }
+
+/* section labels */
+.qg-sec { padding: 22px 20px 8px; display: flex; align-items: baseline; }
+.qg-sec b { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+            color: var(--text-muted); }
+.qg-sec small { margin-left: auto; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+
+/* steps */
+.qg-step { display: flex; gap: 14px; padding: 16px 20px; background: var(--bg-panel);
+           border-top: 1px solid var(--border-hair, var(--border)); text-align: left; width: 100%; }
+.qg-shot { flex-shrink: 0; width: 100px; height: 185px; border-radius: 14px; overflow: hidden;
+           background: var(--bg-inner); border: 1px solid var(--border); }
+.qg-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.qg-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.qg-n { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+        color: var(--accent-ink, var(--accent)); }
+.qg-t { margin: 5px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -.015em;
+        color: var(--text-main); text-wrap: balance; }
+.qg-d { margin: 7px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--text-muted);
+        text-wrap: pretty; }
+.qg-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--text-main);
+           background: var(--bg-inner); border-radius: 10px; padding: 8px 10px; }
+.qg-note b { font-weight: 700; }
+.qg-go { margin-top: auto; padding-top: 12px; display: inline-flex; align-items: center; gap: 6px;
+         font-size: 13.5px; font-weight: 700; color: var(--accent-ink, var(--accent)); }
+
+/* footer */
+.qg-foot { padding: 22px 20px 34px; }
+.qg-foot-card { background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+                border-radius: 14px; padding: 18px; }
+.qg-foot-card b { display: block; font-size: 15px; font-weight: 700; color: var(--text-main); }
+.qg-foot-card p { margin: 6px 0 14px; font-size: 13.5px; line-height: 1.45; color: var(--text-muted); }
+.qg-foot-links { display: flex; gap: 10px; flex-wrap: wrap; }
+.qg-foot-card a { display: inline-flex; align-items: center; height: 42px; padding: 0 16px;
+                  border-radius: 11px; font-size: 14px; font-weight: 700; }
+.qg-foot-card a.primary { background: var(--accent-deep, var(--accent)); color: #fff; }
+.qg-foot-card a.primary:hover { background: var(--accent-ink, var(--accent)); color: #fff; }
+.qg-foot-card a.ghost { background: var(--bg-inner); color: var(--text-main); }
+
+@media (max-width: 480px) {
+  .qg-intro h1 { font-size: 24px; }
+  .qg-shot { width: 84px; height: 155px; }
+}
+</style>
+</head>
+<body>
+
+<header class="qg-head">
+  <button class="qg-back" onclick="window.location.href='/settings'" aria-label="Back to Settings">
+    <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>
+  </button>
+  <b>Quick Guide</b>
+  <button class="qg-done" onclick="window.location.href='/settings'">Done</button>
+</header>
+
+<main class="qg-wrap">
+  <div class="qg-intro">
+    <h1>Eight steps to a shelf that tells the truth</h1>
+    <p>Do them in this order and everything after — costs, margins, reorders, analytics — fills itself in.</p>
+  </div>
+
+  <div class="qg-sec"><b>Set up the shelf</b><small>steps 1–3</small></div>
+  <div id="steps-a"></div>
+
+  <div class="qg-sec"><b>Sell and restock</b><small>steps 4–6</small></div>
+  <div id="steps-b"></div>
+
+  <div class="qg-sec"><b>Keep the books honest</b><small>steps 7–8</small></div>
+  <div id="steps-c"></div>
+
+  <div class="qg-foot">
+    <div class="qg-foot-card">
+      <b>Still stuck?</b>
+      <p>The full docs cover items, products, orders and expenses in more detail, plus answers to common questions.</p>
+      <div class="qg-foot-links">
+        <a class="primary" href="/docs">Read the full docs</a>
+        <a class="ghost" href="/settings">Back to Settings</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// Each step links straight to the real page for that action. The four
+// "create something new" steps (1, 2, 4, 7) reuse the existing
+// shelfy_open_create cross-page hand-off (same mechanism ingredients.html /
+// recipes.html / orders.html / expenses.html already use for their own "+"
+// buttons) so the step drops the user directly into that form instead of
+// just an empty list. 'manual' skips the method picker where one exists
+// (ingredients/orders) -- recipes.html has no such picker, any truthy value
+// opens its builder directly.
+const STEPS = [
+  { group: 'a', img: '01-add-materials.png', n: 'Step 1', t: 'Add your materials',
+    d: 'Name, unit, what you paid and the minimum you want on the shelf. Everything else is calculated from these four.',
+    note: 'Scan a supplier invoice instead and the form fills itself.',
+    go: 'Open Items', href: '/ingredients', handoff: 'manual' },
+  { group: 'a', img: '02-product-recipe.png', n: 'Step 2', t: 'Write each product’s recipe',
+    d: 'List the materials a product consumes and how much of each. Cost and margin appear as you type.',
+    go: 'Open Products', href: '/recipes', handoff: '1' },
+  { group: 'a', img: '03-recipe-quantities.png', n: 'Step 3', t: 'Get the quantities right',
+    d: 'Per-unit amounts, not per-batch. Change a gram here and the margin on every size updates.',
+    go: 'Edit a recipe', href: '/recipes' },
+  { group: 'b', img: '04-process-order.png', n: 'Step 4', t: 'Process an order',
+    d: 'Pick the products that went out the door and how many. You never enter materials by hand.',
+    go: 'New order', href: '/orders', handoff: 'manual' },
+  { group: 'b', img: '05-confirm-order.png', n: 'Step 5', t: 'Confirm and let stock move',
+    d: 'The last screen shows what the order eats and what it leaves behind before anything is written.',
+    note: 'Leave <b>Deduct from stock</b> on unless you’re logging an old order.',
+    go: 'See the preview', href: '/orders' },
+  { group: 'b', img: '06-reorder.png', n: 'Step 6', t: 'Reorder what went short',
+    d: 'Suggested quantities come from your own minimums and how fast you’ve been using each item.',
+    go: 'Open the dashboard', href: '/operations' },
+  { group: 'c', img: '07-receipt-scan.png', n: 'Step 7', t: 'Photograph your receipts',
+    d: 'ShelfyAI reads the lines, matches them to your items and only asks about the ones it isn’t sure of.',
+    note: 'Uses one of your monthly AI scans, shared with items and orders.',
+    go: 'Open Expenses', href: '/expenses' },
+  { group: 'c', img: '08-analytics.png', n: 'Step 8', t: 'Read the month',
+    d: 'Revenue, spend and net profit — built from the orders and receipts you already logged. Nothing extra to fill in.',
+    go: 'Open Analytics', href: '/analytics' }
+];
+
+STEPS.forEach(s => {
+  const step = document.createElement('a');
+  step.className = 'qg-step';
+  step.href = s.href;
+  step.style.textDecoration = 'none';
+  step.style.color = 'inherit';
+  if (s.handoff) {
+    step.addEventListener('click', () => sessionStorage.setItem('shelfy_open_create', s.handoff));
+  }
+  step.innerHTML =
+    '<span class="qg-shot"><img src="/quick-guide-screenshots/' + s.img + '" alt="" loading="lazy"></span>' +
+    '<span class="qg-body">' +
+      '<span class="qg-n">' + s.n + '</span>' +
+      '<span class="qg-t">' + s.t + '</span>' +
+      '<span class="qg-d">' + s.d + '</span>' +
+      (s.note ? '<span class="qg-note">' + s.note + '</span>' : '') +
+      '<span class="qg-go">' + s.go +
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>' +
+      '</span>' +
+    '</span>';
+  document.getElementById('steps-' + s.group).appendChild(step);
+});
+</script>
+
+<!-- Feedback Widget -->
+<div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
+  <span>Feedback</span>
+</div>
+
+<div class="feedback-modal" id="feedbackModal">
+  <div class="feedback-content">
+    <button class="feedback-close" onclick="closeFeedback()">×</button>
+
+    <div class="feedback-step" id="step1">
+      <h3>How would you rate your experience?</h3>
+      <div class="emoji-rating">
+        <div class="emoji" onclick="selectRating(1)" data-rating="1"><div class="emoji-face">😡</div><div class="emoji-label">Hate</div></div>
+        <div class="emoji" onclick="selectRating(2)" data-rating="2"><div class="emoji-face">😟</div><div class="emoji-label">Bad</div></div>
+        <div class="emoji" onclick="selectRating(3)" data-rating="3"><div class="emoji-face">😐</div><div class="emoji-label">Okay</div></div>
+        <div class="emoji" onclick="selectRating(4)" data-rating="4"><div class="emoji-face">😊</div><div class="emoji-label">Good</div></div>
+        <div class="emoji" onclick="selectRating(5)" data-rating="5"><div class="emoji-face">🤩</div><div class="emoji-label">Love</div></div>
+      </div>
+      <button class="btn-feedback-next" onclick="nextStep()">Next</button>
+    </div>
+
+    <div class="feedback-step" id="step2" style="display: none;">
+      <h3>Tell us about your experience...</h3>
+      <textarea id="feedbackText" placeholder="Your feedback helps us improve..."></textarea>
+      <button class="btn-feedback-next" onclick="submitFeedback()">Submit</button>
+    </div>
+
+    <div class="feedback-step" id="step3" style="display: none;">
+      <h3>Thank you!</h3>
+      <p style="color: var(--text-muted); margin: 20px 0;">Your feedback has been submitted.</p>
+      <button class="btn-feedback-next" onclick="closeFeedback()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+let feedbackRating = 0;
+
+if (typeof window.supabaseClient !== 'undefined') {
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) document.getElementById('feedbackButton').classList.add('show');
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  setTimeout(() => {
+    currentStep = 1;
+    feedbackRating = 0;
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('feedbackText').value = '';
+    document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  }, 300);
+}
+
+function nextStep() {
+  if (feedbackRating === 0) {
+    alert('Please select a rating');
+    return;
+  }
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  currentStep = 2;
+}
+
+function selectRating(rating) {
+  feedbackRating = rating;
+  document.querySelectorAll('.emoji').forEach(e => e.classList.remove('selected'));
+  document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value;
+
+  if (!text.trim()) {
+    alert('Please provide some feedback');
+    return;
+  }
+
+  if (typeof window.supabaseClient !== 'undefined') {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+
+      if (session) {
+        const { data, error } = await window.supabaseClient
+          .from('feedback')
+          .insert({
+            score: feedbackRating,
+            comment: text,
+            user_id: session.user.id
+          })
+          .select();
+
+        if (error) {
+          console.error('Error saving feedback:', error);
+          alert('Failed to submit feedback. Please try again.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  }
+
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('step3').style.display = 'block';
+  currentStep = 3;
+}
+</script>
+
+</body>
+</html>
