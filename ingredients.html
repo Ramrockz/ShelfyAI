@@ -488,6 +488,22 @@
               color: var(--accent-deep, var(--accent)); font-size: 13px; font-weight: 700; cursor: pointer; }
   .ic-again:disabled { color: var(--text-ghost, #cbd5e1); cursor: default; }
 
+  /* New-item form, mobile: full-screen like recipes.html's "New product"
+     builder (.recipe-overlay/.recipe-builder) instead of a small centered
+     card floating over a dimmed background. !important is required to beat
+     #manualModal .ic-modal's own inline max-width/max-height style attr. */
+  @media (max-width: 768px) {
+    #manualModal { align-items: stretch !important; }
+    #manualModal .ic-modal {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+    }
+  }
+
   #dropZone img {
     filter: brightness(0) saturate(100%) opacity(0.5);
   }
