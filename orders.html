@@ -3758,8 +3758,14 @@ function openShotSheet() {
 function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
 function closeRecipeMappingModal() {
-  // If this review came from a scan the user never actually saved, give
-  // the scan back rather than let it silently count against them.
+  // If this review came from a scan the user never actually saved, make sure
+  // that's what they want before discarding it -- refundScan() below still
+  // gives the scan count back either way, but getting this data again means
+  // spending another one.
+  const pending = window.ShelfyImportModal && window.ShelfyImportModal.hasPending();
+  if (pending && !confirm("Discard this scan? You'll need to scan it again to get this data back, which uses another AI scan.")) {
+    return;
+  }
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('recipeMappingModal').classList.remove('active');
   closeMatchSheet();

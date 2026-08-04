@@ -55,6 +55,12 @@
 
   function confirmScanUsed() { lastScanEntity = null; }
 
+  // Lets a page ask "would closing right now discard an unconfirmed scan?"
+  // before it actually closes, so it can warn the user first instead of
+  // silently refunding behind their back (refundScan() still runs either
+  // way, but re-doing the scan later costs another one).
+  function hasPending() { return !!lastScanEntity; }
+
   // A scan taken on a *different* page (operations.html's dashboard, which
   // hands the draft off via sessionStorage instead of prefilling its own
   // modal for the non-recipe-in-progress case) has no way to have set
@@ -568,5 +574,5 @@
     (mode === 'camera' ? quickCameraInput : quickFileInput).click();
   }
 
-  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending };
+  window.ShelfyImportModal = { open: open, close: close, quickStart: quickStart, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending, hasPending: hasPending };
 })();

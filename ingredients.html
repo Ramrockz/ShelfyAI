@@ -1225,7 +1225,12 @@
               </div>
             </div>
             <div class="ic-field">
-              <label class="ic-label" for="ing_source_url">Source URL</label>
+              <label class="ic-label" for="ing_source_url" style="display:flex;align-items:center;gap:6px;">
+                Source URL
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;opacity:0.6;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" onclick="const url = document.getElementById('ing_source_url').value.trim(); if(url) window.open(url, '_blank')">
+                  <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
+                </svg>
+              </label>
               <input class="ic-input" type="url" id="ing_source_url" placeholder="https://supplier.com/product" oninput="onIngredientEdit()">
             </div>
             <div class="ic-field">
@@ -1729,7 +1734,9 @@ function applyUrlScanToManualModal(data) {
   if (data.sku) document.getElementById('ing_sku').value = data.sku;
   if (data.estimated_delivery) document.getElementById('ing_estimated_delivery').value = data.estimated_delivery;
   if (data.product_category) selectIngCategory(data.product_category);
-  if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+  // The real page URL (not the vendor name) so "visit" links elsewhere can
+  // jump back to the exact page this was scanned from.
+  if (data.source_url) document.getElementById('ing_source_url').value = data.source_url;
 
   const container = document.getElementById('customAttributes');
   if (data.color) {
@@ -1794,9 +1801,20 @@ function closeMethodModal() {
   window.ShelfyCreateModal.close();
 }
 
-function closeManualModal() {
-  // If this form was pre-filled from a scan the user never actually saved,
-  // give the scan back rather than let it silently count against them.
+async function closeManualModal() {
+  // If this form was pre-filled from a scan that hasn't been saved yet,
+  // make sure that's what the user actually wants before discarding it --
+  // refundScan() below still gives the scan count back either way, but
+  // getting this data again means spending another one.
+  const pending = (window.ShelfyImportModal && window.ShelfyImportModal.hasPending())
+    || (window.ShelfyUrlImportModal && window.ShelfyUrlImportModal.hasPending());
+  if (pending) {
+    const discard = await showConfirm(
+      "You'll need to scan it again to get this data back, which uses another AI scan.",
+      'Discard this scan?', 'Discard', true
+    );
+    if (!discard) return;
+  }
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   if (window.ShelfyUrlImportModal) window.ShelfyUrlImportModal.refundScan();
   document.getElementById('manualModal').classList.remove('active');

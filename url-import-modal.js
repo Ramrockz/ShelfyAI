@@ -34,6 +34,12 @@
 
   function confirmScanUsed() { lastScanUsed = false; }
 
+  // Lets a page ask "would closing right now discard an unconfirmed scan?"
+  // before it actually closes, so it can warn the user first instead of
+  // silently refunding behind their back (refundScan() still runs either
+  // way, but re-doing the scan later costs another one).
+  function hasPending() { return lastScanUsed; }
+
   // A scan taken on a *different* page (operations.html's dashboard, which
   // hands the draft off via sessionStorage instead of prefilling its own
   // modal -- see startIngredientUrlImport() there) has no way to have set
@@ -295,6 +301,10 @@
 
       stopFakeProgress();
       var data = result.data;
+      // The extracted data has no idea what page it came from -- keep the
+      // actual URL the user pasted so the resulting form can link back to
+      // it (to double-check details or reorder from the same page fast).
+      data.source_url = link().href;
       var cb = currentOpts.onImported;
       lastScanUsed = true;
       close();
@@ -345,5 +355,5 @@
     sheetEl.style.transition = '';
   }
 
-  window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending };
+  window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending, hasPending: hasPending };
 })();
