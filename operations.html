@@ -3466,7 +3466,6 @@ function startIngredientUrlImport() {
         <span class="rcm-title">Confirm order items</span>
         <span class="rcm-sub" id="rcmSub"></span>
       </span>
-      <button type="button" class="rcm-act" onclick="addMappedItemRow()">Add</button>
     </div>
 
     <div class="rcm-scroll">
@@ -3496,29 +3495,15 @@ function startIngredientUrlImport() {
           <span class="rcm-frow-key">Date</span>
           <span class="rcm-frow-val"><input type="date" id="mapped_date"></span>
         </div>
-        <div class="rcm-frow" id="rcmChannelRow" style="display:none">
-          <span class="rcm-frow-key">Channel</span>
-          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmChannelVal"></span></span>
-        </div>
-        <div class="rcm-frow">
-          <span class="rcm-frow-key">Total read</span>
-          <span class="rcm-frow-val"><span class="rcm-frow-main" id="rcmTotalVal"></span></span>
-        </div>
       </div>
       <p id="mapped_customer_error" style="display:none;color:var(--danger);font-size:12px;margin:6px 16px 0;">Please enter a customer name</p>
 
       <div class="rcm-sec-head">
         <span class="rcm-sec-title">Items</span>
         <span class="rcm-sec-note" id="rcmItemsNote"></span>
+        <button type="button" class="rcm-act" onclick="addMappedItemRow()">Add</button>
       </div>
       <div class="rcm-list" id="mappedItemsList"></div>
-      <div class="rcm-note">Text matching can be wrong — check any item marked in amber before saving.</div>
-
-      <div class="rcm-sec-head">
-        <span class="rcm-sec-title">Inventory after saving</span>
-        <span class="rcm-sec-note" id="rcmImpNote"></span>
-      </div>
-      <div class="rcm-imp" id="rcmImpact"></div>
     </div>
 
     <div class="rcm-foot">
@@ -3534,7 +3519,7 @@ function startIngredientUrlImport() {
         <span class="rcm-tally-r" id="rcmTallyR">$0.00</span>
       </div>
       <div id="rcmTallyWarn"></div>
-      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Save order</button>
+      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Save</button>
       <button type="button" class="rcm-ghost" onclick="closeRecipeMappingModal()">Discard this scan</button>
     </div>
   </div>
@@ -3967,7 +3952,6 @@ let mappedUpdateStock = true;
 let mappedEditingIndex = null;
 let pendingReceiptUrl = null;
 let _rcmMatchToken = 0;
-let _rcmImpactToken = 0;
 let _rcmLastOptions = [];
 
 function calculateSimilarity(str1, str2) {
@@ -4149,9 +4133,7 @@ async function showRecipeMappingModal(orderData) {
 function renderRcmAll() {
   renderRcmHead();
   renderRcmSrc();
-  renderRcmHeaderFields();
   renderRcmLines();
-  renderRcmImpact();
   renderRcmFoot();
 }
 
@@ -4170,22 +4152,6 @@ function renderRcmSrc() {
   document.getElementById('rcmSrcName').textContent = _rcmFileLabel(pendingReceiptUrl);
   const n = mappedRecipes.length;
   document.getElementById('rcmSrcMeta').textContent = `${n} item${n === 1 ? '' : 's'} read${mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : ''}`;
-}
-
-function renderRcmHeaderFields() {
-  const vendor = mappedOrderData?.vendor;
-  const channelRow = document.getElementById('rcmChannelRow');
-  if (vendor) {
-    channelRow.style.display = '';
-    document.getElementById('rcmChannelVal').textContent = vendor;
-  } else {
-    channelRow.style.display = 'none';
-  }
-  const stated = mappedOrderData?.revenue;
-  const totalEl = document.getElementById('rcmTotalVal');
-  const hasTotal = stated !== undefined && stated !== null && stated !== '';
-  totalEl.textContent = hasTotal ? `$${Number(stated).toFixed(2)}` : 'No total read';
-  totalEl.classList.toggle('empty', !hasTotal);
 }
 
 function _rcmLineState(m) {
@@ -4241,62 +4207,9 @@ function renderRcmLines() {
     : '<div class="rcm-line"><span class="rcm-line-main"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></span></div>';
 }
 
-async function computeRcmImpact() {
-  const use = {};
-  mappedRecipes.forEach(m => {
-    if (!m.selectedRecipe || !m.selectedRecipe.components) return;
-    m.selectedRecipe.components.forEach(comp => {
-      const iid = comp.ingredient_id || comp.id;
-      if (!iid) return;
-      const qty = (parseFloat(comp.quantity) || 0) * m.quantity;
-      use[iid] = Math.round(((use[iid] || 0) + qty) * 100) / 100;
-    });
-  });
-  const ids = Object.keys(use);
-  if (!ids.length) return { use, ingredients: {} };
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) return { use, ingredients: {} };
-  const { data: ingredients } = await supabaseClient.from('ingredients').select('id, name, unit, quantity').eq('profile_id', user.id).in('id', ids);
-  const map = {};
-  (ingredients || []).forEach(i => { map[i.id] = i; });
-  return { use, ingredients: map };
-}
-
-async function renderRcmImpact() {
-  const token = ++_rcmImpactToken;
-  const { use, ingredients } = await computeRcmImpact();
-  if (token !== _rcmImpactToken) return;
-  const ids = Object.keys(use);
-  const impEl = document.getElementById('rcmImpact');
-  impEl.dataset.off = mappedUpdateStock ? '0' : '1';
-  document.getElementById('rcmImpNote').textContent = !ids.length ? ''
-    : mappedUpdateStock ? `${ids.length} item${ids.length === 1 ? '' : 's'} deducted on save`
-    : 'not being deducted';
-
-  if (!ids.length) {
-    impEl.innerHTML = '<div class="rcm-imp-row"><span class="rcm-imp-name">Nothing matched yet</span></div>';
-    return;
-  }
-  impEl.innerHTML = ids.map(iid => {
-    const ing = ingredients[iid];
-    if (!ing) return '';
-    const current = parseFloat(ing.quantity) || 0;
-    const after = Math.round((current - use[iid]) * 100) / 100;
-    const short = after < 0;
-    const unit = ing.unit ? ' ' + _rcmEsc(ing.unit) : '';
-    return `<div class="rcm-imp-row">
-        <span class="rcm-imp-name">${_rcmEsc(ing.name)}</span>
-        <span class="rcm-imp-val"${short ? ' data-state="short"' : ''}>${mappedUpdateStock
-          ? `${current} → ${after}${unit}${short ? ' · short' : ''}`
-          : `${current}${unit} · unchanged`}</span>
-      </div>`;
-  }).join('');
-}
-
 function toggleMappedUpdateStock() {
   mappedUpdateStock = !mappedUpdateStock;
   renderRcmFoot();
-  renderRcmImpact();
 }
 
 function renderRcmFoot() {
@@ -4335,17 +4248,17 @@ function renderRcmFoot() {
   btn.disabled = !mappedRecipes.length || lookCount > 0;
   btn.textContent = lookCount
     ? `Confirm ${lookCount} item${lookCount > 1 ? 's' : ''} to save`
-    : mappedUpdateStock ? `Save order · $${sum.toFixed(2)}` : 'Save without updating stock';
+    : 'Save';
 }
 
 function bumpMappedQty(index, delta) {
   mappedRecipes[index].quantity = Math.max(1, mappedRecipes[index].quantity + delta);
-  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  renderRcmLines(); renderRcmFoot();
 }
 
 function removeMappedItem(index) {
   mappedRecipes.splice(index, 1);
-  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  renderRcmLines(); renderRcmFoot();
 }
 
 function addMappedItemRow() {
@@ -4353,7 +4266,7 @@ function addMappedItemRow() {
     itemData: { name: 'Added by you', quantity: 1, price: 0, attributes: {} },
     selectedRecipe: null, matches: [], quantity: 1, score: 0, confirmed: false
   });
-  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  renderRcmLines(); renderRcmFoot();
   openMatchSheet(mappedRecipes.length - 1);
 }
 
@@ -4443,7 +4356,7 @@ function pickMatch(i) {
   m.confirmed = true;
   if (!m.itemData.price) m.itemData.price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
   closeMatchSheet();
-  renderRcmLines(); renderRcmImpact(); renderRcmFoot();
+  renderRcmLines(); renderRcmFoot();
 }
 
 function createProductFromLine() {
