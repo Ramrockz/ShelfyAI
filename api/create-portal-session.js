@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/settings.html`
+      return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`
     });
 
     return res.status(200).json({ url: session.url });

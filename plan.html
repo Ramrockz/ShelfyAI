@@ -154,9 +154,50 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .pl-go:active { background: var(--accent-ink, var(--accent)); }
 .pl-go[disabled] { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); }
 .pl-go.quiet { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); }
+
+/* past-due banner -- a renewal payment actually failed (invoice.payment_failed
+   in api/stripe-webhook.js), shown above the plan cards until fixed. */
+.pl-pastdue { margin: 16px 16px 0; padding: 13px 14px; border-radius: 14px; text-align: left;
+              background: #fef2f2; border: 1px solid rgba(220,38,38,.22); }
+.pl-pastdue-h { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--danger); }
+.pl-pastdue-p { font-size: 12.5px; line-height: 1.5; color: var(--danger); margin: 6px 0 10px; opacity: .85; }
+.pl-pastdue button { height: 36px; padding: 0 14px; border-radius: 10px; border: none;
+                      background: var(--danger); color: #fff; font-size: 13px; font-weight: 800; }
+
+/* checkout-return overlay (adapted from the 34c reference set) -- shown when
+   Stripe's success_url lands here with ?session_id=..., replaced by the
+   normal plan view once the user dismisses it. */
+.co-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center;
+              background: var(--bg-main); }
+.co-card { width: 100%; max-width: 420px; padding: 34px 26px 30px; text-align: center; }
+.co-mark { width: 60px; height: 60px; margin: 0 auto 20px; border-radius: 17px;
+           display: flex; align-items: center; justify-content: center; }
+.co-mark[data-tone="good"] { background: #ecfdf5; color: var(--success); }
+.co-mark[data-tone="warn"] { background: #fffbeb; color: var(--warning); }
+.co-h { font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; margin: 0; }
+.co-p { font-size: 14px; line-height: 1.55; color: var(--text-muted); margin: 9px 0 0; }
+.co-rec { margin: 20px 0 0; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+          border-radius: 14px; overflow: hidden; text-align: left; }
+.co-rec-row { display: flex; align-items: baseline; gap: 12px; padding: 11px 13px; font-size: 13px; color: var(--text-muted); }
+.co-rec-row + .co-rec-row { border-top: 1px solid var(--border-hair, var(--border)); }
+.co-rec-v { margin-left: auto; font-weight: 800; color: var(--text-main); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.co-line { display: flex; align-items: flex-start; gap: 9px; margin: 14px 0 0; padding: 10px 12px;
+           border-radius: 12px; font-size: 12.5px; line-height: 1.45; text-align: left; background: var(--bg-inner); color: var(--text-muted); }
+.co-line svg { flex-shrink: 0; margin-top: 1px; }
+.co-line b { font-weight: 800; }
+.co-spin { animation: co-spin 1.1s linear infinite; transform-origin: 50% 50%; }
+@keyframes co-spin { to { transform: rotate(360deg); } }
+.co-acts { margin-top: 22px; display: flex; flex-direction: column; gap: 8px; }
+.co-cta { width: 100%; height: 50px; border: none; border-radius: 13px; background: var(--accent-deep, var(--accent));
+          color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.co-alt { width: 100%; height: 46px; border-radius: 12px; border: 1px solid var(--border);
+          background: var(--bg-panel); font-size: 14px; font-weight: 700; color: var(--text-main); }
+.co-ghost { width: 100%; height: 42px; background: none; border: none; font-size: 13.5px; font-weight: 600; color: var(--text-muted); }
 </style>
 </head>
 <body>
+
+<div class="co-overlay" id="coOverlay"><div class="co-card" id="coCard"></div></div>
 
 <div class="pl-wrap">
   <div class="pl-head">
@@ -170,6 +211,7 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
   </div>
 
   <div class="pl-scroll">
+    <div id="pastDue"></div>
     <div class="pl-cycle" id="cycle"></div>
     <div class="pl-plans" id="plans"></div>
 
@@ -220,6 +262,11 @@ let tier = 'free', picked = 'starter', cycle = 'month';
 let USE = { scansUsed:0, bonusLeft:0, storageUsedMB:0, stores:0, resetsOn:'' };
 let SCAN_PACK = { configured:false, scanCount:50, priceFormatted:null };
 let hasStripeCustomer = false;
+// A renewal invoice actually failed (api/stripe-webhook.js's
+// handleFailedPayment, invoice.payment_failed) -- the tier check above
+// already reverted `tier` to 'free' for this, but the user has no idea why
+// unless this is shown. { tier } of the plan that lapsed, or null.
+let pastDue = null;
 
 const $ = id => document.getElementById(id);
 const plan = k => PLANS.find(p => p.key === k);
@@ -298,6 +345,19 @@ function renderUse() {
   $('packBtn').disabled = !SCAN_PACK.configured;
 }
 
+function renderPastDue() {
+  const el = $('pastDue');
+  if (!pastDue) { el.innerHTML = ''; return; }
+  const label = plan(pastDue.tier)?.label || 'paid';
+  el.innerHTML = `
+    <div class="pl-pastdue">
+      <div class="pl-pastdue-h">${warn} Your last payment failed</div>
+      <div class="pl-pastdue-p">We couldn't renew your <b>${label}</b> plan, so you're on Free until this is
+        fixed. Nothing you've saved was lost.</div>
+      <button onclick="openBillingPortal()">Update payment method</button>
+    </div>`;
+}
+
 function renderDiff() {
   const p = plan(picked), now = plan(tier);
   const el = $('diff');
@@ -338,7 +398,7 @@ function render() {
   const p = plan(tier);
   $('nowTag').textContent = p.label;
   $('nowTag').dataset.paid = p.mo ? '1' : '0';
-  renderCycle(); renderPlans(); renderUse(); renderDiff(); renderFoot();
+  renderPastDue(); renderCycle(); renderPlans(); renderUse(); renderDiff(); renderFoot();
 }
 function setCycle(c) { cycle = c; render(); }
 function pick(k) { picked = k; render(); }
@@ -462,6 +522,7 @@ async function loadEverything() {
     .maybeSingle();
 
   hasStripeCustomer = !!subscription?.stripe_customer_id;
+  pastDue = subscription && subscription.status === 'past_due' ? { tier: subscription.tier } : null;
   tier = 'free';
   if (subscription && subscription.status === 'active') {
     const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
@@ -499,12 +560,144 @@ async function loadEverything() {
   renderUse();
 }
 
+// ---------- Checkout return screen ----------
+// Stripe's success_url lands back here with ?session_id=... (both the
+// subscription and scan-pack flows in api/create-checkout-session.js use
+// the same shape) -- adapted from the 34c reference screens, with real
+// data from api/checkout-session-status instead of placeholder numbers.
+const CO_ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><polyline points="4 12.6 9.2 17.6 20 6.6"/></svg>';
+const CO_ICON_PACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><path d="M13.4 2.5L4.6 13.4h5.4l-1.4 8.1 8.8-10.9h-5.4z"/></svg>';
+const CO_ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" class="co-spin"><path d="M20.5 12a8.5 8.5 0 11-2.6-6.1"/><polyline points="20.7 4.4 20.7 9.4 15.7 9.4"/></svg>';
+
+let coStatus = null, coAttempts = 0, coBonusBaseline = 0;
+
+function coShow(html) { $('coCard').innerHTML = html; $('coOverlay').style.display = 'flex'; }
+function coDismiss() {
+  $('coOverlay').style.display = 'none';
+  window.history.replaceState({}, document.title, '/plan');
+}
+function coReceiptBtn(url) {
+  return url ? `<button class="co-alt" onclick="window.open('${url}','_blank')">View receipt</button>` : '';
+}
+
+function coSubscriptionHTML(s) {
+  const p = plan(s.tier) || plan(picked);
+  const next = s.nextChargeDate
+    ? new Date(s.nextChargeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—';
+  return `
+    <div class="co-mark" data-tone="good">${CO_ICON_CHECK}</div>
+    <h1 class="co-h">You're on ${p.label}</h1>
+    <p class="co-p">${p.scans} scans a month, ${p.stores === Infinity ? 'unlimited' : p.stores} store${p.stores !== 1 ? 's' : ''}${p.key === 'pro' ? ' and priority support' : ''}.</p>
+    <div class="co-rec">
+      <div class="co-rec-row"><span>Plan</span><span class="co-rec-v">${p.label} · ${s.interval === 'year' ? 'yearly' : 'monthly'}</span></div>
+      <div class="co-rec-row"><span>Paid</span><span class="co-rec-v">${eur(s.amountTotal)}</span></div>
+      <div class="co-rec-row"><span>Next charge</span><span class="co-rec-v">${next}</span></div>
+    </div>
+    <div class="co-acts">
+      <button class="co-cta" onclick="window.location.href='/ingredients'">Start scanning</button>
+      ${coReceiptBtn(s.receiptUrl)}
+      <button class="co-ghost" onclick="coDismiss()">Continue</button>
+    </div>`;
+}
+
+function coScanPackHTML(s) {
+  return `
+    <div class="co-mark" data-tone="good">${CO_ICON_PACK}</div>
+    <h1 class="co-h">${s.scanCount} scans added</h1>
+    <p class="co-p">Bought scans don't expire and are used after your monthly ones.</p>
+    <div class="co-rec">
+      <div class="co-rec-row"><span>Added</span><span class="co-rec-v">${s.scanCount} scans</span></div>
+      <div class="co-rec-row"><span>Paid</span><span class="co-rec-v">${eur(s.amountTotal)}</span></div>
+      <div class="co-rec-row"><span>Available now</span><span class="co-rec-v">${USE.bonusLeft} scans</span></div>
+    </div>
+    <div class="co-acts">
+      <button class="co-cta" onclick="window.location.href='/ingredients'">Start scanning</button>
+      ${coReceiptBtn(s.receiptUrl)}
+      <button class="co-ghost" onclick="coDismiss()">Continue</button>
+    </div>`;
+}
+
+function coPendingHTML() {
+  return `
+    <div class="co-mark" data-tone="warn">${CO_ICON_CLOCK}</div>
+    <h1 class="co-h">Payment went through</h1>
+    <p class="co-p">Your account is still being updated. This usually takes a few seconds.</p>
+    <div class="co-line"><span><b>Don't pay again.</b> This unlocks automatically once it's synced.</span></div>
+    <div class="co-acts">
+      <button class="co-cta" onclick="coRecheck()">Check again</button>
+      <button class="co-alt" onclick="coDismiss()">Continue and check later</button>
+      <button class="co-ghost" onclick="window.location.href='mailto:support@shelfyai.com?subject=Payment%20not%20reflected'">Contact support</button>
+    </div>`;
+}
+
+async function coRecheck() { coAttempts = 0; coShow(coPendingHTML()); await coPoll(); }
+
+// Whether Supabase already reflects what Stripe confirmed was paid. Absolute
+// for subscriptions (tier/status), so there's no race window either way.
+// Scan packs are a running counter, so this can only detect growth *from
+// coBonusBaseline* -- if the webhook had already landed before that baseline
+// was captured (rare, but possible on a slow page load), this keeps polling
+// until it times out into the "still updating, check back" fallback instead
+// of wrongly claiming success. Good enough without a session-keyed ledger.
+async function coSynced() {
+  const { data: { user } } = await window.supabaseClient.auth.getUser();
+  if (!user) return false;
+  if (coStatus.mode === 'subscription') {
+    const { data: sub } = await window.supabaseClient
+      .from('subscriptions').select('tier, status').eq('profile_id', user.id).maybeSingle();
+    return !!sub && sub.tier === coStatus.tier && sub.status === 'active';
+  }
+  const { data: settings } = await window.supabaseClient
+    .from('user_settings').select('bonus_scans').eq('user_id', user.id).single();
+  const bonusNow = settings?.bonus_scans || 0;
+  if (bonusNow >= coBonusBaseline + coStatus.scanCount) { USE.bonusLeft = bonusNow; return true; }
+  return false;
+}
+
+async function coPoll() {
+  coAttempts++;
+  if (await coSynced()) {
+    await loadEverything(); // refresh the page underneath so it isn't stale once dismissed
+    coShow(coStatus.mode === 'subscription' ? coSubscriptionHTML(coStatus) : coScanPackHTML(coStatus));
+    return;
+  }
+  if (coAttempts < 15) { setTimeout(coPoll, 1000); return; }
+  coShow(coPendingHTML());
+}
+
+async function resolveCheckoutReturn(sessionId) {
+  coShow(coPendingHTML());
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) { coDismiss(); return; }
+    coBonusBaseline = USE.bonusLeft; // loadEverything() already ran -- freshest pre-poll read we have
+    const res = await fetch('/api/checkout-session-status?session_id=' + encodeURIComponent(sessionId), {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    const data = await res.json();
+    if (data.error || !data.paid) { coDismiss(); return; }
+    coStatus = data;
+    coAttempts = 0;
+    await coPoll();
+  } catch (e) {
+    console.error('Error resolving checkout return:', e);
+    coDismiss();
+  }
+}
+
 render();
 // auth.js doesn't fire a ready event -- poll briefly instead, same pattern
 // pricing.html's updateAuthUI() already uses.
 let _clientRetries = 0;
 (function waitForClient() {
-  if (typeof window.supabaseClient !== 'undefined') { loadEverything(); return; }
+  if (typeof window.supabaseClient !== 'undefined') {
+    loadEverything().then(() => {
+      const returnSessionId = new URLSearchParams(window.location.search).get('session_id');
+      if (returnSessionId) resolveCheckoutReturn(returnSessionId);
+    });
+    return;
+  }
   if (++_clientRetries > 30) { console.warn('Supabase client never loaded'); return; }
   setTimeout(waitForClient, 100);
 })();

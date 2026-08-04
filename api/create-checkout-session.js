@@ -72,8 +72,8 @@ module.exports = async (req, res) => {
         mode: 'payment',
         payment_method_types: ['card'],
         line_items: [{ price: scanPackPriceId, quantity: 1 }],
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/settings.html?scan_pack=success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/pricing.html`,
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`,
         metadata: { supabase_user_id: user.id, type: 'scan_pack' }
       });
 
@@ -149,8 +149,8 @@ module.exports = async (req, res) => {
       tax_id_collection: {
         enabled: true
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/settings.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/pricing.html`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`,
       subscription_data: {
         metadata: {
           tier,

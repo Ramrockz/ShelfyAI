@@ -2223,61 +2223,13 @@ window.openCustomerPortal = async function() {
   }
 }
 
-// Check for successful checkout
+// Checkout now returns to plan.html's real result screen instead of here --
+// this only catches a Checkout Session created before that change (sessions
+// stay completable for up to 24h), so it isn't left with nothing to show.
 const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.get('session_id');
-
 if (sessionId) {
-  console.log('Checkout session detected, polling for subscription update...');
-  // Poll for subscription update (webhook might take a moment)
-  let attempts = 0;
-  const checkSubscription = async () => {
-    attempts++;
-    console.log(`Checking subscription status (attempt ${attempts})...`);
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-
-    // Query subscriptions table (uses profile_id)
-    const { data: subscription, error: subError } = await supabaseClient
-      .from('subscriptions')
-      .select('tier, status')
-      .eq('profile_id', user.id)
-      .maybeSingle(); // Use maybeSingle to avoid errors if no rows
-
-    if (subError && subError.code !== 'PGRST116') {
-      console.error('Error checking subscription:', subError);
-    }
-
-    console.log('Current subscription in database:', subscription?.tier, subscription?.status);
-
-    if (subscription && subscription.tier !== 'free' && subscription.status === 'active') {
-      // Subscription updated successfully
-      console.log('Subscription update confirmed! New tier:', subscription.tier);
-      
-      // Also update user_settings.tier (uses user_id, not profile_id)
-      await supabaseClient
-        .from('user_settings')
-        .update({ tier: subscription.tier })
-        .eq('user_id', user.id);
-      
-      alert('Subscription successful! Welcome to your new plan.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await loadSubscriptionInfo();
-      await loadSettings();
-    } else if (attempts < 15) {
-      // Retry after 1 second (max 15 attempts = 15 seconds)
-      setTimeout(checkSubscription, 1000);
-    } else {
-      // Fallback: reload anyway and show message
-      console.warn('Subscription update not detected after 15 seconds');
-      alert('Subscription processing... Please refresh the page in a moment if your plan doesn\'t update.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await loadSubscriptionInfo();
-      await loadSettings();
-    }
-  };
-  
-  setTimeout(checkSubscription, 500);
+  window.location.replace('/plan.html?session_id=' + encodeURIComponent(sessionId));
 }
 
 // Load subscription info on page load
