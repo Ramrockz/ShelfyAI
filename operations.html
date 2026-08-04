@@ -4096,9 +4096,15 @@ const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
 function _rcmParseDate(v) {
-  if (!v) return '';
+  const today = new Date().toISOString().split('T')[0];
+  if (!v) return today;
   const d = new Date(v);
-  if (isNaN(d.getTime())) return '';
+  // A scanned date with no real year (e.g. AgentQL returning "Jul 1" off a
+  // receipt) still "parses" -- JavaScript silently defaults it to 2001
+  // instead of erroring, which then showed up as a bogus "July 2001" group
+  // in the order list. Only trust a parse that lands in a plausible range,
+  // same guard expenses.html's own scanned-date parsing already uses.
+  if (isNaN(d.getTime()) || d.getFullYear() < 2015 || d.getFullYear() > new Date().getFullYear() + 1) return today;
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

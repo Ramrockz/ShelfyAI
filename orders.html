@@ -2064,7 +2064,6 @@ async function updateStatusFromList(orderId, newStatus) {
 }
 
 // ---------- Soft delete with undo (swipe) ----------
-let _pendingOrderDelete = null;
 
 // A native confirm() looks and behaves like a bare browser dialog, not part
 // of the app -- this is the same .modal-sheet bottom-sheet every other
@@ -2123,36 +2122,46 @@ async function reverseOrderInventory(saleId) {
   }
 }
 
-function softDeleteOrder(id) {
+// Deletes for real, right away -- the previous version waited 5s (or forced
+// it via a pagehide listener) before actually deleting, but a page refresh
+// or quick navigation within that window silently lost the delete entirely:
+// a fetch kicked off from a pagehide handler has no guarantee of completing
+// before the page is actually torn down. Undo now restores by re-inserting
+// the same row instead of cancelling a delete that hadn't happened yet, so
+// there's nothing left pending for a refresh to lose.
+async function softDeleteOrder(id) {
   const shell = document.querySelector(`.ord-row[data-id="${id}"]`)?.closest('.ord-swipe');
   const o = orders.find(x => x.id === id);
   if (!shell || !o) return;
 
-  clearTimeout(_pendingOrderDelete?.timer);
-  _pendingOrderDelete?.commit();               // a second delete commits the first, don't lose it
   shell.style.display = 'none';
+  orders = orders.filter(x => x.id !== id);
+  localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
 
-  const commit = async () => {
-    _pendingOrderDelete = null;
-    try {
-      const { error } = await offlineWrite('sales', 'delete', null, 'id', id);
-      if (error) throw error;
-      orders = orders.filter(x => x.id !== id);
-      localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
-    } catch (e) {
-      console.error('Error deleting order:', e);
-    }
-  };
-
-  _pendingOrderDelete = { id, shell, timer: setTimeout(commit, 5000), commit };
-  showUndoToast(`Deleted order from ${o.customer || 'customer'}`, () => {
-    clearTimeout(_pendingOrderDelete.timer);
+  try {
+    const { error } = await offlineWrite('sales', 'delete', null, 'id', id);
+    if (error) throw error;
+  } catch (e) {
+    console.error('Error deleting order:', e);
     shell.style.display = '';
-    _pendingOrderDelete = null;
+    orders.push(o);
+    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
+    return;
+  }
+
+  showUndoToast(`Deleted order from ${o.customer || 'customer'}`, async () => {
+    shell.style.display = '';
+    orders.push(o);
+    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
+    try {
+      const { error } = await supabaseClient.from('sales').insert([o]);
+      if (error) throw error;
+    } catch (e) {
+      console.error('Error restoring order:', e);
+      showOrderNotification('Failed to restore order — it may still be deleted', 'error');
+    }
   });
 }
-
-window.addEventListener('pagehide', () => _pendingOrderDelete?.commit());
 
 // ---------- Undo toast ----------
 let _toastTimer = null;
@@ -3454,9 +3463,15 @@ const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
 function _rcmParseDate(v) {
-  if (!v) return '';
+  const today = new Date().toISOString().split('T')[0];
+  if (!v) return today;
   const d = new Date(v);
-  if (isNaN(d.getTime())) return '';
+  // A scanned date with no real year (e.g. AgentQL returning "Jul 1" off a
+  // receipt) still "parses" -- JavaScript silently defaults it to 2001
+  // instead of erroring, which then showed up as a bogus "July 2001" group
+  // in the order list. Only trust a parse that lands in a plausible range,
+  // same guard expenses.html's own scanned-date parsing already uses.
+  if (isNaN(d.getTime()) || d.getFullYear() < 2015 || d.getFullYear() > new Date().getFullYear() + 1) return today;
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
