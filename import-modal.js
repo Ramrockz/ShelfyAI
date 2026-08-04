@@ -15,17 +15,14 @@
   var KINDS = {
     ingredient: {
       label: 'Item', dropLabel: 'Drop a supplier list or price sheet',
-      note: 'Reads each row as an item with its cost and unit. Existing items are matched, not duplicated.',
       manualLabel: 'item'
     },
     expense: {
       label: 'Expense', dropLabel: 'Drop a receipt or invoice',
-      note: 'Reads the vendor, date, total and each line. You confirm before anything is saved.',
       manualLabel: 'expense'
     },
     order: {
       label: 'Order', dropLabel: 'Drop an order screenshot',
-      note: 'Reads the customer, order number and each line, then matches lines to your products.',
       manualLabel: 'order'
     }
   };
@@ -146,7 +143,6 @@
         '<div class="aim-head">' +
           '<span class="aim-titles">' +
             '<span class="aim-title" id="aimTitle"></span>' +
-            '<span class="aim-sub" id="aimSub"></span>' +
           '</span>' +
           '<button type="button" class="aim-close" id="aimClose" aria-label="Close">' + ICON_X + '</button>' +
         '</div>' +
@@ -172,10 +168,8 @@
           '</div>' +
           '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
           '<div class="aim-quote" id="aimQuote"></div>' +
-          '<div class="aim-note" id="aimNote"></div>' +
           '<div class="aim-foot">' +
-            '<div class="aim-tally"><span class="aim-tally-l" id="aimTallyL"></span><span class="aim-tally-r" id="aimTallyR"></span></div>' +
-            '<button type="button" class="aim-cta" id="aimCta">Read this file</button>' +
+            '<button type="button" class="aim-cta" id="aimCta">Read</button>' +
             '<button type="button" class="aim-ghost" id="aimManual"></button>' +
           '</div>' +
         '</div>' +
@@ -333,8 +327,6 @@
   function renderHead() {
     var k = KINDS[currentEntity];
     document.getElementById('aimTitle').textContent = 'Import ' + k.label;
-    document.getElementById('aimSub').textContent = scansLeft() === null ? ''
-      : (scansLeft() + ' scan' + (scansLeft() === 1 ? '' : 's') + ' left this month');
   }
 
   function renderDrop() {
@@ -342,8 +334,7 @@
     document.getElementById('aimDropT').textContent = file ? 'Replace the file' : k.dropLabel;
     document.getElementById('aimDropS').textContent = file
       ? 'One file per import — this replaces the one below'
-      : 'One file at a time · JPG, PNG or PDF up to 10MB';
-    document.getElementById('aimNote').textContent = k.note;
+      : 'JPG, PNG or PDF up to 4MB';
   }
 
   function renderFile() {
@@ -354,7 +345,7 @@
       : file.sizeMB.toFixed(1) + ' MB · ' + cost() + ' scan';
     wrap.innerHTML =
       '<div class="aim-sec-head"><span class="aim-sec-title">File</span>' +
-        '<span class="aim-sec-note">' + (replaced ? 'replaced ' + esc(replaced) : 'one per import') + '</span></div>' +
+        (replaced ? '<span class="aim-sec-note">replaced ' + esc(replaced) + '</span>' : '') + '</div>' +
       '<div class="aim-card">' +
         '<div class="aim-f">' +
           '<span class="aim-f-thumb">' + (file.isPdf ? 'PDF' : 'IMG') + '</span>' +
@@ -379,7 +370,7 @@
       if (!cap) return '';
       return '<span class="aim-q-seg" style="flex:' + cap + '"><i style="width:' + Math.round((used / cap) * 100) + '%;background:' + color + '"></i></span>';
     }
-    var why = !need ? 'Nothing to read yet.'
+    var why = !need ? ''
       : short > 0 ? 'No scans left — buy a pack, or enter it by hand below.'
       : fromBonus ? 'Taken from your bought scans — your monthly allowance is spent.'
       : 'Taken from your ' + mL + ' monthly scan' + (mL === 1 ? '' : 's') + '. Bought scans stay untouched.';
@@ -419,14 +410,9 @@
 
   function renderFoot() {
     var k = KINDS[currentEntity];
-    document.getElementById('aimTallyL').textContent = processingFile ? 'Preparing photo…'
-      : !file ? 'No file yet'
-      : running ? 'Reading…'
-      : file.name;
-    document.getElementById('aimTallyR').textContent = file && !running && !processingFile ? cost() + ' scan' : '';
     var cta = document.getElementById('aimCta');
     cta.disabled = running || processingFile || !usable() || !affordable();
-    cta.textContent = running ? 'Reading…' : processingFile ? 'Preparing…' : !usable() ? 'Read this file' : !affordable() ? 'Not enough scans' : 'Read this file · ' + cost() + ' scan';
+    cta.textContent = running ? 'Reading…' : processingFile ? 'Preparing…' : !affordable() ? 'Not enough scans' : 'Read';
     document.getElementById('aimManual').textContent = 'Enter this ' + k.manualLabel + ' by hand instead';
   }
 
