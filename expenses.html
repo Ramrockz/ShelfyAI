@@ -2779,6 +2779,21 @@ async function deleteExpenseNow(id) {
   list.addEventListener('pointerup', end);
   list.addEventListener('pointercancel', end);
 
+  // A tap on the reveal buttons landing right after the swipe that exposed
+  // them doesn't reliably produce a native "click" on touch -- reordering
+  // the click handler below (see the comment there) wasn't enough on its
+  // own, because on some mobile browsers no click is synthesized at all for
+  // a tap that close (in time and screen position) to the preceding touch
+  // drag, not just a delayed/swallowed one. Firing the button ourselves on
+  // pointerup sidesteps native click synthesis entirely for this case.
+  list.addEventListener('pointerup', e => {
+    if (e.pointerType === 'mouse') return;
+    const actBtn = e.target.closest('.exp-act');
+    if (!actBtn) return;
+    e.preventDefault(); // suppresses the compatibility click this pointerup would otherwise still fire
+    actBtn.click();
+  }, true);
+
   // Tapping an open row closes it instead of navigating
   list.addEventListener('click', e => {
     // The reveal buttons must never be swallowed by the post-drag guard
