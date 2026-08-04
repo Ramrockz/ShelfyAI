@@ -37,6 +37,7 @@
   var running = false;
   var usage = null;      // window.ShelfyCreateModal.checkUsage() result, or null
   var errorMsg = null;
+  var errorCode = null; // one of ERR_CARDS's keys, or null for the old inline banner (429 etc.)
   var fakePct = 0, fakeTimer = null;
   var scanPackPrice = null;
   // Entity type of the most recent scan whose result hasn't been saved or
@@ -91,6 +92,32 @@
     });
   }
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  // Error-card icons (34b reference set)
+  var ICON_TRIANGLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><path d="M12 3.4L1.6 20.6h20.8z"/><line x1="12" y1="10" x2="12" y2="15.2"/><line x1="12" y1="17.7" x2="12" y2="17.8"/></svg>';
+  var ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="12" cy="12" r="9.2"/><polyline points="12 7 12 12 15.6 14"/></svg>';
+  var ICON_SEARCH_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="10.5" cy="10.5" r="6.6"/><line x1="15.4" y1="15.4" x2="21" y2="21"/><line x1="8" y1="10.5" x2="13" y2="10.5"/></svg>';
+  var ICON_CHECK_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="4 12.6 9.2 17.6 20 6.6"/></svg>';
+
+  // Real, distinguishable scan-step failures (api/extract-receipt.js's
+  // `code`) -- everything else (429 limit reached, a thrown Error with no
+  // code) keeps using the small inline .aim-error banner instead of this
+  // takeover. scan.no_match's headline/message depend on currentEntity, so
+  // those two are filled in by renderErrCard() instead of listed here.
+  var ERR_CARDS = {
+    'scan.timeout': { tone: 'warn', icon: ICON_CLOCK, headline: 'The read took too long',
+      message: 'It stopped answering.' },
+    'scan.malformed': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'The scan failed',
+      message: 'It came back broken. We’ve logged it.' },
+    'scan.no_match': { tone: 'warn', icon: ICON_SEARCH_X },
+    // 'unknown' is the server's own outer-catch code -- genuinely unsure
+    // whether the charge happened. 'client' covers everything that never
+    // reached that server code at all (not logged in, a 413, a raw network
+    // failure) -- those are all definitely pre-charge, same shape/headline,
+    // different confidence in the "keep" line (see renderErrCard()).
+    'unknown': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong', uncertain: true },
+    'client': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' }
+  };
 
   function monthlyLeft() { return usage ? Math.max(0, (usage.planLimit || 0) - (usage.used || 0)) : 0; }
   function bonusLeft()   { return usage ? (usage.bonusScans || 0) : 0; }
@@ -123,33 +150,36 @@
           '</span>' +
           '<button type="button" class="aim-close" id="aimClose" aria-label="Close">' + ICON_X + '</button>' +
         '</div>' +
-        '<div class="aim-drop" id="aimDrop">' +
-          '<span class="aim-drop-t" id="aimDropT"></span>' +
-          '<span class="aim-drop-s" id="aimDropS"></span>' +
-          '<div class="aim-drop-btns">' +
-            '<button type="button" id="aimTakePhoto">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M3 8.5A1.5 1.5 0 014.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>' +
-              'Take photo</button>' +
-            '<button type="button" id="aimChooseFile">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M14 3v5h5"/><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/></svg>' +
-              'Choose file</button>' +
+        '<div id="aimNormalBody">' +
+          '<div class="aim-drop" id="aimDrop">' +
+            '<span class="aim-drop-t" id="aimDropT"></span>' +
+            '<span class="aim-drop-s" id="aimDropS"></span>' +
+            '<div class="aim-drop-btns">' +
+              '<button type="button" id="aimTakePhoto">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M3 8.5A1.5 1.5 0 014.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>' +
+                'Take photo</button>' +
+              '<button type="button" id="aimChooseFile">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M14 3v5h5"/><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/></svg>' +
+                'Choose file</button>' +
+            '</div>' +
+            '<input type="file" id="aimFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display:none;">' +
+            '<input type="file" id="aimCameraInput" accept="image/*" capture="environment" style="display:none;">' +
           '</div>' +
-          '<input type="file" id="aimFileInput" accept="image/png,image/jpeg,image/jpg,.pdf" style="display:none;">' +
-          '<input type="file" id="aimCameraInput" accept="image/*" capture="environment" style="display:none;">' +
+          '<div id="aimFileWrap"></div>' +
+          '<div class="aim-error" id="aimError" style="display:none;">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+            '<span id="aimErrorText"></span>' +
+          '</div>' +
+          '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
+          '<div class="aim-quote" id="aimQuote"></div>' +
+          '<div class="aim-note" id="aimNote"></div>' +
+          '<div class="aim-foot">' +
+            '<div class="aim-tally"><span class="aim-tally-l" id="aimTallyL"></span><span class="aim-tally-r" id="aimTallyR"></span></div>' +
+            '<button type="button" class="aim-cta" id="aimCta">Read this file</button>' +
+            '<button type="button" class="aim-ghost" id="aimManual"></button>' +
+          '</div>' +
         '</div>' +
-        '<div id="aimFileWrap"></div>' +
-        '<div class="aim-error" id="aimError" style="display:none;">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-          '<span id="aimErrorText"></span>' +
-        '</div>' +
-        '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
-        '<div class="aim-quote" id="aimQuote"></div>' +
-        '<div class="aim-note" id="aimNote"></div>' +
-        '<div class="aim-foot">' +
-          '<div class="aim-tally"><span class="aim-tally-l" id="aimTallyL"></span><span class="aim-tally-r" id="aimTallyR"></span></div>' +
-          '<button type="button" class="aim-cta" id="aimCta">Read this file</button>' +
-          '<button type="button" class="aim-ghost" id="aimManual"></button>' +
-        '</div>' +
+        '<div id="aimErrCard" style="display:none;"></div>' +
       '</div>';
     document.body.appendChild(div);
     sheetEl = div;
@@ -197,6 +227,14 @@
       if (e.target.id === 'aimCta') { go(); return; }
       if (e.target.id === 'aimManual') { manual(); return; }
       if (e.target.id === 'aimBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
+      if (e.target.id === 'aimErrRetry') { go(); return; }
+      if (e.target.id === 'aimErrDifferentPhoto') { dismissErrCard(); clearFile(); return; }
+      if (e.target.id === 'aimErrPasteLink') { errToUrlImport(); return; }
+      if (e.target.id === 'aimErrManual') { manual(); return; }
+      if (e.target.id === 'aimErrBack') { dismissErrCard(); return; }
+      if (e.target.id === 'aimErrSupport') { window.location.href = 'mailto:support@shelfyai.com?subject=' + encodeURIComponent('ShelfyAI error ' + (errorCode || 'unknown')); return; }
+      if (e.target.id === 'aimErrClose') { close(); return; }
+      if (e.target.id === 'aimErrCopy') { copyErrCode(); return; }
     });
 
     return sheetEl;
@@ -253,7 +291,7 @@
   var processingFile = false;
 
   function setFile(raw) {
-    processingFile = true; errorMsg = null; render();
+    processingFile = true; errorMsg = null; errorCode = null; render();
     compressImage(raw).then(function (processed) {
       processingFile = false;
       var err = validate(processed);
@@ -263,7 +301,7 @@
       render();
     });
   }
-  function clearFile() { file = null; replaced = null; errorMsg = null; render(); }
+  function clearFile() { file = null; replaced = null; errorMsg = null; errorCode = null; render(); }
 
   // Desktop "Take photo" doesn't have a camera to open -- reuse the same
   // screen-capture pattern already established in expenses.html/orders.html
@@ -271,7 +309,7 @@
   // input is a no-op on desktop browsers anyway.
   function captureScreen() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      errorMsg = 'Screen capture is not supported in this browser'; render(); return;
+      errorMsg = 'Screen capture is not supported in this browser'; errorCode = null; render(); return;
     }
     navigator.mediaDevices.getDisplayMedia({ video: { mediaSource: 'screen' } }).then(function (stream) {
       var video = document.createElement('video');
@@ -287,6 +325,7 @@
       };
     }).catch(function (err) {
       errorMsg = err.name === 'NotAllowedError' ? 'Screenshot permission denied' : 'Failed to capture screenshot';
+      errorCode = null;
       render();
     });
   }
@@ -391,7 +430,99 @@
     document.getElementById('aimManual').textContent = 'Enter this ' + k.manualLabel + ' by hand instead';
   }
 
-  function render() { renderHead(); renderDrop(); renderFile(); renderError(); renderQuote(); renderFoot(); }
+  // Full card takeover for a real, distinguishable scan-step failure (see
+  // ERR_CARDS) -- everything else (limit reached etc.) stays on the small
+  // inline banner above, which already has its own good resolution path.
+  function renderErrCard() {
+    var card = ERR_CARDS[errorCode];
+    var el = document.getElementById('aimErrCard');
+    if (!card) return;
+    var k = KINDS[currentEntity];
+    var headline = card.headline, msg = card.message;
+    if (errorCode === 'scan.no_match') {
+      headline = 'No ' + k.manualLabel + ' found in that photo';
+      msg = 'No name or price found. Try a clearer photo, or enter it by hand.';
+    }
+    if (errorCode === 'unknown' || errorCode === 'client') msg = errorMsg || msg;
+    var scansLeftTxt = usage ? (' ' + scansLeft() + ' left this month.') : '';
+    var keepHtml = card.uncertain
+      ? '<div class="aim-err-keep" data-tone="warn">' + ICON_WARN + '<span><b>Can’t confirm</b> whether this used a scan.</span></div>'
+      : '<div class="aim-err-keep" data-tone="ok">' + ICON_CHECK_SM + '<span><b>No scan charged.</b>' + esc(scansLeftTxt) + '</span></div>';
+    var actsHtml;
+    if (errorCode === 'scan.no_match') {
+      // Only the ingredient context has a URL-import equivalent to cross-link to.
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="aimErrDifferentPhoto">Try a different photo</button>' +
+        (currentEntity === 'ingredient' ? '<button type="button" class="aim-err-alt" id="aimErrPasteLink">Paste a link instead</button>' : '') +
+        '<button type="button" class="aim-err-ghost" id="aimErrManual">Enter by hand</button>';
+    } else if (errorCode === 'unknown' || errorCode === 'client') {
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="aimErrRetry">Try again</button>' +
+        '<button type="button" class="aim-err-alt" id="aimErrSupport">Send to support</button>' +
+        '<button type="button" class="aim-err-ghost" id="aimErrClose">Close</button>';
+    } else {
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="aimErrRetry">Try again</button>' +
+        '<button type="button" class="aim-err-alt" id="aimErrManual">Enter by hand</button>' +
+        '<button type="button" class="aim-err-ghost" id="aimErrBack">Back</button>';
+    }
+    var reqCode = errorCode + ' · agentql · req_' + Math.random().toString(36).slice(2, 8);
+    el.dataset.reqCode = reqCode;
+    el.innerHTML =
+      '<div class="aim-err-mark" data-tone="' + card.tone + '">' + card.icon + '</div>' +
+      '<h3 class="aim-err-h">' + esc(headline) + '</h3>' +
+      '<p class="aim-err-p">' + esc(msg) + '</p>' +
+      keepHtml +
+      '<p class="aim-err-code">' + esc(reqCode) + '<button type="button" id="aimErrCopy">Copy</button></p>' +
+      '<div class="aim-err-acts">' + actsHtml + '</div>';
+  }
+
+  function dismissErrCard() { errorCode = null; errorMsg = null; render(); }
+
+  // Only offered for the ingredient context (see renderErrCard() -- url-import
+  // is item-creation only), so the {item:[...]} shape below always matches
+  // what THIS page's onImported (applyReceiptScanToManualModal(data)-style)
+  // expects.
+  function errToUrlImport() {
+    var opts = currentOpts;
+    close();
+    if (!window.ShelfyUrlImportModal || typeof window.ShelfyUrlImportModal.open !== 'function') return;
+    window.ShelfyUrlImportModal.open({
+      onManual: opts.onManual,
+      // url-import-modal.js hands back one flat item; wrap it into the
+      // {item:[...]} array shape this page's onImported was built for,
+      // instead of silently reading undefined fields off a flat object.
+      onImported: function (flat) {
+        if (opts.onImported) opts.onImported({
+          vendor: flat.vendor || null,
+          item: [{
+            name: flat.name || null,
+            price: flat.price || null,
+            SKU: flat.sku || null,
+            quantity: flat.quantity || null,
+            attributes: { color: flat.color || null, size: flat.size || null }
+          }]
+        }, null);
+      }
+    });
+  }
+
+  function copyErrCode() {
+    var el = document.getElementById('aimErrCard');
+    var text = (el && el.dataset.reqCode) || '';
+    if (navigator.clipboard && navigator.clipboard.writeText && text) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    }
+  }
+
+  function render() {
+    var isCard = !!ERR_CARDS[errorCode];
+    document.getElementById('aimNormalBody').style.display = isCard ? 'none' : '';
+    document.getElementById('aimErrCard').style.display = isCard ? 'block' : 'none';
+    renderHead();
+    if (isCard) { renderErrCard(); return; }
+    renderDrop(); renderFile(); renderError(); renderQuote(); renderFoot();
+  }
 
   function startFakeProgress() {
     fakePct = 4;
@@ -407,7 +538,7 @@
 
   async function go() {
     if (running || !usable() || !affordable()) return;
-    running = true; errorMsg = null; render();
+    running = true; errorMsg = null; errorCode = null; render();
     startFakeProgress();
     try {
       var sb = window.supabaseClient;
@@ -440,17 +571,25 @@
             : 'Failed to process (unexpected server response, status ' + response.status + ')' };
         }
         if (response.status === 429) {
-          throw new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          var eLimit = new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          eLimit.limitReached = true;
+          throw eLimit;
         }
         // errorData.details (when present) is the raw AgentQL error -- not
         // shown to the user, but logged so a report of "it just failed,
         // no idea why" is actually diagnosable afterward.
         if (errorData.details) console.error('[ShelfyImportModal] Extraction failed, server details:', errorData.details);
-        throw new Error(errorData.error || 'Failed to extract data from this file');
+        var eBad = new Error(errorData.error || 'Failed to extract data from this file');
+        eBad.code = errorData.code;
+        throw eBad;
       }
 
       var result = await response.json();
-      if (!result.success || !result.data) throw new Error('No data could be extracted from this file');
+      if (!result.success || !result.data) {
+        var eEmpty = new Error(result.error || 'No data could be extracted from this file');
+        eEmpty.code = result.code;
+        throw eEmpty;
+      }
 
       // Pre-upload the file for a receipt/reference URL, same "expenses"
       // storage bucket every entity's own flow already uses today.
@@ -476,6 +615,7 @@
       running = false;
       console.error('[ShelfyImportModal] Upload/extract failed:', err);
       errorMsg = err.message || 'Something went wrong';
+      errorCode = err.limitReached ? null : (ERR_CARDS[err.code] ? err.code : 'client');
       render();
     }
   }
@@ -490,7 +630,7 @@
     opts = opts || {};
     if (!KINDS[entityType]) { console.error('[ShelfyImportModal] Unknown entity type:', entityType); return; }
     currentEntity = entityType; currentOpts = opts;
-    file = null; replaced = null; running = false; errorMsg = null; usage = null;
+    file = null; replaced = null; running = false; errorMsg = null; errorCode = null; usage = null;
     clearInterval(fakeTimer); fakeTimer = null;
     ensureSheet();
     sheetEl.classList.add('active');

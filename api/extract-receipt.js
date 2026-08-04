@@ -202,20 +202,36 @@ module.exports = async (req, res) => {
       })
     );
     
-    const response = await fetch(
-      'https://api.agentql.com/v1/query-document',
-      {
-        method: 'POST',
-        headers: {
-          'X-API-Key': AGENTQL_API_KEY,
-          ...formData.getHeaders() // Sets Content-Type with boundary
-        },
-        body: formData
+    // No documented SLA from AgentQL and no timeout of our own -- without
+    // this, a hung upstream call just runs until Vercel's platform-level
+    // function timeout kills it as an undiagnosable raw failure.
+    const AGENTQL_TIMEOUT_MS = 25000;
+    let response;
+    try {
+      response = await fetch(
+        'https://api.agentql.com/v1/query-document',
+        {
+          method: 'POST',
+          headers: {
+            'X-API-Key': AGENTQL_API_KEY,
+            ...formData.getHeaders() // Sets Content-Type with boundary
+          },
+          body: formData,
+          signal: AbortSignal.timeout(AGENTQL_TIMEOUT_MS)
+        }
+      );
+    } catch (fetchError) {
+      if (fetchError.name === 'TimeoutError' || fetchError.name === 'AbortError') {
+        return res.status(504).json({
+          error: 'The read took too long',
+          code: 'scan.timeout'
+        });
       }
-    );
+      throw fetchError;
+    }
 
     console.log('AgentQL response status:', response.status);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AgentQL API error:', errorText);
@@ -225,6 +241,7 @@ module.exports = async (req, res) => {
       // natural worry after seeing this message.
       return res.status(response.status).json({
         error: "Couldn't read this photo — try a clearer, well-lit shot, or enter it manually. This didn't use one of your scans.",
+        code: 'scan.malformed',
         details: errorText
       });
     }
@@ -332,8 +349,19 @@ module.exports = async (req, res) => {
       };
     }
 
+    // AgentQL can return 200 with zero items read (e.g. a blurry photo or one
+    // that isn't actually a receipt/product) -- that's not a usable draft,
+    // and the user shouldn't be charged a scan for a photo nothing came from.
+    if (!result.data.item || result.data.item.length === 0) {
+      return res.status(200).json({
+        success: false,
+        error: context === 'order' ? 'No order details found in that photo' : 'No item found in that photo',
+        code: 'scan.no_match'
+      });
+    }
+
     // Increment usage counter
-    const incrementFunction = usageType === 'order' 
+    const incrementFunction = usageType === 'order'
       ? 'increment_order_usage' 
       : usageType === 'expense'
       ? 'increment_expense_usage'
@@ -360,9 +388,10 @@ module.exports = async (req, res) => {
   } catch (error) {
     console.error('Error processing receipt:', error);
     console.error('Error stack:', error.stack);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
-      message: error.message 
+      code: 'unknown',
+      message: error.message
     });
   }
 };

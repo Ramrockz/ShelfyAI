@@ -18,6 +18,7 @@
   var running = false;
   var usage = null;
   var errorMsg = null;
+  var errorCode = null; // one of ERR_CARDS's keys, or null for the old inline banner (429 etc.)
   var fakePct = 0, fakeTimer = null;
   var scanPackPrice = null;
   // Whether the most recent scan's result hasn't been saved or discarded
@@ -70,6 +71,29 @@
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   var ICON_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1-1"/></svg>';
   var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  // Error-card icons (34b reference set)
+  var ICON_TRIANGLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><path d="M12 3.4L1.6 20.6h20.8z"/><line x1="12" y1="10" x2="12" y2="15.2"/><line x1="12" y1="17.7" x2="12" y2="17.8"/></svg>';
+  var ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="12" cy="12" r="9.2"/><polyline points="12 7 12 12 15.6 14"/></svg>';
+  var ICON_SEARCH_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="10.5" cy="10.5" r="6.6"/><line x1="15.4" y1="15.4" x2="21" y2="21"/><line x1="8" y1="10.5" x2="13" y2="10.5"/></svg>';
+  var ICON_CHECK_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="4 12.6 9.2 17.6 20 6.6"/></svg>';
+
+  // Real, distinguishable scan-step failures (api/extract-url.js's `code`) --
+  // everything else (429 limit reached, a thrown Error with no code) keeps
+  // using the small inline .aim-error banner below instead of this takeover.
+  var ERR_CARDS = {
+    'scan.timeout': { tone: 'warn', icon: ICON_CLOCK, headline: 'The read took too long' },
+    'scan.malformed': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'The scan failed',
+      message: 'It came back broken. We’ve logged it.' },
+    'scan.no_match': { tone: 'warn', icon: ICON_SEARCH_X, headline: 'No product on that page',
+      message: 'No title or price found. Check the link points at one product.' },
+    // 'unknown' is the server's own outer-catch code -- genuinely unsure
+    // whether the charge happened. 'client' covers everything that never
+    // reached that server code at all (not logged in, a 413, a raw network
+    // failure) -- those are all definitely pre-charge, same shape/headline,
+    // different confidence in the "keep" line (see renderErrCard()).
+    'unknown': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong', uncertain: true },
+    'client': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' }
+  };
 
   function monthlyLeft() { return usage ? Math.max(0, (usage.planLimit || 0) - (usage.used || 0)) : 0; }
   function bonusLeft()   { return usage ? (usage.bonusScans || 0) : 0; }
@@ -103,24 +127,27 @@
           '</span>' +
           '<button type="button" class="aim-close" id="uimClose" aria-label="Close">' + ICON_X + '</button>' +
         '</div>' +
-        '<div class="uim-field-wrap">' +
-          '<div class="uim-url" id="uimUrlBox">' + ICON_LINK +
-            '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
-            '<button type="button" id="uimUrlBtn">Paste</button>' +
+        '<div id="uimNormalBody">' +
+          '<div class="uim-field-wrap">' +
+            '<div class="uim-url" id="uimUrlBox">' + ICON_LINK +
+              '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
+              '<button type="button" id="uimUrlBtn">Paste</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
+            '<span id="uimErrorText"></span>' +
+          '</div>' +
+          '<div id="uimWorkWrap"></div>' +
+          '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
+          '<div class="aim-quote" id="uimQuote"></div>' +
+          '<div class="aim-note">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
+          '<div class="aim-foot">' +
+            '<div class="aim-tally"><span class="aim-tally-l" id="uimTallyL"></span><span class="aim-tally-r" id="uimTallyR"></span></div>' +
+            '<button type="button" class="aim-cta" id="uimCta">Read this page</button>' +
+            '<button type="button" class="aim-ghost" id="uimManual">Enter this item by hand instead</button>' +
           '</div>' +
         '</div>' +
-        '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
-          '<span id="uimErrorText"></span>' +
-        '</div>' +
-        '<div id="uimWorkWrap"></div>' +
-        '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
-        '<div class="aim-quote" id="uimQuote"></div>' +
-        '<div class="aim-note">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
-        '<div class="aim-foot">' +
-          '<div class="aim-tally"><span class="aim-tally-l" id="uimTallyL"></span><span class="aim-tally-r" id="uimTallyR"></span></div>' +
-          '<button type="button" class="aim-cta" id="uimCta">Read this page</button>' +
-          '<button type="button" class="aim-ghost" id="uimManual">Enter this item by hand instead</button>' +
-        '</div>' +
+        '<div id="uimErrCard" style="display:none;"></div>' +
       '</div>';
     document.body.appendChild(div);
     sheetEl = div;
@@ -133,7 +160,7 @@
     });
 
     var input = document.getElementById('uimUrlInput');
-    input.addEventListener('input', function (e) { raw = e.target.value; errorMsg = null; render(); });
+    input.addEventListener('input', function (e) { raw = e.target.value; errorMsg = null; errorCode = null; render(); });
     input.addEventListener('focus', function () { document.getElementById('uimUrlBox').dataset.focus = '1'; });
     input.addEventListener('blur',  function () { document.getElementById('uimUrlBox').dataset.focus = '0'; });
     document.getElementById('uimUrlBtn').addEventListener('click', urlAction);
@@ -142,6 +169,14 @@
       if (e.target.id === 'uimCta') { go(); return; }
       if (e.target.id === 'uimManual') { manual(); return; }
       if (e.target.id === 'uimBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
+      if (e.target.id === 'uimErrRetry') { go(); return; }
+      if (e.target.id === 'uimErrScreenshot') { errToScreenshot(); return; }
+      if (e.target.id === 'uimErrAnotherLink') { setUrl(''); var i = document.getElementById('uimUrlInput'); if (i) i.focus(); return; }
+      if (e.target.id === 'uimErrManual') { manual(); return; }
+      if (e.target.id === 'uimErrBack') { dismissErrCard(); return; }
+      if (e.target.id === 'uimErrSupport') { window.location.href = 'mailto:support@shelfyai.com?subject=' + encodeURIComponent('ShelfyAI error ' + (errorCode || 'unknown')); return; }
+      if (e.target.id === 'uimErrClose') { close(); return; }
+      if (e.target.id === 'uimErrCopy') { copyErrCode(); return; }
     });
 
     return sheetEl;
@@ -152,6 +187,7 @@
     var input = document.getElementById('uimUrlInput');
     if (input) input.value = raw;
     errorMsg = null;
+    errorCode = null;
     render();
   }
 
@@ -250,7 +286,95 @@
     cta.textContent = running ? 'Reading…' : !usable() ? 'Read this page' : !affordable() ? 'Not enough scans' : 'Read this page · ' + cost() + ' scan';
   }
 
-  function render() { renderHead(); renderField(); renderWork(); renderError(); renderQuote(); renderFoot(); }
+  // Full card takeover for a real, distinguishable scan-step failure (see
+  // ERR_CARDS) -- everything else (limit reached etc.) stays on the small
+  // inline banner above, which already has its own good resolution path.
+  function renderErrCard() {
+    var card = ERR_CARDS[errorCode];
+    var el = document.getElementById('uimErrCard');
+    if (!card) return;
+    var msg = card.message;
+    if (errorCode === 'scan.timeout') {
+      var l = link();
+      msg = (l && l.host ? l.host : 'That site') + ' stopped answering.';
+    }
+    if (errorCode === 'unknown' || errorCode === 'client') msg = errorMsg || msg;
+    var scansLeftTxt = usage ? (' ' + scansLeft() + ' left this month.') : '';
+    var keepHtml = card.uncertain
+      ? '<div class="aim-err-keep" data-tone="warn">' + ICON_WARN + '<span><b>Can’t confirm</b> whether this used a scan.</span></div>'
+      : '<div class="aim-err-keep" data-tone="ok">' + ICON_CHECK_SM + '<span><b>No scan charged.</b>' + esc(scansLeftTxt) + '</span></div>';
+    var actsHtml;
+    if (errorCode === 'scan.no_match') {
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="uimErrScreenshot">Import a screenshot</button>' +
+        '<button type="button" class="aim-err-alt" id="uimErrAnotherLink">Try another link</button>' +
+        '<button type="button" class="aim-err-ghost" id="uimErrManual">Enter by hand</button>';
+    } else if (errorCode === 'unknown' || errorCode === 'client') {
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="uimErrRetry">Try again</button>' +
+        '<button type="button" class="aim-err-alt" id="uimErrSupport">Send to support</button>' +
+        '<button type="button" class="aim-err-ghost" id="uimErrClose">Close</button>';
+    } else {
+      actsHtml =
+        '<button type="button" class="aim-err-cta" id="uimErrRetry">Try again</button>' +
+        '<button type="button" class="aim-err-alt" id="uimErrManual">Enter by hand</button>' +
+        '<button type="button" class="aim-err-ghost" id="uimErrBack">Back</button>';
+    }
+    var reqCode = errorCode + ' · agentql · req_' + Math.random().toString(36).slice(2, 8);
+    el.dataset.reqCode = reqCode;
+    el.innerHTML =
+      '<div class="aim-err-mark" data-tone="' + card.tone + '">' + card.icon + '</div>' +
+      '<h3 class="aim-err-h">' + esc(card.headline) + '</h3>' +
+      '<p class="aim-err-p">' + esc(msg) + '</p>' +
+      keepHtml +
+      '<p class="aim-err-code">' + esc(reqCode) + '<button type="button" id="uimErrCopy">Copy</button></p>' +
+      '<div class="aim-err-acts">' + actsHtml + '</div>';
+  }
+
+  function dismissErrCard() { errorCode = null; errorMsg = null; render(); }
+
+  function errToScreenshot() {
+    var opts = currentOpts;
+    close();
+    if (!window.ShelfyImportModal || typeof window.ShelfyImportModal.open !== 'function') return;
+    window.ShelfyImportModal.open('ingredient', {
+      onManual: opts.onManual,
+      // import-modal.js hands back {item:[...]} (possibly several rows);
+      // this page's onImported was built for THIS module's flat single-item
+      // shape (applyUrlScanToManualModal(data)-style) -- adapt the first
+      // item into that shape so it still populates correctly when reached
+      // via this cross-link, instead of silently reading undefined fields.
+      onImported: function (data) {
+        var item = (data.item && data.item[0]) || {};
+        if (opts.onImported) opts.onImported({
+          vendor: data.vendor || null,
+          name: item.name || null,
+          price: item.price || null,
+          sku: item.SKU || null,
+          quantity: item.quantity || null,
+          color: (item.attributes && item.attributes.color) || null,
+          size: (item.attributes && item.attributes.size) || null
+        });
+      }
+    });
+  }
+
+  function copyErrCode() {
+    var el = document.getElementById('uimErrCard');
+    var text = (el && el.dataset.reqCode) || '';
+    if (navigator.clipboard && navigator.clipboard.writeText && text) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    }
+  }
+
+  function render() {
+    var isCard = !!ERR_CARDS[errorCode];
+    document.getElementById('uimNormalBody').style.display = isCard ? 'none' : '';
+    document.getElementById('uimErrCard').style.display = isCard ? 'block' : 'none';
+    renderHead();
+    if (isCard) { renderErrCard(); return; }
+    renderField(); renderWork(); renderError(); renderQuote(); renderFoot();
+  }
 
   function startFakeProgress() {
     fakePct = 4;
@@ -264,7 +388,7 @@
 
   async function go() {
     if (running || !usable() || !affordable()) return;
-    running = true; errorMsg = null; render();
+    running = true; errorMsg = null; errorCode = null; render();
     startFakeProgress();
     try {
       var sb = window.supabaseClient;
@@ -287,17 +411,25 @@
           errorData = { error: 'Failed to process (unexpected server response, status ' + response.status + ')' };
         }
         if (response.status === 429) {
-          throw new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          var eLimit = new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          eLimit.limitReached = true;
+          throw eLimit;
         }
         // errorData.details (when present) is the raw AgentQL error — not
         // shown to the user, but logged so a report of "it just failed,
         // no idea why" is actually diagnosable afterward.
         if (errorData.details) console.error('[ShelfyUrlImportModal] Extraction failed, server details:', errorData.details);
-        throw new Error(errorData.error || "Couldn't read this page — check the link, or enter it by hand instead. This didn't use one of your scans.");
+        var eBad = new Error(errorData.error || "Couldn't read this page — check the link, or enter it by hand instead. This didn't use one of your scans.");
+        eBad.code = errorData.code;
+        throw eBad;
       }
 
       var result = await response.json();
-      if (!result.success || !result.data) throw new Error('No data could be read from this page');
+      if (!result.success || !result.data) {
+        var eEmpty = new Error(result.error || 'No data could be read from this page');
+        eEmpty.code = result.code;
+        throw eEmpty;
+      }
 
       stopFakeProgress();
       var data = result.data;
@@ -314,6 +446,7 @@
       running = false;
       console.error('[ShelfyUrlImportModal] Read failed:', err);
       errorMsg = err.message || 'Something went wrong';
+      errorCode = err.limitReached ? null : (ERR_CARDS[err.code] ? err.code : 'client');
       render();
     }
   }
@@ -327,7 +460,7 @@
   async function open(opts) {
     opts = opts || {};
     currentOpts = opts;
-    raw = ''; running = false; errorMsg = null; usage = null;
+    raw = ''; running = false; errorMsg = null; errorCode = null; usage = null;
     clearInterval(fakeTimer); fakeTimer = null;
     ensureSheet();
     var input = document.getElementById('uimUrlInput');

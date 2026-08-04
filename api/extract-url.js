@@ -19,12 +19,16 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let hostname = null;
+
   try {
     const { url } = req.body;
-    
+
     if (!url) {
       return res.status(400).json({ error: 'No URL provided' });
     }
+
+    try { hostname = new URL(url).hostname.replace(/^www\./, ''); } catch (_) { hostname = url; }
 
     // Get API keys from environment variables
     const AGENTQL_API_KEY = process.env.AGENTQL_KEY;
@@ -126,37 +130,66 @@ module.exports = async (req, res) => {
   }
 }`;
 
-    // Call AgentQL API for URL extraction
-    const response = await fetch('https://api.agentql.com/v1/query-data', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': AGENTQL_API_KEY
-      },
-      body: JSON.stringify({
-        url: url,
-        query: extractionQuery
-      })
-    });
+    // AgentQL has no documented SLA and this app has no client-side timeout
+    // of its own -- without this, a hung upstream call would just run until
+    // Vercel's platform-level function timeout kills it, which the caller
+    // never sees as anything more specific than a raw 504.
+    const AGENTQL_TIMEOUT_MS = 25000;
+    let response;
+    try {
+      response = await fetch('https://api.agentql.com/v1/query-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': AGENTQL_API_KEY
+        },
+        body: JSON.stringify({
+          url: url,
+          query: extractionQuery
+        }),
+        signal: AbortSignal.timeout(AGENTQL_TIMEOUT_MS)
+      });
+    } catch (fetchError) {
+      if (fetchError.name === 'TimeoutError' || fetchError.name === 'AbortError') {
+        return res.status(504).json({
+          error: `${hostname} stopped answering`,
+          code: 'scan.timeout',
+          hostname
+        });
+      }
+      throw fetchError;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AgentQL API error:', errorText);
-      return res.status(response.status).json({ 
-        error: 'Failed to extract data from URL',
-        details: errorText 
+      return res.status(response.status).json({
+        error: 'The scan failed — it came back broken',
+        code: 'scan.malformed',
+        details: errorText
       });
     }
 
     const agentqlResponse = await response.json();
     console.log('AgentQL raw response:', JSON.stringify(agentqlResponse, null, 2));
-    
+
     // AgentQL wraps the response in a 'data' object
     const extractedData = agentqlResponse.data || {};
-    
+
     // Parse and return the extracted data
     const quantity = extractedData.item?.quantity || 0;
-    
+
+    // AgentQL can return 200 with every field empty (e.g. the link isn't
+    // actually a single product page) -- that's not a usable draft, and the
+    // user shouldn't be charged a scan for a page that had nothing on it.
+    if (!extractedData.item?.name && !extractedData.item?.price) {
+      return res.status(200).json({
+        success: false,
+        error: 'No title or price found on that page',
+        code: 'scan.no_match'
+      });
+    }
+
     // Increment usage counter
     const { data: rpcData, error: rpcError } = await supabase.rpc('increment_ingredient_usage', { p_user_id: user.id });
     if (rpcError) {
@@ -192,9 +225,10 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('Error processing URL:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
-      message: error.message 
+      code: 'unknown',
+      message: error.message
     });
   }
 };
