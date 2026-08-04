@@ -2430,7 +2430,6 @@ document.addEventListener('keydown', (e) => {
         </span>
         <span class="rcm-src-main">
           <span class="rcm-src-name" id="rcmSrcName"></span>
-          <span class="rcm-src-meta" id="rcmSrcMeta"></span>
         </span>
         <button type="button" class="rcm-src-view" onclick="openShotSheet()">View</button>
       </div>
@@ -2455,7 +2454,6 @@ document.addEventListener('keydown', (e) => {
 
       <div class="rcm-sec-head">
         <span class="rcm-sec-title">Items</span>
-        <span class="rcm-sec-note" id="rcmItemsNote"></span>
         <button type="button" class="rcm-act" onclick="addMappedItemRow()">Add</button>
       </div>
       <div class="rcm-list" id="mappedItemsList"></div>
@@ -2470,7 +2468,6 @@ document.addEventListener('keydown', (e) => {
         <span class="rcm-tog-sw"></span>
       </button>
       <div class="rcm-tally">
-        <span class="rcm-tally-l" id="rcmTallyL"></span>
         <span class="rcm-tally-r" id="rcmTallyR">$0.00</span>
       </div>
       <div id="rcmTallyWarn"></div>
@@ -2480,19 +2477,43 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-<!-- Product-match sheet — nested on top of #recipeMappingModal -->
+<!-- Product picker sheet — nested on top of #recipeMappingModal. Used both
+     for "Pick"/"Change" on an existing scanned line (mappedEditingIndex is a
+     real index) and for the Items section's "Add" button (mappedEditingIndex
+     is null -- pickMatch() only pushes into mappedRecipes once a product is
+     actually chosen, so backing out of this sheet via the X/backdrop/Escape
+     leaves nothing behind). Reuses the exact same browsing experience as
+     the manual order picker (#manualStep1, same .op-* classes): search,
+     category filters, Favorites/Ordered recently/All products -- just
+     single-select (tap a row to pick it immediately) instead of multi-select
+     with quantities, since this only ever fills one line. -->
 <div class="modal-overlay modal-sheet" id="rcmMatchSheet" onclick="if(event.target===this)closeMatchSheet()">
-  <div class="modal-content">
-    <h2 class="rcm-sheet-title">Which product is this?</h2>
-    <p class="rcm-sheet-sub" id="rcmMatchSub"></p>
-    <div class="rcm-sheet-find">
-      <label class="rcm-sheet-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
-        <input id="rcmMatchQ" type="search" placeholder="Search your products" oninput="renderMatchList()" autocomplete="off">
-      </label>
+  <div class="modal-content op-modal" style="padding:0; display:flex; flex-direction:column;">
+    <div class="op-head">
+      <div class="op-bar">
+        <span class="op-titles">
+          <span class="op-title" id="rcmMatchTitle">Which product is this?</span>
+          <span class="op-sub" id="rcmMatchSub"></span>
+        </span>
+        <button type="button" class="op-skip" onclick="createProductFromLine()">New</button>
+        <button type="button" onclick="closeMatchSheet()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;padding:8px;">&times;</button>
+      </div>
+      <div class="op-find">
+        <label class="op-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="17" height="17"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+          <input id="rcmMatchQ" type="text" placeholder="Search your products" autocomplete="off"
+                 oninput="renderMatchList()"
+                 onkeydown="if(event.key==='Escape'){this.value='';renderMatchList()}">
+          <button class="op-clear" id="rcmMatchClear" type="button" onclick="document.getElementById('rcmMatchQ').value='';renderMatchList();" aria-label="Clear">&times;</button>
+        </label>
+        <button class="op-filter" id="rcmFilterBtn" aria-expanded="false" aria-label="Filter products" onclick="toggleRcmMatchFilters()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19" height="19"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
+          <span class="op-filter-n" id="rcmFilterN" data-on="0"></span>
+        </button>
+      </div>
+      <div class="op-chips" id="rcmChips"></div>
     </div>
-    <div class="rcm-sheet-scroll" id="rcmMatchList"></div>
-    <button type="button" class="rcm-sheet-new" id="rcmMatchNew" onclick="createProductFromLine()">+ Create as a new product</button>
+    <div class="op-scroll" id="rcmMatchList"></div>
   </div>
 </div>
 
@@ -2558,7 +2579,6 @@ let mappedOrderData = null;
 let mappedRecipes = [];
 let mappedUpdateStock = true;
 let mappedEditingIndex = null;
-let _rcmMatchToken = 0;
 let _rcmLastOptions = [];
 
 // --- Method Modal ---
@@ -3396,7 +3416,6 @@ const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-const ICON_RCM_CHECK = '<svg class="rcm-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="17" height="17"><polyline points="20 6 9 17 4 12"/></svg>';
 
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
@@ -3476,8 +3495,6 @@ function renderRcmSrc() {
   if (!pendingReceiptUrl) { el.style.display = 'none'; return; }
   el.style.display = '';
   document.getElementById('rcmSrcName').textContent = _rcmFileLabel(pendingReceiptUrl);
-  const n = mappedRecipes.length;
-  document.getElementById('rcmSrcMeta').textContent = `${n} item${n === 1 ? '' : 's'} read${mappedOrderData?.vendor ? ' · ' + mappedOrderData.vendor : ''}`;
 }
 
 function _rcmLineState(m) {
@@ -3491,7 +3508,6 @@ function _rcmLineHTML(m, index) {
   const cleanName = _rcmCleanName(item.name) || 'Unknown item';
   const sel = m.selectedRecipe;
   const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (item.price || 0);
-  const priceOff = sel && item.price && Math.abs(price - item.price) > 0.005;
   const why = st === 'ok'
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
     : st === 'todo' ? 'Not sure this is right — check it'
@@ -3515,19 +3531,12 @@ function _rcmLineHTML(m, index) {
         <span class="rcm-step-qty">${m.quantity}</span>
         <button type="button" onclick="bumpMappedQty(${index},1)" aria-label="One more">${ICON_RCM_PLUS}</button>
       </span>
-      <span class="rcm-line-money">$${(price * m.quantity).toFixed(2)}
-        <small>$${price.toFixed(2)} ea${priceOff ? ' · differs' : ''}</small>
-      </span>
+      <span class="rcm-line-money">$${(price * m.quantity).toFixed(2)}</span>
     </span>
   </div>`;
 }
 
 function renderRcmLines() {
-  const todo = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
-  const note = document.getElementById('rcmItemsNote');
-  note.textContent = todo ? `${todo} need${todo > 1 ? '' : 's'} checking` : `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'}`;
-  todo ? note.setAttribute('data-state', 'todo') : note.removeAttribute('data-state');
-
   document.getElementById('mappedItemsList').innerHTML = mappedRecipes.length
     ? mappedRecipes.map((m, i) => _rcmLineHTML(m, i)).join('')
     : '<div class="rcm-line"><span class="rcm-line-main"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></span></div>';
@@ -3549,15 +3558,10 @@ function renderRcmFoot() {
     const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (m.itemData.price || 0);
     return s + price * m.quantity;
   }, 0);
-  const totalUnits = mappedRecipes.reduce((s, m) => s + m.quantity, 0);
-  document.getElementById('rcmTallyL').textContent = `${mappedRecipes.length} item${mappedRecipes.length === 1 ? '' : 's'} · ${totalUnits} unit${totalUnits === 1 ? '' : 's'}`;
   document.getElementById('rcmTallyR').textContent = `$${sum.toFixed(2)}`;
 
   const noneCount = mappedRecipes.filter(m => _rcmLineState(m) === 'none').length;
   const lookCount = mappedRecipes.filter(m => _rcmLineState(m) === 'todo').length;
-  const stated = mappedOrderData?.revenue;
-  const hasStated = stated !== undefined && stated !== null && stated !== '';
-  const gap = hasStated ? Math.round((Number(stated) - sum) * 100) / 100 : 0;
 
   const bits = [];
   if (noneCount) bits.push(`${noneCount} item${noneCount > 1 ? 's' : ''} need${noneCount > 1 ? '' : 's'} a product`);
@@ -3569,9 +3573,7 @@ function renderRcmFoot() {
   const warnEl = document.getElementById('rcmTallyWarn');
   warnEl.innerHTML = lookCount
     ? `<div class="rcm-warn">${bits.join(' · ')}</div>`
-    : (hasStated && Math.abs(gap) > 0.005)
-      ? `<div class="rcm-warn">$${Math.abs(gap).toFixed(2)} ${gap > 0 ? 'less than' : 'more than'} the $${Number(stated).toFixed(2)} on the screenshot</div>`
-      : (noneCount ? `<div class="rcm-warn" style="color:var(--text-faint,var(--text-muted))">${bits.join(' · ')}</div>` : '');
+    : (noneCount ? `<div class="rcm-warn" style="color:var(--text-faint,var(--text-muted))">${bits.join(' · ')}</div>` : '');
 
   const btn = document.getElementById('rcmSaveBtn');
   btn.disabled = !mappedRecipes.length || lookCount > 0;
@@ -3591,95 +3593,153 @@ function removeMappedItem(index) {
 }
 
 function addMappedItemRow() {
-  mappedRecipes.push({
-    itemData: { name: 'Added by you', quantity: 1, price: 0, attributes: {} },
-    selectedRecipe: null, matches: [], quantity: 1, score: 0, confirmed: false
-  });
-  renderRcmLines(); renderRcmFoot();
-  openMatchSheet(mappedRecipes.length - 1);
+  // Nothing is added until a product is actually picked in the sheet --
+  // see openMatchSheet(null)/pickMatch() below.
+  openMatchSheet(null);
 }
 
-// --- Product-match sheet ---
+// --- Product picker sheet ---
+// index is a real row in mappedRecipes ("Pick"/"Change" on an existing
+// scanned line) or null (the Items section's "Add" button) -- pickMatch()
+// below only creates a row for the null case once something is actually
+// picked, so backing out of this sheet without picking leaves nothing behind.
+let rcmMatchFilters = { cats: new Set() };
+
 function openMatchSheet(index) {
   mappedEditingIndex = index;
-  const m = mappedRecipes[index];
-  const cleanName = _rcmCleanName(m.itemData.name) || 'this item';
-  document.getElementById('rcmMatchSub').textContent = `The screenshot said "${cleanName}" · ${m.quantity} × $${(m.itemData.price || 0).toFixed(2)}`;
+  const titleEl = document.getElementById('rcmMatchTitle');
+  const subEl = document.getElementById('rcmMatchSub');
+  if (index === null) {
+    titleEl.textContent = 'Add a product';
+    subEl.textContent = '';
+  } else {
+    const m = mappedRecipes[index];
+    const cleanName = _rcmCleanName(m.itemData.name) || 'this item';
+    titleEl.textContent = 'Which product is this?';
+    subEl.textContent = `The screenshot said "${cleanName}" · ${m.quantity} × $${(m.itemData.price || 0).toFixed(2)}`;
+  }
   document.getElementById('rcmMatchQ').value = '';
-  renderMatchList();
+  rcmMatchFilters = { cats: new Set() };
+  document.getElementById('rcmFilterBtn')?.setAttribute('aria-expanded', 'false');
+  document.getElementById('rcmChips')?.setAttribute('data-open', '0');
   document.getElementById('rcmMatchSheet').classList.add('active');
+  if (orderRecipeCache) renderMatchList();
+  else loadOrderRecipeData().then(renderMatchList);
 }
 function closeMatchSheet() {
   document.getElementById('rcmMatchSheet').classList.remove('active');
   mappedEditingIndex = null;
 }
 
-function _rcmOptHTML(recipe, selected, likely) {
-  const isSel = !!(selected && selected.id === recipe.id);
-  const price = recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0;
-  const compCount = Array.isArray(recipe.components) ? recipe.components.length : 0;
-  return `<button type="button" class="rcm-opt" aria-selected="${isSel}" onclick="pickMatch(${_rcmLastOptions.length - 1})">
-    <span class="rcm-opt-body">
-      <span class="rcm-opt-name">${_rcmEsc(recipe.name)}</span>
-      <span class="rcm-opt-meta">$${price.toFixed(2)}${compCount ? ` · ${compCount} item${compCount === 1 ? '' : 's'} on its recipe` : ' · no recipe yet'}</span>
+function _rcmMatchPickerPasses(recipe) {
+  return !rcmMatchFilters.cats.size || rcmMatchFilters.cats.has(recipe.category);
+}
+
+function renderRcmMatchChips() {
+  const counts = c => (orderRecipeCache || []).filter(r => r.category === c).length;
+  const cats = [...new Set((orderRecipeCache || []).map(r => r.category).filter(Boolean))]
+    .sort((a, b) => counts(b) - counts(a));
+  const n = rcmMatchFilters.cats.size;
+  const nEl = document.getElementById('rcmFilterN');
+  if (nEl) { nEl.dataset.on = n ? '1' : '0'; nEl.textContent = n; }
+  const chipsEl = document.getElementById('rcmChips');
+  if (!chipsEl) return;
+  chipsEl.innerHTML = `
+    ${cats.map(c => `<button type="button" class="op-chip" aria-pressed="${rcmMatchFilters.cats.has(c)}" onclick="toggleRcmMatchCatFilter('${_rcmEsc(c)}')">${_rcmEsc(c)}<span class="op-chip-count">${counts(c)}</span></button>`).join('')}
+    ${n ? `<button type="button" class="op-chip-clear" onclick="clearRcmMatchFilters()">Clear</button>` : ''}`;
+}
+function toggleRcmMatchFilters() {
+  const btn = document.getElementById('rcmFilterBtn');
+  const chips = document.getElementById('rcmChips');
+  if (!btn || !chips) return;
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', String(open));
+  chips.dataset.open = open ? '1' : '0';
+}
+function toggleRcmMatchCatFilter(c) {
+  if (rcmMatchFilters.cats.has(c)) rcmMatchFilters.cats.delete(c); else rcmMatchFilters.cats.add(c);
+  renderMatchList();
+}
+function clearRcmMatchFilters() {
+  rcmMatchFilters.cats.clear();
+  renderMatchList();
+}
+
+function _rcmMatchRowHtml(recipe) {
+  _rcmLastOptions.push(recipe);
+  const i = _rcmLastOptions.length - 1;
+  const price = parseFloat(recipe.retail_price) || parseFloat(recipe.cost) || 0;
+  return `<button type="button" class="op-row" onclick="pickMatch(${i})">
+    <span class="op-main">
+      <span class="op-name">${_rcmEsc(recipe.name)}</span>
+      <span class="op-meta">$${price.toFixed(2)}</span>
     </span>
-    ${likely && !isSel ? '<span class="rcm-opt-tag">likely</span>' : ''}
-    ${isSel ? ICON_RCM_CHECK : ''}
   </button>`;
 }
 
 async function renderMatchList() {
-  const index = mappedEditingIndex;
-  if (index === null) return;
-  const m = mappedRecipes[index];
-  const q = document.getElementById('rcmMatchQ').value.trim();
   const listEl = document.getElementById('rcmMatchList');
-  const token = ++_rcmMatchToken;
+  if (!listEl) return;
+  const clearBtn = document.getElementById('rcmMatchClear');
+  const q = document.getElementById('rcmMatchQ').value.trim().toLowerCase();
+  if (clearBtn) clearBtn.dataset.on = q ? '1' : '0';
+  renderRcmMatchChips();
   _rcmLastOptions = [];
 
-  if (!q) {
-    const opts = (m.matches || []).slice(0, 20);
-    if (!opts.length) {
-      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No suggestions — search your products above.</span></span></div>';
-      return;
-    }
-    listEl.innerHTML = opts.map(o => {
-      _rcmLastOptions.push(o.recipe);
-      return _rcmOptHTML(o.recipe, m.selectedRecipe, o.score >= 0.5);
-    }).join('');
-    return;
-  }
+  const pool = (orderRecipeCache || []).filter(_rcmMatchPickerPasses);
 
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
-    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
-    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    let query = supabaseClient.from('recipes').select('*').eq('profile_id', user.id).ilike('name', `%${q}%`).limit(25);
-    if (storeId) query = query.eq('store_id', storeId);
-    const { data: recipes } = await query;
-    if (token !== _rcmMatchToken || mappedEditingIndex !== index) return; // stale response
-    if (!recipes || !recipes.length) {
-      listEl.innerHTML = `<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">No product matches "${_rcmEsc(q)}".</span></span></div>`;
-      return;
-    }
-    listEl.innerHTML = recipes.map(r => {
-      _rcmLastOptions.push(r);
-      return _rcmOptHTML(r, m.selectedRecipe, false);
-    }).join('');
-  } catch (error) {
-    console.error('Error searching recipes:', error);
-    if (token === _rcmMatchToken) {
-      listEl.innerHTML = '<div class="rcm-opt"><span class="rcm-opt-body"><span class="rcm-opt-meta">Search failed. Please try again.</span></span></div>';
+  let html = '';
+  if (q) {
+    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q));
+    html = hits.length
+      ? `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
+         <div class="op-list">${hits.map(r => _rcmMatchRowHtml(r)).join('')}</div>`
+      : `<div class="op-empty">
+           <div class="op-empty-t">No product matches "${_rcmEsc(q)}"</div>
+           <div class="op-empty-s">Create it now and pick it right away.</div>
+           <button type="button" class="op-empty-b" onclick="createProductFromLine()">Create "${_rcmEsc(q)}"</button>
+         </div>`;
+  } else {
+    const favs = pool.filter(r => orderFavoriteIds.has(r.id));
+    const favIds = new Set(favs.map(r => r.id));
+    const lastUsed = await _getLastUsedRecipes();
+    const recentList = (lastUsed || []).filter(r => !favIds.has(r.id) && _rcmMatchPickerPasses(r));
+    const recentIds = new Set(recentList.map(r => r.id));
+    const rest = pool.filter(r => !favIds.has(r.id) && !recentIds.has(r.id));
+
+    if (favs.length) html += `<div class="op-sec-head"><span class="op-sec-title">Favorites</span><span class="op-sec-note">${favs.length}</span></div>
+      <div class="op-list">${favs.map(r => _rcmMatchRowHtml(r)).join('')}</div>`;
+    if (recentList.length) html += `<div class="op-sec-head"><span class="op-sec-title">Ordered recently</span><span class="op-sec-note">${recentList.length}</span></div>
+      <div class="op-list">${recentList.map(r => _rcmMatchRowHtml(r)).join('')}</div>`;
+    if (rest.length) html += `<div class="op-sec-head"><span class="op-sec-title">All products</span><span class="op-sec-note">${rest.length}</span></div>
+      <div class="op-list">${rest.map(r => _rcmMatchRowHtml(r)).join('')}</div>`;
+
+    if (!favs.length && !recentList.length && !rest.length) {
+      html += `<div class="op-empty">
+        <div class="op-empty-t">No products yet</div>
+        <div class="op-empty-s">Create your first product to start adding it to orders.</div>
+        <button type="button" class="op-empty-b" onclick="createProductFromLine()">New product</button>
+      </div>`;
     }
   }
+  listEl.innerHTML = html;
 }
 
 function pickMatch(i) {
-  const index = mappedEditingIndex;
-  if (index === null) return;
   const recipe = _rcmLastOptions[i];
   if (!recipe) return;
+  if (mappedEditingIndex === null) {
+    // Add flow -- this is the only place a row from here gets pushed, so
+    // backing out earlier without picking never left anything behind.
+    mappedRecipes.push({
+      itemData: { name: recipe.name, quantity: 1, price: recipe.retail_price || (parseFloat(recipe.cost) * 1.6) || 0, attributes: {} },
+      selectedRecipe: recipe, matches: [], quantity: 1, score: 1, confirmed: true
+    });
+    closeMatchSheet();
+    renderRcmLines(); renderRcmFoot();
+    return;
+  }
+  const index = mappedEditingIndex;
   const m = mappedRecipes[index];
   m.selectedRecipe = recipe;
   m.confirmed = true;
@@ -3693,8 +3753,7 @@ function pickMatch(i) {
 // lines are only in-memory and don't survive the navigation.
 function createProductFromLine() {
   const index = mappedEditingIndex;
-  if (index === null) return;
-  const cleanName = _rcmCleanName(mappedRecipes[index].itemData.name);
+  const cleanName = index !== null ? _rcmCleanName(mappedRecipes[index].itemData.name) : document.getElementById('rcmMatchQ').value.trim();
   const hasProgress = mappedRecipes.some(r => r.selectedRecipe);
   if (hasProgress && !confirm("Creating a new product will leave this order — any products you've already matched won't be saved. Continue?")) return;
   createProductFromOrderSearch(cleanName);
