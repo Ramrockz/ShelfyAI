@@ -1200,6 +1200,17 @@
   </div>
 </div>
 
+<!-- Reverse Inventory Success screen (inventory-impact.js) -->
+<div class="modal-overlay modal-sheet" id="reverseInvSuccessModal">
+  <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0;">
+    <div id="reverseInvSuccessBody" style="flex:1;min-height:0;overflow-y:auto;padding:24px 24px 8px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn ghost" onclick="closeReverseInvSuccess()">Done</button>
+      <button type="button" class="ii-btn primary" id="reverseInvSuccessViewBtn">View expense</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Ingredient Mapping Modal -->
 <div class="modal-overlay modal-sheet" id="ingredientMappingModal">
@@ -2854,9 +2865,10 @@ async function reverseExpenseInventory(expenseId) {
 
     if (!await openReverseInvConfirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
 
+    const impactRows = [];
     for (const row of rows) {
       const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // positive -- an addition
-      const { data: ing } = await supabaseClient.from('ingredients').select('quantity').eq('id', row.ingredient_id).single();
+      const { data: ing } = await supabaseClient.from('ingredients').select('name, unit, quantity, min_stock').eq('id', row.ingredient_id).single();
       if (!ing) continue;
       const current = parseFloat(ing.quantity) || 0;
       const restored = Math.max(0, current - delta);
@@ -2866,12 +2878,38 @@ async function reverseExpenseInventory(expenseId) {
         old_value: String(current), new_value: String(restored),
         reason: 'expense_reversal', reference_id: String(expenseId), reference_text: 'Reversed expense inventory'
       }]);
+      const minStock = parseFloat(ing.min_stock) || 0;
+      impactRows.push({
+        name: ing.name, from: current, to: restored, unit: ing.unit,
+        href: `/ingredient-detail?id=${encodeURIComponent(row.ingredient_id)}`,
+        state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
+      });
     }
-    showNotification('Inventory reversed for this expense', 'success');
+    showReverseInvSuccess(impactRows, `/expense-detail?id=${encodeURIComponent(expenseId)}`);
   } catch (e) {
     console.error('Error reversing expense inventory:', e);
     showNotification('Failed to reverse inventory', 'error');
   }
+}
+
+function showReverseInvSuccess(rows, viewHref) {
+  const body = document.getElementById('reverseInvSuccessBody');
+  ShelfyInventoryImpact.render(body, {
+    title: 'Inventory reversed',
+    sub: `${rows.length} item${rows.length !== 1 ? 's' : ''} restored`,
+    figs: [],
+    secTitle: 'Stock updated',
+    secNote: `${rows.length} item${rows.length !== 1 ? 's' : ''}`,
+    rows,
+    note: "This expense's stock addition has been undone.",
+    undo: null
+  });
+  const viewBtn = document.getElementById('reverseInvSuccessViewBtn');
+  if (viewBtn) viewBtn.onclick = () => { window.location.href = viewHref; };
+  document.getElementById('reverseInvSuccessModal').classList.add('active');
+}
+function closeReverseInvSuccess() {
+  document.getElementById('reverseInvSuccessModal').classList.remove('active');
 }
 
 // Deletes for real, right away -- the previous version waited 5s (or forced
@@ -3769,6 +3807,8 @@ document.addEventListener('keydown', (e) => {
       closeDeleteModal();
     } else if (document.getElementById('reverseInvConfirmModal')?.classList.contains('active')) {
       closeReverseInvConfirm(false);
+    } else if (document.getElementById('reverseInvSuccessModal')?.classList.contains('active')) {
+      closeReverseInvSuccess();
     } else if (document.getElementById('ingredientMappingModal').classList.contains('active')) {
       closeIngredientMappingModal();
     }
