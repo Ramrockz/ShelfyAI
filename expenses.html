@@ -2801,7 +2801,6 @@ async function deleteExpenseNow(id) {
 })();
 
 // ---------- Soft delete with undo ----------
-let _pendingDeleteExpense = null;
 
 // A native confirm() looks and behaves like a bare browser dialog, not part
 // of the app -- this is the same .modal-sheet bottom-sheet every other
@@ -2860,30 +2859,48 @@ async function reverseExpenseInventory(expenseId) {
   }
 }
 
-function softDeleteExpense(id) {
+// Deletes for real, right away -- the previous version waited 5s (or forced
+// it via a pagehide listener) before actually deleting, but a page refresh
+// or quick navigation within that window silently lost the delete entirely:
+// a fetch kicked off from a pagehide handler has no guarantee of completing
+// before the page is actually torn down. Undo now restores by re-inserting
+// the same row instead of cancelling a delete that hadn't happened yet, so
+// there's nothing left pending for a refresh to lose. Doesn't reuse
+// deleteExpenseNow() -- that one calls render(), which would rebuild the
+// list and detach `shell` before the undo window is even up.
+async function softDeleteExpense(id) {
   const expense = expenses.find(e => e.id === id || e.id == id);
   const shell = document.querySelector(`.exp-row[data-id="${id}"]`)?.closest('.exp-swipe');
   if (!shell || !expense) return;
 
-  clearTimeout(_pendingDeleteExpense?.timer);
-  _pendingDeleteExpense?.commit();
   shell.style.display = 'none';
+  expenses = expenses.filter(e => e.id !== id);
+  localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
-  const commit = () => {
-    _pendingDeleteExpense = null;
-    deleteExpenseNow(id);
-  };
-
-  _pendingDeleteExpense = { id, shell, timer: setTimeout(commit, 5000), commit };
-  showUndoToast(`Deleted ${expense.description || 'expense'}`, () => {
-    clearTimeout(_pendingDeleteExpense.timer);
+  try {
+    const { error } = await offlineWrite('expenses', 'delete', null, 'id', id);
+    if (error) throw error;
+  } catch (e) {
+    console.error('Error deleting expense:', e);
     shell.style.display = '';
-    _pendingDeleteExpense = null;
+    expenses.push(expense);
+    localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+    return;
+  }
+
+  showUndoToast(`Deleted ${expense.description || 'expense'}`, async () => {
+    try {
+      const { error } = await supabaseClient.from('expenses').insert([expense]);
+      if (error) throw error;
+      shell.style.display = '';
+      expenses.push(expense);
+      localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
+    } catch (e) {
+      console.error('Error restoring expense:', e);
+      showNotification('Failed to restore expense', 'error');
+    }
   });
 }
-
-// Don't lose a pending delete if the user leaves the page
-window.addEventListener('pagehide', () => _pendingDeleteExpense?.commit());
 
 // ---------- Undo toast ----------
 let _toastTimer = null;

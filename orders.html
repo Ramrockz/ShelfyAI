@@ -2150,12 +2150,12 @@ async function softDeleteOrder(id) {
   }
 
   showUndoToast(`Deleted order from ${o.customer || 'customer'}`, async () => {
-    shell.style.display = '';
-    orders.push(o);
-    localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
     try {
       const { error } = await supabaseClient.from('sales').insert([o]);
       if (error) throw error;
+      shell.style.display = '';
+      orders.push(o);
+      localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
     } catch (e) {
       console.error('Error restoring order:', e);
       showOrderNotification('Failed to restore order — it may still be deleted', 'error');
