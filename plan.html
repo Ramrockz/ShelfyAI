@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ShelfyAI – Plan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+
+<script>
+  // Apply theme immediately from localStorage to prevent flash
+  (function(){var t=localStorage.getItem('shelfy-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="ShelfyAI" />
+<link rel="apple-touch-icon" href="/apple-touch-icon-180.png" />
+<script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js');});}</script>
+<script src="/pwa-install.js" defer></script>
+<link rel="stylesheet" href="styles.css" />
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+
+<style>
+/* Plan — real page (adapted from the plan-32b.html mockup), reached from
+   Settings → Plan instead of the old plain redirect to /pricing. Keeps
+   /pricing as the public, logged-out marketing page; this is the
+   logged-in, usage-aware version.
+
+   Differences from the mockup, deliberately:
+   - Real numbers throughout: the mockup's storage (100MB/1GB/10GB) and
+     store limits (1/3/10) didn't match what's actually enforced
+     (settings.html's PLAN_META / storeLimits — 10MB/50MB/250MB and
+     1/5/unlimited), and yearly Pro is a real €239, not 24.99*10. Scans
+     (5/100/300) were already correct.
+   - A real, responsive centered column instead of a fixed 390x800 phone
+     frame (same call as quick-guide.html).
+   - Upgrading calls the real /api/create-checkout-session (Stripe
+     Checkout); downgrading (to a lower paid tier or to Free) and
+     "Invoices and payment method" both go through the real
+     /api/create-portal-session (Stripe's own Customer Portal) instead of
+     any custom cancel/downgrade logic here. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; background: var(--bg-main); color: var(--text-main);
+  font: 400 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+}
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+
+.pl-wrap { max-width: 480px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+
+.pl-head { position: sticky; top: 0; z-index: 20; flex-shrink: 0; background: var(--bg-panel);
+           border-bottom: 1px solid var(--border-hair, var(--border)); }
+.pl-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+.pl-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+           background: none; border: none; color: var(--text-main); border-radius: 50%; }
+.pl-back:hover { background: var(--bg-inner); }
+.pl-title { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.pl-now { flex-shrink: 0; height: 26px; padding: 0 10px; margin-right: 8px; border-radius: 8px;
+          background: var(--bg-inner); font-size: 12px; font-weight: 800; color: var(--text-muted);
+          display: inline-flex; align-items: center; }
+.pl-now[data-paid="1"] { background: var(--accent-glow); color: var(--accent-ink, var(--accent)); }
+
+.pl-scroll { flex: 1; padding-bottom: 22px; }
+
+/* billing cycle */
+.pl-cycle { display: flex; gap: 0; margin: 16px; border: 1px solid var(--border); border-radius: 12px;
+            overflow: hidden; background: var(--bg-panel); }
+.pl-cycle button { flex: 1; height: 42px; border: none; background: var(--bg-panel); display: flex;
+                    align-items: center; justify-content: center; gap: 7px;
+                    font-size: 13.5px; font-weight: 700; color: var(--text-muted); }
+.pl-cycle button[aria-pressed="true"] { background: var(--text-main); color: var(--bg-panel); }
+.pl-cycle small { font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+                  background: var(--accent-glow); color: var(--accent-ink, var(--accent)); }
+.pl-cycle button[aria-pressed="true"] small { background: rgba(255,255,255,.18); color: inherit; }
+
+/* plan cards */
+.pl-plans { display: flex; flex-direction: column; gap: 11px; padding: 0 16px; }
+.pl-plan { display: block; width: 100%; text-align: left; background: var(--bg-panel);
+           border: 1.5px solid var(--border); border-radius: 16px; padding: 14px; position: relative; }
+.pl-plan[aria-pressed="true"] { border-color: var(--accent-deep, var(--accent)); box-shadow: 0 0 0 3px var(--accent-glow); }
+.pl-plan-top { display: flex; align-items: flex-start; gap: 10px; }
+.pl-plan-name { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+.pl-plan-flag { height: 20px; padding: 0 7px; border-radius: 6px; background: var(--accent-glow);
+                color: var(--accent-ink, var(--accent)); font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+                text-transform: uppercase; display: inline-flex; align-items: center; }
+.pl-plan-flag[data-kind="now"] { background: var(--bg-inner); color: var(--text-muted); }
+.pl-plan-price { margin-left: auto; text-align: right; flex-shrink: 0; }
+.pl-plan-amt { font-size: 22px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+               display: block; line-height: 1.1; }
+.pl-plan-per { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); display: block; margin-top: 1px; }
+.pl-plan-save { font-size: 11.5px; font-weight: 700; color: var(--success); display: block; margin-top: 3px; }
+.pl-plan-lines { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.pl-plan-line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+.pl-plan-line b { font-weight: 800; color: var(--text-main); font-variant-numeric: tabular-nums; }
+.pl-plan-line svg { flex-shrink: 0; color: var(--accent-deep, var(--accent)); }
+.pl-plan-line[data-lack="1"] { color: var(--warning); }
+.pl-plan-line[data-lack="1"] svg { color: var(--warning); }
+.pl-plan-line[data-lack="1"] b { color: var(--warning); }
+
+/* where you are today */
+.pl-use { margin: 20px 16px 0; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+          border-radius: 14px; padding: 14px; }
+.pl-use-h { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+            color: var(--text-muted); }
+.pl-meter { margin-top: 13px; }
+.pl-meter-top { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+.pl-meter-l { font-size: 13.5px; font-weight: 700; }
+.pl-meter-r { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+.pl-meter-track { height: 6px; border-radius: 99px; background: var(--bg-inner); margin-top: 8px;
+                  overflow: hidden; display: flex; }
+.pl-meter-track i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.pl-meter-track i[data-state="warn"] { background: var(--warning); }
+.pl-meter-track i[data-state="full"] { background: var(--danger); }
+.pl-meter-why { font-size: 11.5px; color: var(--text-muted); margin-top: 7px; }
+.pl-meter-why[data-state="warn"] { color: var(--warning); font-weight: 700; }
+
+/* one-off packs */
+.pl-pack { margin: 12px 16px 0; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+           border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+.pl-pack-main { flex: 1; min-width: 0; }
+.pl-pack-main b { display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+.pl-pack-main span { display: block; font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.pl-pack button { flex-shrink: 0; height: 38px; padding: 0 14px; border-radius: 11px;
+                   border: 1px solid var(--border); background: var(--bg-panel);
+                   font-size: 13.5px; font-weight: 800; color: var(--text-main); }
+.pl-pack button:disabled { opacity: .6; cursor: default; }
+
+/* what changes if you switch */
+.pl-diff { margin: 20px 16px 0; border-radius: 14px; padding: 13px 14px; font-size: 12.5px; line-height: 1.5;
+           background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border)); color: var(--text-muted); }
+.pl-diff b { color: var(--text-main); font-weight: 800; }
+.pl-diff[data-tone="warn"] { background: rgba(180,83,9,.08); border-color: rgba(180,83,9,.22); color: var(--warning); }
+.pl-diff[data-tone="warn"] b { color: var(--warning); }
+
+.pl-fine { padding: 16px 20px 0; font-size: 11.5px; line-height: 1.55; color: var(--text-faint, var(--text-muted)); }
+.pl-fine button { background: none; border: none; padding: 0; color: var(--accent-deep, var(--accent)); font-weight: 700; font-size: inherit; }
+
+/* sticky action */
+.pl-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
+           padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+.pl-foot-sum { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.pl-foot-sum b { font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+.pl-foot-sum span { margin-left: auto; font-size: 12.5px; color: var(--text-muted);
+                     font-variant-numeric: tabular-nums; }
+.pl-go { width: 100%; height: 50px; border: none; border-radius: 13px; background: var(--accent-deep, var(--accent));
+         color: #fff; font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+.pl-go:active { background: var(--accent-ink, var(--accent)); }
+.pl-go[disabled] { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); }
+.pl-go.quiet { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="pl-wrap">
+  <div class="pl-head">
+    <div class="pl-bar">
+      <button class="pl-back" onclick="window.location.href='/settings'" aria-label="Back to Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="pl-title">Plan</span>
+      <span class="pl-now" id="nowTag">Free</span>
+    </div>
+  </div>
+
+  <div class="pl-scroll">
+    <div class="pl-cycle" id="cycle"></div>
+    <div class="pl-plans" id="plans"></div>
+
+    <div class="pl-use">
+      <div class="pl-use-h">Where you are this month</div>
+      <div class="pl-meter" id="mScans"></div>
+      <div class="pl-meter" id="mStore"></div>
+      <div class="pl-meter" id="mShops"></div>
+    </div>
+
+    <div class="pl-pack">
+      <span class="pl-pack-main"><b>Scan pack</b><span id="packWhy">Checking price…</span></span>
+      <button onclick="buyScanPack()" id="packBtn" disabled>…</button>
+    </div>
+
+    <div class="pl-diff" id="diff"></div>
+
+    <div class="pl-fine">
+      Scans and storage are shared across items, orders and expenses. Cancel any time —
+      you keep the plan until the end of the period you paid for.
+      <button onclick="openBillingPortal()">Invoices and payment method</button>
+    </div>
+  </div>
+
+  <div class="pl-foot">
+    <div class="pl-foot-sum" id="footSum"></div>
+    <button class="pl-go" id="goBtn"></button>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+// Real numbers — must match settings.html's PLAN_META / storeLimits and
+// api/extract-receipt.js's scanLimits (the source of truth for
+// enforcement; this is just the display). Yearly is the real Stripe
+// price, not monthly*10 (Pro yearly is €239, not €249.90).
+const PLANS = [
+  { key:'free',    label:'Free',    mo:0,     yr:0,   scans:5,   storageMB:10,  stores:1,
+    lines:['Manual entry, unlimited','Products, orders, expenses'] },
+  { key:'starter', label:'Starter', mo:9.99,  yr:99,  scans:100, storageMB:50,  stores:5,
+    flag:'Most makers', lines:['Analytics and reorder predictions','CSV exports'] },
+  { key:'pro',     label:'Pro',     mo:24.99, yr:239, scans:300, storageMB:250, stores:Infinity,
+    lines:['Everything in Starter','Priority support'] }
+];
+let tier = 'free', picked = 'starter', cycle = 'month';
+
+// Real usage, loaded from Supabase — see loadEverything()
+let USE = { scansUsed:0, bonusLeft:0, storageUsedMB:0, stores:0, resetsOn:'' };
+let SCAN_PACK = { configured:false, scanCount:50, priceFormatted:null };
+let hasStripeCustomer = false;
+
+const $ = id => document.getElementById(id);
+const plan = k => PLANS.find(p => p.key === k);
+const mbLabel = mb => mb >= 1024 ? (mb/1024).toFixed(mb/1024 >= 10 ? 0 : 1)+' GB' : Math.round(mb)+' MB';
+const eur = n => n === 0 ? 'Free' : '€'+n.toFixed(2).replace('.',',');
+const price = p => cycle === 'month' ? p.mo : p.yr/12;
+const total = p => cycle === 'month' ? p.mo : p.yr;
+const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
+const warn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="14" height="14"><line x1="12" y1="7" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/><circle cx="12" cy="12" r="9.5"/></svg>';
+
+function renderCycle() {
+  $('cycle').innerHTML = `
+    <button aria-pressed="${cycle==='month'}" onclick="setCycle('month')">Monthly</button>
+    <button aria-pressed="${cycle==='year'}" onclick="setCycle('year')">Yearly <small>2 months free</small></button>`;
+}
+
+// A line goes amber when the tier you're looking at is under what you
+// already use — the whole point of showing usage on a pricing screen.
+function renderPlans() {
+  $('plans').innerHTML = PLANS.map(p => {
+    const on = p.key === picked, isNow = p.key === tier;
+    const shortScans = USE.scansUsed > p.scans,
+          shortStore = USE.storageUsedMB > p.storageMB,
+          shortShops = USE.stores > p.stores;
+    const line = (lack, html) =>
+      `<span class="pl-plan-line"${lack ? ' data-lack="1"' : ''}>${lack ? warn : tick}${html}</span>`;
+    return `<button class="pl-plan" aria-pressed="${on}" onclick="pick('${p.key}')">
+      <span class="pl-plan-top">
+        <span>
+          <span class="pl-plan-name">${p.label}</span>
+          ${isNow ? '<span class="pl-plan-flag" data-kind="now">Current</span>'
+                  : p.flag ? `<span class="pl-plan-flag">${p.flag}</span>` : ''}
+        </span>
+        <span class="pl-plan-price">
+          <b class="pl-plan-amt">${eur(price(p))}</b>
+          <span class="pl-plan-per">${p.mo ? 'per month' : 'forever'}</span>
+          ${p.mo && cycle==='year' ? `<span class="pl-plan-save">${eur(total(p))} billed yearly</span>` : ''}
+        </span>
+      </span>
+      <span class="pl-plan-lines">
+        ${line(shortScans, `<b>${p.scans}</b> AI scans a month`)}
+        ${line(shortStore, `<b>${mbLabel(p.storageMB)}</b> receipt storage`)}
+        ${line(shortShops, `<b>${p.stores === Infinity ? 'Unlimited' : p.stores}</b> store${p.stores!==1?'s':''}`)}
+        ${p.lines.map(l => line(false, l)).join('')}
+      </span>
+    </button>`;
+  }).join('');
+}
+
+function meter(el, label, used, cap, unit, why) {
+  const pct = cap > 0 ? Math.min(100, Math.round(used/cap*100)) : 0;
+  const st = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
+  $(el).innerHTML = `
+    <div class="pl-meter-top"><span class="pl-meter-l">${label}</span><span class="pl-meter-r">${unit}</span></div>
+    <div class="pl-meter-track"><i style="width:${pct}%"${st?` data-state="${st}"`:''}></i></div>
+    <div class="pl-meter-why"${st?' data-state="warn"':''}>${why}</div>`;
+}
+function renderUse() {
+  const p = plan(tier);
+  meter('mScans', 'AI scans', USE.scansUsed, p.scans,
+    `${USE.scansUsed} of ${p.scans} used`,
+    `Resets ${USE.resetsOn}. ${USE.bonusLeft} bought scans on top, they don't expire.`);
+  meter('mStore', 'Receipt storage', USE.storageUsedMB, p.storageMB,
+    `${mbLabel(USE.storageUsedMB)} of ${mbLabel(p.storageMB)}`,
+    USE.storageUsedMB/p.storageMB >= .8 ? `${mbLabel(Math.max(0, p.storageMB-USE.storageUsedMB))} left before uploads are refused.`
+                                        : 'Receipts and order screenshots you upload.');
+  const storeCap = p.stores === Infinity ? Math.max(USE.stores, 1) : p.stores;
+  meter('mShops', 'Stores', USE.stores, Math.max(USE.stores, storeCap),
+    `${USE.stores} of ${p.stores === Infinity ? '∞' : p.stores}`,
+    p.stores !== Infinity && USE.stores > p.stores ? `${USE.stores-p.stores} over ${p.label} — kept read-only until you delete one.`
+                          : 'Items, orders and expenses are kept per store.');
+  $('packWhy').textContent = SCAN_PACK.configured
+    ? `${SCAN_PACK.scanCount} scans, one-off · never expire · ${USE.bonusLeft} left`
+    : `Scan packs aren't configured yet · ${USE.bonusLeft} left`;
+  $('packBtn').textContent = SCAN_PACK.priceFormatted || (SCAN_PACK.configured ? 'Buy' : 'Unavailable');
+  $('packBtn').disabled = !SCAN_PACK.configured;
+}
+
+function renderDiff() {
+  const p = plan(picked), now = plan(tier);
+  const el = $('diff');
+  if (picked === tier) {
+    el.dataset.tone = '';
+    el.innerHTML = `You're on <b>${p.label}</b>. Nothing changes — pick another plan to see what you'd gain or lose.`;
+  } else if (p.mo > now.mo) {
+    el.dataset.tone = '';
+    el.innerHTML = `Switching to <b>${p.label}</b> takes you from ${now.scans} to <b>${p.scans}</b> scans a month
+      and ${mbLabel(now.storageMB)} to <b>${mbLabel(p.storageMB)}</b> of storage. It starts today; you're charged
+      <b>${eur(total(p))}</b> ${cycle === 'month' ? 'a month' : 'a year'}.`;
+  } else {
+    const losses = [];
+    if (USE.scansUsed > p.scans) losses.push(`you've already used ${USE.scansUsed} scans this month`);
+    if (USE.storageUsedMB > p.storageMB) losses.push(`your receipts take ${mbLabel(USE.storageUsedMB)}`);
+    if (p.stores !== Infinity && USE.stores > p.stores) losses.push(`${USE.stores-p.stores} store would go read-only`);
+    el.dataset.tone = 'warn';
+    el.innerHTML = losses.length
+      ? `Dropping to <b>${p.label}</b> is tight: ${losses.join(', ')}. Nothing is deleted — the extra is kept read-only until you're back under the limit.`
+      : `Dropping to <b>${p.label}</b> keeps everything you have today. It takes effect at the end of the period you've paid for.`;
+  }
+}
+
+function renderFoot() {
+  const p = plan(picked), now = plan(tier), same = picked === tier;
+  $('footSum').innerHTML = same ? `<b>${p.label}</b><span>current plan</span>`
+    : `<b>${p.label}</b><span>${p.mo ? eur(total(p)) + (cycle==='month' ? ' / month' : ' / year') : 'no charge'}</span>`;
+  const btn = $('goBtn');
+  btn.disabled = same;
+  btn.className = 'pl-go' + (!same && p.mo < now.mo ? ' quiet' : '');
+  btn.textContent = same ? 'Your current plan'
+    : p.mo > now.mo ? `Upgrade to ${p.label}`
+    : p.mo === 0 ? 'Cancel and move to Free' : `Switch to ${p.label}`;
+  btn.onclick = () => goClicked(p, now);
+}
+
+function render() {
+  const p = plan(tier);
+  $('nowTag').textContent = p.label;
+  $('nowTag').dataset.paid = p.mo ? '1' : '0';
+  renderCycle(); renderPlans(); renderUse(); renderDiff(); renderFoot();
+}
+function setCycle(c) { cycle = c; render(); }
+function pick(k) { picked = k; render(); }
+
+// ---------- Real actions ----------
+
+async function goClicked(p, now) {
+  const btn = $('goBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) { window.location.href = '/login?redirect=plan'; return; }
+
+    if (p.mo > now.mo) {
+      // Upgrade — real Stripe Checkout, same contract pricing.html uses.
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ tier: p.key, interval: cycle })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const stripe = Stripe(data.publishableKey);
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      if (error) throw error;
+    } else if (!hasStripeCustomer) {
+      // Never subscribed, so "downgrade" has nothing to do -- avoid the
+      // portal API's 404 for a user with no Stripe customer at all.
+      alert("You're already on the Free plan.");
+      btn.disabled = false;
+      btn.textContent = originalText;
+    } else {
+      // Downgrade (to a lower paid tier, or to Free) — Stripe's own Customer
+      // Portal, not custom cancel/downgrade logic here.
+      await goToPortal(session, `Change your plan to ${p.label} from the "Subscription" section.`);
+    }
+  } catch (err) {
+    alert('Failed to start checkout: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function goToPortal(session, hint) {
+  const res = await fetch('/api/create-portal-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  if (hint) alert(hint);
+  window.location.href = data.url;
+}
+
+async function openBillingPortal() {
+  const { data: { session } } = await window.supabaseClient.auth.getSession();
+  if (!session) { window.location.href = '/login?redirect=plan'; return; }
+  if (!hasStripeCustomer) { alert("You're on the Free plan with no billing history yet — there's nothing to manage."); return; }
+  try {
+    await goToPortal(session, null);
+  } catch (err) {
+    alert('Failed to open billing portal: ' + err.message);
+  }
+}
+
+async function buyScanPack() {
+  const btn = $('packBtn');
+  if (btn.disabled) return;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) { window.location.href = '/login?redirect=plan'; return; }
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type: 'scan_pack' })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const stripe = Stripe(data.publishableKey);
+    const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+    if (error) throw error;
+  } catch (err) {
+    alert('Failed to start checkout: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// Stripe checkout navigates away; if the user cancels and comes back via
+// the browser's back button, the page can be restored from bfcache with
+// whatever "Loading…" state was frozen right before navigating away.
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  render();
+});
+
+// ---------- Real data ----------
+
+async function loadEverything() {
+  const { data: { user } } = await window.supabaseClient.auth.getUser();
+  if (!user) { window.location.href = '/login?redirect=plan'; return; }
+
+  const { data: settings } = await window.supabaseClient
+    .from('user_settings')
+    .select('bonus_scans, storage_used_bytes, storage_limit_bytes')
+    .eq('user_id', user.id)
+    .single();
+
+  // Always verify against the subscriptions table -- user_settings.tier can
+  // be stale if the subscription expired without the webhook firing (same
+  // check settings.html's loadTierInformation() already does).
+  const { data: subscription } = await window.supabaseClient
+    .from('subscriptions')
+    .select('tier, status, current_period_end, stripe_customer_id')
+    .eq('profile_id', user.id)
+    .maybeSingle();
+
+  hasStripeCustomer = !!subscription?.stripe_customer_id;
+  tier = 'free';
+  if (subscription && subscription.status === 'active') {
+    const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+    if (!periodEnd || periodEnd > new Date()) tier = subscription.tier || 'free';
+  }
+  picked = tier === 'free' ? 'starter' : tier;
+
+  USE.bonusLeft = settings?.bonus_scans || 0;
+  USE.storageUsedMB = (settings?.storage_used_bytes || 0) / 1048576;
+
+  const now = new Date();
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const { data: usageRecords } = await window.supabaseClient
+    .from('ai_usage_tracking')
+    .select('ingredient_count, order_count, expense_count')
+    .eq('user_id', user.id)
+    .gte('date', `${yearMonth}-01`)
+    .lte('date', `${yearMonth}-${String(lastDay).padStart(2,'0')}`);
+  USE.scansUsed = (usageRecords || []).reduce((s, r) => s + (r.ingredient_count||0) + (r.order_count||0) + (r.expense_count||0), 0);
+
+  const resetDate = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  USE.resetsOn = resetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const { data: stores } = await window.supabaseClient.from('stores').select('id').eq('owner_id', user.id);
+  USE.stores = stores ? stores.length : 1;
+
+  render();
+
+  try {
+    const res = await fetch('/api/scan-pack-price');
+    const data = await res.json();
+    SCAN_PACK = { configured: !!data.configured, scanCount: data.scanCount || 50, priceFormatted: data.priceFormatted || null };
+  } catch (e) { console.error('Error loading scan pack price:', e); }
+  renderUse();
+}
+
+render();
+// auth.js doesn't fire a ready event -- poll briefly instead, same pattern
+// pricing.html's updateAuthUI() already uses.
+let _clientRetries = 0;
+(function waitForClient() {
+  if (typeof window.supabaseClient !== 'undefined') { loadEverything(); return; }
+  if (++_clientRetries > 30) { console.warn('Supabase client never loaded'); return; }
+  setTimeout(waitForClient, 100);
+})();
+</script>
+</body>
+</html>

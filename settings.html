@@ -762,7 +762,7 @@
           <div class="user-menu-role">Free Plan</div>
         </div>
         <div class="user-menu-list">
-          <div class="user-menu-item" onclick="window.location.href='/pricing'" style="color: var(--accent); font-weight: 600;">
+          <div class="user-menu-item" onclick="window.location.href='/plan'" style="color: var(--accent); font-weight: 600;">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
@@ -1325,7 +1325,7 @@ function renderPool() {
       : total <= 2 ? `<div class="st-pool-low">${total} left</div>` : ''}
     <div class="st-pool-buy">
       <button type="button" class="st-buy-primary" onclick="openStSheet('packs')">${bL ? 'Buy more scans' : 'Buy a scan pack'}</button>
-      ${ST.tier !== 'pro' ? `<button type="button" class="st-buy-second" onclick="window.location.href='/pricing'">Upgrade plan</button>` : ''}
+      ${ST.tier !== 'pro' ? `<button type="button" class="st-buy-second" onclick="window.location.href='/plan'">Upgrade plan</button>` : ''}
     </div>`;
   $('stPoolNote').textContent = bL
     ? 'Monthly scans are used first; bought scans never expire and carry over.'
@@ -1335,7 +1335,7 @@ function renderPool() {
 function renderPlanRows() {
   const meta = PLAN_META[ST.tier] || PLAN_META.free;
   $('stPlanRows').innerHTML = `
-    <button type="button" class="st-row" onclick="window.location.href='/pricing'">
+    <button type="button" class="st-row" onclick="window.location.href='/plan'">
       <span class="st-row-main"><span class="st-row-name">${esc(meta.label)} plan</span>
       <span class="st-row-why">${meta.scans} scans · ${meta.storageMB} MB storage</span></span>
       <span class="st-row-tag"${ST.tier !== 'free' ? ' data-paid="1"' : ''}>${ST.tier === 'pro' ? 'Top plan' : 'Change'}</span>
