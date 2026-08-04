@@ -1112,7 +1112,7 @@ function renderReorderPredictions() {
         <span class="an-l-name">${anEsc(p.name)}</span>
         <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${daysText} · ${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
       </span>
-      <a href="/ingredient-detail?id=${p.id}" class="an-l-act">Open</a>
+      <a href="/ingredient-detail?id=${p.id}&openReorder=true" class="an-l-act">Reorder</a>
     </div>`;
   }).join('') + (predictions.length > 5
     ? `<a href="#" class="an-more" onclick="event.preventDefault();roExpanded=!roExpanded;renderReorderPredictions();">${roExpanded ? 'Show less' : `Show all ${predictions.length}`}</a>`
