@@ -1559,6 +1559,21 @@
   </div>
 </div>
 
+<!-- Reverse Inventory Confirmation -->
+<div class="modal-overlay modal-sheet" id="reverseInvConfirmModal" onclick="if(event.target === this) closeReverseInvConfirm(false)">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Reverse inventory?</h3>
+      <button onclick="closeReverseInvConfirm(false)" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0;">&times;</button>
+    </div>
+    <p id="reverseInvConfirmDesc" style="margin: 16px 0; color: var(--text-main);"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeReverseInvConfirm(false)" style="flex: 1;">Cancel</button>
+      <button class="btn-primary" style="flex: 1;" onclick="closeReverseInvConfirm(true)">Reverse</button>
+    </div>
+  </div>
+</div>
+
 <!-- Quantity Input Modal -->
 <!-- Remove Recipe Modal -->
 <div class="modal-overlay" id="removeRecipeModal" onclick="if(event.target === this) closeRemoveRecipeModal()">
@@ -1917,6 +1932,20 @@ async function updateReverseInventoryVisibility() {
   } catch (e) { console.error('Error checking inventory reversal state:', e); }
 }
 
+// A native confirm() looks and behaves like a bare browser dialog, not part
+// of the app -- this is the same .modal-sheet bottom-sheet every other
+// confirmation in the app already uses.
+let _reverseInvResolve = null;
+function openReverseInvConfirm(desc) {
+  document.getElementById('reverseInvConfirmDesc').textContent = desc;
+  document.getElementById('reverseInvConfirmModal').classList.add('active');
+  return new Promise(resolve => { _reverseInvResolve = resolve; });
+}
+function closeReverseInvConfirm(result) {
+  document.getElementById('reverseInvConfirmModal').classList.remove('active');
+  if (_reverseInvResolve) { _reverseInvResolve(!!result); _reverseInvResolve = null; }
+}
+
 // Undoes exactly what THIS order's inventory deduction did -- not a reset to
 // the order's own recorded pre-sale quantity (stock could have moved for
 // other reasons since), but the inverse of this order's own delta applied
@@ -1933,7 +1962,7 @@ async function reverseOrderInventory(saleId) {
     if (error) throw error;
     if (!rows || !rows.length) { showNotification('No inventory changes to reverse for this order', 'error'); return; }
 
-    if (!confirm(`Add back the stock this order deducted for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
+    if (!await openReverseInvConfirm(`Add back the stock this order deducted for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
 
     for (const row of rows) {
       const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // negative -- a deduction

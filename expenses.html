@@ -1188,6 +1188,18 @@
   </div>
 </div>
 
+<!-- Reverse Inventory Confirmation -->
+<div class="modal-overlay modal-sheet" id="reverseInvConfirmModal" onclick="if(event.target === this) closeReverseInvConfirm(false)">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top: 0;">Reverse inventory?</h3>
+    <p id="reverseInvConfirmDesc" style="color: var(--text-muted); margin-bottom: 24px;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="flex: 1; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="closeReverseInvConfirm(false)">Cancel</button>
+      <button class="btn" style="flex: 1; background: var(--accent-deep, var(--accent)); color: #fff; border: none;" onclick="closeReverseInvConfirm(true)">Reverse</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Ingredient Mapping Modal -->
 <div class="modal-overlay modal-sheet" id="ingredientMappingModal">
@@ -2769,8 +2781,14 @@ async function deleteExpenseNow(id) {
 
   // Tapping an open row closes it instead of navigating
   list.addEventListener('click', e => {
+    // The reveal buttons must never be swallowed by the post-drag guard
+    // below -- swiping open ends right where these buttons are, so the very
+    // next tap (the one actually meant for Reverse/Delete) often lands
+    // inside that 300ms window and was getting silently eaten, requiring a
+    // second tap to do anything.
+    if (e.target.closest('.exp-actions')) return;
     if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
-    if (!open || e.target.closest('.exp-actions')) return;
+    if (!open) return;
     if (e.target.closest('.exp-row') === open) {
       e.stopPropagation(); e.preventDefault();
       close();
@@ -2784,6 +2802,20 @@ async function deleteExpenseNow(id) {
 
 // ---------- Soft delete with undo ----------
 let _pendingDeleteExpense = null;
+
+// A native confirm() looks and behaves like a bare browser dialog, not part
+// of the app -- this is the same .modal-sheet bottom-sheet every other
+// confirmation in the app already uses.
+let _reverseInvResolve = null;
+function openReverseInvConfirm(desc) {
+  document.getElementById('reverseInvConfirmDesc').textContent = desc;
+  document.getElementById('reverseInvConfirmModal').classList.add('active');
+  return new Promise(resolve => { _reverseInvResolve = resolve; });
+}
+function closeReverseInvConfirm(result) {
+  document.getElementById('reverseInvConfirmModal').classList.remove('active');
+  if (_reverseInvResolve) { _reverseInvResolve(!!result); _reverseInvResolve = null; }
+}
 
 // Undoes exactly what THIS expense's inventory addition did -- not a reset
 // to the expense's own recorded pre-purchase quantity (stock could have
@@ -2806,7 +2838,7 @@ async function reverseExpenseInventory(expenseId) {
     if (error) throw error;
     if (!rows || !rows.length) { showNotification('No inventory changes to reverse for this expense', 'error'); return; }
 
-    if (!confirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
+    if (!await openReverseInvConfirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
 
     for (const row of rows) {
       const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // positive -- an addition
@@ -3701,8 +3733,10 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.getElementById('expenseModal').classList.contains('active')) {
       closeExpenseModal();
-    } else if (document.getElementById('deleteModal').classList.contains('active')) {
+    } else if (document.getElementById('deleteModal')?.classList.contains('active')) {
       closeDeleteModal();
+    } else if (document.getElementById('reverseInvConfirmModal')?.classList.contains('active')) {
+      closeReverseInvConfirm(false);
     } else if (document.getElementById('ingredientMappingModal').classList.contains('active')) {
       closeIngredientMappingModal();
     }
