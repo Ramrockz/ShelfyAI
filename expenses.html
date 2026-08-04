@@ -462,6 +462,7 @@
              align-items: center; justify-content: center; gap: 3px;
              font-family: inherit; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; }
   .exp-act-del { background: var(--danger); color: #fff; }
+  .exp-act-rev { background: var(--accent-deep, var(--accent)); color: #fff; }
   .exp-row { display: flex; align-items: center; gap: 12px; height: 64px;
              padding: 0 14px 0 16px; background: var(--bg-panel);
              box-sizing: border-box; cursor: pointer;
@@ -1647,6 +1648,9 @@ function renderRecentLedger(filtered, displayData, hasMore, container) {
     const meta = [day, e.vendor ? _escHtml(e.vendor) : null, n ? `${n} item${n !== 1 ? 's' : ''}` : null].filter(Boolean).join(' · ');
     return `<div class="exp-swipe">
         <div class="exp-actions">
+          <button class="exp-act exp-act-rev" onclick="reverseExpenseInventory('${e.id}')" aria-label="Reverse inventory">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 8 7 8"/></svg>
+          </button>
           <button class="exp-act exp-act-del" onclick="softDeleteExpense('${e.id}')" aria-label="Delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
@@ -2701,7 +2705,7 @@ async function deleteExpenseNow(id) {
 
 // ---------- Mobile ledger row swipe-to-reveal (Delete) ----------
 (function initExpSwipe() {
-  const REVEAL    = 48;   // total action width — must equal 1 × .exp-act width
+  const REVEAL    = 96;   // total action width — must equal 2 × .exp-act width
   const THRESHOLD = 40;   // px of travel that commits the open/close
   const RUBBER    = 0.24; // 0 = hard stop at both ends, 1 = no resistance
   const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
@@ -2780,6 +2784,49 @@ async function deleteExpenseNow(id) {
 
 // ---------- Soft delete with undo ----------
 let _pendingDeleteExpense = null;
+
+// Undoes exactly what THIS expense's inventory addition did -- not a reset
+// to the expense's own recorded pre-purchase quantity (stock could have
+// moved for other reasons since), but the inverse of this expense's own
+// delta applied to wherever quantity is *now*. Reads/writes ingredient_history
+// the same way saveExpense()/confirmIngredientMapping() already do, so it
+// stays a durable, auditable trail rather than a silent one-off adjustment.
+async function reverseExpenseInventory(expenseId) {
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: already } = await supabaseClient
+      .from('ingredient_history').select('id').eq('reference_id', String(expenseId)).eq('reason', 'expense_reversal').limit(1);
+    if (already && already.length) { showNotification("This expense's inventory was already reversed", 'error'); return; }
+
+    const { data: rows, error } = await supabaseClient
+      .from('ingredient_history').select('ingredient_id, old_value, new_value')
+      .eq('reference_id', String(expenseId)).eq('reason', 'expense');
+    if (error) throw error;
+    if (!rows || !rows.length) { showNotification('No inventory changes to reverse for this expense', 'error'); return; }
+
+    if (!confirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
+
+    for (const row of rows) {
+      const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // positive -- an addition
+      const { data: ing } = await supabaseClient.from('ingredients').select('quantity').eq('id', row.ingredient_id).single();
+      if (!ing) continue;
+      const current = parseFloat(ing.quantity) || 0;
+      const restored = Math.max(0, current - delta);
+      await supabaseClient.from('ingredients').update({ quantity: restored }).eq('id', row.ingredient_id);
+      await supabaseClient.from('ingredient_history').insert([{
+        ingredient_id: row.ingredient_id, profile_id: user.id, field_name: 'quantity',
+        old_value: String(current), new_value: String(restored),
+        reason: 'expense_reversal', reference_id: String(expenseId), reference_text: 'Reversed expense inventory'
+      }]);
+    }
+    showNotification('Inventory reversed for this expense', 'success');
+  } catch (e) {
+    console.error('Error reversing expense inventory:', e);
+    showNotification('Failed to reverse inventory', 'error');
+  }
+}
 
 function softDeleteExpense(id) {
   const expense = expenses.find(e => e.id === id || e.id == id);
@@ -3553,30 +3600,6 @@ async function confirmIngredientMapping() {
 
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    // Update inventory if toggle is on
-    // item.price is the LINE total (see mappedItems construction above and
-    // the readonly "Price" field in renderDetectedItems, which auto-fills as
-    // cost_per_unit * qty) -- divide by quantity everywhere a genuine
-    // per-unit cost_per_unit is needed, and never re-multiply it by qty
-    // again when summing a total.
-    if (updateInventory) {
-      for (const item of mappedItems) {
-        if (item.ingredientId && item.quantity > 0) {
-          const ing = allIngredientsCache.find(i => i.id === item.ingredientId);
-          if (ing) {
-            const unitCost = item.price != null ? item.price / item.quantity : ing.cost_per_unit;
-            await supabaseClient
-              .from('ingredients')
-              .update({
-                quantity: (ing.quantity || 0) + item.quantity,
-                cost_per_unit: unitCost
-              })
-              .eq('id', item.ingredientId);
-          }
-        }
-      }
-    }
-
     // Save expense
     const d = pendingExpenseData;
     const totalAmount = mappedItems.reduce((sum, item) => sum + (item.price || 0), 0)
@@ -3598,7 +3621,7 @@ async function confirmIngredientMapping() {
 
     const receiptUrl = pendingExpenseReceiptUrl || null;
     pendingExpenseReceiptUrl = null;
-    const { error } = await supabaseClient.from('expenses').insert([{
+    const { data: savedExpense, error } = await supabaseClient.from('expenses').insert([{
       profile_id: user.id,
       store_id: storeId,
       description: d.description || mappedItems[0]?.detectedName || 'Expense',
@@ -3608,9 +3631,50 @@ async function confirmIngredientMapping() {
       category: d.category || null,
       ingredients: expenseIngredients.length > 0 ? expenseIngredients : null,
       ...(receiptUrl ? { receipt_url: receiptUrl, receipt_urls: [receiptUrl] } : {})
-    }]);
+    }]).select();
 
     if (error) throw error;
+
+    // Update inventory if toggle is on -- done after the expense insert
+    // (not before, as this used to) so the ingredient_history rows below can
+    // carry the real expense id, same as the manual entry flow's own
+    // history logging (saveExpense()) -- without that reference, "Reverse
+    // inventory" would have nothing to reverse for a scanned expense.
+    // item.price is the LINE total (see mappedItems construction above and
+    // the readonly "Price" field in renderDetectedItems, which auto-fills as
+    // cost_per_unit * qty) -- divide by quantity everywhere a genuine
+    // per-unit cost_per_unit is needed, and never re-multiply it by qty
+    // again when summing a total.
+    if (updateInventory && savedExpense && savedExpense[0]) {
+      for (const item of mappedItems) {
+        if (item.ingredientId && item.quantity > 0) {
+          const ing = allIngredientsCache.find(i => i.id === item.ingredientId);
+          if (ing) {
+            const unitCost = item.price != null ? item.price / item.quantity : ing.cost_per_unit;
+            const oldQty = parseFloat(ing.quantity) || 0;
+            const newQty = oldQty + item.quantity;
+            await supabaseClient
+              .from('ingredients')
+              .update({ quantity: newQty, cost_per_unit: unitCost })
+              .eq('id', item.ingredientId);
+            ing.quantity = newQty;
+            ing.cost_per_unit = unitCost;
+            try {
+              await supabaseClient.from('ingredient_history').insert([{
+                ingredient_id: item.ingredientId,
+                profile_id: user.id,
+                field_name: 'quantity',
+                old_value: String(oldQty),
+                new_value: String(newQty),
+                reason: 'expense',
+                reference_id: String(savedExpense[0].id),
+                reference_text: vendor || null
+              }]);
+            } catch (historyError) { console.error('Error creating history entry:', historyError); }
+          }
+        }
+      }
+    }
 
     if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
     closeIngredientMappingModal();

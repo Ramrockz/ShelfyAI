@@ -1313,6 +1313,10 @@
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
+      <button type="button" class="ord-more-item" id="ordReverseInvBtn" style="display:none;" onclick="closeOrdMoreMenu(); reverseOrderInventory(orderId)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 8 7 8"/></svg>
+        <span>Reverse inventory</span>
+      </button>
       <button type="button" class="ord-more-item ord-more-item-danger" onclick="closeOrdMoreMenu(); showDeleteModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         <span>Delete order</span>
@@ -1592,6 +1596,7 @@ async function init() {
   await loadOrder();
   await loadRecipes();
   displayOrder();
+  updateReverseInventoryVisibility();
   console.log('[Order Detail] Init complete, orderData:', orderData);
 }
 
@@ -1895,6 +1900,61 @@ function toggleOrdMoreMenu() {
 function closeOrdMoreMenu() {
   document.getElementById('ordMoreMenu')?.classList.remove('open');
   document.getElementById('ordMoreBtn')?.setAttribute('aria-expanded', 'false');
+}
+
+// Only show "Reverse inventory" when this order actually deducted stock and
+// hasn't already been reversed -- both determined from ingredient_history
+// (see reverseOrderInventory() below), not a dedicated column.
+async function updateReverseInventoryVisibility() {
+  const btn = document.getElementById('ordReverseInvBtn');
+  if (!btn || !orderId) return;
+  try {
+    const { data: rows } = await window.supabaseClient
+      .from('ingredient_history').select('reason').eq('reference_id', String(orderId)).in('reason', ['order', 'order_reversal']);
+    const applied = (rows || []).some(r => r.reason === 'order');
+    const reversed = (rows || []).some(r => r.reason === 'order_reversal');
+    btn.style.display = (applied && !reversed) ? '' : 'none';
+  } catch (e) { console.error('Error checking inventory reversal state:', e); }
+}
+
+// Undoes exactly what THIS order's inventory deduction did -- not a reset to
+// the order's own recorded pre-sale quantity (stock could have moved for
+// other reasons since), but the inverse of this order's own delta applied
+// to wherever quantity is *now*. Logs to ingredient_history the same way
+// the original deduction did, so it stays a durable, auditable trail.
+async function reverseOrderInventory(saleId) {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: rows, error } = await window.supabaseClient
+      .from('ingredient_history').select('ingredient_id, old_value, new_value')
+      .eq('reference_id', String(saleId)).eq('reason', 'order');
+    if (error) throw error;
+    if (!rows || !rows.length) { showNotification('No inventory changes to reverse for this order', 'error'); return; }
+
+    if (!confirm(`Add back the stock this order deducted for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
+
+    for (const row of rows) {
+      const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // negative -- a deduction
+      const { data: ing } = await window.supabaseClient.from('ingredients').select('quantity').eq('id', row.ingredient_id).single();
+      if (!ing) continue;
+      const current = parseFloat(ing.quantity) || 0;
+      const restored = Math.max(0, current - delta); // subtracting a negative delta adds it back
+      await window.supabaseClient.from('ingredients').update({ quantity: restored }).eq('id', row.ingredient_id);
+      await window.supabaseClient.from('ingredient_history').insert([{
+        ingredient_id: row.ingredient_id, profile_id: user.id, field_name: 'quantity',
+        old_value: String(current), new_value: String(restored),
+        reason: 'order_reversal', reference_id: String(saleId), reference_text: 'Reversed order inventory'
+      }]);
+    }
+    showNotification('Inventory reversed for this order', 'success');
+    const btn = document.getElementById('ordReverseInvBtn');
+    if (btn) btn.style.display = 'none';
+  } catch (e) {
+    console.error('Error reversing order inventory:', e);
+    showNotification('Failed to reverse inventory', 'error');
+  }
 }
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('ordMoreMenu');
