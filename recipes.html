@@ -1653,6 +1653,7 @@ async function loadIngredients() {
         unit: ing.unit || 'kg',
         quantity: parseFloat(ing.quantity) || 0,
         min_stock: parseFloat(ing.min_stock) || 0,
+        expiration_date: ing.expiration_date || null,
         attributes: attributes,
         is_favorite: ing.is_favorite || false,
         type: ing.type || 'Production',
@@ -1840,6 +1841,15 @@ function hideUndoToast() {
 }
 
 // --- AVAILABILITY CHECK ---
+// An expired ingredient blocks production the same way being out of stock
+// does, regardless of how much quantity is left -- you can't sell it
+// either way. Only "expired" blocks; "expiring soon" is informational.
+function isIngredientExpired(expirationDate) {
+  if (!expirationDate) return false;
+  const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
+  return days < 0;
+}
+
 function checkRecipeAvailability(recipe) {
   if (!recipe.components || recipe.components.length === 0) {
     return 'orange'; // No component data
@@ -1855,7 +1865,7 @@ function checkRecipeAvailability(recipe) {
     const required = comp.quantity || 0;
     const available = ingredient.quantity || 0;
     const minStock = ingredient.min_stock || 0;
-    if (available < required) {
+    if (available < required || isIngredientExpired(ingredient.expiration_date)) {
       canProduce = false;
     } else if (available <= minStock) {
       atMinStock = true;

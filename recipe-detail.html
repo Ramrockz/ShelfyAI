@@ -1315,6 +1315,16 @@ async function renderFamilyBreadcrumb(userId, storeId) {
   }
 }
 
+// An expired ingredient blocks production the same way being out of stock
+// does, regardless of how much quantity is left. Only "expired" blocks;
+// "expiring soon" (still has stock, just within the warning window) is
+// informational only.
+function isIngredientExpired(expirationDate) {
+  if (!expirationDate) return false;
+  const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
+  return days < 0;
+}
+
 async function loadFamilyMatrix(userId, storeId) {
   const section = document.getElementById('variantMatrixSection');
   if (!section) return;
@@ -1332,11 +1342,11 @@ async function loadFamilyMatrix(userId, storeId) {
     let stockMap = {};
     const allIngIds = [...new Set([recipe, ...familyVariants].flatMap(m => (m.components || []).map(c => c.ingredient_id || c.id)).filter(Boolean))];
     if (allIngIds.length) {
-      let _qs = window.supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', userId);
+      let _qs = window.supabaseClient.from('ingredients').select('id, quantity, min_stock, expiration_date').eq('profile_id', userId);
       if (storeId) _qs = _qs.eq('store_id', storeId);
       _qs = _qs.in('id', allIngIds);
       const { data: stockRows } = await _qs;
-      (stockRows || []).forEach(s => { stockMap[s.id] = { quantity: parseFloat(s.quantity) || 0, min_stock: parseFloat(s.min_stock) || 0 }; });
+      (stockRows || []).forEach(s => { stockMap[s.id] = { quantity: parseFloat(s.quantity) || 0, min_stock: parseFloat(s.min_stock) || 0, expiration_date: s.expiration_date || null }; });
     }
 
     renderVariantMatrix(stockMap);
@@ -1351,10 +1361,10 @@ function _memberAvailability(m, stockMap) {
   let maxCount = Infinity, canProduce = true, atMin = false;
   comps.forEach(c => {
     const id = c.ingredient_id || c.id;
-    const s = stockMap[id] || { quantity: 0, min_stock: 0 };
+    const s = stockMap[id] || { quantity: 0, min_stock: 0, expiration_date: null };
     const required = parseFloat(c.quantity) || 0;
     if (required > 0) maxCount = Math.min(maxCount, Math.floor(s.quantity / required));
-    if (s.quantity < required) canProduce = false;
+    if (s.quantity < required || isIngredientExpired(s.expiration_date)) canProduce = false;
     else if (s.min_stock > 0 && s.quantity <= s.min_stock) atMin = true;
   });
   if (maxCount === Infinity) maxCount = null;
@@ -1542,6 +1552,7 @@ async function renderRecipe() {
   let canProduce = true;
   let hasOutOfStock = false;
   let hasLowStock = false;
+  let hasExpired = false;
   
   // Fetch ingredient stock info
   const ingredientIds = components.map(c => c.ingredient_id || c.id).filter(Boolean);
@@ -1558,7 +1569,7 @@ async function renderRecipe() {
 
         let _q3 = window.supabaseClient
           .from('ingredients')
-          .select('id, quantity, min_stock, reorder_pending')
+          .select('id, quantity, min_stock, reorder_pending, expiration_date')
           .eq('profile_id', user.id);
         if (storeId) _q3 = _q3.eq('store_id', storeId);
         _q3 = _q3.in('id', ingredientIds);
@@ -1573,7 +1584,8 @@ async function renderRecipe() {
             ingredientStockMap[ing.id] = {
               quantity: ing.quantity || 0,
               min_stock: ing.min_stock || 0,
-              reorder_pending: ing.reorder_pending || false
+              reorder_pending: ing.reorder_pending || false,
+              expiration_date: ing.expiration_date || null
             };
           });
         }
@@ -1611,29 +1623,37 @@ async function renderRecipe() {
     const stockInfo = ingredientStockMap[ingredientId] || { quantity: 0 };
     const stock = parseFloat(stockInfo.quantity) || 0;
     const requiredQty = parseFloat(comp.quantity) || 0;
-    
+    // An expired ingredient blocks production the same way being out of
+    // stock does, regardless of how much of it is left -- forced to 0 here
+    // so it always wins as "the" blocker below, however much quantity the
+    // naive stock/required math would otherwise suggest is makeable.
+    const ingredientExpired = isIngredientExpired(stockInfo.expiration_date);
+
     // Calculate how many times this ingredient allows recipe to be made
-    if (requiredQty > 0) {
-      const timesForThisIngredient = Math.floor(stock / requiredQty);
+    if (requiredQty > 0 || ingredientExpired) {
+      const timesForThisIngredient = ingredientExpired ? 0 : Math.floor(stock / requiredQty);
       if (timesForThisIngredient < maxRecipeCount) {
         maxRecipeCount = timesForThisIngredient;
         _blockerName = comp.ingredient_name || comp.name || '';
         _blockerStock = stock; _blockerNeed = requiredQty;
       }
     }
-    
+
     // Debug logging
     console.log('Ingredient:', comp.ingredient_name || comp.name, 'ID:', ingredientId, 'Stock:', stock, 'Required:', requiredQty);
-    
-    // Recipe can't be produced if required quantity exceeds available stock
-    if (stock === 0) { canProduce = false; hasOutOfStock = true; }
+
+    // Recipe can't be produced if required quantity exceeds available stock,
+    // or if the ingredient itself has expired.
+    if (ingredientExpired) { canProduce = false; hasExpired = true; }
+    else if (stock === 0) { canProduce = false; hasOutOfStock = true; }
     else if (stock < requiredQty) { canProduce = false; hasLowStock = true; }
 
     // "Low" here means short for THIS product; fall back to the ingredient's
     // own min_stock threshold when there's technically enough for this
     // product but it's still generally running low.
     const stockMinStock = parseFloat(stockInfo.min_stock) || 0;
-    const stockPill = stock === 0 ? '<span class="stock-pill out">Out</span>'
+    const stockPill = ingredientExpired ? '<span class="stock-pill expired">Expired</span>'
+      : stock === 0 ? '<span class="stock-pill out">Out</span>'
       : stock < requiredQty ? '<span class="stock-pill low">Low</span>'
       : stockMinStock > 0 && stock < stockMinStock ? '<span class="stock-pill low">Low</span>'
       : '';
@@ -1688,6 +1708,10 @@ async function renderRecipe() {
       statusEl.textContent = 'Can Produce';
       statusEl.style.background = 'rgba(34, 197, 94, 0.2)';
       statusEl.style.color = 'var(--success)';
+    } else if (hasExpired) {
+      statusEl.textContent = 'Item expired';
+      statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
+      statusEl.style.color = 'var(--danger)';
     } else if (hasOutOfStock) {
       statusEl.textContent = 'Item out of stock';
       statusEl.style.background = 'rgba(239, 68, 68, 0.2)';
@@ -1790,7 +1814,8 @@ function renderMobileOverlay() {
     // dropped entirely, hiding it from this page.
     const need = parseFloat(comp.quantity) || 0;
     const minStock = parseFloat(stock?.min_stock) || 0;
-    const stockPill2 = qty === null ? ''
+    const stockPill2 = isIngredientExpired(stock?.expiration_date) ? '<span class="stock-pill expired">Expired</span>'
+      : qty === null ? ''
       : qty === 0 ? '<span class="stock-pill out">Out</span>'
       : qty < need ? `<span class="stock-pill low">Short ${(need - qty).toFixed(0)}</span>`
       : minStock > 0 && qty < minStock ? '<span class="stock-pill low">Low</span>'
