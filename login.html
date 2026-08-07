@@ -108,6 +108,7 @@
     color: var(--danger);
   }
 
+
   .divider {
     display: flex;
     align-items: center;
@@ -358,13 +359,13 @@
 
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="signup-password" placeholder="At least 6 characters" minlength="6" required oninput="updatePasswordMatchHint()" />
-          <div class="form-hint">Must be at least 6 characters long.</div>
+          <input type="password" id="signup-password" placeholder="At least 6 characters" minlength="6" required oninput="updatePasswordRequirementHints('signup')" />
+          <div class="form-hint mismatch" id="signup-password-reqs"></div>
         </div>
 
         <div class="form-group">
           <label>Confirm Password</label>
-          <input type="password" id="signup-confirm-password" placeholder="Re-enter your password" minlength="6" required oninput="updatePasswordMatchHint()" />
+          <input type="password" id="signup-confirm-password" placeholder="Re-enter your password" minlength="6" required oninput="updatePasswordMatchHint('signup')" />
           <div class="form-hint" id="signup-password-match-hint"></div>
         </div>
 
@@ -514,10 +515,40 @@ function resolveConfirm(result) {
     }
   }
 
-  function updatePasswordMatchHint() {
-    const password = document.getElementById('signup-password').value;
-    const confirmPassword = document.getElementById('signup-confirm-password').value;
-    const hint = document.getElementById('signup-password-match-hint');
+  // Password requirements: 6+ chars, 1 uppercase letter, 1 special character.
+  // Only unmet requirements are shown, and the hint disappears once the
+  // password is valid -- same pattern as the rest of the app's inline hints.
+  function getUnmetPasswordRequirements(password) {
+    const unmet = [];
+    if (password.length < 6) unmet.push('at least 6 characters');
+    if (!/[A-Z]/.test(password)) unmet.push('1 uppercase letter');
+    if (!/[^A-Za-z0-9]/.test(password)) unmet.push('1 special character');
+    return unmet;
+  }
+
+  function isPasswordValid(password) {
+    return getUnmetPasswordRequirements(password).length === 0;
+  }
+
+  const PASSWORD_FIELD_IDS = {
+    signup: { password: 'signup-password', confirm: 'signup-confirm-password', reqs: 'signup-password-reqs', match: 'signup-password-match-hint' },
+    update: { password: 'update-password-new', confirm: 'update-password-confirm', reqs: 'update-password-reqs', match: 'update-password-match-hint' }
+  };
+
+  function updatePasswordRequirementHints(prefix) {
+    const ids = PASSWORD_FIELD_IDS[prefix];
+    const password = document.getElementById(ids.password).value;
+    const hint = document.getElementById(ids.reqs);
+    if (!hint) return;
+    const unmet = password ? getUnmetPasswordRequirements(password) : [];
+    hint.textContent = unmet.length ? `Needs: ${unmet.join(', ')}.` : '';
+  }
+
+  function updatePasswordMatchHint(prefix) {
+    const ids = PASSWORD_FIELD_IDS[prefix];
+    const password = document.getElementById(ids.password).value;
+    const confirmPassword = document.getElementById(ids.confirm).value;
+    const hint = document.getElementById(ids.match);
     if (!hint) return;
     if (!confirmPassword) {
       hint.textContent = '';
@@ -536,6 +567,11 @@ function resolveConfirm(result) {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
     const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+    if (!isPasswordValid(password)) {
+      showAlert('Password needs: ' + getUnmetPasswordRequirements(password).join(', ') + '.', 'Error');
+      return;
+    }
 
     if (password !== confirmPassword) {
       showAlert('Passwords do not match!', 'Error');
@@ -649,25 +685,10 @@ function resolveConfirm(result) {
     document.getElementById('updatePasswordModal').classList.remove('active');
     document.getElementById('update-password-new').value = '';
     document.getElementById('update-password-confirm').value = '';
+    const reqs = document.getElementById('update-password-reqs');
+    if (reqs) reqs.textContent = '';
     const hint = document.getElementById('update-password-match-hint');
     if (hint) { hint.textContent = ''; hint.className = 'form-hint'; }
-  }
-
-  function updateUpdatePasswordMatchHint() {
-    const password = document.getElementById('update-password-new').value;
-    const confirmPassword = document.getElementById('update-password-confirm').value;
-    const hint = document.getElementById('update-password-match-hint');
-    if (!hint) return;
-    if (!confirmPassword) {
-      hint.textContent = '';
-      hint.className = 'form-hint';
-    } else if (password === confirmPassword) {
-      hint.textContent = 'Passwords match.';
-      hint.className = 'form-hint match';
-    } else {
-      hint.textContent = 'Passwords do not match.';
-      hint.className = 'form-hint mismatch';
-    }
   }
 
   async function handleUpdatePassword(e) {
@@ -675,13 +696,13 @@ function resolveConfirm(result) {
     const newPassword = document.getElementById('update-password-new').value;
     const confirmPassword = document.getElementById('update-password-confirm').value;
 
-    if (newPassword !== confirmPassword) {
-      showAlert('Passwords do not match!', 'Error');
+    if (!isPasswordValid(newPassword)) {
+      showAlert('Password needs: ' + getUnmetPasswordRequirements(newPassword).join(', ') + '.', 'Error');
       return;
     }
 
-    if (newPassword.length < 6) {
-      showAlert('Password must be at least 6 characters long.', 'Error');
+    if (newPassword !== confirmPassword) {
+      showAlert('Passwords do not match!', 'Error');
       return;
     }
 
@@ -774,12 +795,12 @@ function resolveConfirm(result) {
     <form onsubmit="handleUpdatePassword(event)">
       <div class="form-group">
         <label>New Password</label>
-        <input type="password" id="update-password-new" placeholder="At least 6 characters" minlength="6" required oninput="updateUpdatePasswordMatchHint()" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
-        <div class="form-hint">Must be at least 6 characters long.</div>
+        <input type="password" id="update-password-new" placeholder="At least 6 characters" minlength="6" required oninput="updatePasswordRequirementHints('update')" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
+        <div class="form-hint mismatch" id="update-password-reqs"></div>
       </div>
       <div class="form-group">
         <label>Confirm New Password</label>
-        <input type="password" id="update-password-confirm" placeholder="Re-enter your new password" minlength="6" required oninput="updateUpdatePasswordMatchHint()" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
+        <input type="password" id="update-password-confirm" placeholder="Re-enter your new password" minlength="6" required oninput="updatePasswordMatchHint('update')" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;" />
         <div class="form-hint" id="update-password-match-hint"></div>
       </div>
       <div style="display: flex; gap: 12px; margin-top: 24px;">
