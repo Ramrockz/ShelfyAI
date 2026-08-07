@@ -53,48 +53,6 @@
 
   .section-container { max-width: 1200px; margin: 0 auto; padding: 60px 24px 100px; }
 
-  /* ---------- HERO ---------- */
-  .hero { display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; align-items: center; }
-  h1 { font-size: 64px; font-weight: 800; line-height: 1.05; margin: 0 0 24px; letter-spacing: -1.5px; }
-  .sub { font-size: 19px; line-height: 1.6; color: var(--text-muted); max-width: 540px; margin-bottom: 40px; }
-  .btn { padding: 14px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; text-align: center; text-decoration: none; display: inline-block; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-secondary { background: var(--bg-inner); color: var(--text-main); border: 1px solid var(--border); margin-left: 12px; }
-
-  /* ---------- INTERACTIVE PANEL (MODIFIED) ---------- */
-  .panel { 
-    position: relative; 
-    background: transparent; /* Removed background */
-    border-radius: 32px; 
-    padding: 0px; /* Reduced padding */
-    border: none; /* Removed border */
-    min-height: 650px; 
-    overflow: visible; 
-  }
-
-  .tabs { 
-    position: relative; 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 15px; /* Reduced from 30px */
-    padding-bottom: 15px; /* Reduced from 20px */
-    border-bottom: 1px solid var(--border); 
-    z-index: 100;
-    justify-content: flex-end;
-  }
-
-  .tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted); transition: 0.2s; }
-  .tab.active { background: var(--accent); color: #fff; font-weight: 700; }
-  .pro-badge { font-size: 9px; padding: 2px 6px; background: var(--premium); border-radius: 4px; margin-left: 4px; font-weight: 800; color: #fff; }
-  
-  .tab-description { 
-    font-size: 13px; 
-    color: var(--text-muted); 
-    margin-bottom: 6px; 
-    line-height: 1.5; 
-    transition: opacity 0.2s; 
-  }
-
   .btn-signin {
     padding: 8px 16px;
     border-radius: 8px;
@@ -109,347 +67,6 @@
 
   .btn-signin:hover {
     background: #0891b2;
-  }
-
-  /* ---------- TRIPLE OVERLAP STAGE ---------- */
-  .insights-stage { position: relative; display: flex; align-items: center; min-height: 500px; }
-
-  .window-mock {
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1), border-color 0.3s, opacity 0.3s;
-    cursor: default;
-  }
-
-  .window-mock:hover {
-    z-index: 100 !important;
-    border-color: rgba(255,255,255,0.4);
-  }
-
-  /* Foundation - Kanban */
-  .kanban-window {
-    position: absolute;
-    left: 0; width: 540px;
-    background: var(--bg-panel); border: 1px solid var(--border);
-    border-radius: 24px; padding: 24px; z-index: 10;
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  }
-  .kanban-window:hover { transform: scale(1.03); }
-
-  /* Overlapping Right Stack */
-  .card-column { margin-left: auto; width: 400px; display: flex; flex-direction: column; gap: -40px; z-index: 20; position: relative; pointer-events: none; }
-  .card-column .window-mock { pointer-events: auto; position: relative; }
-  .stack-window { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-
-  /* Recent Detection - Middle */
-  .window-recent {
-    background: var(--bg-panel); backdrop-filter: blur(20px);
-    transform: translateX(-80px) translateY(15px); z-index: 15; /* Kept Original Position */
-  }
-  .window-recent:hover { transform: translateX(-80px) translateY(15px) scale(1.03) !important; }
-
-  /* Operational Insight - Front */
-  .window-operational { z-index: 25; border-color: var(--border); }
-  .window-operational:hover { transform: scale(1.03); }
-
-  /* Component Styles */
-  .window-header { padding: 12px 18px; font-size: 10px; font-weight: 700; border-bottom: 1px solid var(--border); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
-  .window-content { padding: 20px; }
-  .kb-col { display: flex; flex-direction: column; gap: 12px; }
-  .kb-header { font-size: 9px; font-weight: 800; color: var(--text-main); letter-spacing: 1.2px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; }
-  .kb-card { background: var(--bg-inner); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-  .kb-line-sm { height: 3px; background: var(--accent); opacity: 0.6; border-radius: 2px; width: 40%; margin-bottom: 6px; }
-  .kb-line-lg { height: 3px; background: var(--border); border-radius: 2px; width: 85%; }
-  
-  .recent-flex { display: flex; align-items: center; gap: 14px; }
-  .recent-thumb { width: 50px; height: 50px; border-radius: 10px; background-size: cover; border: 1px solid var(--border); flex-shrink: 0; }
-  
-  .insight-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .insight-table th { text-align: left; padding-bottom: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
-  .insight-table td { padding: 10px 0; border-bottom: 1px solid var(--border); }
-
-  .locked-overlay {
-    position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(12px); z-index: 200; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; border-radius: 32px;
-  }
-
-  @media (max-width: 1000px) {
-    .insights-stage { flex-direction: column; height: auto; }
-    .window-mock, .window-recent, .window-operational { position: relative !important; width: 100% !important; left: 0 !important; top: 0 !important; transform: none !important; margin-bottom: 20px; }
-  }
-
-  /* ===== MOBILE RESPONSIVE ===== */
-  @media (max-width: 768px) {
-    /* Section */
-    .section-container {
-      padding: 32px 16px 60px;
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 40px;
-    }
-
-    /* Hero text */
-    .hero-text { text-align: center; }
-    h1 { font-size: 36px; letter-spacing: -0.5px; margin-bottom: 16px; }
-    .sub { font-size: 16px; max-width: 100%; margin-bottom: 28px; }
-    .cta-group { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-    .btn { width: 100%; max-width: 320px; padding: 15px 24px; font-size: 16px; }
-    .btn-secondary { margin-left: 0; }
-
-    /* Panel */
-    .panel { min-height: auto; }
-
-    /* Tabs — scrollable row */
-    .tabs {
-      justify-content: flex-start;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      flex-wrap: nowrap;
-      gap: 8px;
-      padding-bottom: 12px;
-      margin-bottom: 12px;
-    }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 14px; font-size: 13px; }
-
-    /* Hide the heavy kanban layer on mobile */
-    .kanban-window { display: none !important; }
-
-    /* Hide tab description on mobile */
-    .tab-description { display: none !important; }
-
-    /* Simplify card column - show only Recent Detection window */
-    .card-column {
-      width: 100% !important;
-      margin-left: 0;
-      gap: 12px;
-    }
-    .insights-stage {
-      flex-direction: column;
-      min-height: auto;
-      gap: 12px;
-    }
-    .window-mock,
-    .window-recent {
-      position: relative !important;
-      width: 100% !important;
-      left: 0 !important;
-      top: 0 !important;
-      transform: none !important;
-      margin-bottom: 0;
-    }
-    /* Hide operational insight window on mobile */
-    .window-operational { display: none !important; }
-    
-    .stack-window { border-radius: 14px; }
-    .insight-table { font-size: 13px; }
-    .insight-table td, .insight-table th { padding: 8px 4px; }
-
-    /* Footer */
-    footer > div > div:first-child {
-      grid-template-columns: 1fr !important;
-      gap: 24px !important;
-    }
-  }
-
-  @media (max-width: 480px) {
-    h1 { font-size: 30px; }
-    .sub { font-size: 15px; }
-    .section-container { padding: 24px 14px 48px; }
-  }
-
-  /* ---------- USP SECTION ---------- */
-  .usp-section {
-    background: var(--bg-main);
-    padding: 80px 24px;
-  }
-
-  .usp-section h2 {
-    font-size: 48px;
-    font-weight: 800;
-    margin-bottom: 60px;
-    text-align: center;
-    color: var(--text-main);
-    letter-spacing: -1px;
-  }
-
-  .usp-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 32px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .usp-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 32px;
-    text-align: center;
-  }
-
-  .usp-icon {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 36px;
-  }
-
-  .usp-icon.icon-focus {
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05));
-  }
-
-  .usp-icon.icon-automation {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
-  }
-
-  .usp-icon.icon-ai {
-    background: linear-gradient(135deg, rgba(155, 89, 182, 0.15), rgba(155, 89, 182, 0.05));
-  }
-
-  .usp-card h3 {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: var(--text-main);
-    line-height: 1.3;
-  }
-
-  .usp-card p {
-    font-size: 16px;
-    line-height: 1.7;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  /* ---------- TESTIMONIALS SECTION ---------- */
-  .testimonial-section {
-    background: var(--bg-inner);
-    padding: 80px 24px 100px;
-  }
-
-  .testimonial-section h2 {
-    font-size: 48px;
-    font-weight: 800;
-    margin-bottom: 16px;
-    text-align: center;
-    color: var(--text-main);
-    letter-spacing: -1px;
-  }
-
-  .testimonial-section .section-subtitle {
-    font-size: 18px;
-    color: var(--text-muted);
-    text-align: center;
-    margin-bottom: 60px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .testimonial-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 28px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .testimonial-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .testimonial-rating {
-    font-size: 20px;
-    color: var(--accent);
-    margin-bottom: 16px;
-    letter-spacing: 2px;
-  }
-
-  .testimonial-quote {
-    font-size: 16px;
-    line-height: 1.7;
-    color: var(--text-main);
-    margin-bottom: 24px;
-    font-style: italic;
-    flex-grow: 1;
-    position: relative;
-    z-index: 1;
-  }
-
-  .testimonial-author {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-top: auto;
-  }
-
-.testimonial-info {
-    flex: 1;
-  }
-
-  .testimonial-name {
-    font-weight: 700;
-    color: var(--text-main);
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-
-  .testimonial-role {
-    font-size: 14px;
-    color: var(--text-muted);
-  }
-
-  /* ---------- MOBILE RESPONSIVE ---------- */
-  @media (max-width: 768px) {
-    .usp-section,
-    .testimonial-section {
-      padding: 60px 16px;
-    }
-
-    .usp-section h2,
-    .testimonial-section h2 {
-      font-size: 36px;
-      margin-bottom: 40px;
-    }
-
-    .usp-grid,
-    .testimonial-grid {
-      grid-template-columns: 1fr;
-      gap: 24px;
-    }
-
-    .usp-card,
-    .testimonial-card {
-      padding: 32px 24px;
-    }
-
-    .usp-card h3 {
-      font-size: 22px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .usp-section h2,
-    .testimonial-section h2 {
-      font-size: 30px;
-    }
-
-    .testimonial-section .section-subtitle {
-      font-size: 16px;
-    }
   }
 
   /* ================= 25d — mobile-only landing redesign =================
@@ -569,6 +186,42 @@
     .ld-mobile { display: block; }
     .ld-desktop-only { display: none !important; }
   }
+
+  /* ================= 25e — desktop layout for the same narrative =========
+     Everything above is shared copy/markup; from here down we only widen
+     containers, turn stacked lists into grids, and put the hero copy next
+     to the device mock. No new sections, no new content. */
+  @media (min-width: 769px) {
+    .ld-wrap { max-width: 640px; margin: 0 auto; }
+    .ld-wrap-wide { max-width: 900px; }
+
+    .ld-hero { padding: 96px 40px; }
+    .ld-hero-grid { max-width: 1100px; margin: 0 auto; display: grid;
+                    grid-template-columns: 1fr 0.85fr; gap: 72px; align-items: center; }
+    .ld-hero-copy h1 { font-size: 50px; line-height: 1.08; }
+    .ld-hero-copy .ld-lede { font-size: 18px; max-width: 460px; }
+    .ld-hero-copy .ld-cta { display: inline-block; width: auto; padding: 0 34px; }
+    .ld-hero-copy .ld-cta-note { text-align: left; }
+
+    .ld-showcase { padding: 0; }
+    .ld-device { width: 300px; margin: 0; }
+    .ld-caption { text-align: left; margin: 20px 0 0; max-width: 300px; }
+
+    .ld-sec { padding: 100px 40px; }
+    .ld-sec h2 { font-size: 38px; }
+    .ld-sec .ld-lede { font-size: 17px; }
+
+    .ld-pain { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: transparent; }
+    .ld-pain-i { border-radius: 14px; border: 1px solid var(--border-hair, var(--border)); }
+
+    .ld-steps { max-width: 640px; margin-left: auto; margin-right: auto; }
+
+    .ld-gains { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .ld-quote { max-width: 640px; margin: 28px auto 0; }
+
+    .ld-close { max-width: 720px; margin: 0 auto; padding: 56px 72px; }
+    .ld-close .ld-cta { display: inline-block; width: auto; padding: 0 36px; }
+  }
 </style>
 
 <!-- JSON-LD Structured Data -->
@@ -661,55 +314,20 @@
   </div>
 </nav>
 
-<section class="section-container hero ld-desktop-only">
-  <div class="hero-text">
-    <h1>Cause we're lazy</h1>
-    <p class="sub">Keeping your inventory up to date is annoying. Not anymore! ShelfyAI helps you manage your inventory effortlessly.</p>
-    <div class="cta-group">
-      <a href="https://www.shelfyai.com/docs" class="btn btn-primary">Get Started</a>
-      <a href="/login" class="btn btn-secondary">Sign up</a>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="tabs">
-      <div class="tab active" onclick="manualTabClick('ingredients', this)">Items</div>
-      <div class="tab" onclick="manualTabClick('recipes', this)">Products</div>
-      <div class="tab" onclick="manualTabClick('orders', this)">Orders</div>
-      <div class="tab" onclick="manualTabClick('expenses', this)">Expenses</div>
+<!-- 25e — problem-first narrative is now the landing page at every width.
+     Desktop gets its own two-column hero (copy + device mock side by side)
+     and wider grids for the sections below; the content is the same one
+     narrative used on mobile, not a separate desktop pitch. -->
+<section class="ld-hero">
+  <div class="ld-hero-grid">
+    <div class="ld-hero-copy">
+      <h1>Know what's on the shelf <em>without counting it</em>.</h1>
+      <p class="ld-lede">If you make things to sell, your stock lives in your head and in a spreadsheet you last touched in March. ShelfyAI keeps the count for you — so you know what you can build today, what you're about to run out of, and what each product really costs to make.</p>
+      <a href="/login" class="ld-cta">Start tracking</a>
+      <p class="ld-cta-note">Takes about ten minutes to set up.</p>
     </div>
 
-    <div class="tab-description" id="tabDescription">Create and monitor your raw materials effortlessly</div>
-
-    <div class="insights-stage" id="panel-stage">
-      <div class="window-mock kanban-window" id="kanbanLayer"></div>
-
-      <div class="card-column">
-        <div class="window-mock stack-window window-recent">
-          <div class="window-header">Recent Detection</div>
-          <div class="window-content" id="recentContent"></div>
-        </div>
-
-        <div class="window-mock stack-window window-operational">
-          <div class="window-header" id="operationalHeader">Operational Insight</div>
-          <div class="window-content" id="insightContent"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- 25d mobile-only redesign: problem-first narrative replaces the tabbed
-     demo panel, USP grid and testimonial grid on phones. Desktop above is
-     untouched. -->
-<section class="ld-hero ld-mobile">
-  <h1>Know what's on the shelf <em>without counting it</em>.</h1>
-  <p class="ld-lede">If you make things to sell, your stock lives in your head and in a spreadsheet you last touched in March. ShelfyAI keeps the count for you — so you know what you can build today, what you're about to run out of, and what each product really costs to make.</p>
-  <a href="/login" class="ld-cta">Start tracking</a>
-  <p class="ld-cta-note">Takes about ten minutes to set up.</p>
-</section>
-
-<section class="ld-showcase ld-mobile">
+<div class="ld-showcase">
   <div class="ld-device">
     <div class="ld-screen">
 
@@ -770,9 +388,13 @@
     </div>
   </div>
   <p class="ld-caption">Your shelf, sorted by what needs you. <b>Out first, low next, healthy out of the way.</b></p>
+</div>
+
+  </div>
 </section>
 
-<section class="ld-sec ld-tint ld-mobile">
+<section class="ld-sec ld-tint">
+  <div class="ld-wrap ld-wrap-wide">
   <div class="ld-kick">The problem</div>
   <h2>Stock only ever tells the truth on the day you count it.</h2>
   <div class="ld-pain">
@@ -794,9 +416,11 @@
     </div>
   </div>
   <p class="ld-pain-sum">Every one of those comes from the same place: nothing changes unless you type it in.</p>
+  </div>
 </section>
 
-<section class="ld-sec ld-mobile">
+<section class="ld-sec">
+  <div class="ld-wrap">
   <div class="ld-kick">How it works</div>
   <h2>Type it in once. After that, send paper.</h2>
   <div class="ld-steps">
@@ -829,9 +453,11 @@
       </div>
     </div>
   </div>
+  </div>
 </section>
 
-<section class="ld-sec ld-tint ld-mobile">
+<section class="ld-sec ld-tint">
+  <div class="ld-wrap ld-wrap-wide">
   <div class="ld-kick">What changes</div>
   <h2>Three questions you stop guessing at.</h2>
   <div class="ld-gains">
@@ -852,9 +478,10 @@
     <p>"I used to spend three hours a week on the spreadsheet. Now I photograph the receipts and it's done."</p>
     <div><b>Sarah Martinez</b> · Sweet Delights Bakery</div>
   </div>
+  </div>
 </section>
 
-<section class="ld-sec ld-mobile" style="padding-bottom: 0;">
+<section class="ld-sec" style="padding-bottom: 0;">
   <div class="ld-close">
     <h2>Your stock is already out of date.</h2>
     <p>Set it straight once, and let the receipts keep it there.</p>
@@ -863,216 +490,7 @@
   </div>
 </section>
 
-<!-- Why ShelfyAI Section -->
-<section class="usp-section ld-desktop-only">
-  <h2>Why ShelfyAI?</h2>
-  
-  <div class="usp-grid">
-    <!-- USP 1: User Friendly UX -->
-    <div class="usp-card">
-      <h3>Focus on What Matters</h3>
-      <p>
-        Clean, intuitive interface designed with small businesses in mind. Get a crystal-clear overview of your inventory at a glance—no clutter, no confusion, just the insights you need to make smart decisions.
-      </p>
-    </div>
-
-    <!-- USP 2: Set It and Forget It -->
-    <div class="usp-card">
-      <h3>Set It and Forget It</h3>
-      <p>
-        After your initial inventory setup all you do is upload your orders and expenses. Shelfy automatically keeps your inventory up to date—no manual entry, no spreadsheet maintenance, no headaches.
-      </p>
-    </div>
-
-    <!-- USP 3: AI Does the Heavy Lifting -->
-    <div class="usp-card">
-      <h3>Cause we're lazy</h3>
-      <p>
-        Snap a photo of your receipt or paste an order URL. Our AI instantly reads and extracts items, quantities, and prices, then updates your inventory in seconds. No typing, no data entry errors—just fast, accurate tracking.
-      </p>
-    </div>
-  </div>
-</section>
-
-<!-- Testimonials Section -->
-<section class="section-container ld-desktop-only" style="padding-top: 80px; padding-bottom: 100px; background: var(--bg-inner);">
-  <div style="max-width: 1100px; margin: 0 auto;">
-    <h2 style="ftestimonial-section">
-  <h2>What other lazy people say</h2>
-  
-  <div class="testimonial-grid">
-    <!-- Testimonial 1 -->
-    <div class="testimonial-card">
-      <div class="testimonial-rating">★★★★★</div>
-      <p class="testimonial-quote">
-        "I used to spend 3 hours every week updating my spreadsheet. Now I just snap photos of my receipts and Shelf does the rest. I've saved so many hours this year!"
-      </p>
-      <div class="testimonial-author">
-<div class="testimonial-info">
-          <div class="testimonial-name">Sarah Martinez</div>
-          <div class="testimonial-role">Owner, Sweet Delights Bakery</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Testimonial 2 -->
-    <div class="testimonial-card">
-      <div class="testimonial-rating">★★★★★</div>
-      <p class="testimonial-quote">
-        "The low-stock alerts saved my business during the holiday rush. I used to run out of key materials and lose sales. Now I know exactly when to reorder. Total game-changer."
-      </p>
-      <div class="testimonial-author">
-<div class="testimonial-info">
-          <div class="testimonial-name">James Chen</div>
-          <div class="testimonial-role">Etsy Seller, Handmade Candles</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Testimonial 3 -->
-    <div class="testimonial-card">
-      <div class="testimonial-rating">★★★★★</div>
-      <p class="testimonial-quote">
-        "Never really had the discipline to keep my inventory updated. Shelfy does it for me now. It's like having a personal assistant who actually does their job!"
-      </p>
-      <div class="testimonial-author">
-<div class="testimonial-info">
-          <div class="testimonial-name">Lisa Patel</div>
-          <div class="testimonial-role">Founder, Organic Skincare Studiov>
-    </div>
-  </div>
-</section>
-
 <script>
-const data = {
-  ingredients: {
-    description: "Create and monitor your raw materials effortlessly",
-    thumb: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?q=80&w=200",
-    recent: { name: "M8 Steel Bolts", meta: "482 Units Detected" },
-    opHeader: "Stock Status",
-    list: `<table class="insight-table"><thead><tr><th>Item</th><th>Stock</th><th>Status</th></tr></thead><tbody><tr><td>Steel Bolts</td><td>482</td><td style="color:var(--success)">Healthy</td></tr><tr><td>Oak Planks</td><td>12</td><td style="color:var(--warning)">Low</td></tr></tbody></table>`,
-    kanban: [
-        { label: "IN STOCK", color: "var(--success)", items: ["M8 Bolts", "Glue"] },
-        { label: "LOW STOCK", color: "var(--warning)", items: ["Planks"] },
-        { label: "OUT", color: "var(--danger)", items: ["Varnish"] }
-    ]
-  },
-  recipes: {
-    description: "Add materials to form your final product once and use it for inventory calculation",
-    thumb: "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=200",
-    recent: { name: "Wooden Box", meta: "Batch Ready for Assembly" },
-    opHeader: "Product Production",
-    list: `<table class="insight-table"><thead><tr><th>Product</th><th>Profit</th><th>Stock</th></tr></thead><tbody><tr><td>Wooden Box</td><td style="color:var(--success)">+$32.60</td><td>Ready</td></tr><tr><td>Acrylic Tray</td><td style="color:var(--success)">+$14.00</td><td>Ready</td></tr></tbody></table>`,
-    kanban: [
-        { label: "READY", color: "var(--success)", items: ["Box", "Tray"] },
-        { label: "INCOMPLETE", color: "var(--warning)", items: ["Desk"] },
-        { label: "PLANNING", color: "var(--text-muted)", items: ["Shelf"] }
-    ]
-  },
-  orders: {
-    description: "Process and track your order to decrease your inventory and track revenue",
-    thumb: "https://images.unsplash.com/photo-1585079542156-2755d9c8a094?q=80&w=200",
-    recent: { name: "Order #48291", meta: "Etsy Store • Priority 1" },
-    opHeader: "Active Orders",
-    list: `<table class="insight-table"><thead><tr><th>Order ID</th><th>Source</th><th>Total</th></tr></thead><tbody><tr><td>#48291</td><td>Etsy</td><td>$45.00</td></tr><tr><td>#48290</td><td>Wix</td><td>$120.00</td></tr></tbody></table>`,
-    kanban: [
-        { label: "NEW", color: "var(--accent)", items: ["#48291", "#48292"] },
-        { label: "PICKING", color: "var(--warning)", items: ["#48290"] },
-        { label: "SHIPPED", color: "var(--success)", items: ["#48288"] }
-    ]
-  },
-  expenses: {
-    description: "Process and track your expenses to increase your inventory and track revenue",
-    thumb: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=200",
-    recent: { name: "Material Cost", meta: "$284.50 • Oak Planks Purchase" },
-    opHeader: "Recent Expenses",
-    list: `<table class="insight-table"><thead><tr><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody><tr><td>Oak Planks</td><td>Materials</td><td style="color:var(--danger)">-$284.50</td></tr><tr><td>Shipping Labels</td><td>Supplies</td><td style="color:var(--danger)">-$42.00</td></tr></tbody></table>`,
-    kanban: [
-        { label: "MATERIALS", color: "var(--accent)", items: ["Oak Planks", "Steel Bolts"] },
-        { label: "SUPPLIES", color: "var(--warning)", items: ["Labels"] },
-        { label: "OVERHEAD", color: "var(--text-muted)", items: ["Utilities"] }
-    ]
-  }
-};
-
-function setTab(key, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  const item = data[key];
-  const stage = document.getElementById('panel-stage');
-  
-  // Update description
-  document.getElementById('tabDescription').textContent = item.description;
-  
-  const existingLock = stage.querySelector('.locked-overlay');
-  if (existingLock) existingLock.remove();
-
-  if (item.locked) {
-    stage.insertAdjacentHTML('beforeend', `
-      <div class="locked-overlay">
-        <h3 style="margin:0 0 10px 0;">Pro Feature</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Automate COGS and ledger tracking.</p>
-        <button class="btn btn-primary">Upgrade to Pro</button>
-      </div>
-    `);
-    return;
-  }
-
-  document.getElementById('kanbanLayer').innerHTML = item.kanban.map(col => `
-    <div class="kb-col">
-      <div class="kb-header"><span class="dot" style="background:${col.color}"></span>${col.label}</div>
-      ${col.items.map(i => `
-        <div class="kb-card">
-          <div style="font-size:11px; font-weight:700; margin-bottom:8px;">${i}</div>
-          <div class="kb-line-sm"></div><div class="kb-line-lg"></div>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
-
-  document.getElementById('recentContent').innerHTML = `
-    <div class="recent-flex">
-      <div class="recent-thumb" style="background-image:url('${item.thumb}')"></div>
-      <div>
-        <div style="font-size:14px; font-weight:700">${item.recent.name}</div>
-        <div style="font-size:11px; color:var(--text-muted)">${item.recent.meta}</div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('operationalHeader').innerText = item.opHeader;
-  document.getElementById('insightContent').innerHTML = item.list;
-}
-
-setTab('ingredients', document.querySelector('.tab'));
-
-// Auto-rotate tabs every 3 seconds
-const tabOrder = ['ingredients', 'recipes', 'orders', 'expenses'];
-let currentTabIndex = 0;
-let autoRotateInterval = null;
-
-// Function to handle manual tab clicks
-function manualTabClick(key, el) {
-  // Stop auto-rotation when user manually clicks
-  if (autoRotateInterval) {
-    clearInterval(autoRotateInterval);
-    autoRotateInterval = null;
-  }
-  setTab(key, el);
-}
-
-// Start auto-rotation
-autoRotateInterval = setInterval(() => {
-  currentTabIndex = (currentTabIndex + 1) % tabOrder.length;
-  const nextTab = tabOrder[currentTabIndex];
-  const tabElement = Array.from(document.querySelectorAll('.tab')).find(
-    tab => tab.textContent.toLowerCase() === nextTab
-  );
-  if (tabElement) {
-    setTab(nextTab, tabElement);
-  }
-}, 3000);
-
 // Auto-highlight active page in navigation
 (function() {
   const currentPage = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
@@ -1082,6 +500,7 @@ autoRotateInterval = setInterval(() => {
   }
 })();
 </script>
+
 
 <!-- Feedback Widget -->
 <div class="feedback-button" id="feedbackButton" onclick="openFeedback()">
