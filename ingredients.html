@@ -482,6 +482,11 @@
 
   .ic-note { padding: 14px 20px 20px; font-size: 12px; color: var(--text-faint, var(--text-muted)); }
 
+  /* Suggested attribute quick-add chips (Attributes field, New Item form) */
+  .attr-chips { display: none; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .attr-chip { height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border-hair, var(--border));
+               background: var(--bg-inner); color: var(--text-muted); font-size: 12px; font-weight: 700; }
+
   .ic-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
              padding: 12px 20px calc(14px + env(safe-area-inset-bottom)); }
   .ic-value { min-height: 20px; font-size: 12.5px; color: var(--text-muted);
@@ -668,11 +673,11 @@
     .schip.active { background: var(--text-main); color: var(--bg-panel); border-color: var(--text-main); }
     .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; }
     .schip-icon.active { background: rgba(6,182,212,.11); color: #0e7490; border-color: rgba(6,182,212,.4); }
-    .schip-out i, .schip-low i { width: 6px; height: 6px; border-radius: 50%; }
+    .schip-out i, .schip-low i, .schip-expiring i { width: 6px; height: 6px; border-radius: 50%; }
     .schip-out i { background: var(--danger); }
-    .schip-low i { background: var(--warning); }
+    .schip-low i, .schip-expiring i { background: var(--warning); }
     .schip-out.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
-    .schip-low.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
+    .schip-low.active, .schip-expiring.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
   }
   .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
              border-radius: 12px; cursor: pointer; }
@@ -1081,6 +1086,7 @@
       <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
       <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
       <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
+      <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
       <span style="flex:1"></span>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
@@ -1202,6 +1208,7 @@
           </div>
           <div class="ic-field">
             <label class="ic-label">Attributes</label>
+            <div id="attrSuggestChips" class="attr-chips"></div>
             <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;"></div>
             <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
           </div>
@@ -1223,6 +1230,10 @@
                 <label class="ic-label" for="ing_estimated_delivery">Delivery days</label>
                 <input class="ic-input" type="number" id="ing_estimated_delivery" placeholder="—" oninput="onIngredientEdit()">
               </div>
+            </div>
+            <div class="ic-field">
+              <label class="ic-label" for="ing_expiration_date">Expiration date</label>
+              <input class="ic-input" type="date" id="ing_expiration_date" oninput="onIngredientEdit()">
             </div>
             <div class="ic-field">
               <label class="ic-label" for="ing_source_url" style="display:flex;align-items:center;gap:6px;">
@@ -1453,6 +1464,7 @@ async function loadIngredients() {
       is_favorite: item.is_favorite || false,
       custom_attributes: item.custom_attributes || null,
       min_stock: item.min_stock || 0,
+      expiration_date: item.expiration_date || null,
       reorder_point: item.reorder_point || 10,
       max_stock: item.max_stock || null,
       source_url: item.source_url || '',
@@ -1826,6 +1838,7 @@ async function closeManualModal() {
   renderIcCatValue();
   document.getElementById('ing_min_stock').value = '';
   document.getElementById('ing_estimated_delivery').value = '';
+  document.getElementById('ing_expiration_date').value = '';
   document.getElementById('ing_sku').value = '';
   document.getElementById('ing_source_url').value = '';
   document.getElementById('ing_notes').value = '';
@@ -1985,6 +1998,37 @@ const CAT_META = [
   { label: 'Other',           icon: 'tag' }
 ];
 
+// Quick-add suggestions for the New Item form's free-form Attributes
+// builder -- keyed by category so niche fields (lot numbers, allergens,
+// hazard class...) are one tap away without cluttering the form for
+// everyone else. Deliberately excludes anything that's already a real
+// column (SKU, min_stock, delivery days) or its own field (Expiration
+// date, added separately below since it drives its own alert/filter).
+const SUGGESTED_ATTRS_BY_CATEGORY = {
+  'Raw Material':     ['Lot Number', 'Material Grade', 'Country of Origin', 'Storage Requirement'],
+  'Component':         ['Manufacturer Part Number', 'Material Grade', 'Dimensions'],
+  'Base Product':      ['Lot Number', 'Weight', 'Dimensions'],
+  'Packaging':         ['Dimensions', 'Material', 'Weight Capacity'],
+  'Shipping Supply':   ['Dimensions', 'Weight Capacity'],
+  'Finished Product':  ['Lot Number', 'Allergens', 'Certifications', 'Warranty'],
+  'Digital Product':   ['License Type', 'Version'],
+  'Equipment':          ['Serial Number', 'Warranty', 'Maintenance Interval'],
+  'Consumable':        ['Lot Number', 'Allergens', 'Storage Requirement', 'Hazard Class'],
+  'Other':             []
+};
+
+function renderAttrSuggestChips() {
+  const el = document.getElementById('attrSuggestChips');
+  if (!el) return;
+  const cat = document.getElementById('ing_category').value;
+  const suggestions = SUGGESTED_ATTRS_BY_CATEGORY[cat] || [];
+  if (!suggestions.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = suggestions.map(key =>
+    `<button type="button" class="attr-chip" onclick="addAttributeRow('${key.replace(/'/g, "\\'")}')">+ ${escapeHtml(key)}</button>`
+  ).join('');
+}
+
 function renderCatSheet() {
   const row = (label, icon, value, count) => {
     const on = activeCategoryFilter === value;
@@ -2022,7 +2066,20 @@ function pickCat(value) {
 }
 
 // ---------- Status chips (All / Out / Low) ----------
-let activeStockFilter = 'all'; // 'all' | 'out' | 'low'
+let activeStockFilter = 'all'; // 'all' | 'out' | 'low' | 'expiring'
+
+// Expiration is a niche field most items never set, so the badge/filter
+// treat "no date" as simply not expiring rather than needing a separate
+// opt-in. 'expired' (days < 0) and 'expiring' (days <= the window) share
+// one filter chip but get distinct badge colors (danger vs warning).
+const EXPIRING_SOON_DAYS = 30;
+function getExpiryState(expirationDate) {
+  if (!expirationDate) return '';
+  const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
+  if (days < 0) return 'expired';
+  if (days <= EXPIRING_SOON_DAYS) return 'expiring';
+  return '';
+}
 
 function filterByStock(kind) {
   activeStockFilter = kind;
@@ -2044,12 +2101,19 @@ function updateStockChipCounts() {
   const q = i => i.qty ?? i.quantity;
   const out = ingredients.filter(i => q(i) === 0).length;
   const low = ingredients.filter(i => { const v = q(i); return v > 0 && i.min_stock > 0 && v < i.min_stock; }).length;
+  const expiring = ingredients.filter(i => getExpiryState(i.expiration_date)).length;
   const allEl = document.getElementById('chipAllN');
   const outEl = document.getElementById('chipOutN');
   const lowEl = document.getElementById('chipLowN');
+  const expiringEl = document.getElementById('chipExpiringN');
+  const expiringChip = document.getElementById('chipExpiring');
   if (allEl) allEl.textContent = ingredients.length;
   if (outEl) outEl.textContent = out;
   if (lowEl) lowEl.textContent = low;
+  if (expiringEl) expiringEl.textContent = expiring;
+  // Only show the chip once someone's actually using expiration dates --
+  // most businesses never will, and a permanently-zero chip is just clutter.
+  if (expiringChip) expiringChip.style.display = expiring > 0 ? '' : 'none';
 }
 
 function _renderAttrSubfilters(cat) {
@@ -2672,12 +2736,13 @@ function render() {
       return false;
     }
 
-    // Apply stock-status chip (All / Out / Low)
+    // Apply stock-status chip (All / Out / Low / Expiring)
     if (activeStockFilter === 'out' || activeStockFilter === 'low') {
       const q = i.qty ?? i.quantity;
       if (activeStockFilter === 'out' && q !== 0) return false;
       if (activeStockFilter === 'low' && !(q > 0 && i.min_stock > 0 && q < i.min_stock)) return false;
     }
+    if (activeStockFilter === 'expiring' && !getExpiryState(i.expiration_date)) return false;
 
     // Apply mobile attribute value subfilters — OR within the same key, AND between keys.
     // e.g. (Size=L OR Size=M) AND (Color=Black OR Color=Blue)
@@ -3141,6 +3206,8 @@ function renderRecent(data) {
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
     attributesText = attributesText ? categoryBadge + ' &bull; ' + attributesText : categoryBadge;
     const truckHtml = i.reorder_pending ? `<span class="stock-pill delivery" onclick="event.stopPropagation(); window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" title="Delivery pending" style="cursor:pointer;">On the way</span>` : '';
+    const expiryState = getExpiryState(i.expiration_date);
+    const expiryHtml = expiryState ? `<span class="stock-pill ${expiryState}" title="Expires ${escapeHtml(i.expiration_date)}">${expiryState === 'expired' ? 'Expired' : 'Expiring'}</span>` : '';
     // Desktop keeps the original spacious grid card; the swipeable row
     // layout (Step 4/5b) is a mobile-only optimization -- desktop mouse
     // users don't have the same fat-finger/FAB-collision problems it
@@ -3149,7 +3216,7 @@ function renderRecent(data) {
       return `<div class="card-small" data-id="${i.id}">
           <h4>
             <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
-            <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}${expiryHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
           </h4>
           ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
           <div style="display: flex; justify-content: center; margin: 12px 0;">
@@ -3183,7 +3250,7 @@ function renderRecent(data) {
         <div class="ing-row" data-id="${i.id}">
           <span class="ing-row-bar" data-state="${i.qty === 0 ? 'out' : (i.min_stock && i.qty < i.min_stock ? 'low' : 'ok')}"></span>
           <span class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView">
-            <span class="ing-row-name">${safeName}${truckHtml}</span>
+            <span class="ing-row-name">${safeName}${truckHtml}${expiryHtml}</span>
             <span class="ing-row-meta">${attributesText}</span>
           </span>
           <span class="ing-row-qty">
@@ -3808,6 +3875,9 @@ async function saveDuplicate(keepOpen = false) {
         type: fullData.type,
         min_stock: fullData.min_stock,
         estimated_delivery: fullData.estimated_delivery,
+        // expiration_date is deliberately NOT carried over -- a duplicate is
+        // a new batch/lot, and copying the old date forward would silently
+        // mislabel it as already expiring.
         notes: fullData.notes || '',
         sku: fullData.sku || '',
         source_url: sourceUrl || '',
@@ -3903,16 +3973,26 @@ async function saveDuplicate(keepOpen = false) {
   }
 }
 
-function addAttributeRow() {
+function addAttributeRow(prefillKey) {
   const container = document.getElementById('customAttributes');
+  if (prefillKey) {
+    // A suggestion chip for a key that's already been added focuses the
+    // existing row's value instead of adding a duplicate.
+    const existing = [...container.children].find(row => {
+      const nameInput = row.querySelector('input');
+      return nameInput && nameInput.value.trim().toLowerCase() === prefillKey.toLowerCase();
+    });
+    if (existing) { existing.querySelectorAll('input')[1]?.focus(); return; }
+  }
   const row = document.createElement('div');
   row.style.cssText = 'display: flex; gap: 8px;';
   row.innerHTML = `
-    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" value="${prefillKey ? escapeHtml(prefillKey) : ''}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
     <input type="text" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
     <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
   `;
   container.appendChild(row);
+  if (prefillKey) row.querySelectorAll('input')[1]?.focus();
 }
 
 function selectIngCategory(value) {
@@ -3932,6 +4012,7 @@ function renderIcCatValue() {
   const icon = (CAT_META.find(m => m.label === v) || {}).icon || 'tag';
   el.innerHTML = v ? `<i data-lucide="${icon}" style="width:15px;height:15px"></i>${escapeHtml(v)}` : 'Not set';
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  renderAttrSuggestChips();
 }
 function openIcCatSheet() {
   const current = document.getElementById('ing_category').value;
@@ -4047,6 +4128,7 @@ async function saveIngredient(event) {
     category: document.getElementById('ing_category').value || '',
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
+    expiration_date: document.getElementById('ing_expiration_date').value || null,
     sku: document.getElementById('ing_sku').value || '',
     source_url: document.getElementById('ing_source_url').value || '',
     notes: document.getElementById('ing_notes').value || '',

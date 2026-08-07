@@ -1408,6 +1408,11 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label for="expiration_date">Expiration Date</label>
+          <input type="date" id="expiration_date" class="form-input" onblur="autoSave()">
+        </div>
+
         <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
           <div>
             <label for="alert_disabled" style="display:block; margin-bottom:2px;">Disable alert</label>
@@ -1768,6 +1773,7 @@
     document.getElementById('min_stock').value = ing.min_stock != null ? ing.min_stock : '';
     document.getElementById('sku').value = ing.sku || '';
     document.getElementById('estimated_delivery').value = ing.estimated_delivery || '';
+    document.getElementById('expiration_date').value = ing.expiration_date || '';
     document.getElementById('source_url').value = ing.source_url || '';
     document.getElementById('notes').value = ing.notes || '';
     document.getElementById('alert_disabled').checked = !!ing.alert_disabled;
@@ -2838,7 +2844,8 @@
   // own price/lead time) are managed from the reorder screen.
   const DETAIL_ROWS_TOP = [
     { ids: ['cost_per_unit'], label: 'Cost each',   fmt: v => v.cost_per_unit ? `$${parseFloat(v.cost_per_unit).toFixed(2)}` : '' },
-    { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' }
+    { ids: ['min_stock'],     label: 'Alert below', fmt: v => v.min_stock || '' },
+    { ids: ['expiration_date'], label: 'Expires',   fmt: v => v.expiration_date ? new Date(v.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '' }
   ];
   const DETAIL_ROWS_BOTTOM = [
     { ids: ['sku', 'notes'],  label: 'SKU · Notes', fmt: v => [v.sku, v.notes].filter(Boolean).join(' · ') }
@@ -3196,6 +3203,7 @@
       min_stock: _numOrNull(document.getElementById('min_stock').value),
       sku: document.getElementById('sku').value || '',
       estimated_delivery: parseInt(document.getElementById('estimated_delivery').value) || null,
+      expiration_date: document.getElementById('expiration_date').value || null,
       source_url: document.getElementById('source_url').value || '',
       notes: document.getElementById('notes').value || '',
       custom_attributes: Object.keys(customAttributes).length > 0 ? JSON.stringify(customAttributes) : null,
@@ -3314,6 +3322,7 @@
           type: currentIngredient.type,
           min_stock: currentIngredient.min_stock,
           estimated_delivery: currentIngredient.estimated_delivery,
+          // expiration_date intentionally not carried over -- a duplicate is a new batch/lot.
           alert_disabled: currentIngredient.alert_disabled || false,
           notes: currentIngredient.notes || '',
           sku: currentIngredient.sku || '',
@@ -3354,6 +3363,7 @@
         category: document.getElementById('category')?.value || currentIngredient.category || '',
         min_stock: _numOrNull(document.getElementById('min_stock')?.value ?? currentIngredient.min_stock),
         estimated_delivery: parseInt(document.getElementById('estimated_delivery')?.value ?? currentIngredient.estimated_delivery) || null,
+        // expiration_date intentionally not carried over -- a duplicate is a new batch/lot.
         sku: document.getElementById('sku')?.value ?? currentIngredient.sku ?? '',
         source_url: document.getElementById('source_url')?.value ?? currentIngredient.source_url ?? '',
         notes: document.getElementById('notes')?.value ?? currentIngredient.notes ?? '',
