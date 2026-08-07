@@ -3493,6 +3493,7 @@ async function matchItemToRecipes(itemData) {
       return [];
     }
     const itemAttributes = itemData.attributes || {};
+    const normItemAttrs = _rcmNormAttrs(itemAttributes);
     console.log('Item attributes:', JSON.stringify(itemAttributes, null, 2));
     console.log('Attribute count:', Object.keys(itemAttributes).length);
     if (Object.keys(itemAttributes).length === 0) {
@@ -3537,7 +3538,6 @@ async function matchItemToRecipes(itemData) {
         ? (recipeById[recipe.parent_id].name || '') : (recipe.name || '');
       const vSearchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
       const vWords = vSearchName.split(/[\s\-_,/]+/).filter(w => w.length > 1);
-      const normItemAttrs = _rcmNormAttrs(itemAttributes);
       const attrKeys = Object.keys(normItemAttrs);
       const variantMatches = recipes
         .map(recipe => {
@@ -3575,15 +3575,15 @@ async function matchItemToRecipes(itemData) {
         const ingredient = ingredientMap[comp.ingredient_id];
         if (!ingredient || !ingredient.custom_attributes) continue;
         try {
-          const ingAttrs = typeof ingredient.custom_attributes === 'string' ? JSON.parse(ingredient.custom_attributes) : ingredient.custom_attributes;
-          const ingAttrsLower = {};
-          Object.entries(ingAttrs).forEach(([key, value]) => { ingAttrsLower[key.toLowerCase()] = value; });
-          let attrMatches = 0, attrTotal = Object.keys(itemAttributes).length;
-          for (const [key, value] of Object.entries(itemAttributes)) {
-            const ingValue = ingAttrsLower[key.toLowerCase()];
-            if (ingValue && ingValue.toString().toLowerCase() === value.toString().toLowerCase()) attrMatches++;
-          }
-          const ingredientScore = attrMatches / attrTotal;
+          // Same normalized key+color comparison as the variant branch above --
+          // this used to compare raw un-translated strings, so "Weiß" vs an
+          // ingredient labeled "White" scored as a non-match for color on
+          // BOTH a white and a black candidate alike (only size lined up for
+          // either), tying them and leaving the winner to array order.
+          const normIngAttrs = _rcmNormAttrs(ingredient.custom_attributes);
+          const attrKeysForIng = Object.keys(normItemAttrs);
+          const attrMatches = attrKeysForIng.filter(key => normIngAttrs[key] && normIngAttrs[key] === normItemAttrs[key]).length;
+          const ingredientScore = attrKeysForIng.length > 0 ? attrMatches / attrKeysForIng.length : 0;
           if (ingredientScore > score) score = ingredientScore;
         } catch (e) { console.warn('Error parsing ingredient attributes:', e); }
       }
