@@ -3429,6 +3429,27 @@ function calculateSimilarity(str1, str2) {
   return 0;
 }
 
+// Same key-normalization as api/extract-receipt.js's ATTRIBUTE_KEY_SYNONYMS,
+// duplicated client-side since a product's own variant attribute keys can
+// be in whatever language the user typed them in (e.g. "Größe") just like
+// a scanned document's -- both sides need normalizing to compare at all.
+const RCM_ATTR_KEY_SYNONYMS = {
+  size: 'size', größe: 'size', groesse: 'size', grosse: 'size', grösse: 'size',
+  talla: 'size', tamaño: 'size', tamano: 'size',
+  color: 'color', colour: 'color', farbe: 'color'
+};
+function _rcmNormAttrKey(key) {
+  const clean = String(key || '').trim().toLowerCase();
+  return RCM_ATTR_KEY_SYNONYMS[clean] || clean;
+}
+function _rcmNormAttrs(attrs) {
+  let obj = attrs;
+  if (typeof obj === 'string') { try { obj = JSON.parse(obj); } catch (e) { obj = {}; } }
+  const out = {};
+  Object.entries(obj || {}).forEach(([k, v]) => { out[_rcmNormAttrKey(k)] = String(v == null ? '' : v).trim().toLowerCase(); });
+  return out;
+}
+
 async function matchItemToRecipes(itemData) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -3471,6 +3492,43 @@ async function matchItemToRecipes(itemData) {
         .sort((a, b) => b.score - a.score);
       return nameMatches;
     }
+
+    // Variant-aware match: a product with size/color variants stores each
+    // variant as its own recipe row (parent_id + its own `attributes` JSON,
+    // components copied verbatim from the parent) -- so a parent template
+    // and every one of its variants share the exact same ingredients, and
+    // the ingredient-attribute branch below can't tell them apart at all.
+    // Compare the scanned attributes directly against each candidate's own
+    // `attributes` column instead, matching by base name (the parent's name
+    // for a variant child, since the scanned line rarely includes the
+    // "· L · White" suffix a variant's own name gets).
+    {
+      const recipeById = {};
+      recipes.forEach(r => { recipeById[r.id] = r; });
+      const baseNameOf = recipe => (recipe.parent_id && recipeById[recipe.parent_id])
+        ? (recipeById[recipe.parent_id].name || '') : (recipe.name || '');
+      const vSearchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+      const vWords = vSearchName.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+      const normItemAttrs = _rcmNormAttrs(itemAttributes);
+      const attrKeys = Object.keys(normItemAttrs);
+      const variantMatches = recipes
+        .map(recipe => {
+          const rn = baseNameOf(recipe).toLowerCase();
+          const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+          const forward = vWords.length > 0 ? vWords.filter(w => rWords.includes(w)).length / vWords.length : 0;
+          const backward = rWords.length > 0 ? rWords.filter(w => vWords.includes(w)).length / rWords.length : 0;
+          const nameScore = Math.max(forward, backward);
+          const normRecipeAttrs = _rcmNormAttrs(recipe.attributes);
+          const attrScore = attrKeys.length > 0
+            ? attrKeys.filter(k => normRecipeAttrs[k] === normItemAttrs[k]).length / attrKeys.length
+            : 0;
+          return { recipe, score: nameScore * 0.5 + attrScore * 0.5, nameScore, attrScore, matchReason: 'Variant match' };
+        })
+        .filter(r => r.nameScore >= 0.3 && r.attrScore > 0)
+        .sort((a, b) => b.score - a.score);
+      if (variantMatches.length > 0) return variantMatches;
+    }
+
     const allIngredientIds = new Set();
     recipes.forEach(recipe => {
       if (recipe.components && Array.isArray(recipe.components)) {
