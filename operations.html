@@ -2998,7 +2998,7 @@ async function closeManualEntryModal() {
     || (window.ShelfyUrlImportModal && window.ShelfyUrlImportModal.hasPending());
   if (pending) {
     const discard = await showConfirm(
-      "You'll need to scan it again to get this data back, which uses another AI scan.",
+      "This scan won't count against your limit — but you'll need to scan again if you want this data back.",
       'Discard this scan?', 'Keep editing', 'Discard'
     );
     if (!discard) return;
@@ -4455,7 +4455,7 @@ async function closeRecipeMappingModal() {
   const pending = window.ShelfyImportModal && window.ShelfyImportModal.hasPending();
   if (pending) {
     const discard = await showConfirm(
-      "You'll need to scan it again to get this data back, which uses another AI scan.",
+      "This scan won't count against your limit — but you'll need to scan again if you want this data back.",
       'Discard this scan?', 'Keep editing', 'Discard'
     );
     if (!discard) return;

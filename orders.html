@@ -3913,7 +3913,7 @@ function closeRecipeMappingModal() {
   // gives the scan count back either way, but getting this data again means
   // spending another one.
   const pending = window.ShelfyImportModal && window.ShelfyImportModal.hasPending();
-  if (pending && !confirm("Discard this scan? You'll need to scan it again to get this data back, which uses another AI scan.")) {
+  if (pending && !confirm("Discard this scan? This scan won't count against your limit — but you'll need to scan again if you want this data back.")) {
     return;
   }
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
