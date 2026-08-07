@@ -520,8 +520,17 @@ function resolveConfirm(result) {
 
       if (error) throw error;
 
+      // Supabase doesn't return an error when the email is already registered —
+      // it silently returns a user with an empty identities array and sends no email.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        showAlert('This email is already registered. Please sign in instead (or use "Forgot password" if you signed up with a password).', 'Error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Account';
+        return;
+      }
+
       showAlert('Account created successfully! Please check your email to confirm your account, then you can log in.', 'Success');
-      
+
       // Switch to login tab
       document.querySelectorAll('.tab')[0].click();
       document.getElementById('login-email').value = email;
