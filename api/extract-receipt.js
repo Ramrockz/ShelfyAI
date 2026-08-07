@@ -23,6 +23,39 @@ function normalizeAttributeKey(key) {
   return ATTRIBUTE_KEY_SYNONYMS[clean.toLowerCase()] || clean;
 }
 
+// Known key words, longest first so e.g. "grösse" isn't cut short by a
+// shorter synonym that happens to be a prefix of it.
+const ATTRIBUTE_KEY_WORDS = Object.keys(ATTRIBUTE_KEY_SYNONYMS).sort((a, b) => b.length - a.length);
+
+// AgentQL returns each attribute as a plain string, but NOT always in the
+// "Key: Value" shape this originally assumed -- a screenshot where the
+// label and value are just visually adjacent (e.g. Etsy's order-detail
+// page rendering "Größe" and "L" next to each other with no literal colon
+// between them) comes back as "Größe L" instead of "Größe: L". Recognized
+// here by matching a known key word at the start of the string; anything
+// that matches neither shape is dropped rather than guessed at.
+function parseAttributes(attrArray) {
+  if (!Array.isArray(attrArray)) return {};
+  const result = {};
+  attrArray.forEach(attr => {
+    if (typeof attr !== 'string') return;
+    const trimmed = attr.trim();
+    if (!trimmed) return;
+    if (trimmed.includes(':')) {
+      const [key, ...valueParts] = trimmed.split(':');
+      const value = valueParts.join(':').trim();
+      if (value) result[normalizeAttributeKey(key)] = value;
+      return;
+    }
+    const keyWord = ATTRIBUTE_KEY_WORDS.find(k => trimmed.toLowerCase().startsWith(k.toLowerCase() + ' '));
+    if (keyWord) {
+      const value = trimmed.slice(keyWord.length).trim();
+      if (value) result[normalizeAttributeKey(keyWord)] = value;
+    }
+  });
+  return result;
+}
+
 module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -259,20 +292,6 @@ module.exports = async (req, res) => {
     let result;
     
     if (context === 'order') {
-      // Parse attributes from array format ["Key: Value"] to object {key: "value"}
-      const parseAttributes = (attrArray) => {
-        if (!Array.isArray(attrArray)) return {};
-        const result = {};
-        attrArray.forEach(attr => {
-          if (typeof attr === 'string' && attr.includes(':')) {
-            const [key, ...valueParts] = attr.split(':');
-            const value = valueParts.join(':').trim();
-            result[normalizeAttributeKey(key)] = value;
-          }
-        });
-        return result;
-      };
-      
       // Handle item as array (from prompt: item []{})
       let items = [];
       if (Array.isArray(extractedData.item)) {
@@ -302,20 +321,6 @@ module.exports = async (req, res) => {
         }
       };
     } else {
-      // Parse attributes from array format ["Key: Value"] to object {key: "value"}
-      const parseAttributes = (attrArray) => {
-        if (!Array.isArray(attrArray)) return {};
-        const result = {};
-        attrArray.forEach(attr => {
-          if (typeof attr === 'string' && attr.includes(':')) {
-            const [key, ...valueParts] = attr.split(':');
-            const value = valueParts.join(':').trim();
-            result[normalizeAttributeKey(key)] = value;
-          }
-        });
-        return result;
-      };
-      
       // Handle item as array (from prompt: item []{})
       let items = [];
       if (Array.isArray(extractedData.item) && extractedData.item.length > 0) {
