@@ -3442,11 +3442,39 @@ function _rcmNormAttrKey(key) {
   const clean = String(key || '').trim().toLowerCase();
   return RCM_ATTR_KEY_SYNONYMS[clean] || clean;
 }
+
+// Color NAMES also need translating, same problem as the key names above --
+// a scanned German receipt says "Weiß", a variant set up in English says
+// "White", same real color either way. Only applied to the "color" key;
+// other attributes (size, material, ...) are compared as literal text
+// since there's no safe universal translation for those.
+const RCM_COLOR_VALUE_SYNONYMS = {
+  white: 'white', weiß: 'white', weiss: 'white', blanco: 'white', blanc: 'white',
+  black: 'black', schwarz: 'black', negro: 'black', noir: 'black',
+  red: 'red', rot: 'red', rojo: 'red', rouge: 'red',
+  blue: 'blue', blau: 'blue', azul: 'blue', bleu: 'blue',
+  green: 'green', grün: 'green', gruen: 'green', verde: 'green', vert: 'green',
+  yellow: 'yellow', gelb: 'yellow', amarillo: 'yellow', jaune: 'yellow',
+  pink: 'pink', rosa: 'pink', rose: 'pink',
+  purple: 'purple', lila: 'purple', violett: 'purple', morado: 'purple', violet: 'purple',
+  orange: 'orange', naranja: 'orange',
+  brown: 'brown', braun: 'brown', marrón: 'brown', marron: 'brown',
+  grey: 'grey', gray: 'grey', grau: 'grey', gris: 'grey',
+  beige: 'beige',
+  navy: 'navy', marineblau: 'navy'
+};
+function _rcmNormAttrValue(normKey, value) {
+  const clean = String(value == null ? '' : value).trim().toLowerCase();
+  return normKey === 'color' ? (RCM_COLOR_VALUE_SYNONYMS[clean] || clean) : clean;
+}
 function _rcmNormAttrs(attrs) {
   let obj = attrs;
   if (typeof obj === 'string') { try { obj = JSON.parse(obj); } catch (e) { obj = {}; } }
   const out = {};
-  Object.entries(obj || {}).forEach(([k, v]) => { out[_rcmNormAttrKey(k)] = String(v == null ? '' : v).trim().toLowerCase(); });
+  Object.entries(obj || {}).forEach(([k, v]) => {
+    const normKey = _rcmNormAttrKey(k);
+    out[normKey] = _rcmNormAttrValue(normKey, v);
+  });
   return out;
 }
 
