@@ -571,6 +571,9 @@
       }
 
       var result = await response.json();
+      if (currentEntity === 'order' || currentEntity === 'expense') {
+        console.log('[ShelfyImportModal] AI read from ' + currentEntity + ' document:', result.data);
+      }
       if (!result.success || !result.data) {
         var eEmpty = new Error(result.error || 'No data could be extracted from this file');
         eEmpty.code = result.code;
