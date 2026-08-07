@@ -1556,6 +1556,7 @@ loadIngredients().then(() => {
     try {
       seedManualModal(JSON.parse(seedRaw));
       document.getElementById('manualModal').classList.add('active');
+      renderAttrSuggestChips();
     } catch (e) { console.error('Error applying seeded item:', e); }
   }
 
@@ -1635,6 +1636,7 @@ async function checkAIUsage() {
 
 function openManualIngredientModal() {
   document.getElementById('manualModal').classList.add('active');
+  renderAttrSuggestChips();
 }
 
 async function _notifyIfIngredientLimitReached() {
@@ -2017,11 +2019,45 @@ const SUGGESTED_ATTRS_BY_CATEGORY = {
   'Other':             []
 };
 
+// Same idea, but keyed by what the user said they sell during onboarding
+// (user_settings.onboarding_categories, stashed on window by category-
+// filter.js) rather than this item's own Raw Material/Component/etc.
+// category -- a much more specific niche-industry signal when it's there.
+// Keys are the exact literal option strings from onboarding-modal.html.
+// Onboarding is mobile-only and skippable, so this is frequently empty --
+// callers must treat that as "no signal", not an error.
+const SUGGESTED_ATTRS_BY_BUSINESS_TYPE = {
+  'Handmade Crafts & Art':    ['Material', 'Country of Origin'],
+  'Jewelry & Accessories':    ['Metal Purity', 'Gemstone Type', 'Plating', 'Hypoallergenic'],
+  'Home Decor':               ['Material', 'Dimensions', 'Care Instructions'],
+  'Apparel & Fashion':        ['Fabric Composition', 'Size Range', 'Care Instructions'],
+  'Beauty & Skincare':        ['PAO (Period After Opening)', 'INCI Name', 'Allergens', 'Certifications'],
+  'Food & Beverage':          ['Lot Number', 'Allergens', 'Storage Requirement', 'Certifications'],
+  'Stationery & Paper Goods': ['Paper Weight', 'Finish'],
+  'Toys & Games':             ['Age Range', 'Safety Certification'],
+  'Party Supplies & Gifts':   ['Theme', 'Material'],
+  'Electronics & Gadgets':    ['Voltage', 'Certifications'],
+  'Tools & Supplies':         ['Material Grade', 'Hazard Class'],
+  'Whatever':                 []
+};
+
 function renderAttrSuggestChips() {
   const el = document.getElementById('attrSuggestChips');
   if (!el) return;
   const cat = document.getElementById('ing_category').value;
-  const suggestions = SUGGESTED_ATTRS_BY_CATEGORY[cat] || [];
+  const fromCategory = SUGGESTED_ATTRS_BY_CATEGORY[cat] || [];
+  const businessTypes = window.userOnboardingCategories || [];
+  const fromBusiness = businessTypes.flatMap(bt => SUGGESTED_ATTRS_BY_BUSINESS_TYPE[bt] || []);
+  // Business-type suggestions lead (what the whole store sells is a more
+  // specific signal than this one item's generic category), de-duped
+  // case-insensitively against the per-category list.
+  const seen = new Set();
+  const suggestions = [...fromBusiness, ...fromCategory].filter(key => {
+    const k = key.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   if (!suggestions.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'flex';
   el.innerHTML = suggestions.map(key =>

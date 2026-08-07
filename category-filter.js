@@ -73,13 +73,19 @@ async function applyPersonalizedCategories() {
       console.error('Error fetching user settings:', error);
       return;
     }
-    
+
+    // Stashed globally regardless of the toggle below -- that toggle only
+    // controls category-CHIP filtering (a no-op today, see CATEGORY_MAPPING
+    // above), but other features (e.g. ingredients.html's suggested
+    // Attributes chips) want the raw "what do you sell" signal on its own.
+    window.userOnboardingCategories = (data && data.onboarding_categories) || [];
+
     // If personalized categories are disabled, show all
     if (!data || !data.personalized_categories_enabled) {
       showAllCategories();
       return;
     }
-    
+
     // Get personalized categories
     const onboardingCategories = data.onboarding_categories || [];
     const allowedCategories = getPersonalizedCategories(onboardingCategories);
