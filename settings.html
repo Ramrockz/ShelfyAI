@@ -948,6 +948,13 @@
       </span>
       <span class="st-sw" id="expiredItemsToggle"></span>
     </button>
+    <button type="button" class="st-row st-sub" id="reorderArrivalRow" aria-pressed="true" onclick="toggleReorderArrivalAlerts()">
+      <span class="st-row-main">
+        <span class="st-row-name">Reorder arriving today</span>
+        <span class="st-row-why">A pending delivery is expected today</span>
+      </span>
+      <span class="st-sw" id="reorderArrivalToggle"></span>
+    </button>
   </div>
   <div class="st-note" id="alertNote"></div>
 
@@ -1167,7 +1174,8 @@ async function getOrCreateUserSettings(userId) {
         low_stock_notifications: true,
         out_of_stock_notifications: true,
         ai_limit_notifications: true,
-        expired_item_notifications: true
+        expired_item_notifications: true,
+        reorder_arrival_notifications: true
       })
       .select()
       .single();
@@ -1240,6 +1248,7 @@ async function loadSettings() {
     SET.outOfStock = settings.out_of_stock_notifications !== false;
     SET.aiLimit = settings.ai_limit_notifications !== false;
     SET.expiredItems = settings.expired_item_notifications !== false;
+    SET.reorderArrival = settings.reorder_arrival_notifications !== false;
     SET.categories = settings.personalized_categories_enabled !== false;
     renderAlerts();
     setRowPressed('personalizedCategoriesToggle', SET.categories);
@@ -1615,7 +1624,7 @@ function updateThemeButtons(theme) {
 
 // Every toggle below persists immediately (no separate Save/Discard step) --
 // each is a single-column user_settings update.
-let SET = { notifications: true, lowStock: true, outOfStock: true, aiLimit: true, expiredItems: true, categories: true };
+let SET = { notifications: true, lowStock: true, outOfStock: true, aiLimit: true, expiredItems: true, reorderArrival: true, categories: true };
 
 function setRowPressed(id, on) {
   const el = $(id);
@@ -1627,7 +1636,8 @@ function renderAlerts() {
   setRowPressed('outOfStockRow', SET.notifications && SET.outOfStock);
   setRowPressed('aiLimitRow', SET.notifications && SET.aiLimit);
   setRowPressed('expiredItemsRow', SET.notifications && SET.expiredItems);
-  $('alertNote').textContent = SET.notifications ? '' : 'Notifications are off, so the four below are paused — their settings are kept.';
+  setRowPressed('reorderArrivalRow', SET.notifications && SET.reorderArrival);
+  $('alertNote').textContent = SET.notifications ? '' : 'Notifications are off, so the five below are paused — their settings are kept.';
 }
 
 async function _persistSettings(fields) {
@@ -1650,7 +1660,7 @@ function _tog(key) {
     SET[key] = !SET[key];
   }
   renderAlerts();
-  const fieldMap = { lowStock: 'low_stock_notifications', outOfStock: 'out_of_stock_notifications', aiLimit: 'ai_limit_notifications', expiredItems: 'expired_item_notifications' };
+  const fieldMap = { lowStock: 'low_stock_notifications', outOfStock: 'out_of_stock_notifications', aiLimit: 'ai_limit_notifications', expiredItems: 'expired_item_notifications', reorderArrival: 'reorder_arrival_notifications' };
   const payload = key === 'notifications'
     ? { notifications_enabled: SET.notifications }
     : { notifications_enabled: SET.notifications, [fieldMap[key]]: SET[key] };
@@ -1661,6 +1671,7 @@ function toggleLowStockAlerts() { _tog('lowStock'); }
 function toggleOutOfStockAlerts() { _tog('outOfStock'); }
 function toggleAILimitAlerts() { _tog('aiLimit'); }
 function toggleExpiredItemAlerts() { _tog('expiredItems'); }
+function toggleReorderArrivalAlerts() { _tog('reorderArrival'); }
 
 // Reflects actual browser subscription state, not a stored preference --
 // unlike the toggles above, this can't be "on" without the user having

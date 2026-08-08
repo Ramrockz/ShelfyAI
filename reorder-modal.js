@@ -366,7 +366,10 @@ async function placeReorder() {
     if (q) {
       const { error } = await supabaseClient.from('ingredients').update({
         reorder_pending: true, reorder_date: today, estimated_delivery: s.lead || null,
-        reorder_quantity: q, reorder_supplier_id: s.supplierId
+        reorder_quantity: q, reorder_supplier_id: s.supplierId,
+        // Re-arms the one-time "arrives today" alert for this new delivery
+        // (see api/send-reorder-arrival-notifications.js).
+        reorder_arrival_alert_sent_at: null
       }).eq('id', _roIngredient.id);
       if (error) throw error;
       _roIngredient.reorder_pending = true;
@@ -382,7 +385,8 @@ async function placeReorder() {
       const row = rows?.[0];
       await supabaseClient.from('ingredients').update({
         reorder_pending: true, reorder_date: today, estimated_delivery: row?.lead_time_days || null,
-        reorder_quantity: pickedQty, reorder_supplier_id: s.supplierId
+        reorder_quantity: pickedQty, reorder_supplier_id: s.supplierId,
+        reorder_arrival_alert_sent_at: null
       }).eq('id', id);
       if (row) await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', row.id);
       placedIds.push(id);
