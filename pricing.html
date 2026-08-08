@@ -127,6 +127,14 @@
     font-weight: 700;
   }
 
+  /* Hidden by default (mobile) -- there's no room to spare above the fold
+     on a phone, so cards should be visible immediately. Shown on desktop
+     via the min-width override below. */
+  .pricing-intro { display: none; max-width: 800px; margin: 60px auto 40px; text-align: center; }
+  @media (min-width: 769px) {
+    .pricing-intro { display: block; }
+  }
+
   /* ---------- PRICING CARDS ---------- */
   .pricing-grid {
     display: grid;
@@ -434,6 +442,22 @@
     <label for="price-switch" class="switch"></label>
     <span class="toggle-label" id="label-yearly">Yearly</span>
     <span class="discount-badge">Save 20%</span>
+  </div>
+
+  <!-- Desktop-only: mobile removed this to keep cards visible immediately on
+       load (there's no room to spare on a phone screen), but on desktop the
+       page read as thin without it. -->
+  <div class="pricing-intro">
+    <h2 style="font-size: 36px; font-weight: 700; margin-bottom: 20px; color: var(--text-main);">Simple, Transparent Inventory Management Pricing</h2>
+    <p style="font-size: 17px; line-height: 1.7; color: var(--text-muted); margin-bottom: 20px;">
+      Whether you're just starting out or scaling your business, we have a plan that fits. Start free with manual inventory tracking and unlimited storage. Upgrade to unlock AI-powered receipt scanning and order extraction when you're ready to save time.
+    </p>
+
+    <p style="font-size: 16px; line-height: 1.8; color: var(--text-muted); text-align: left; max-width: 700px; margin: 0 auto;">
+      <strong style="color: var(--text-main);">Free Plan:</strong> Perfect for testing ShelfyAI and tracking items manually, with unlimited AI ingredient imports. Ideal for makers just getting started with inventory management.<br><br>
+      <strong style="color: var(--text-main);">Starter Plan:</strong> Add AI automation for orders and expenses with 100 scans per month, plus unlimited ingredient imports. Great for small businesses processing regular supplier orders.<br><br>
+      <strong style="color: var(--text-main);">Pro Plan:</strong> For growing businesses needing more AI capacity with 300 scans per month. Best for high-volume shops on Etsy, e-commerce, or restaurants.
+    </p>
   </div>
 
   <div class="pricing-grid">

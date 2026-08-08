@@ -693,6 +693,32 @@
       display: none; /* Chrome, Safari, Opera */
     }
   }
+
+  /* ---------- DESKTOP ADJUSTMENTS ---------- */
+  /* Mobile's compact app-list design (narrow column, no page title) is
+     right for a phone, but on a desktop monitor it left most of the screen
+     empty. Widen the column and bring back a real page header here only. */
+  @media (min-width: 769px) {
+    .settings-container {
+      max-width: 760px;
+      padding: 40px 24px 60px;
+    }
+    .settings-header {
+      display: block;
+      margin-bottom: 28px;
+    }
+    .settings-header h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+    .settings-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  }
 </style>
 </head>
 
@@ -843,7 +869,14 @@
   })();
 </script>
 
-<div class="settings-container" style="max-width: 480px;">
+<div class="settings-container">
+
+  <!-- Hidden on mobile (bottom nav / page title handles it there); shown
+       on desktop, where the app otherwise has no page title at all. -->
+  <div class="settings-header">
+    <h1>Settings</h1>
+    <p>Manage your account preferences and application settings</p>
+  </div>
 
   <!-- 26a: identity -->
   <div class="st-who">
