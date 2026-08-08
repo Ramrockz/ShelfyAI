@@ -265,6 +265,15 @@ function getStoreId() {
   return window.currentStoreId || localStorage.getItem('shelfy_store_id');
 }
 
+// Every "Update Plan"/"Upgrade" link in the app used to go straight to
+// /plan (the compact in-app subscription manager) regardless of screen
+// size. On desktop that skipped the full public pricing page entirely --
+// send desktop to /pricing instead, where there's room for the full
+// comparison; mobile keeps the app-native /plan screen.
+function goToPlanPage() {
+  window.location.href = window.innerWidth <= 768 ? '/plan' : '/pricing';
+}
+
 // Check if user is authenticated
 async function isAuthenticated() {
   const { data: { session } } = await supabaseClient.auth.getSession();
