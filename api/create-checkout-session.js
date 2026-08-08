@@ -70,7 +70,9 @@ module.exports = async (req, res) => {
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
         mode: 'payment',
-        payment_method_types: ['card'],
+        // No payment_method_types here on purpose -- Checkout shows whatever
+        // you've enabled in the Stripe Dashboard (card, PayPal, etc.) instead
+        // of being locked to a hardcoded list.
         line_items: [{ price: scanPackPriceId, quantity: 1 }],
         success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`,
@@ -139,7 +141,9 @@ module.exports = async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription',
-      payment_method_types: ['card'],
+      // No payment_method_types here on purpose -- Checkout shows whatever
+      // you've enabled in the Stripe Dashboard (card, PayPal, etc.) instead
+      // of being locked to a hardcoded list.
       line_items: [{ price: PRICE_IDS[tier][interval], quantity: 1 }],
       automatic_tax: { enabled: true },
       customer_update: {
