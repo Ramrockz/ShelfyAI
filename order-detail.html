@@ -687,8 +687,9 @@
 
   .cat-chip img { width: 20px; height: 20px; display: block; }
 
-  .items-desktop-table { display: table; }
-  .items-mobile-list   { display: none; }
+  .items-desktop-table { display: none; }
+  .items-mobile-list   { display: block; }
+  #itemsSectionHeader { display: none; }
 
   /* Mobile-only elements — hidden by default; the <=768px media query
      turns each on. Without this, a bare <div> defaults to display:block
@@ -696,9 +697,6 @@
      desktop layout they're meant to replace only at narrow widths. */
   .ord-mobile-header,
   .ord-more-menu,
-  .ord-info-rows,
-  .msec,
-  .ord-rev-meta,
   #odCreateBtn,
   #odNotificationBell,
   #odUserAvatar {
@@ -895,6 +893,47 @@
   .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
                     background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 
+  /* Order info card header -- customer name/date, mobile's look, now used
+     at every width instead of only inside the old mobile-only header. */
+  .ord-customer {
+    font-size: 18px; font-weight: 800; letter-spacing: -.01em; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ord-rev-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Info rows: Date / Channel / Reference / Tracking -- mobile's tappable
+     row list, now the only way this info is shown/edited at any width. */
+  .ord-info-rows { display: block; margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .ord-drow {
+    display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
+    padding: 0 14px 0 16px; text-align: left; background: var(--bg-panel);
+    border: none; cursor: pointer;
+  }
+  .ord-drow + .ord-drow { border-top: 1px solid var(--border); }
+  .ord-drow-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
+  .ord-drow-value { font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: var(--text-main); }
+  .ord-drow-chev { color: var(--border); flex-shrink: 0; }
+
+  /* Pack list -- mobile's item cards, now the only item list at any width
+     (the old .items-desktop-table is retired via its base rule above). */
+  .msec { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; }
+  .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+  .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); }
+  .pack-row {
+    display: flex; align-items: center; gap: 13px; min-height: 62px;
+    padding: 10px 14px; background: var(--bg-panel);
+    border-top: 1px solid var(--border); box-sizing: border-box;
+  }
+  .pack-row:first-child { border-top: none; border-radius: 12px 12px 0 0; }
+  .pack-row:last-child { border-radius: 0 0 12px 12px; }
+  .pack-row:only-child { border-radius: 12px; }
+  .pack-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
+  .pack-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pack-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .pack-qty { font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); flex-shrink: 0; }
+  .pack-chev { color: var(--border); flex-shrink: 0; }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
     .container { padding: 24px 16px; }
@@ -963,14 +1002,6 @@
       gap: 12px;
     }
 
-    /* Hide table, show cards */
-    .items-desktop-table { display: none !important; }
-    .items-mobile-list   { display: block !important; }
-
-    #itemsTable {
-      display: none;
-    }
-
     .recipe-card {
       display: block;
     }
@@ -1016,14 +1047,6 @@
       display: none; /* Chrome, Safari, Opera */
     }
 
-    /* Old desktop order-info section is replaced by #ordMobileHeader +
-       #ordInfoRows below — hide it here so both don't show at once.
-       #revenuePanel stays visible on mobile too, as the hero total
-       (matching expense-detail's big #expenseCost display). */
-    #orderInfoSection { display: none !important; }
-    #itemsSectionHeader { display: none !important; }
-    #ordPackHeader { display: flex !important; }
-
     /* Mobile header block: customer, total, ⋯ menu.
        The real .navbar (with its own bell/avatar) is hidden on this page at
        mobile widths — #odCreateBtn/#odNotificationBell/#odUserAvatar below
@@ -1039,7 +1062,7 @@
     .ord-mobile-header {
       display: block; margin-bottom: 16px;
     }
-    .ord-head-top { display: flex; align-items: center; gap: 8px; }
+    .ord-head-top { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
     .ord-more-btn {
       width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
       background: transparent; color: var(--text-main); cursor: pointer;
@@ -1050,13 +1073,6 @@
       width: 32px; height: 32px; align-items: center; justify-content: center;
       background: none; border: none; border-radius: 50%; color: var(--text-main); cursor: pointer; padding: 0;
     }
-    .ord-head-main { flex: 1; min-width: 0; }
-    .ord-customer {
-      font-size: 18px; font-weight: 800; letter-spacing: -.01em; cursor: pointer;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .ord-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ord-rev-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
 
     .ord-more-menu {
       display: none; position: fixed; z-index: 10200; right: 16px;
@@ -1075,35 +1091,6 @@
     .ord-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
     .ord-more-item-danger, .ord-more-item-danger svg { color: var(--danger); }
 
-/* Info rows: Channel / Reference / Revenue / Tracking */
-    .ord-info-rows { display: block; margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-    .ord-drow {
-      display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
-      padding: 0 14px 0 16px; text-align: left; background: var(--bg-panel);
-      border: none; cursor: pointer;
-    }
-    .ord-drow + .ord-drow { border-top: 1px solid var(--border); }
-    .ord-drow-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
-    .ord-drow-value { font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: var(--text-main); }
-    .ord-drow-chev { color: var(--border); flex-shrink: 0; }
-
-    /* Pack list */
-    .msec { display: none; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; }
-    .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
-    .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); }
-    .pack-row {
-      display: flex; align-items: center; gap: 13px; min-height: 62px;
-      padding: 10px 14px; background: var(--bg-panel);
-      border-top: 1px solid var(--border); box-sizing: border-box;
-    }
-    .pack-row:first-child { border-top: none; border-radius: 12px 12px 0 0; }
-    .pack-row:last-child { border-radius: 0 0 12px 12px; }
-    .pack-row:only-child { border-radius: 12px; }
-    .pack-main { flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0; cursor: pointer; }
-    .pack-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pack-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .pack-qty { font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--text-main); flex-shrink: 0; }
-    .pack-chev { color: var(--border); flex-shrink: 0; }
     #receiptPanel { margin-bottom: 90px; }
 
     /* Item / channel / one-field sheets */
@@ -1290,15 +1277,11 @@
 
   <div class="main-grid">
 
-    <!-- Mobile-only header: customer, total, stage strip, ⋯ menu.
-         Replaces the squeezed desktop form fields below (#orderInfoSection),
-         which are hidden at <=768px so the two don't show simultaneously. -->
+    <!-- Mobile-only toolbar: create/notifications/avatar/more-menu, standing
+         in for the real .navbar (hidden at <=768px on this page). Customer
+         name/date live in #orderInfoSection below, shown at every width. -->
     <div class="ord-mobile-header" id="ordMobileHeader">
       <div class="ord-head-top">
-        <div class="ord-head-main">
-          <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
-          <div class="ord-meta" id="ordMeta"></div>
-        </div>
         <button id="odCreateBtn" onclick="createNewOrder()" aria-label="Create order">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -1341,33 +1324,43 @@
     <div id="leftColumn">
 
       <div class="form-section" id="orderInfoSection">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+          <div style="min-width: 0;">
+            <div class="ord-customer" id="ordCustomerName" onclick="openOrderFieldSheet('customer','Customer')">-</div>
+            <div class="ord-meta" id="ordMeta"></div>
+          </div>
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Order Details</h2>
             <span id="orderStatus" class="status-badge"></span>
-          </div>
-          <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
-            <button class="detail-cta-btn reverse-inv-btn" id="ordReverseInvBtnDesktop" style="display:none;" onclick="reverseOrderInventory(orderId)" title="Reverse inventory">Reverse Inventory</button>
-            <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
+            <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
+              <button class="detail-cta-btn reverse-inv-btn" id="ordReverseInvBtnDesktop" style="display:none;" onclick="reverseOrderInventory(orderId)" title="Reverse inventory">Reverse Inventory</button>
+              <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
+            </div>
           </div>
         </div>
-        
-        <div class="form-group">
-          <label for="customerName">Customer Name *</label>
-          <div class="info-value editable-field" id="customerName" onclick="makeEditable('customerName', 'customer')">-</div>
-        </div>
-        <div class="form-row">
+
+        <div class="ord-info-rows" id="ordInfoRows"></div>
+
+        <!-- Legacy raw fields -- superseded by the tappable rows above.
+             Kept in the DOM (hidden) rather than removed: displayOrder()
+             still writes into these ids and one call site (trackingGroup's
+             visibility toggle) isn't null-guarded. -->
+        <div style="display:none;">
           <div class="form-group">
-            <label for="orderReference">Order Reference</label>
-            <div class="info-value editable-field" id="orderReference" onclick="makeEditable('orderReference', 'order_reference')">-</div>
+            <label for="customerName">Customer Name *</label>
+            <div class="info-value editable-field" id="customerName" onclick="makeEditable('customerName', 'customer')">-</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="orderReference">Order Reference</label>
+              <div class="info-value editable-field" id="orderReference" onclick="makeEditable('orderReference', 'order_reference')">-</div>
+            </div>
+            <div class="form-group">
+              <label for="orderDate">Order Date</label>
+              <div class="info-value editable-field" id="orderDate" onclick="makeEditable('orderDate', 'sale_date')" style="cursor: pointer;">-</div>
+            </div>
           </div>
           <div class="form-group">
-            <label for="orderDate">Order Date</label>
-            <div class="info-value editable-field" id="orderDate" onclick="makeEditable('orderDate', 'sale_date')" style="cursor: pointer;">-</div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="salesChannel">Sales Channel</label>
+            <label for="salesChannel">Sales Channel</label>
             <div id="salesChannelPicker" class="cat-grid" style="margin-bottom: 12px;">
               <div class="cat-chip" data-channel="Etsy" onclick="selectChannel('Etsy')" title="Etsy">
                 <img src="https://cdn.simpleicons.org/etsy/F56400" alt="Etsy">
@@ -1387,10 +1380,10 @@
             </div>
             <div class="info-value" id="salesChannel" style="display: none;">-</div>
           </div>
-        </div>
-        <div class="form-group" id="trackingGroup" style="display: none;">
-          <label for="trackingNumber">Tracking Number</label>
-          <div class="info-value editable-field" id="trackingNumber" onclick="makeEditable('trackingNumber', 'tracking_number')">-</div>
+          <div class="form-group" id="trackingGroup" style="display: none;">
+            <label for="trackingNumber">Tracking Number</label>
+            <div class="info-value editable-field" id="trackingNumber" onclick="makeEditable('trackingNumber', 'tracking_number')">-</div>
+          </div>
         </div>
       </div>
 
@@ -1398,12 +1391,13 @@
         <div id="itemsSectionHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Included Products</h3>
         </div>
-        <!-- Mobile-only: replaces itemsSectionHeader above -->
+        <!-- Shown at every width -- replaces itemsSectionHeader above -->
         <div class="msec" id="ordPackHeader">
           <span class="msec-title">Items Sold</span>
         </div>
 
-        <!-- Desktop Table -->
+        <!-- Retired -- kept in the DOM (hidden) since displayOrder() still
+             populates #itemsTableBody unconditionally. -->
         <table id="itemsTable" class="items-desktop-table">
           <thead>
             <tr>
@@ -1434,10 +1428,6 @@
         <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Receipt upload requires Supabase storage bucket setup. Please contact support to enable this feature.</p>
       </div>
     </div>
-
-    <!-- Mobile-only: Channel/Reference/Tracking as tappable rows, moved to
-         the bottom to match expense-detail's layout (extra fields last). -->
-    <div class="ord-info-rows" id="ordInfoRows"></div>
   </div>
 
   <!-- Receipt viewer -->
@@ -1903,7 +1893,10 @@ function createNewOrder() {
 function renderOrdInfoRows() {
   const el = document.getElementById('ordInfoRows');
   if (!el || !orderData) return;
+  const saleDate = orderData.sale_date ? new Date(orderData.sale_date) : null;
+  const dateLabel = saleDate && !isNaN(saleDate) ? saleDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-';
   const rows = [
+    ['Date', _escHtml(dateLabel), "openOrderFieldSheet('sale_date','Order Date')"],
     ['Channel', _escHtml(orderData.source || 'Website'), "openOrdChannelSheet()"],
     ['Reference', _escHtml(orderData.order_reference || 'N/A'), "openOrderFieldSheet('order_reference','Reference')"]
   ];
@@ -2038,8 +2031,10 @@ function openOrderFieldSheet(field, label) {
   _ordEditingField = field;
   document.getElementById('ordFieldSheetLabel').textContent = label;
   const input = document.getElementById('ordFieldSheetInput');
-  input.type = field === 'revenue' ? 'number' : 'text';
-  input.value = field === 'revenue' ? String(parseFloat(orderData.revenue) || 0) : (orderData[field] || '');
+  input.type = field === 'revenue' ? 'number' : (field === 'sale_date' ? 'date' : 'text');
+  input.value = field === 'revenue' ? String(parseFloat(orderData.revenue) || 0)
+    : field === 'sale_date' ? (orderData.sale_date || '').slice(0, 10)
+    : (orderData[field] || '');
   document.getElementById('ordFieldSheet').classList.add('active');
   setTimeout(() => input.focus(), 120);
 }
