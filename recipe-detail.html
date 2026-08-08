@@ -53,11 +53,10 @@
   .breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; cursor: pointer; }
   .breadcrumb:hover { color: var(--accent); }
 
-  /* Desktop layout for the product detail page -- mirrors mobile's
-     #mobileViewOverlay content (headline/category/restock) which never had
-     a desktop equivalent before. Items list stays the wide primary column. */
-  .pd-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
-  .pd-grid > div:last-child { display: flex; flex-direction: column; gap: 16px; }
+  /* Category + Restock sit side by side, full width, above the (also
+     full-width) items list -- see .pd-category-row/.pd-restock-row below. */
+  .pd-secondary-row { display: flex; gap: 16px; margin-bottom: 24px; }
+  .pd-secondary-row > * { flex: 1; }
 
   /* ---------- HEADER ---------- */
   .header {
@@ -456,9 +455,9 @@
       grid-template-columns: 1fr;
       gap: 16px;
     }
-    .pd-grid { grid-template-columns: 1fr; }
     .pd-headline { flex-direction: column; align-items: stretch; }
     .pd-stats { width: 100%; }
+    .pd-secondary-row { flex-direction: column; }
   }
   
   @media (min-width: 769px) {
@@ -1137,33 +1136,29 @@
     </div>
   </div>
 
-  <div class="pd-grid">
-    <!-- Left column: items -->
-    <div>
-      <div class="panel">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
-          <h3 style="margin:0;">Items</h3>
-        </div>
-        <div id="ingredientsList">
-          <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
-        </div>
-      </div>
+  <!-- Category + Restock -- mirrors #mobileViewOverlay's category sheet
+       trigger/restock row, which never had a desktop equivalent before.
+       A compact side-by-side row rather than a lopsided sidebar column
+       next to the (much taller) items list below. -->
+  <div class="pd-secondary-row">
+    <button type="button" class="pd-category-row" id="pdCategoryRow" onclick="openRdmCategorySheet()">
+      <span class="pd-category-label">Category</span>
+      <span class="pd-category-value empty" id="pdCategoryValue">Not set</span>
+      <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+
+    <div class="pd-restock-row" id="pdRestockRow" style="display:none;" onclick="rdmRestockShort()">
+      <span id="pdRestockLabel"></span>
+      <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
     </div>
+  </div>
 
-    <!-- Right column: category, restock -- mirrors #mobileViewOverlay's
-         category sheet trigger/restock row, which never had a desktop
-         equivalent before. -->
-    <div>
-      <button type="button" class="pd-category-row" id="pdCategoryRow" onclick="openRdmCategorySheet()">
-        <span class="pd-category-label">Category</span>
-        <span class="pd-category-value empty" id="pdCategoryValue">Not set</span>
-        <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
-      </button>
-
-      <div class="pd-restock-row" id="pdRestockRow" style="display:none;" onclick="rdmRestockShort()">
-        <span id="pdRestockLabel"></span>
-        <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
-      </div>
+  <div class="panel">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
+      <h3 style="margin:0;">Items</h3>
+    </div>
+    <div id="ingredientsList">
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
     </div>
   </div>
 </div>
