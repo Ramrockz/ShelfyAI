@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="reorder-modal.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -41,6 +42,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
+<script src="reorder-modal.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -458,127 +460,8 @@
 
 
 
-  /* ---------- Place reorder screen (full-screen on desktop, half-sheet
-     on mobile via .ro-card below) ---------- */
-  .ro-screen {
-    display: none; position: fixed; inset: 0; z-index: 10100;
-    flex-direction: column; background: var(--bg-app, var(--bg-main));
-  }
-  .ro-screen.active { display: flex; }
-  /* Plain pass-through wrapper on desktop (still fills .ro-screen exactly
-     like before this was introduced); mobile below turns it into the actual
-     bottom-sheet panel, with .ro-screen becoming its dim backdrop instead. */
-  .ro-card { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-  @media (max-width: 768px) {
-    .ro-screen { background: rgba(15,23,42,.42); justify-content: flex-end; }
-    .ro-card {
-      height: auto; max-height: 75vh; border-radius: 20px 20px 0 0; overflow: hidden;
-      background: var(--bg-app, var(--bg-main));
-      box-shadow: 0 -8px 24px -12px rgba(0,0,0,0.35);
-      transform: translateY(30px);
-      transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
-      padding-top: 10px;
-    }
-    .ro-card::before {
-      content: ''; display: block; flex-shrink: 0;
-      width: 36px; height: 4px; background: rgba(128,128,128,0.3);
-      border-radius: 2px; margin: 0 auto 8px;
-    }
-    .ro-screen.active .ro-card { transform: translateY(0); }
-  }
-  .ro-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
-  .ro-bar { min-height: calc(52px + env(safe-area-inset-top, 0px)); display: flex; align-items: center;
-            gap: 4px; padding: env(safe-area-inset-top, 0px) 8px 0; box-sizing: border-box; }
-  .ro-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-             background: none; border: none; color: var(--text-main); }
-  .ro-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .ro-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--text-main); }
-  .ro-sub { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 1px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ro-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
-  .ro-qty-panel { background: var(--bg-panel); padding: 22px 16px 16px; border-bottom: 1px solid var(--border); }
-  .ro-qty-row { display: flex; align-items: center; justify-content: center; gap: 24px; }
-  .ro-qty-btn { width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px; border: none;
-                background: var(--bg-inner); color: var(--text-main); font-size: 28px; font-weight: 600; line-height: 1; }
-  .ro-qty-btn.plus { background: rgba(6,182,212,.12); color: var(--accent); }
-  .ro-qty-btn:active { transform: scale(.96); }
-  .ro-qty-center { display: flex; flex-direction: column; align-items: center;
-                   flex: 0 1 auto; min-width: 92px; max-width: 150px; }
-  .ro-qty-value { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em;
-                  background: none; border: none; text-align: center; width: 100%; min-width: 0;
-                  padding: 0; color: var(--text-main); -webkit-appearance: none; appearance: none; }
-  .ro-qty-value::-webkit-inner-spin-button, .ro-qty-value::-webkit-outer-spin-button {
-    -webkit-appearance: none; display: none; }
-  .ro-sec-head { display: flex; align-items: baseline; padding: 18px 16px 8px; }
-  .ro-sec-title { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
-  .ro-sec-note { margin-left: auto; font-size: 11.5px; color: var(--text-muted); }
-  .ro-list { background: var(--bg-panel); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-
-  .ro-drow { display: flex; align-items: center; gap: 12px; min-height: 56px; width: 100%;
-             padding: 8px 14px 8px 16px; text-align: left; background: var(--bg-panel); border: none;
-             border-top: 1px solid var(--border); }
-  .ro-list .ro-drow:first-child { border-top: none; }
-  .ro-drow-label { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .ro-drow-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em;
-                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
-  .ro-drow-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .ro-drow-chev { color: var(--text-muted); flex-shrink: 0; }
-  .ro-drow-tag { flex-shrink: 0; height: 22px; padding: 0 8px; border-radius: 7px; background: var(--bg-inner);
-                 font-size: 11.5px; font-weight: 700; color: var(--text-muted); display: inline-flex; align-items: center; }
-
-  .ro-op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 12px 10px 16px;
-               border-top: 1px solid var(--border); }
-  .ro-list .ro-op-row:first-child { border-top: none; }
-  .ro-op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
-  .ro-op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .ro-op-name { display: block; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em;
-                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
-  .ro-op-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .ro-op-meta b { font-weight: 700; color: var(--text-main); }
-  .ro-op-meta[data-state="low"] { color: var(--warning); }
-  .ro-op-meta[data-state="out"] { color: var(--danger); }
-  .ro-op-add { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border);
-               background: var(--bg-panel); color: var(--accent); display: flex; align-items: center; justify-content: center; }
-  .ro-op-add:active { background: var(--bg-inner); }
-  .ro-op-step { flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
-  .ro-op-step button { width: 40px; height: 44px; border: none; background: none; color: var(--accent);
-                        display: flex; align-items: center; justify-content: center; border-radius: 10px; }
-  .ro-op-step button:active { background: var(--bg-inner); }
-  .ro-op-qty { min-width: 26px; text-align: center; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }
-  .ro-note { padding: 14px 20px 26px; font-size: 12px; color: var(--text-muted); }
-
-  .ro-foot { flex-shrink: 0; background: var(--bg-panel); border-top: 1px solid var(--border);
-             padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
-  .ro-tally { display: flex; align-items: center; gap: 8px; min-height: 26px; }
-  .ro-tally-l { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-  .ro-tally-r { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -.02em;
-                font-variant-numeric: tabular-nums; color: var(--text-main); }
-  .ro-warn { font-size: 12px; font-weight: 700; color: var(--warning); margin-top: 2px; }
-  .ro-cont { width: 100%; height: 50px; margin-top: 10px; border: none; border-radius: 13px;
-             background: var(--accent); color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
-  .ro-cont:active { opacity: .85; }
-  .ro-cont:disabled { background: var(--bg-inner); color: var(--text-muted); cursor: default; }
-
-  .ro-sheet { position: fixed; inset: 0; z-index: 10200; background: rgba(15,23,42,.42);
-              display: none; align-items: flex-end; }
-  .ro-sheet.active { display: flex; }
-  .ro-sheet-content { width: 100%; background: var(--bg-panel); border-radius: 20px 20px 0 0;
-                      padding: 20px 0 calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 80%; overflow-y: auto; }
-  .ro-sheet-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0 16px 12px; color: var(--text-main); }
-  .ro-sup-opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px;
-                padding: 10px 16px; text-align: left; background: none; border: none; border-top: 1px solid var(--border); }
-  .ro-sup-opt:first-of-type { border-top: none; }
-  .ro-sup-opt[aria-selected="true"] .ro-drow-name { color: var(--accent); }
-  .ro-sup-check { color: var(--accent); flex-shrink: 0; }
-  .ro-sheet-new { display: block; width: 100%; padding: 16px; text-align: left; background: none;
-                  border: none; border-top: 1px solid var(--border); color: var(--accent); font-size: 14.5px; font-weight: 700; }
-  .ro-new-sup-form { padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
-  .ro-new-sup-row { display: flex; gap: 10px; }
-  .ro-new-sup-input { flex: 1; height: 46px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border);
-                       background: var(--bg-inner); color: var(--text-main); font-size: 14px; min-width: 0; }
-  .ro-new-sup-save { height: 46px; border: none; border-radius: 10px; background: var(--accent); color: #fff;
-                      font-size: 14.5px; font-weight: 700; }
+  /* Place-reorder screen (.ro-*) styles moved to reorder-modal.css, shared
+     with operations.html's in-place reorder modal. */
 
   .btn-reorder {
     background: var(--accent);
@@ -1534,7 +1417,7 @@
         </span>
         <span class="ro-drow-tag" id="roSupTag" style="display:none;"></span>
         <span id="roVisitBtn" role="button" aria-label="Visit supplier page"
-          onclick="event.stopPropagation(); const url = currentIngredient && currentIngredient.source_url; if (url) window.open(url, '_blank');"
+          onclick="event.stopPropagation(); const url = _roIngredient && _roIngredient.source_url; if (url) window.open(url, '_blank');"
           style="display:none;padding:4px;opacity:0.6;">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="fill:currentColor;display:block;">
             <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
@@ -1659,11 +1542,8 @@
   let initialFormState = null;
   let _autoSaveTimer = null;
 
-  // ---------- Place reorder screen state ----------
-  let roSuppliers = [];       // ingredient_suppliers rows (+ joined supplier name) for currentIngredient
-  let roSupplierId = null;    // selected ingredient_suppliers.id
-  let roAlsoList = [];        // other low/out ingredients sharing the selected supplier
-  let roPicked = {};          // otherIngredientId -> qty, for "ship together"
+  // Place-reorder screen state now lives in reorder-modal.js (shared with
+  // operations.html's in-place reorder modal).
 
   function selectCategory(value) {
     document.getElementById('category').value = value;
@@ -1739,12 +1619,13 @@
       displayIngredient(data);
       
       // Check if we should auto-open the reorder screen. Suppliers are a
-      // standalone concept now (see openReorderScreen/materializeDefaultSupplier)
-      // — no source_url required to open it, same as the header's Restock trigger.
+      // standalone concept now (see openReorderModal/materializeDefaultSupplier
+      // in reorder-modal.js) — no source_url required to open it, same as
+      // the header's Restock trigger.
       const openReorder = urlParams.get('openReorder');
       if (openReorder === 'true') {
         setTimeout(() => {
-          openReorderScreen();
+          handleReorderClick();
         }, 300);
       }
 
@@ -1962,369 +1843,30 @@
   // Suppliers are a standalone concept now (suppliers + ingredient_suppliers
   // tables) — no more "no source URL" gate blocking reorder entirely; a
   // supplier can be added from inside the reorder screen itself.
+  // openReorderModal/closeReorderScreen live in reorder-modal.js, shared
+  // with operations.html's in-place reorder modal.
   function handleReorderClick() {
     if (!currentIngredient) return;
-    openReorderScreen();
-  }
-
-  async function openReorderScreen() {
-    if (!currentIngredient) return;
-    roPicked = {};
-    document.getElementById('roSub').textContent = currentIngredient.name || '';
-    document.getElementById('roScreen').classList.add('active');
-
-    await loadRoSuppliers();
-    if (!roSuppliers.length) await materializeDefaultSupplier();
-    roSupplierId = (roSuppliers.find(s => s.is_primary) || roSuppliers[0] || {}).id || null;
-
-    roSetQty(roSuggestedQty());
-    await loadRoAlso();
-    roRenderAll();
-  }
-
-  function closeReorderScreen() {
-    document.getElementById('roScreen').classList.remove('active');
-  }
-
-  async function loadRoSuppliers() {
-    roSuppliers = [];
-    if (!currentIngredient) return;
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabaseClient
-        .from('ingredient_suppliers')
-        .select('id, supplier_id, price, lead_time_days, moq, is_primary, last_ordered_at, suppliers(name)')
-        .eq('ingredient_id', currentIngredient.id)
-        .eq('profile_id', user.id)
-        .order('is_primary', { ascending: false })
-        .order('price', { ascending: true });
-      if (error) throw error;
-      roSuppliers = (data || []).map(r => ({
-        id: r.id, supplierId: r.supplier_id, name: r.suppliers?.name || 'Supplier',
-        price: parseFloat(r.price) || 0, lead: r.lead_time_days || 0,
-        moq: parseFloat(r.moq) || 0, is_primary: !!r.is_primary, lastOrdered: r.last_ordered_at
-      }));
-    } catch (e) {
-      console.error('Error loading suppliers:', e);
-    }
-  }
-
-  // First time the reorder screen opens for an ingredient that predates the
-  // suppliers table, turn its old single-vendor fields (source_url,
-  // cost_per_unit, estimated_delivery) into a real supplier row instead of
-  // leaving the reorder screen with nothing to show.
-  async function materializeDefaultSupplier() {
-    const url = currentIngredient.source_url;
-    if (!url || !url.trim()) return;
-    const name = _vendorNameFromUrl(url) || 'Supplier';
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-
-      // Reuse an existing supplier with the same name instead of always
-      // inserting a new one -- otherwise every ingredient materialized from
-      // the same vendor's URL ends up with its own separate supplier row,
-      // and "ship together" (which matches by supplier_id) never finds them.
-      let supplierId = null;
-      let _supQ = supabaseClient.from('suppliers').select('id').eq('profile_id', user.id).ilike('name', name);
-      if (storeId) _supQ = _supQ.eq('store_id', storeId);
-      const { data: existingSup, error: findErr } = await _supQ.limit(1);
-      if (findErr) throw findErr;
-
-      if (existingSup && existingSup.length) {
-        supplierId = existingSup[0].id;
-      } else {
-        const supplierRow = { profile_id: user.id, name };
-        if (storeId) supplierRow.store_id = storeId;
-        const { data: sup, error: supErr } = await supabaseClient
-          .from('suppliers').insert([supplierRow]).select().single();
-        if (supErr) throw supErr;
-        supplierId = sup.id;
+    openReorderModal(currentIngredient.id, {
+      onPlaced: (updatedIngredient) => {
+        currentIngredient.reorder_pending = updatedIngredient.reorder_pending;
+        currentIngredient.estimated_delivery = updatedIngredient.estimated_delivery;
+        const reorderBtn = document.getElementById('reorderBtn');
+        if (reorderBtn) {
+          reorderBtn.title = 'Confirm Delivery';
+          reorderBtn.onclick = openDeliveryModal;
+          document.getElementById('reorderBtnLabel').textContent = 'On the way';
+        }
+        renderRestockRow();
       }
-
-      const { error: isErr } = await supabaseClient.from('ingredient_suppliers').insert([{
-        ingredient_id: currentIngredient.id,
-        supplier_id: supplierId,
-        profile_id: user.id,
-        price: parseFloat(currentIngredient.cost_per_unit) || 0,
-        lead_time_days: currentIngredient.estimated_delivery || null,
-        moq: 0,
-        is_primary: true
-      }]);
-      if (isErr) throw isErr;
-      await loadRoSuppliers();
-    } catch (e) {
-      console.error('Error materializing default supplier:', e);
-    }
+    });
   }
 
-  function roSup() { return roSuppliers.find(s => s.id === roSupplierId) || null; }
-  function roQty() { return Math.max(0, parseInt(document.getElementById('roQty').value, 10) || 0); }
-
-  // No usage-history tracking exists yet, so "suggested" is just enough to
-  // clear the alert level with a little headroom — not a velocity-based
-  // forecast like a real demand-planning feature would compute.
-  function roSuggestedQty() {
-    const stock = parseFloat(currentIngredient?.quantity) || 0;
-    const min = parseFloat(currentIngredient?.min_stock) || 0;
-    const topUp = Math.max(0, min - stock);
-    return Math.max(topUp, min, 1);
-  }
-
-  function roEtaLabel(days) {
-    const d = new Date(Date.now() + (parseInt(days, 10) || 0) * 86400000);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  function renderRoSupplier() {
-    const s = roSup();
-    const nameEl = document.getElementById('roSupName');
-    const metaEl = document.getElementById('roSupMeta');
-    const tagEl = document.getElementById('roSupTag');
-    const etaRow = document.getElementById('roEtaRow');
-    const visitBtn = document.getElementById('roVisitBtn');
-    // Suppliers don't have their own URL on file yet -- the only link we
-    // actually have is the ingredient's own source_url (the page it was
-    // originally added/scanned from), so that's what "visit" reopens.
-    visitBtn.style.display = currentIngredient && currentIngredient.source_url ? '' : 'none';
-    if (!s) {
-      nameEl.textContent = 'Add a supplier';
-      metaEl.textContent = 'No supplier on file for this item yet';
-      tagEl.style.display = 'none';
-      etaRow.style.display = 'none';
-      return;
-    }
-    nameEl.textContent = s.name;
-    const bits = [s.price ? `$${s.price.toFixed(2)} each` : null, s.lead ? `~${s.lead} days` : null,
-                  s.lastOrdered ? `last ordered ${new Date(s.lastOrdered).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : null]
-      .filter(Boolean);
-    metaEl.textContent = bits.join(' · ');
-
-    if (roSuppliers.length > 1) {
-      const cheapest = roSuppliers.reduce((a, b) => (b.price < a.price ? b : a));
-      tagEl.style.display = 'inline-flex';
-      tagEl.textContent = s.id === cheapest.id ? 'cheapest' : `$${(s.price - cheapest.price).toFixed(2)} over ${cheapest.name}`;
-    } else {
-      tagEl.style.display = 'none';
-    }
-
-    if (s.lead) {
-      etaRow.style.display = 'flex';
-      document.getElementById('roEtaName').textContent = 'Expected ' + roEtaLabel(s.lead);
-      document.getElementById('roEtaMeta').textContent = `~${s.lead} days · stock updates when you mark it received`;
-    } else {
-      etaRow.style.display = 'none';
-    }
-  }
-
-  async function loadRoAlso() {
-    roAlsoList = [];
-    const s = roSup();
-    if (!s || !currentIngredient) return;
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabaseClient
-        .from('ingredient_suppliers')
-        .select('ingredient_id, price, ingredients(id, name, quantity, min_stock)')
-        .eq('supplier_id', s.supplierId)
-        .eq('profile_id', user.id)
-        .neq('ingredient_id', currentIngredient.id);
-      if (error) throw error;
-      roAlsoList = (data || [])
-        .filter(r => r.ingredients)
-        .map(r => ({
-          id: r.ingredients.id, name: r.ingredients.name,
-          stock: parseFloat(r.ingredients.quantity) || 0, min: parseFloat(r.ingredients.min_stock) || 0,
-          price: parseFloat(r.price) || 0
-        }))
-        .filter(a => a.stock === 0 || (a.min > 0 && a.stock < a.min))
-        .sort((a, b) => (a.stock === 0 ? 0 : 1) - (b.stock === 0 ? 0 : 1));
-    } catch (e) {
-      console.error('Error loading ship-together items:', e);
-    }
-  }
-
-  function renderRoAlso() {
-    const rows = roAlsoList;
-    const s = roSup();
-    document.getElementById('roAlsoNote').textContent =
-      rows.length && s ? `${rows.length} low at ${s.name}` : '';
-    document.getElementById('roAlso').innerHTML = !rows.length ? `<div class="ro-op-row"><span class="ro-op-main">
-        <span class="ro-op-name" style="font-weight:600;color:var(--text-muted)">${s ? 'Nothing else is low here' : 'Pick a supplier to see what else ships with it'}</span>
-      </span></div>` : rows.map(a => {
-      const q = roPicked[a.id] || 0;
-      const st = a.stock === 0 ? 'out' : 'low';
-      const line = q
-        ? `$${a.price.toFixed(2)} each · <b>${a.stock} &rarr; ${a.stock + q}</b>`
-        : `$${a.price.toFixed(2)} each · ${a.stock} of ${a.min} min`;
-      return `<div class="ro-op-row" data-picked="${q ? 1 : 0}">
-        <span class="ro-op-main">
-          <span class="ro-op-name">${escapeHtml(a.name)}</span>
-          <span class="ro-op-meta"${st && !q ? ` data-state="${st}"` : ''}>${line}</span>
-        </span>
-        ${q ? `<span class="ro-op-step">
-            <button onclick="roBump('${a.id}',-1)" aria-label="One fewer">&minus;</button>
-            <span class="ro-op-qty">${q}</span>
-            <button onclick="roBump('${a.id}',1)" aria-label="One more">+</button>
-          </span>`
-        : `<button class="ro-op-add" onclick="roBump('${a.id}',${Math.max(a.min, 1) || 1})" aria-label="Add ${escapeHtml(a.name)}">+</button>`}
-      </div>`;
-    }).join('');
-    document.getElementById('roFootnote').textContent = s
-      ? `Creates a draft order to ${s.name}. Nothing is deducted or paid until you mark it received.`
-      : '';
-  }
-
-  function renderRoTally() {
-    const s = roSup(), q = roQty();
-    const extraUnits = Object.values(roPicked).reduce((a, b) => a + b, 0);
-    const extra = Object.keys(roPicked).reduce((sum, id) =>
-      sum + roPicked[id] * (roAlsoList.find(a => a.id === id)?.price || 0), 0);
-    const total = (s ? q * s.price : 0) + extra;
-    const lines = (q && s ? 1 : 0) + Object.keys(roPicked).length;
-
-    document.getElementById('roCount').textContent = lines
-      ? `${lines} item${lines > 1 ? 's' : ''} · ${q + extraUnits} unit${q + extraUnits !== 1 ? 's' : ''}`
-      : 'Nothing to order yet';
-    document.getElementById('roTotal').textContent = `$${total.toFixed(2)}`;
-
-    const shortBy = s && s.moq ? s.moq - total : 0;
-    document.getElementById('roWarn').innerHTML = lines && shortBy > 0
-      ? `<div class="ro-warn">$${shortBy.toFixed(2)} under ${escapeHtml(s.name)}'s $${s.moq.toFixed(2)} minimum</div>`
-      : '';
-    const cont = document.getElementById('roCont');
-    cont.disabled = !lines || !s;
-    cont.textContent = lines ? `Place reorder · $${total.toFixed(2)}` : 'Place reorder';
-  }
-
-  function roRenderAll() { renderRoSupplier(); renderRoAlso(); renderRoTally(); }
-  function roSetQty(n) { document.getElementById('roQty').value = Math.max(0, n); roRenderAll(); }
-  function roStepQty(d) { roSetQty(roQty() + d); }
-  function roBump(id, d) {
-    const next = (roPicked[id] || 0) + d;
-    if (next <= 0) delete roPicked[id]; else roPicked[id] = next;
-    renderRoAlso();
-    renderRoTally();
-  }
-
-  function openRoSupplierSheet() {
-    const cheapest = roSuppliers.length ? roSuppliers.reduce((a, b) => (b.price < a.price ? b : a)) : null;
-    const fastest = roSuppliers.length ? roSuppliers.reduce((a, b) => (b.lead && (!a.lead || b.lead < a.lead) ? b : a)) : null;
-    document.getElementById('roSupList').innerHTML = roSuppliers.map(s => {
-      const tag = s.id === cheapest?.id ? 'cheapest' : s.id === fastest?.id ? 'fastest' : '';
-      return `<button class="ro-sup-opt" aria-selected="${s.id === roSupplierId}" onclick="pickRoSupplier('${s.id}')">
-        <span class="ro-drow-label">
-          <span class="ro-drow-name">${escapeHtml(s.name)}</span>
-          <span class="ro-drow-meta">$${s.price.toFixed(2)} each${s.lead ? ` · ~${s.lead} days` : ''}${s.moq ? ` · $${s.moq.toFixed(2)} min` : ''}</span>
-        </span>
-        ${tag ? `<span class="ro-drow-tag">${tag}</span>` : ''}
-        ${s.id === roSupplierId ? '<svg class="ro-sup-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-      </button>`;
-    }).join('');
-    document.getElementById('roNewSupplierForm').style.display = 'none';
-    document.getElementById('roNewSupplierToggle').textContent = 'New supplier';
-    document.getElementById('roSupSheet').classList.add('active');
-  }
-  function closeRoSupplierSheet() { document.getElementById('roSupSheet').classList.remove('active'); }
-  function pickRoSupplier(id) {
-    roSupplierId = id;
-    roPicked = {}; // "ship together" items belong to the old supplier, can't carry over
-    closeRoSupplierSheet();
-    loadRoAlso().then(roRenderAll);
-  }
-  function toggleNewSupplierForm() {
-    const form = document.getElementById('roNewSupplierForm');
-    const isOpen = form.style.display !== 'none';
-    form.style.display = isOpen ? 'none' : 'flex';
-    document.getElementById('roNewSupplierToggle').textContent = isOpen ? 'New supplier' : 'Cancel';
-  }
-  async function saveNewSupplier() {
-    const name = document.getElementById('roNewSupName').value.trim();
-    if (!name) { showAlert('Supplier name is required'); return; }
-    const price = parseFloat(document.getElementById('roNewSupPrice').value) || 0;
-    const lead = parseInt(document.getElementById('roNewSupLead').value, 10) || null;
-    const moq = parseFloat(document.getElementById('roNewSupMoq').value) || 0;
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-      const supplierRow = { profile_id: user.id, name };
-      if (storeId) supplierRow.store_id = storeId;
-      const { data: sup, error: supErr } = await supabaseClient
-        .from('suppliers').insert([supplierRow]).select().single();
-      if (supErr) throw supErr;
-
-      const { data: isRow, error: isErr } = await supabaseClient.from('ingredient_suppliers').insert([{
-        ingredient_id: currentIngredient.id,
-        supplier_id: sup.id,
-        profile_id: user.id,
-        price, lead_time_days: lead, moq,
-        is_primary: roSuppliers.length === 0
-      }]).select().single();
-      if (isErr) throw isErr;
-
-      await loadRoSuppliers();
-      roSupplierId = isRow.id;
-      closeRoSupplierSheet();
-      await loadRoAlso();
-      roRenderAll();
-    } catch (e) {
-      console.error('Error saving supplier:', e);
-      showAlert('Failed to save supplier: ' + e.message);
-    }
-  }
-
-  async function placeReorder() {
-    const s = roSup();
-    const q = roQty();
-    if (!s) { showAlert('Add a supplier first'); return; }
-    if (!q && !Object.keys(roPicked).length) { showAlert('Nothing to order yet'); return; }
-
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) return;
-      const today = new Date().toISOString().split('T')[0];
-
-      if (q) {
-        const { error } = await supabaseClient.from('ingredients').update({
-          reorder_pending: true, reorder_date: today, estimated_delivery: s.lead || null,
-          reorder_quantity: q, reorder_supplier_id: s.supplierId
-        }).eq('id', currentIngredient.id);
-        if (error) throw error;
-        currentIngredient.reorder_pending = true;
-        currentIngredient.estimated_delivery = s.lead || null;
-        await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', s.id);
-      }
-
-      for (const [id, pickedQty] of Object.entries(roPicked)) {
-        const also = roAlsoList.find(a => a.id === id);
-        const { data: rows } = await supabaseClient
-          .from('ingredient_suppliers').select('id, lead_time_days')
-          .eq('ingredient_id', id).eq('supplier_id', s.supplierId).limit(1);
-        const row = rows?.[0];
-        await supabaseClient.from('ingredients').update({
-          reorder_pending: true, reorder_date: today, estimated_delivery: row?.lead_time_days || null,
-          reorder_quantity: pickedQty, reorder_supplier_id: s.supplierId
-        }).eq('id', id);
-        if (row) await supabaseClient.from('ingredient_suppliers').update({ last_ordered_at: today }).eq('id', row.id);
-      }
-
-      const reorderBtn = document.getElementById('reorderBtn');
-      if (reorderBtn) {
-        reorderBtn.title = 'Confirm Delivery';
-        reorderBtn.onclick = openDeliveryModal;
-        document.getElementById('reorderBtnLabel').textContent = 'On the way';
-      }
-      renderRestockRow();
-      closeReorderScreen();
-    } catch (e) {
-      console.error('Error placing reorder:', e);
-      showAlert('Failed to place reorder: ' + e.message);
-    }
-  }
+  // loadRoSuppliers/materializeDefaultSupplier/roSup/roQty/roSuggestedQty/
+  // roEtaLabel/renderRoSupplier/loadRoAlso/renderRoAlso/renderRoTally/
+  // roRenderAll/roSetQty/roStepQty/roBump/openRoSupplierSheet/
+  // closeRoSupplierSheet/pickRoSupplier/toggleNewSupplierForm/
+  // saveNewSupplier/placeReorder all moved to reorder-modal.js.
 
   function openExpenseModal() {
     document.getElementById('expenseModal').classList.add('active');
