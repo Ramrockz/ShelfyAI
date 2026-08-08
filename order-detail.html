@@ -416,18 +416,6 @@
     border-color: var(--accent);
   }
 
-  .form-group {
-    margin-bottom: 20px;
-  }
-
-  .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-main);
-  }
-
   .form-group input {
     width: 100%;
     padding: 10px 12px;
@@ -883,6 +871,30 @@
                   transition: border-color 0.2s, background 0.2s; }
   .add-item-btn:hover, .add-item-btn:active { border-color: var(--accent); background: rgba(6,182,212,0.05); }
 
+  /* Desktop layout -- was missing entirely (the mobile/968px media queries
+     below only ever *override* .main-grid/.panel, assuming a base rule that
+     never existed), so desktop rendered as one unstyled full-width column
+     with no card backgrounds on #revenuePanel/#receiptPanel. Revenue spans
+     both columns to stay a full-width hero above the details/items (left)
+     and receipts (right), matching mobile's priority order. */
+  .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+  #revenuePanel { grid-column: 1 / -1; }
+  .panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; }
+
+  /* Category / one-field sheets -- shared with #ordFieldSheet (opened by
+     clicking the revenue number, which is NOT mobile-gated) but previously
+     only styled inside @media(max-width:768px) below, so it rendered
+     unstyled on desktop. */
+  .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 4px;
+             border-radius: 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+             font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .cat-row.active { color: var(--accent); }
+  .cat-row img, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                     text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                    background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+
   /* ---------- MOBILE RESPONSIVE ---------- */
   @media (max-width: 968px) {
     .container { padding: 24px 16px; }
@@ -1106,15 +1118,6 @@
       font-size: 22px; font-weight: 800; border: 1px solid var(--border);
       border-radius: 14px; background: var(--bg-inner); color: var(--text-main);
     }
-    .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 4px;
-               border-radius: 12px; cursor: pointer; border: none; background: none; width: 100%; text-align: left;
-               font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text-main); }
-    .cat-row.active { color: var(--accent); }
-    .cat-row img, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
-    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
-                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
-                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
     .form-input {
       width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
       border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
@@ -1314,7 +1317,7 @@
       </div>
     </div>
     <div class="ord-more-menu" id="ordMoreMenu">
-      <button type="button" class="ord-more-item" id="ordReverseInvBtn" style="display:none;" onclick="closeOrdMoreMenu(); reverseOrderInventory(orderId)">
+      <button type="button" class="ord-more-item reverse-inv-btn" id="ordReverseInvBtn" style="display:none;" onclick="closeOrdMoreMenu(); reverseOrderInventory(orderId)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 8 7 8"/></svg>
         <span>Reverse inventory</span>
       </button>
@@ -1344,6 +1347,7 @@
             <span id="orderStatus" class="status-badge"></span>
           </div>
           <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
+            <button class="detail-cta-btn reverse-inv-btn" id="ordReverseInvBtnDesktop" style="display:none;" onclick="reverseOrderInventory(orderId)" title="Reverse inventory">Reverse Inventory</button>
             <button class="detail-del-btn" onclick="showDeleteModal()" title="Delete Order">Delete</button>
           </div>
         </div>
@@ -1932,14 +1936,14 @@ function closeOrdMoreMenu() {
 // hasn't already been reversed -- both determined from ingredient_history
 // (see reverseOrderInventory() below), not a dedicated column.
 async function updateReverseInventoryVisibility() {
-  const btn = document.getElementById('ordReverseInvBtn');
-  if (!btn || !orderId) return;
+  const btns = document.querySelectorAll('.reverse-inv-btn');
+  if (!btns.length || !orderId) return;
   try {
     const { data: rows } = await window.supabaseClient
       .from('ingredient_history').select('reason').eq('reference_id', String(orderId)).in('reason', ['order', 'order_reversal']);
     const applied = (rows || []).some(r => r.reason === 'order');
     const reversed = (rows || []).some(r => r.reason === 'order_reversal');
-    btn.style.display = (applied && !reversed) ? '' : 'none';
+    btns.forEach(btn => { btn.style.display = (applied && !reversed) ? '' : 'none'; });
   } catch (e) { console.error('Error checking inventory reversal state:', e); }
 }
 
@@ -1995,8 +1999,7 @@ async function reverseOrderInventory(saleId) {
         state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
       });
     }
-    const btn = document.getElementById('ordReverseInvBtn');
-    if (btn) btn.style.display = 'none';
+    document.querySelectorAll('.reverse-inv-btn').forEach(btn => { btn.style.display = 'none'; });
     showReverseInvSuccess(impactRows);
   } catch (e) {
     console.error('Error reversing order inventory:', e);
