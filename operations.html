@@ -141,6 +141,25 @@
     color: #fff;
   }
 
+  /* Process Order is the action people reach for daily — call it out with
+     a solid accent background instead of the neutral card the other three get. */
+  .action-card.highlight {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .action-card.highlight h3 { color: #fff; }
+  .action-card.highlight p { color: rgba(255, 255, 255, 0.85); }
+  .action-card.highlight .icon img { filter: brightness(0) invert(1) !important; }
+  .action-card.highlight .btn-action-cyan {
+    background: #fff;
+    color: var(--accent);
+    border-color: transparent;
+  }
+  .action-card.highlight .btn-action-cyan:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--accent);
+  }
+
   /* Mobile hero CTA and search — hidden on desktop */
   .mobile-hero-action { display: none; }
   .mobile-hero-btn {
@@ -298,18 +317,18 @@
   .stock-health-bar span { transition: width 0.4s ease; }
   #healthOut { background: var(--danger); }
   #healthLow { background: var(--warning); }
-  #healthOk  { background: var(--success); }
-  .stock-health-keys { display: none; gap: 18px; margin-top: 12px; }
+  /* The key legend below already carries the color-coded counts, so the
+     bar's remaining/ok portion stays neutral instead of competing with it. */
+  #healthOk  { background: #cbd5e1; }
+  [data-theme="dark"] #healthOk { background: #475569; }
+  .stock-health-keys { display: flex; gap: 18px; margin-top: 12px; }
   .stock-health-key { display: flex; align-items: center; gap: 7px; }
   .stock-health-key i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .stock-health-key b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }
   .stock-health-key span { font-size: 13px; color: var(--text-muted); }
 
-  .status-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-  }
+  /* Superseded by .stock-health-keys above on all screen sizes now. */
+  .status-cards-grid { display: none; }
 
   .status-card {
     background: var(--bg-panel);
@@ -886,14 +905,6 @@
       margin-bottom: 24px;
     }
     
-    /* The bar + key legend already carry the counts on mobile -- the two
-       big digit cards would just repeat them, so they're hidden here only
-       (desktop keeps the cards exactly as before). */
-    .status-cards-grid { display: none !important; }
-    #healthOk { background: #cbd5e1; }
-    [data-theme="dark"] #healthOk { background: #475569; }
-    .stock-health-keys { display: flex; }
-
     /* Show mobile hero, convert action cards to horizontal scroll strip */
     .mobile-hero-action {
       display: block;
@@ -1862,9 +1873,8 @@
         <span id="healthLow" style="width:0%"></span>
         <span id="healthOk"  style="width:100%"></span>
       </div>
-      <!-- Mobile-only key legend -- the two big digit cards below are hidden
-           on mobile in favor of this, since the bar already carries the
-           colour; desktop keeps the cards as-is. -->
+      <!-- Key legend -- the two big digit cards below are hidden in favor of
+           this on all screen sizes now, since the bar already carries the colour. -->
       <div class="stock-health-keys" id="stockHealthKeys"></div>
     </div>
     <div class="status-cards-grid">
@@ -1917,7 +1927,7 @@
       <button class="btn-action btn-action-cyan" onclick="openRecipeBuilder()">+ New Product</button>
     </div>
 
-    <div class="action-card">
+    <div class="action-card highlight">
       <div class="action-card-header">
         <span class="icon"><img src="https://cdn-icons-png.flaticon.com/512/9422/9422482.png" alt="Process Order" width="32" height="32"></span>
         <h3>Process Order</h3>
@@ -2551,7 +2561,7 @@ function resolveConfirm(result) {
     const totalEl = document.getElementById('stockHealthTotal');
     if (totalEl) totalEl.textContent = total ? total + ' items' : '';
 
-    // Mobile key legend -- same counts as the two big digit cards, just
+    // Key legend -- same counts the old two big digit cards showed, now
     // shown inline next to the bar instead of as separate cards.
     const keysEl = document.getElementById('stockHealthKeys');
     if (keysEl) {

@@ -142,6 +142,62 @@ async function ensureProfileExists(user) {
   }
 }
 
+// Best-effort device/browser/OS detection for the in-app analytics dashboard
+// (mobile vs desktop breakdown). Heuristic UA sniffing — good enough for a
+// usage breakdown, not meant to be authoritative.
+function detectDeviceType() {
+  const ua = navigator.userAgent;
+  if (/iPad|Tablet|(?=.*Android)(?!.*Mobile)/i.test(ua)) return 'tablet';
+  if (/Mobi|iPhone|iPod|Android|Windows Phone/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+function detectBrowser(ua) {
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/OPR\//.test(ua)) return 'Opera';
+  if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  return 'Other';
+}
+
+function detectOS(ua) {
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Other';
+}
+
+// Logs one row per user per calendar day with their device type, for the
+// admin analytics dashboard. Fire-and-forget — never blocks page render or
+// the auth flow. Deduped via localStorage so we don't upsert on every page load.
+function logDeviceSession(user) {
+  if (!user || !navigator.onLine) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const cacheKey = `shelfy_device_logged_${user.id}`;
+  if (localStorage.getItem(cacheKey) === today) return;
+
+  const ua = navigator.userAgent;
+  supabaseClient
+    .from('device_sessions')
+    .upsert(
+      {
+        user_id: user.id,
+        session_date: today,
+        device_type: detectDeviceType(),
+        browser: detectBrowser(ua),
+        os: detectOS(ua)
+      },
+      { onConflict: 'user_id,session_date' }
+    )
+    .then(({ error }) => {
+      if (error) { console.error('logDeviceSession error:', error); return; }
+      try { localStorage.setItem(cacheKey, today); } catch (e) {}
+    });
+}
+
 // Track which user we last validated stores for so we don't re-fetch on every call
 let _storeValidatedForUser = null;
 
@@ -309,6 +365,7 @@ async function initUserMenu() {
 
     // Cache email unconditionally — DOM may not be ready yet if auth.js ran in <head>
     localStorage.setItem('shelfy_user_email', user.email);
+    logDeviceSession(user);
     if (userEmailElement) {
       userEmailElement.textContent = user.email;
     }
