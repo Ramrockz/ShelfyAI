@@ -269,9 +269,16 @@
   /* Headline / category / restock -- desktop equivalents of mobile's
      .rdm-headline/.rdm-hl-*/.rdm-stats/.rdm-restock-row (which only exist
      inside #mobileViewOverlay). Same proportions/colors as mobile (52px
-     number, same font sizes) rather than a generic .panel card, just
-     boxed on all sides instead of mobile's flush top-of-screen strip. */
-  .pd-headline { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; padding: 20px 24px 18px; }
+     number, same font sizes) rather than a generic .panel card. Full-width,
+     above the items/category grid -- matches mobile's own priority order
+     (header, then this, then the item list) instead of being a secondary
+     sidebar card. */
+  .pd-headline {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px;
+    padding: 20px 24px; margin-bottom: 24px;
+  }
+  .pd-hl-main { min-width: 0; }
   .pd-hl-top { display: flex; align-items: baseline; gap: 10px; }
   .pd-hl-num { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em; }
   .pd-hl-num[data-state="ok"]  { color: var(--success); }
@@ -279,7 +286,7 @@
   .pd-hl-num[data-state="out"] { color: var(--danger); }
   .pd-hl-label { font-size: 14px; font-weight: 700; color: var(--text-main); }
   .pd-hl-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 7px; }
-  .pd-stats { display: flex; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .pd-stats { display: flex; flex-shrink: 0; width: 320px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .pd-stats > div { flex: 1; padding: 9px 12px; }
   .pd-stats > div + div { border-left: 1px solid var(--border); }
   .pd-stats label { display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted);
@@ -450,6 +457,8 @@
       gap: 16px;
     }
     .pd-grid { grid-template-columns: 1fr; }
+    .pd-headline { flex-direction: column; align-items: stretch; }
+    .pd-stats { width: 100%; }
   }
   
   @media (min-width: 769px) {
@@ -1113,6 +1122,21 @@
     <a id="familyBreadcrumbLink" href="#" style="color:var(--accent);text-decoration:none;font-weight:600;font-size:13px;">&larr; <span id="familyBreadcrumbName"></span></a>
   </div>
 
+  <!-- Full-width, above everything else -- matches mobile's own priority
+       order (header, then this, then the item list), instead of being a
+       secondary sidebar card next to the items. -->
+  <div class="pd-headline">
+    <div class="pd-hl-main">
+      <div class="pd-hl-top"><span class="pd-hl-num" data-state="out">0</span><span class="pd-hl-label">can be made now</span></div>
+      <div class="pd-hl-sub"></div>
+    </div>
+    <div class="pd-stats">
+      <div><label>Cost</label><span id="productionCostDisplay">$0.00</span></div>
+      <div><label>Price</label><span>$<input type="number" id="retailPriceInput" min="0" step="0.01" placeholder="0.00" inputmode="decimal" onblur="updateRetailPrice()" onkeydown="if(event.key==='Enter')this.blur();"></span></div>
+      <div><label>Margin</label><span id="pdMargin">—</span></div>
+    </div>
+  </div>
+
   <div class="pd-grid">
     <!-- Left column: items -->
     <div>
@@ -1126,22 +1150,10 @@
       </div>
     </div>
 
-    <!-- Right column: availability/cost/price/margin, category, restock --
-         mirrors #mobileViewOverlay's headline/category/restock, which never
-         had a desktop equivalent before. #productionCostDisplay and
-         #retailPriceInput keep their existing ids/handlers (updateRetailPrice(),
-         updateRecipeInDatabase()) -- only relocated, not rewritten. -->
+    <!-- Right column: category, restock -- mirrors #mobileViewOverlay's
+         category sheet trigger/restock row, which never had a desktop
+         equivalent before. -->
     <div>
-      <div class="pd-headline">
-        <div class="pd-hl-top"><span class="pd-hl-num" data-state="out">0</span><span class="pd-hl-label">can be made now</span></div>
-        <div class="pd-hl-sub"></div>
-        <div class="pd-stats">
-          <div><label>Cost</label><span id="productionCostDisplay">$0.00</span></div>
-          <div><label>Price</label><span>$<input type="number" id="retailPriceInput" min="0" step="0.01" placeholder="0.00" inputmode="decimal" onblur="updateRetailPrice()" onkeydown="if(event.key==='Enter')this.blur();"></span></div>
-          <div><label>Margin</label><span id="pdMargin">—</span></div>
-        </div>
-      </div>
-
       <button type="button" class="pd-category-row" id="pdCategoryRow" onclick="openRdmCategorySheet()">
         <span class="pd-category-label">Category</span>
         <span class="pd-category-value empty" id="pdCategoryValue">Not set</span>
@@ -1470,7 +1482,7 @@ async function renderRecipe() {
             <button onclick="openSwapModal(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
             </button>
-            <button onclick="reorderIngredient('${ingredientId}')" style="background: ${isReorderPending ? 'rgba(6,182,212,0.12)' : 'var(--bg-inner)'}; border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0 12px; height: 36px; border-radius: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">${isReorderPending ? 'On the way' : 'Reorder'}</button>
+            <button onclick="reorderIngredient('${ingredientId}')" style="background: ${isReorderPending ? 'rgba(6,182,212,0.12)' : 'var(--bg-inner)'}; border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0 12px; height: 36px; min-width: 92px; border-radius: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; text-align: center; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">${isReorderPending ? 'On the way' : 'Reorder'}</button>
           </div>
         </div>
       </div>
