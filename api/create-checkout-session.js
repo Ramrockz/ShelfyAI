@@ -47,7 +47,14 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { tier, interval, type } = req.body;
+    const { tier, interval, type, cancelPath } = req.body;
+
+    // Whitelisted, not a raw redirect target from the client -- /plan is the
+    // app-native subscription screen (mobile), /pricing is the full public
+    // pricing page (desktop). Canceling out of Checkout should return to
+    // whichever one the customer actually started from.
+    const ALLOWED_CANCEL_PATHS = ['/plan', '/pricing'];
+    const cancelUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}${ALLOWED_CANCEL_PATHS.includes(cancelPath) ? cancelPath : '/plan'}`;
 
     // Scan pack — one-time payment
     if (type === 'scan_pack') {
@@ -76,7 +83,7 @@ module.exports = async (req, res) => {
         line_items: [{ price: scanPackPriceId, quantity: 1 }],
         allow_promotion_codes: true,
         success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`,
+        cancel_url: cancelUrl,
         metadata: { supabase_user_id: user.id, type: 'scan_pack' }
       });
 
@@ -156,7 +163,7 @@ module.exports = async (req, res) => {
         enabled: true
       },
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html`,
+      cancel_url: cancelUrl,
       subscription_data: {
         metadata: {
           tier,

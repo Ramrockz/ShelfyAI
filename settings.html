@@ -1508,7 +1508,7 @@ async function buyScanPack() {
     const res = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ type: 'scan_pack' })
+      body: JSON.stringify({ type: 'scan_pack', cancelPath: planOrPricingPath() })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -2532,7 +2532,8 @@ window.handleSubscribe = async function() {
       },
       body: JSON.stringify({
         tier: selectedPlan,
-        interval: selectedInterval
+        interval: selectedInterval,
+        cancelPath: planOrPricingPath()
       })
     });
 

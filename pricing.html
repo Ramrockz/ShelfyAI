@@ -550,7 +550,7 @@
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ type: 'scan_pack' })
+        body: JSON.stringify({ type: 'scan_pack', cancelPath: planOrPricingPath() })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -753,7 +753,7 @@ window.handlePricingClick = async function(tier) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({ tier, interval })
+      body: JSON.stringify({ tier, interval, cancelPath: planOrPricingPath() })
     });
 
     const data = await response.json();

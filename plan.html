@@ -419,7 +419,7 @@ async function goClicked(p, now) {
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ tier: p.key, interval: cycle })
+        body: JSON.stringify({ tier: p.key, interval: cycle, cancelPath: planOrPricingPath() })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -478,7 +478,7 @@ async function buyScanPack() {
     const res = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ type: 'scan_pack' })
+      body: JSON.stringify({ type: 'scan_pack', cancelPath: planOrPricingPath() })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);

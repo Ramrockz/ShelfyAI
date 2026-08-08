@@ -270,8 +270,11 @@ function getStoreId() {
 // size. On desktop that skipped the full public pricing page entirely --
 // send desktop to /pricing instead, where there's room for the full
 // comparison; mobile keeps the app-native /plan screen.
+function planOrPricingPath() {
+  return window.innerWidth <= 768 ? '/plan' : '/pricing';
+}
 function goToPlanPage() {
-  window.location.href = window.innerWidth <= 768 ? '/plan' : '/pricing';
+  window.location.href = planOrPricingPath();
 }
 
 // Check if user is authenticated
