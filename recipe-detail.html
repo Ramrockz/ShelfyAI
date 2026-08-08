@@ -438,6 +438,30 @@
     transform: scale(1);
   }
 
+  /* Category sheet -- bottom-sheet look on every screen size (rounded top
+     corners only, drag handle, anchored to the bottom), matching mobile's
+     #rdmCategorySheet instead of the plain centered dialog every other
+     modal on this page uses. */
+  #rdmCategorySheet.modal-overlay {
+    align-items: flex-end;
+  }
+  #rdmCategorySheet .modal-content {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 20px 20px 0 0;
+    transform: none;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  #rdmCategorySheet .modal-content::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
   /* Mobile view overlay — hidden until JS activates it */
   #mobileViewOverlay { display: none; }
 
