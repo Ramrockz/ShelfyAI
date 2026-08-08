@@ -392,12 +392,37 @@
   .recipe-ingredient:hover { background: rgba(255,255,255,0.06); border-color: var(--accent); transform: translateX(2px); }
   .recipe-ingredient.disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; pointer-events: none; }
   
-  /* Ingredient Cards */
-  .ingredient-card { background: var(--bg-panel); border: 2px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 12px; font-size: 15px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-  .ingredient-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-  .ingredient-card > div > div:first-child { min-width: 0; }
-  .ingredient-card > div > div:first-child > div:first-child { min-width: 0; }
-  .ingredient-card > div > div:first-child > div:first-child > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  /* Ingredient rows -- flat list matching mobile's #rdmQtyList rows (thin
+     divider, no boxed card), rather than the old bordered/shadowed cards. */
+  .ingredient-card {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 4px;
+    border-top: 1px solid var(--border);
+    font-size: 15px;
+  }
+  .ingredient-card:first-child { border-top: none; }
+  .ing-row-main { flex: 1; min-width: 0; cursor: pointer; }
+  .ing-row-main:hover .ing-row-name { text-decoration: underline; }
+  .ing-row-top { display: flex; align-items: center; gap: 7px; }
+  .ing-row-name { font-size: 15px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ing-row-sub { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ing-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .ing-row-qty { display: flex; align-items: center; gap: 7px; background: var(--bg-inner); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); }
+  .ing-row-step { width: 24px; height: 24px; border-radius: 6px; border: none; background: none; color: var(--text-main); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .ing-row-num { min-width: 22px; text-align: center; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ing-row-icon-btn { background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; padding: 0; }
+  .ing-row-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ing-row-icon-btn.is-pending { background: rgba(6,182,212,0.12); border-color: var(--accent); color: var(--accent); }
+  .ing-row-icon-btn.remove-btn { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .ing-row-icon-btn.remove-btn:hover { opacity: 0.85; color: #fff; }
+  .ing-add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 16px; margin-top: 12px;
+    color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer;
+    border: 2px dashed var(--border); border-radius: 16px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .ing-add-btn:hover { border-color: var(--accent); background: rgba(6,182,212,0.05); }
 
   /* ---------- CUSTOM MODALS ---------- */
   .modal-overlay { 
@@ -738,58 +763,13 @@
       gap: 12px;
     }
 
-    /* Ingredient cards - mobile friendly */
+    /* Ingredient rows - stack actions below the name at narrow widths */
     .ingredient-card {
-      padding: 16px;
-      position: relative;
+      flex-wrap: wrap;
     }
-
-    .ingredient-card > div {
-      flex-direction: column !important;
-      gap: 16px !important;
-    }
-
-    .ingredient-card > div > div:first-child {
+    .ing-row-actions {
       width: 100%;
-      padding-right: 24px;
-    }
-
-    /* Stock indicator - always top right corner */
-    .ingredient-card > div > div:first-child > div:first-child > div {
-      position: absolute !important;
-      top: 16px;
-      right: 16px;
-      margin: 0 !important;
-    }
-
-    /* Truncate ingredient name on mobile */
-    .ingredient-card > div > div:first-child > div:first-child > strong {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: calc(100% - 30px);
-    }
-
-    /* Hide cost on mobile - target the span with font-weight in first child */
-    .ingredient-card > div > div:first-child > div:first-child > span[style*="font-weight: 600"] {
-      display: none !important;
-    }
-
-    .ingredient-card > div > div:last-child {
-      width: 100%;
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      gap: 8px !important;
-    }
-
-    /* Quantity controls - centered */
-    .ingredient-card > div > div:last-child > div {
-      flex: 1;
-      max-width: 180px;
-      margin: 0 auto;
+      justify-content: space-between;
     }
 
     /* Ensure Ingredients h3 is visible */
@@ -1469,28 +1449,29 @@ async function renderRecipe() {
       : '';
     const isReorderPending = !!(ingredientStockMap[ingredientId]?.reorder_pending);
 
+    const deliveryPill = isReorderPending ? '<span class="stock-pill delivery">On the way</span>' : '';
     return `
       <div class="ingredient-card">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="flex: 1; min-width: 0;">
-            <strong style="font-size: 16px; cursor: pointer; color: var(--text-main); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="window.location.href='/ingredient-detail?id=${ingredientId}'" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${comp.ingredient_name || comp.name || 'Unknown ingredient'} ${stockPill}</strong>
-            ${attributes ? `<div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">${attributes}</div>` : ''}
+        <div class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${ingredientId}'">
+          <div class="ing-row-top">
+            <strong class="ing-row-name">${_escHtml(comp.ingredient_name || comp.name || 'Unknown ingredient')}</strong>
+            ${stockPill}${deliveryPill}
           </div>
-          <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-            <span style="color: var(--text-muted); font-size: 13px; font-weight: 600; min-width: 44px; text-align: right;">$${(comp.cost || 0).toFixed(2)}</span>
-            <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-inner); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);">
-              <button onclick="decreaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">−</button>
-              <span style="color: var(--text-main); font-size: 14px; font-weight: 600; min-width: 28px; text-align: center;">${comp.quantity || 0}</span>
-              <button onclick="increaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">+</button>
-            </div>
-            <button onclick="removeIngredientFromRecipe(${origIndex})" style="background: var(--danger); border: none; color: white; cursor: pointer; font-size: 14px; padding: 0; width: 36px; height: 36px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; justify-content: center;" title="Remove">✕</button>
-            <button onclick="rdmReplaceItem(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
-            </button>
-            <button onclick="reorderIngredient('${ingredientId}')" style="background: ${isReorderPending ? 'rgba(6,182,212,0.12)' : 'var(--bg-inner)'}; border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-            </button>
+          <div class="ing-row-sub">${requiredQty} per unit · $${(comp.cost || 0).toFixed(2)} of cost${attributes ? ` · ${attributes}` : ''}</div>
+        </div>
+        <div class="ing-row-actions">
+          <div class="ing-row-qty">
+            <button class="ing-row-step" onclick="event.stopPropagation(); decreaseIngredientQuantity(${origIndex})">−</button>
+            <span class="ing-row-num">${comp.quantity || 0}</span>
+            <button class="ing-row-step" onclick="event.stopPropagation(); increaseIngredientQuantity(${origIndex})">+</button>
           </div>
+          <button class="ing-row-icon-btn remove-btn" onclick="event.stopPropagation(); removeIngredientFromRecipe(${origIndex})" title="Remove">✕</button>
+          <button class="ing-row-icon-btn" onclick="event.stopPropagation(); rdmReplaceItem(${origIndex})" title="Swap ingredient">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
+          </button>
+          <button class="ing-row-icon-btn${isReorderPending ? ' is-pending' : ''}" onclick="event.stopPropagation(); reorderIngredient('${ingredientId}')" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          </button>
         </div>
       </div>
     `;
@@ -1545,11 +1526,8 @@ async function renderRecipe() {
   }
   
   const addButtonHtml = `
-    <div class="ingredient-card" style="border: 2px dashed var(--border); background: transparent; cursor: pointer; transition: all 0.2s;" onclick="openAddIngredientModal()" onmouseover="this.style.borderColor='var(--accent)'; this.style.background='rgba(52, 152, 219, 0.05)'" onmouseout="this.style.borderColor='var(--border)'; this.style.background='transparent'">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px;">
-        <span style="font-size: 24px; color: var(--accent);">+</span>
-        <span style="color: var(--accent); font-size: 15px; font-weight: 600;">Add Item</span>
-      </div>
+    <div class="ing-add-btn" onclick="openAddIngredientModal()">
+      <span style="font-size: 20px; line-height: 1;">+</span> Add Item
     </div>
   `;
   
