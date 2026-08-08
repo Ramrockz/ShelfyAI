@@ -1329,13 +1329,15 @@
      builds the same kind of order. ---------- */
   .op-modal { border-radius: 20px; overflow: hidden; }
   .op-head { flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
-  .op-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 20px; }
+  .op-bar { min-height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 20px 0 8px; }
   .op-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .op-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
   .op-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .op-skip { height: 40px; padding: 0 12px; background: none; border: none;
              color: var(--accent-deep, var(--accent)); font-size: 13.5px; font-weight: 700; }
+  .op-close { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+              background: none; border: none; color: var(--text-main); cursor: pointer; }
 
   .op-find { display: flex; align-items: center; gap: 8px; padding: 0 20px 12px; }
   .op-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; height: 44px;
@@ -3449,12 +3451,14 @@ function startIngredientUrlImport() {
   <div class="modal-content op-modal" id="manualStep1" style="padding:0; display:flex; flex-direction:column;">
     <div class="op-head">
       <div class="op-bar">
+        <button type="button" class="op-close" onclick="closeManualOrderModal()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <span class="op-titles">
           <span class="op-title">Add products</span>
           <span class="op-sub">Select one or more products to include in this order</span>
         </span>
         <button type="button" class="op-skip" onclick="openProductCreateFromOrder()">New</button>
-        <button type="button" onclick="closeManualOrderModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;padding:8px;">&times;</button>
       </div>
       <div class="op-find">
         <label class="op-search">
@@ -3635,12 +3639,14 @@ function startIngredientUrlImport() {
   <div class="modal-content op-modal" style="padding:0; display:flex; flex-direction:column;">
     <div class="op-head">
       <div class="op-bar">
+        <button type="button" class="op-close" onclick="closeMatchSheet()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <span class="op-titles">
           <span class="op-title" id="rcmMatchTitle">Which product is this?</span>
           <span class="op-sub" id="rcmMatchSub"></span>
         </span>
         <button type="button" class="op-skip" onclick="createProductFromLine()">New</button>
-        <button type="button" onclick="closeMatchSheet()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;padding:8px;">&times;</button>
       </div>
       <div class="op-find">
         <label class="op-search">
@@ -3753,9 +3759,11 @@ function startIngredientUrlImport() {
       </div>
     </div>
     <div class="recipe-panel">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
+        <span onclick="closeRecipeBuilder()" role="button" aria-label="Back" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:28px; height:28px; flex-shrink:0; color:var(--text-main); margin-left:-6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+        </span>
         <h3 style="margin: 0;">Item Library</h3>
-        <span onclick="closeRecipeBuilder()" style="cursor:pointer; color:var(--text-muted); font-size:32px; line-height: 1; font-weight: 300;">&times;</span>
       </div>
       <input class="recipe-search-input" id="recipeSearchIng" placeholder="Search items..." oninput="filterRecipeIngredients()" />
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>

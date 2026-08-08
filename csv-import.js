@@ -135,12 +135,14 @@
   <div class="modal-content" id="csvImportContent" style="max-width:600px;width:95vw;padding:28px 32px;display:flex;flex-direction:column;overflow:hidden;">
 
     <!-- Header -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+      <button onclick="window.closeCSVImport()" aria-label="Back" style="background:none;border:none;cursor:pointer;color:var(--text-main);padding:8px;margin:-8px 0 -8px -8px;line-height:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <div>
         <h3 style="margin:0 0 4px 0;font-size:20px;">Import from CSV</h3>
         <p style="margin:0;font-size:13px;color:var(--text-muted);">Create multiple items at once from a spreadsheet</p>
       </div>
-      <button onclick="window.closeCSVImport()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-muted);padding:0 0 0 16px;line-height:1;flex-shrink:0;">&times;</button>
     </div>
 
     <!-- Step bar -->

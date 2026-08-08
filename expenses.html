@@ -646,8 +646,8 @@
   .ec-modal { border-radius: 20px; overflow: hidden; }
   .ec-head { flex-shrink: 0; min-height: 52px; display: flex; align-items: center; gap: 4px;
              padding: 0 8px; background: var(--bg-panel); border-bottom: 1px solid var(--border-hair, var(--border)); }
-  .ec-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-             background: none; border: none; color: var(--text-main); font-size: 22px; line-height: 1; }
+  .ec-back { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+             background: none; border: none; color: var(--text-main); }
   .ec-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .ec-title { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
   .ec-sub { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px;
@@ -1042,11 +1042,13 @@
 <div class="modal-overlay modal-sheet" id="expenseModal">
   <div class="modal-content ec-modal" id="expenseStep1" style="max-width: 460px; padding: 0; display: flex; flex-direction: column; max-height: 90vh;">
     <div class="ec-head">
+      <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <span class="ec-titles">
         <span class="ec-title" id="modalTitle">New expense</span>
         <span class="ec-sub">Vendor, amount, date — items are optional</span>
       </span>
-      <button type="button" class="ec-back" onclick="closeExpenseModal()" aria-label="Close">&times;</button>
     </div>
 
     <!-- novalidate: native required-field validation runs before the submit

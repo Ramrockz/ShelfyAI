@@ -69,6 +69,7 @@
     });
   }
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>';
   var ICON_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1-1"/></svg>';
   var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
   // Error-card icons (34b reference set)
@@ -121,11 +122,11 @@
     div.innerHTML =
       '<div class="modal-content aim-content" id="uimContent">' +
         '<div class="aim-head">' +
+          '<button type="button" class="aim-close" id="uimClose" aria-label="Back">' + ICON_BACK + '</button>' +
           '<span class="aim-titles">' +
             '<span class="aim-title">Import from URL</span>' +
             '<span class="aim-sub" id="uimSub"></span>' +
           '</span>' +
-          '<button type="button" class="aim-close" id="uimClose" aria-label="Close">' + ICON_X + '</button>' +
         '</div>' +
         '<div id="uimNormalBody">' +
           '<div class="uim-field-wrap">' +
