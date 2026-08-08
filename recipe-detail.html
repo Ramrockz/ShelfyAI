@@ -266,17 +266,19 @@
     padding: 24px;
   }
 
-  /* Headline / category / restock cards -- desktop equivalents of mobile's
+  /* Headline / category / restock -- desktop equivalents of mobile's
      .rdm-headline/.rdm-hl-*/.rdm-stats/.rdm-restock-row (which only exist
-     inside #mobileViewOverlay), styled to sit as .panel cards instead of a
-     flush mobile header/footer strip. */
+     inside #mobileViewOverlay). Same proportions/colors as mobile (52px
+     number, same font sizes) rather than a generic .panel card, just
+     boxed on all sides instead of mobile's flush top-of-screen strip. */
+  .pd-headline { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px; padding: 20px 24px 18px; }
   .pd-hl-top { display: flex; align-items: baseline; gap: 10px; }
-  .pd-hl-num { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -.03em; }
+  .pd-hl-num { font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em; }
   .pd-hl-num[data-state="ok"]  { color: var(--success); }
   .pd-hl-num[data-state="low"] { color: var(--warning); }
   .pd-hl-num[data-state="out"] { color: var(--danger); }
   .pd-hl-label { font-size: 14px; font-weight: 700; color: var(--text-main); }
-  .pd-hl-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; }
+  .pd-hl-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 7px; }
   .pd-stats { display: flex; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .pd-stats > div { flex: 1; padding: 9px 12px; }
   .pd-stats > div + div { border-left: 1px solid var(--border); }
@@ -288,31 +290,13 @@
   .pd-category-row, .pd-restock-row {
     display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer;
     font-family: inherit; text-align: left; color: inherit;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
   }
   .pd-category-label { font-size: 13.5px; color: var(--text-muted); }
   .pd-category-value { flex: 1; text-align: right; font-size: 14.5px; font-weight: 700; }
   .pd-category-value.empty { font-weight: 400; color: var(--text-muted); }
   .pd-restock-row #pdRestockLabel { flex: 1; font-size: 14.5px; font-weight: 700; color: var(--accent); }
   .pd-chev { color: var(--border); flex-shrink: 0; }
-
-  /* ---------- VARIANT MATRIX ---------- */
-  .vmx-scroll { overflow-x: auto; }
-  .vmx-grid { display: grid; gap: 4px; align-items: stretch; min-width: 100%; }
-  .vmx-col-head { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); text-align: center; padding: 6px 4px; }
-  .vmx-corner { position: sticky; left: 0; background: var(--bg-panel); z-index: 2; }
-  .vmx-row-label { position: sticky; left: 0; background: var(--bg-panel); z-index: 1; display: flex; align-items: center; padding: 0 8px; font-size: 13px; font-weight: 700; min-height: 46px; color: var(--text-main); }
-  .vmx-cell { min-height: 46px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; cursor: pointer; border: 1px solid var(--border); background: none; font-family: inherit; }
-  .vmx-cell-empty { background: transparent; border: 1.5px dashed var(--border); color: var(--text-muted); font-size: 18px; }
-  .vmx-cell-filled.avail-red { background: rgba(239,68,68,0.10); color: #dc2626; }
-  .vmx-cell-filled.avail-orange { background: rgba(245,158,11,0.12); color: #b45309; }
-  .vmx-cell-filled.avail-green { background: rgba(16,185,129,0.12); color: #047857; }
-  [data-theme="dark"] .vmx-cell-filled.avail-red { background: rgba(239,68,68,0.16); color: #f87171; }
-  [data-theme="dark"] .vmx-cell-filled.avail-orange { background: rgba(245,158,11,0.16); color: #fbbf24; }
-  [data-theme="dark"] .vmx-cell-filled.avail-green { background: rgba(16,185,129,0.16); color: #34d399; }
-
-  .variant-flat-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
-  .variant-flat-row:last-child { border-bottom: none; }
-  .variant-flat-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-main); }
 
   /* ---------- FINANCIALS ---------- */
   .margin-card {
@@ -1130,16 +1114,8 @@
   </div>
 
   <div class="pd-grid">
-    <!-- Left column: items (+ variant matrix, when this product has variants) -->
+    <!-- Left column: items -->
     <div>
-      <div class="panel" id="variantMatrixSection" style="display:none;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
-          <h3 style="margin:0;">Variants</h3>
-          <button class="btn btn-secondary" onclick="openAddVariantsModal()" style="padding:8px 14px;font-size:13px;">+ Add Variants</button>
-        </div>
-        <div id="variantMatrixBody"></div>
-      </div>
-
       <div class="panel">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 20px;">
           <h3 style="margin:0;">Items</h3>
@@ -1156,7 +1132,7 @@
          #retailPriceInput keep their existing ids/handlers (updateRetailPrice(),
          updateRecipeInDatabase()) -- only relocated, not rewritten. -->
     <div>
-      <div class="panel pd-headline">
+      <div class="pd-headline">
         <div class="pd-hl-top"><span class="pd-hl-num" data-state="out">0</span><span class="pd-hl-label">can be made now</span></div>
         <div class="pd-hl-sub"></div>
         <div class="pd-stats">
@@ -1166,13 +1142,13 @@
         </div>
       </div>
 
-      <button type="button" class="panel pd-category-row" id="pdCategoryRow" onclick="openRdmCategorySheet()">
+      <button type="button" class="pd-category-row" id="pdCategoryRow" onclick="openRdmCategorySheet()">
         <span class="pd-category-label">Category</span>
         <span class="pd-category-value empty" id="pdCategoryValue">Not set</span>
         <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
       </button>
 
-      <div class="panel pd-restock-row" id="pdRestockRow" style="display:none;" onclick="rdmRestockShort()">
+      <div class="pd-restock-row" id="pdRestockRow" style="display:none;" onclick="rdmRestockShort()">
         <span id="pdRestockLabel"></span>
         <svg class="pd-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
       </div>
@@ -1180,27 +1156,6 @@
   </div>
 </div>
 
-<!-- Add Variants Modal -->
-<div class="modal-overlay modal-sheet" id="addVariantsModal" onclick="if(event.target === this) closeAddVariantsModal()">
-  <div class="modal-content" style="max-width: 480px;">
-    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);">Add Variants</h3>
-    <div style="margin-bottom:16px;">
-      <label id="avRowLabel" style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:8px;">Attribute A</label>
-      <input type="text" id="avRowInput" placeholder="Comma-separated values, e.g. Black, Blue, Red" oninput="updateAddVariantsPreview()"
-        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-inner);color:var(--text-main);font-family:inherit;font-size:14px;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <label id="avColLabel" style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:8px;">Attribute B</label>
-      <input type="text" id="avColInput" placeholder="Comma-separated values, e.g. S, M, L" oninput="updateAddVariantsPreview()"
-        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-inner);color:var(--text-main);font-family:inherit;font-size:14px;">
-    </div>
-    <div id="avPreviewCount" style="font-size:13px;color:var(--text-muted);margin-bottom:20px;min-height:18px;"></div>
-    <div style="display:flex;gap:12px;">
-      <button style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="closeAddVariantsModal()">Cancel</button>
-      <button style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="submitAddVariants()">Create</button>
-    </div>
-  </div>
-</div>
 
 <script>
 let recipeId = null;
@@ -1320,7 +1275,6 @@ async function loadRecipe() {
     recipe = data;
     renderRecipe();
     renderFamilyBreadcrumb(user.id, storeId);
-    loadFamilyMatrix(user.id, storeId);
   } catch (error) {
     console.error('Error loading recipe:', error);
     showAlert('Failed to load product');
@@ -1341,10 +1295,7 @@ function _blurActive() {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
-// --- Product family (parent_id + attributes) ---
-let familyVariants = [];
-let _familyAxesCache = null;
-
+// --- Product family (parent_id) ---
 async function renderFamilyBreadcrumb(userId, storeId) {
   const bc = document.getElementById('familyBreadcrumb');
   if (!recipe.parent_id) { if (bc) bc.style.display = 'none'; return; }
@@ -1370,211 +1321,6 @@ function isIngredientExpired(expirationDate) {
   if (!expirationDate) return false;
   const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
   return days < 0;
-}
-
-async function loadFamilyMatrix(userId, storeId) {
-  const section = document.getElementById('variantMatrixSection');
-  if (!section) return;
-  if (recipe.parent_id) { section.style.display = 'none'; return; } // only heads/standalone show the matrix
-
-  section.style.display = '';
-  try {
-    let _qv = window.supabaseClient.from('recipes').select('*').eq('parent_id', recipeId).eq('profile_id', userId);
-    if (storeId) _qv = _qv.eq('store_id', storeId);
-    const { data: variants, error } = await _qv;
-    if (error) throw error;
-
-    familyVariants = variants || [];
-
-    let stockMap = {};
-    const allIngIds = [...new Set([recipe, ...familyVariants].flatMap(m => (m.components || []).map(c => c.ingredient_id || c.id)).filter(Boolean))];
-    if (allIngIds.length) {
-      let _qs = window.supabaseClient.from('ingredients').select('id, quantity, min_stock, expiration_date').eq('profile_id', userId);
-      if (storeId) _qs = _qs.eq('store_id', storeId);
-      _qs = _qs.in('id', allIngIds);
-      const { data: stockRows } = await _qs;
-      (stockRows || []).forEach(s => { stockMap[s.id] = { quantity: parseFloat(s.quantity) || 0, min_stock: parseFloat(s.min_stock) || 0, expiration_date: s.expiration_date || null }; });
-    }
-
-    renderVariantMatrix(stockMap);
-  } catch (e) {
-    console.error('Error loading variant matrix:', e);
-  }
-}
-
-function _memberAvailability(m, stockMap) {
-  const comps = m.components || [];
-  if (!comps.length) return { status: 'orange', maxCount: null };
-  let maxCount = Infinity, canProduce = true, atMin = false;
-  comps.forEach(c => {
-    const id = c.ingredient_id || c.id;
-    const s = stockMap[id] || { quantity: 0, min_stock: 0, expiration_date: null };
-    const required = parseFloat(c.quantity) || 0;
-    if (required > 0) maxCount = Math.min(maxCount, Math.floor(s.quantity / required));
-    if (s.quantity < required || isIngredientExpired(s.expiration_date)) canProduce = false;
-    else if (s.min_stock > 0 && s.quantity <= s.min_stock) atMin = true;
-  });
-  if (maxCount === Infinity) maxCount = null;
-  return { status: !canProduce ? 'red' : atMin ? 'orange' : 'green', maxCount };
-}
-
-function _variantAxes(variants) {
-  const keys = [...new Set(variants.flatMap(v => Object.keys(v.attributes || {})))];
-  const SIZE_ORDER = ['XXS','XS','S','M','L','XL','XXL','2XL','3XL','4XL','ONE SIZE'];
-  const rowKey = keys.find(k => k !== 'size') || keys[0];
-  const colKey = keys.includes('size') ? 'size' : keys[1];
-  const vals = k => k ? [...new Set(variants.map(v => v.attributes?.[k]).filter(Boolean))] : [];
-  const cols = vals(colKey).sort((a, b) => {
-    const ia = SIZE_ORDER.indexOf(String(a).toUpperCase()), ib = SIZE_ORDER.indexOf(String(b).toUpperCase());
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a).localeCompare(String(b));
-  });
-  return { rowKey, colKey, rows: vals(rowKey), cols,
-           at: (r, c) => variants.find(v => v.attributes?.[rowKey] === r && v.attributes?.[colKey] === c) };
-}
-
-function renderVariantMatrix(stockMap) {
-  const body = document.getElementById('variantMatrixBody');
-  if (!body) return;
-
-  if (!familyVariants.length) {
-    _familyAxesCache = null;
-    body.innerHTML = `<div style="text-align:center;padding:24px 16px;color:var(--text-muted);">
-      <p style="margin:0;font-size:14px;">No variants yet — add color/size options to sell this as a family of products.</p>
-    </div>`;
-    return;
-  }
-
-  const axes = _variantAxes(familyVariants);
-  _familyAxesCache = axes;
-
-  if (!axes.colKey) {
-    // Only one attribute key present — a 1-column matrix isn't useful, show a flat list instead
-    body.innerHTML = familyVariants.map(v => {
-      const { status } = _memberAvailability(v, stockMap);
-      const label = Object.values(v.attributes || {}).join(' · ') || v.name;
-      const pill = status === 'red' ? '<span class="stock-pill out">Out</span>' : status === 'orange' ? '<span class="stock-pill low">Low</span>' : '';
-      return `<div class="variant-flat-row" onclick="window.location.href='/recipe-detail?id=${v.id}'">
-        <span class="variant-flat-name">${_escHtml(label)}</span>
-        ${pill}
-      </div>`;
-    }).join('');
-    return;
-  }
-
-  const headerCells = axes.cols.map(c => `<div class="vmx-col-head">${_escHtml(c)}</div>`).join('');
-  const rowsHtml = axes.rows.map(r => {
-    const cells = axes.cols.map(c => {
-      const v = axes.at(r, c);
-      if (!v) {
-        return `<button type="button" class="vmx-cell vmx-cell-empty" onclick="addVariant('${_escHtml(r)}','${_escHtml(c)}')">+</button>`;
-      }
-      const { status, maxCount } = _memberAvailability(v, stockMap);
-      return `<div class="vmx-cell vmx-cell-filled avail-${status}" onclick="window.location.href='/recipe-detail?id=${v.id}'" title="${_escHtml(v.name)}">${maxCount ?? '&ndash;'}</div>`;
-    }).join('');
-    return `<div class="vmx-row-label">${_escHtml(r)}</div>${cells}`;
-  }).join('');
-
-  body.innerHTML = `<div class="vmx-scroll">
-    <div class="vmx-grid" style="grid-template-columns: 78px repeat(${axes.cols.length}, 1fr);">
-      <div class="vmx-col-head vmx-corner"></div>
-      ${headerCells}
-      ${rowsHtml}
-    </div>
-  </div>`;
-}
-
-async function addVariant(rowVal, colVal) {
-  const axes = _familyAxesCache;
-  const rowKey = axes?.rowKey || 'color';
-  const colKey = axes?.colKey || 'size';
-  await createVariants(recipeId, rowKey, [rowVal], colKey, [colVal]);
-}
-
-function openAddVariantsModal() {
-  const rowKey = _familyAxesCache?.rowKey || 'color';
-  const colKey = _familyAxesCache?.colKey || 'size';
-  const rowLabel = document.getElementById('avRowLabel');
-  const colLabel = document.getElementById('avColLabel');
-  const rowInput = document.getElementById('avRowInput');
-  const colInput = document.getElementById('avColInput');
-  rowLabel.textContent = rowKey.charAt(0).toUpperCase() + rowKey.slice(1);
-  colLabel.textContent = colKey.charAt(0).toUpperCase() + colKey.slice(1);
-  rowInput.dataset.key = rowKey;
-  colInput.dataset.key = colKey;
-  rowInput.value = '';
-  colInput.value = '';
-  updateAddVariantsPreview();
-  document.getElementById('addVariantsModal').classList.add('active');
-}
-
-function closeAddVariantsModal() {
-  document.getElementById('addVariantsModal').classList.remove('active');
-}
-
-function _splitCsv(s) {
-  return s.split(',').map(x => x.trim()).filter(Boolean);
-}
-
-function updateAddVariantsPreview() {
-  const rowVals = _splitCsv(document.getElementById('avRowInput').value);
-  const colVals = _splitCsv(document.getElementById('avColInput').value);
-  const n = rowVals.length * colVals.length;
-  document.getElementById('avPreviewCount').textContent = n
-    ? `Will create up to ${n} variant${n !== 1 ? 's' : ''} (existing combinations are skipped)`
-    : '';
-}
-
-async function submitAddVariants() {
-  const rowInput = document.getElementById('avRowInput');
-  const colInput = document.getElementById('avColInput');
-  const rowKey = rowInput.dataset.key || 'color';
-  const colKey = colInput.dataset.key || 'size';
-  const rowVals = _splitCsv(rowInput.value);
-  const colVals = _splitCsv(colInput.value);
-  if (!rowVals.length || !colVals.length) {
-    showAlert('Enter at least one value for each attribute');
-    return;
-  }
-  closeAddVariantsModal();
-  await createVariants(recipeId, rowKey, rowVals, colKey, colVals);
-}
-
-async function createVariants(headId, rowKey, rowVals, colKey, colVals) {
-  if (!recipe || recipe.id !== headId) return;
-  try {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) return;
-
-    const existing = familyVariants;
-    const rows = [];
-    for (const rv of rowVals) {
-      for (const cv of colVals) {
-        if (existing.some(v => v.attributes?.[rowKey] === rv && v.attributes?.[colKey] === cv)) continue;
-        rows.push({
-          profile_id: user.id, store_id: recipe.store_id ?? null,
-          parent_id: headId,
-          name: `${recipe.name} · ${rv} · ${cv}`,
-          attributes: { [rowKey]: rv, [colKey]: cv },
-          components: recipe.components,
-          cost: recipe.cost, retail_price: recipe.retail_price,
-          is_favorite: false
-        });
-      }
-    }
-    if (!rows.length) { showAlert('Those variants already exist'); return; }
-
-    const { error } = await window.supabaseClient.from('recipes').insert(rows);
-    if (error) { console.error(error); showAlert('Could not create variants'); return; }
-
-    localStorage.removeItem('shelfy_cache_recipes');
-    if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
-    const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
-    await loadFamilyMatrix(user.id, storeId);
-    showAlert(`${rows.length} variant${rows.length !== 1 ? 's' : ''} created`);
-  } catch (e) {
-    console.error('Error creating variants:', e);
-    showAlert('Could not create variants');
-  }
 }
 
 async function renderRecipe() {
