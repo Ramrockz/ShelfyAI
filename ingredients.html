@@ -850,7 +850,24 @@
       border-radius: 2px;
       margin: 0 auto 20px;
     }
-    
+
+    /* #manualModal (.ic-modal) is a full-bleed, edge-to-edge sheet by design
+       (see the comment near .ic-scroll) -- its own padding:0/max-width:460px
+       inline styles get overridden by the generic .modal-content mobile rule
+       above (margin:16px + padding:24px 20px, both !important), which
+       reintroduces a side gutter that lets the modal's grey background show
+       through around .ic-group's white card, plus an unwanted drag-handle
+       bar. Higher specificity (.ic-modal vs .modal-content) restores the
+       intended full-screen look. */
+    .ic-modal {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      max-height: 90vh !important;
+    }
+    .ic-modal::before { display: none !important; }
+
     /* Table container - horizontal scroll */
     .table-container {
       overflow-x: auto;
