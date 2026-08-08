@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="reorder-modal.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -40,6 +41,7 @@
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
+<script src="reorder-modal.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -294,7 +296,6 @@
   .pd-stat-action { cursor: pointer; transition: background 0.15s; }
   .pd-stat-action:hover { background: var(--bg-inner); }
   .pd-stat-action span.empty { font-weight: 400; color: var(--text-muted); }
-  .pd-stat-action#pdRestockRow span { color: var(--accent); }
 
   /* ---------- FINANCIALS ---------- */
   .margin-card {
@@ -1131,7 +1132,6 @@
       <div><label>Price</label><span>$<input type="number" id="retailPriceInput" min="0" step="0.01" placeholder="0.00" inputmode="decimal" onblur="updateRetailPrice()" onkeydown="if(event.key==='Enter')this.blur();"></span></div>
       <div><label>Margin</label><span id="pdMargin">—</span></div>
       <div class="pd-stat-action" id="pdCategoryRow" onclick="openRdmCategorySheet()"><label>Category</label><span class="empty" id="pdCategoryValue">Not set</span></div>
-      <div class="pd-stat-action" id="pdRestockRow" style="display:none;" onclick="rdmRestockShort()"><label>Restock</label><span id="pdRestockLabel"></span></div>
     </div>
   </div>
 
@@ -1273,6 +1273,10 @@ async function loadRecipe() {
 function _escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+// reorder-modal.js (shared Place Reorder screen) calls escapeHtml() -- this
+// page's own equivalent is _escHtml(), same job.
+function escapeHtml(s) { return _escHtml(s); }
 
 // If the quantity input (or any other field) is still focused when the user
 // taps Swap/Remove/Restock, mobile Safari's first tap just dismisses the
@@ -1456,7 +1460,7 @@ async function renderRecipe() {
               <button onclick="increaseIngredientQuantity(${origIndex})" style="background: none; border: none; color: var(--text-main); cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">+</button>
             </div>
             <button onclick="removeIngredientFromRecipe(${origIndex})" style="background: var(--danger); border: none; color: white; cursor: pointer; font-size: 14px; padding: 0; width: 36px; height: 36px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; justify-content: center;" title="Remove">✕</button>
-            <button onclick="openSwapModal(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
+            <button onclick="rdmReplaceItem(${origIndex})" style="background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-muted)'" title="Swap ingredient">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg>
             </button>
             <button onclick="reorderIngredient('${ingredientId}')" style="background: ${isReorderPending ? 'rgba(6,182,212,0.12)' : 'var(--bg-inner)'}; border: 1px solid ${isReorderPending ? 'var(--accent)' : 'var(--border)'}; color: ${isReorderPending ? 'var(--accent)' : 'var(--text-muted)'}; cursor: pointer; padding: 0; width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="${isReorderPending ? 'Delivery pending' : 'Reorder'}">
@@ -1488,8 +1492,9 @@ async function renderRecipe() {
   };
 
   // These three used to only run inside renderMobileOverlay() (which bails
-  // out entirely on desktop) -- .pd-headline/#pdMargin/#pdRestockRow need
-  // them too now, so they run unconditionally here instead.
+  // out entirely on desktop) -- .pd-headline/#pdMargin need them too now
+  // (and mobile's own #rdmRestockRow still does), so they run
+  // unconditionally here instead.
   rdmRenderHeadline();
   rdmRenderMargin();
   rdmRenderRestockRow();
@@ -1693,14 +1698,10 @@ function rdmRenderRestockRow() {
     return q != null && q < (parseFloat(c.quantity) || 0);
   });
   const shortName = short[0]?.ingredient_name || short[0]?.name;
-  // Mobile's row has its own line to itself ("Restock <name>" reads fine
-  // there); desktop's is a KPI cell with "Restock" already as the column
-  // label above it, so the value underneath is just the name/count.
-  const rows = [
-    ['rdmRestockRow', 'rdmRestockLabel', short.length === 1 ? `Restock ${shortName}` : `Restock the ${short.length} short items`, 'flex'],
-    ['pdRestockRow', 'pdRestockLabel', short.length === 1 ? shortName : `${short.length} items`, '']
-  ];
-  rows.forEach(([rowId, labelId, label, shownDisplay]) => {
+  const label = short.length === 1 ? `Restock ${shortName}` : `Restock the ${short.length} short items`;
+  // Desktop-only: no restock CTA anymore (the items list right below already
+  // has a per-item restock action). Mobile keeps its own footer row.
+  [['rdmRestockRow', 'rdmRestockLabel', 'flex']].forEach(([rowId, labelId, shownDisplay]) => {
     const row = document.getElementById(rowId);
     if (!row) return;
     if (!short.length) { row.style.display = 'none'; return; }
@@ -2711,7 +2712,11 @@ async function reorderIngredient(ingredientId) {
     if (ingredient.reorder_pending) {
       openRdmDeliveryModal();
     } else {
-      openReorderModal();
+      // The shared Place Reorder screen (reorder-modal.js), same one
+      // ingredient-detail.html/operations.html use -- replaces this page's
+      // own older openLegacyReorderModal()/#reorderModal flow (now unused;
+      // left in place rather than torn out in this pass).
+      openReorderModal(ingredientId, { onPlaced: () => renderRecipe() });
     }
   } catch (error) {
     console.error('Error loading ingredient:', error);
@@ -2775,7 +2780,11 @@ function extractBaseDomain(url) {
   }
 }
 
-async function openReorderModal() {
+// Renamed from openReorderModal() to avoid colliding with reorder-modal.js's
+// shared openReorderModal(ingredientId, opts) -- this older flow (visit
+// source URL / other items from the same vendor) is still used by the
+// mobile restock row and the Add-items picker's own Restock button.
+async function openLegacyReorderModal() {
   if (!currentReorderIngredient) return;
 
   if (!currentReorderIngredient.source_url || !currentReorderIngredient.source_url.trim()) {
@@ -4096,6 +4105,96 @@ document.addEventListener('keydown', (e) => {
   <div class="modal-content">
     <label class="drow-edit-label">Filter by category</label>
     <div id="aiCatList"></div>
+  </div>
+</div>
+
+<!-- Place reorder screen (shared with ingredient-detail.html/operations.html
+     via reorder-modal.js/css) -- what the per-item truck button opens now,
+     instead of this page's own older "Reorder Modal" below (still used by
+     the mobile restock row / the Add-items picker's own Restock button). -->
+<div class="ro-screen" id="roScreen" onclick="if(event.target===this)closeReorderScreen()">
+  <div class="ro-card">
+  <div class="ro-head">
+    <div class="ro-bar">
+      <button class="ro-back" onclick="closeReorderScreen()" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="ro-titles">
+        <span class="ro-title">Place reorder</span>
+        <span class="ro-sub" id="roSub"></span>
+      </span>
+    </div>
+  </div>
+
+  <div class="ro-scroll">
+    <div class="ro-qty-panel">
+      <div class="ro-qty-row">
+        <button class="ro-qty-btn" aria-label="One fewer" onclick="roStepQty(-1)">&minus;</button>
+        <span class="ro-qty-center">
+          <input class="ro-qty-value" id="roQty" type="number" inputmode="numeric" value="0" onchange="roRenderAll()">
+        </span>
+        <button class="ro-qty-btn plus" aria-label="One more" onclick="roStepQty(1)">+</button>
+      </div>
+    </div>
+
+    <div class="ro-sec-head"><span class="ro-sec-title">Supplier</span></div>
+    <div class="ro-list" id="roSupplierSection">
+      <button class="ro-drow" onclick="openRoSupplierSheet()">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name" id="roSupName">No supplier yet</span>
+          <span class="ro-drow-meta" id="roSupMeta"></span>
+        </span>
+        <span class="ro-drow-tag" id="roSupTag" style="display:none;"></span>
+        <span id="roVisitBtn" role="button" aria-label="Visit supplier page"
+          onclick="event.stopPropagation(); const url = _roIngredient && _roIngredient.source_url; if (url) window.open(url, '_blank');"
+          style="display:none;padding:4px;opacity:0.6;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="fill:currentColor;display:block;">
+            <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7z"/>
+          </svg>
+        </span>
+        <svg class="ro-drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <div class="ro-drow" id="roEtaRow" style="display:none;">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name" id="roEtaName">Expected —</span>
+          <span class="ro-drow-meta" id="roEtaMeta"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="ro-sec-head">
+      <span class="ro-sec-title">Ship together</span>
+      <span class="ro-sec-note" id="roAlsoNote"></span>
+    </div>
+    <div class="ro-list" id="roAlso"></div>
+    <div class="ro-note" id="roFootnote"></div>
+  </div>
+
+  <div class="ro-foot">
+    <div class="ro-tally">
+      <span class="ro-tally-l" id="roCount"></span>
+      <span class="ro-tally-r" id="roTotal">$0.00</span>
+    </div>
+    <div id="roWarn"></div>
+    <button class="ro-cont" id="roCont" onclick="placeReorder()">Place reorder</button>
+  </div>
+  </div>
+
+  <div class="ro-sheet" id="roSupSheet" onclick="if(event.target===this)closeRoSupplierSheet()">
+    <div class="ro-sheet-content">
+      <h2 class="ro-sheet-title">Supplier</h2>
+      <div id="roSupList"></div>
+      <div id="roNewSupplierForm" class="ro-new-sup-form" style="display:none;">
+        <input type="text" id="roNewSupName" class="ro-new-sup-input" placeholder="Supplier name">
+        <div class="ro-new-sup-row">
+          <input type="number" id="roNewSupPrice" class="ro-new-sup-input" placeholder="Price each" step="0.01" inputmode="decimal">
+          <input type="number" id="roNewSupLead" class="ro-new-sup-input" placeholder="Lead time (days)" inputmode="numeric">
+        </div>
+        <input type="number" id="roNewSupMoq" class="ro-new-sup-input" placeholder="Minimum order ($, optional)" step="0.01" inputmode="decimal">
+        <button class="ro-new-sup-save" onclick="saveNewSupplier()">Save supplier</button>
+      </div>
+      <button class="ro-sheet-new" id="roNewSupplierToggle" onclick="toggleNewSupplierForm()">New supplier</button>
+    </div>
   </div>
 </div>
 
