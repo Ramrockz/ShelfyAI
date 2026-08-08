@@ -590,9 +590,7 @@
   #expCreateBtn,
   #expNotificationBell,
   #expUserAvatar,
-  .exp-meta,
-  .msec,
-  .affected-mobile-list {
+  .exp-more-menu {
     display: none;
   }
 
@@ -632,8 +630,63 @@
     flex-wrap: wrap;
   }
 
-  .ingredients-desktop-table { display: table; }
-  .ingredients-mobile-list { display: none; }
+  .ingredients-desktop-table { display: none; }
+  .ingredients-mobile-list { display: block; }
+  #affectedIngredientsSection table { display: none; }
+  #itemsSectionHeader, #affectedSectionTitle { display: none; }
+
+  /* Item/unit count line under the cost hero -- mobile's look, now shown
+     at every width. */
+  .exp-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+
+  /* Section labels (Pack list-style pattern, shared with the other detail
+     pages this session) -- promoted from mobile-only so "Items bought"/
+     "Stock it added" show at every width instead of "Involved Items"/
+     "Affected Items". */
+  .msec { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+  .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
+
+  /* Items bought -- mobile's read-only row (tap opens the item sheet for
+     both quantity AND unit cost editing), now the only item list at any
+     width. Desktop's old table only exposed a quantity stepper + remove,
+     with no way to edit an existing line's unit cost -- promoting this
+     row fixes that gap too. */
+  .exp-item-row {
+    display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%;
+    padding: 9px 14px 9px 16px; text-align: left; background: var(--bg-panel);
+    border: none; border-top: 1px solid var(--border); box-sizing: border-box;
+    border-radius: 0; margin: 0 -16px; width: calc(100% + 32px);
+  }
+  .ingredients-mobile-list .exp-item-row:first-child { border-top: none; }
+  .ingredients-mobile-list .exp-item-row:last-child { border-bottom: 1px solid var(--border); }
+  .exp-item-main { flex: 1; min-width: 0; }
+  .exp-item-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exp-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .exp-item-total { font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--text-main); flex-shrink: 0; }
+  .exp-chev { color: var(--border); flex-shrink: 0; }
+
+  /* Stock it added -- from -> to per ingredient, mobile's look, now the
+     only affected-items list at any width. */
+  .stock-row {
+    display: flex; align-items: center; gap: 11px; height: 50px;
+    padding: 0 14px 0 16px; background: var(--bg-panel);
+    border-top: 1px solid var(--border); box-sizing: border-box;
+    margin: 0 -16px; width: calc(100% + 32px);
+  }
+  .affected-mobile-list .stock-row:first-child { border-top: none; }
+  .affected-mobile-list .stock-row:last-child { border-bottom: 1px solid var(--border); }
+  .stock-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stock-from { font-size: 13.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .stock-to { font-size: 15px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
+
+  /* One-field sheet (#fieldSheet) -- opened by the non-gated #expenseCost/
+     #expenseDate click handlers, but previously only styled inside
+     @media(max-width:768px) below, so it rendered unstyled on desktop. */
+  .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                     text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                    background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 
 
   /* ---------- MOBILE RESPONSIVE ---------- */
@@ -725,44 +778,6 @@
     .exp-more-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-muted); }
     .exp-more-item-danger, .exp-more-item-danger svg { color: var(--danger); }
 
-    .exp-meta { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
-
-    /* Section headings (Pack list-style pattern, reused from the other
-       detail pages this session) */
-    .msec { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
-    .msec-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
-    .msec-aside { font-size: 12.5px; font-weight: 700; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
-    #itemsSectionHeader, #affectedSectionTitle { display: none !important; }
-
-    /* Items bought — read-only row, tap opens the item sheet */
-    .exp-item-row {
-      display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%;
-      padding: 9px 14px 9px 16px; text-align: left; background: var(--bg-panel);
-      border: none; border-top: 1px solid var(--border); box-sizing: border-box;
-      border-radius: 0; margin: 0 -16px; width: calc(100% + 32px);
-    }
-    .ingredients-mobile-list .exp-item-row:first-child { border-top: none; }
-    .ingredients-mobile-list .exp-item-row:last-child { border-bottom: 1px solid var(--border); }
-    .exp-item-main { flex: 1; min-width: 0; }
-    .exp-item-name { display: block; font-size: 14.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .exp-item-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .exp-item-total { font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--text-main); flex-shrink: 0; }
-    .exp-chev { color: var(--border); flex-shrink: 0; }
-
-    /* Stock it added — from → to per ingredient, no horizontal scroll */
-    #affectedIngredientsSection table { display: none !important; }
-    .stock-row {
-      display: flex; align-items: center; gap: 11px; height: 50px;
-      padding: 0 14px 0 16px; background: var(--bg-panel);
-      border-top: 1px solid var(--border); box-sizing: border-box;
-      margin: 0 -16px; width: calc(100% + 32px);
-    }
-    .affected-mobile-list .stock-row:first-child { border-top: none; }
-    .affected-mobile-list .stock-row:last-child { border-bottom: 1px solid var(--border); }
-    .stock-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stock-from { font-size: 13.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-    .stock-to { font-size: 15px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
-
     /* Item / field sheets */
     .sheet-qty { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; }
     .sheet-qty button {
@@ -781,10 +796,6 @@
       font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
       color: var(--text-muted); margin: 8px 0 0;
     }
-    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
-                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
-                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
     .form-input {
       width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
       border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
@@ -1042,6 +1053,7 @@
       <div id="expenseDate" onclick="editField('expense_date','Date')" style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-top: 4px; cursor: pointer;"></div>
     </div>
     <div class="header-actions">
+      <button class="detail-cta-btn reverse-inv-btn" id="expReverseInvBtnDesktop" style="display:none;" onclick="reverseExpenseInventory(expenseId)" title="Reverse inventory">Reverse Inventory</button>
       <button class="detail-cta-btn" onclick="copyExpense()">Copy</button>
       <button class="detail-cta-btn" style="color: var(--danger);" onclick="showDeleteModal()">Delete</button>
     </div>
@@ -1142,7 +1154,7 @@
      text are directly tappable; Duplicate is desktop-only via Copy above),
      leaving just Delete, same as order-detail.html's #ordMoreMenu. -->
 <div class="exp-more-menu" id="expenseMenu">
-  <button type="button" class="exp-more-item" id="expReverseInvBtn" style="display:none;" onclick="closeExpMoreMenu(); reverseExpenseInventory(expenseId)">
+  <button type="button" class="exp-more-item reverse-inv-btn" id="expReverseInvBtn" style="display:none;" onclick="closeExpMoreMenu(); reverseExpenseInventory(expenseId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 8 7 8"/></svg>
     <span>Reverse inventory</span>
   </button>
@@ -1702,14 +1714,14 @@ function closeExpMoreMenu() {
 // hasn't already been reversed -- both determined from ingredient_history
 // (see reverseExpenseInventory() below), not a dedicated column.
 async function updateReverseInventoryVisibility() {
-  const btn = document.getElementById('expReverseInvBtn');
-  if (!btn || !expenseId) return;
+  const btns = document.querySelectorAll('.reverse-inv-btn');
+  if (!btns.length || !expenseId) return;
   try {
     const { data: rows } = await window.supabaseClient
       .from('ingredient_history').select('reason').eq('reference_id', String(expenseId)).in('reason', ['expense', 'expense_reversal']);
     const applied = (rows || []).some(r => r.reason === 'expense');
     const reversed = (rows || []).some(r => r.reason === 'expense_reversal');
-    btn.style.display = (applied && !reversed) ? '' : 'none';
+    btns.forEach(btn => { btn.style.display = (applied && !reversed) ? '' : 'none'; });
   } catch (e) { console.error('Error checking inventory reversal state:', e); }
 }
 
@@ -1766,8 +1778,7 @@ async function reverseExpenseInventory(expId) {
         state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
       });
     }
-    const btn = document.getElementById('expReverseInvBtn');
-    if (btn) btn.style.display = 'none';
+    document.querySelectorAll('.reverse-inv-btn').forEach(btn => { btn.style.display = 'none'; });
     showReverseInvSuccess(impactRows);
   } catch (e) {
     console.error('Error reversing expense inventory:', e);
