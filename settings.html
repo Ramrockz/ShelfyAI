@@ -955,11 +955,12 @@
        an explicit browser permission grant rather than just a settings flag. -->
   <div class="st-sec-head"><span class="st-sec-title">Push notifications</span></div>
   <div class="st-list">
-    <button type="button" class="st-row" id="pushEnableRow" onclick="handlePushToggleClick()">
+    <button type="button" class="st-row" id="pushEnableRow" aria-pressed="false" onclick="handlePushToggleClick()">
       <span class="st-row-main">
-        <span class="st-row-name" id="pushEnableLabel">Enable push notifications</span>
+        <span class="st-row-name">Push notifications</span>
         <span class="st-row-why" id="pushEnableSub">Get an alert on this device even when ShelfyAI isn't open</span>
       </span>
+      <span class="st-sw"></span>
     </button>
   </div>
   <div class="st-note" id="pushIOSNote" style="display:none;">On iPhone/iPad, add ShelfyAI to your Home Screen first (Share → Add to Home Screen), then come back here to enable push.</div>
@@ -1667,30 +1668,22 @@ function toggleExpiredItemAlerts() { _tog('expiredItems'); }
 async function initPushNotificationsUI() {
   if (isIOSNotStandalone()) $('pushIOSNote').style.display = '';
   if (!isPushSupported()) {
-    $('pushEnableLabel').textContent = 'Push notifications not supported';
     $('pushEnableSub').textContent = 'This browser doesn\'t support push notifications';
     $('pushEnableRow').disabled = true;
     return;
   }
   const subscription = await getCurrentPushSubscription();
-  _renderPushRow(!!subscription);
-}
-
-function _renderPushRow(enabled) {
-  $('pushEnableLabel').textContent = enabled ? 'Push notifications enabled' : 'Enable push notifications';
-  $('pushEnableSub').textContent = enabled
-    ? 'Tap to turn off'
-    : 'Get an alert on this device even when ShelfyAI isn\'t open';
+  setRowPressed('pushEnableRow', !!subscription);
 }
 
 async function handlePushToggleClick() {
   const subscription = await getCurrentPushSubscription();
   if (subscription) {
     await disablePushNotifications();
-    _renderPushRow(false);
+    setRowPressed('pushEnableRow', false);
   } else {
     const ok = await enablePushNotifications();
-    _renderPushRow(ok);
+    setRowPressed('pushEnableRow', ok);
   }
 }
 
