@@ -488,6 +488,28 @@
     margin: 0 auto 20px;
   }
 
+  /* Sheet content styling (rename input label, category rows, form inputs)
+     -- these used to live inside the @media(max-width:768px) block, so none
+     of it applied on desktop: the "Category" label sat flush against the
+     first row (no margin-bottom) and every .cat-row rendered as a bare,
+     unstyled icon+text line (no height/padding/rounded active highlight). */
+  .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+                     text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
+                    background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
+             border-radius: 12px; cursor: pointer; }
+  .cat-row.active { background: rgba(6,182,212,.1); color: #0e7490; }
+  .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .form-input {
+    width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
   /* Mobile view overlay — hidden until JS activates it */
   #mobileViewOverlay { display: none; }
 
@@ -666,26 +688,6 @@
       background: var(--bg-panel); border-top: 1px solid var(--border);
     }
     .rdm-restock-row #rdmRestockLabel { flex: 1; font-size: 14.5px; font-weight: 700; color: var(--accent); }
-
-    /* Rename sheet */
-    .drow-edit-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
-                       text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .drow-edit-save { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 10px;
-                      background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
-
-    /* Category sheet */
-    .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
-               border-radius: 12px; cursor: pointer; }
-    .cat-row.active { background: rgba(6,182,212,.1); color: #0e7490; }
-    .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
-    .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
-                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-    .form-input {
-      width: 100%; padding: 12px 14px; background: var(--bg-inner); border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none;
-    }
-    .form-input:focus { border-color: var(--accent); }
 
     /* Hide chat and feedback widgets on mobile */
     #chat-widget,
