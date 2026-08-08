@@ -1,22 +1,26 @@
 /* Shared "Place reorder" screen — used by ingredient-detail.html and
-   operations.html. Full-screen overlay on desktop, half-sheet on mobile
-   via .ro-card below. Pair with reorder-modal.js; the page including this
-   file must also copy the #roScreen/#roSupSheet markup (see
-   ingredient-detail.html) into its own body. */
+   operations.html. A centered floating dialog on desktop, a bottom sheet
+   on mobile via .ro-card below. Pair with reorder-modal.js; the page
+   including this file must also copy the #roScreen/#roSupSheet markup
+   (see ingredient-detail.html) into its own body. */
 .ro-screen {
   display: none; position: fixed; inset: 0; z-index: 10100;
-  flex-direction: column; background: var(--bg-app, var(--bg-main));
+  align-items: center; justify-content: center;
+  background: rgba(15,23,42,.5);
 }
 .ro-screen.active { display: flex; }
-/* Plain pass-through wrapper on desktop (still fills .ro-screen exactly
-   like before this was introduced); mobile below turns it into the actual
-   bottom-sheet panel, with .ro-screen becoming its dim backdrop instead. */
-.ro-card { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.ro-card {
+  display: flex; flex-direction: column; min-height: 0;
+  width: 92%; max-width: 460px; max-height: 88vh;
+  background: var(--bg-app, var(--bg-main));
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.45);
+}
 @media (max-width: 768px) {
-  .ro-screen { background: rgba(15,23,42,.42); justify-content: flex-end; }
+  .ro-screen { background: rgba(15,23,42,.42); align-items: flex-end; }
   .ro-card {
-    height: auto; max-height: 75vh; border-radius: 20px 20px 0 0; overflow: hidden;
-    background: var(--bg-app, var(--bg-main));
+    width: 100%; max-width: none;
+    height: auto; max-height: 75vh; border-radius: 20px 20px 0 0;
     box-shadow: 0 -8px 24px -12px rgba(0,0,0,0.35);
     transform: translateY(30px);
     transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
