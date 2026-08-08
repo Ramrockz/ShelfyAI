@@ -81,6 +81,15 @@
     "api/stripe-webhook.js": {
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/send-expiry-notifications.js": {
+      "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/send-expiry-notifications",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

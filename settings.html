@@ -44,6 +44,7 @@
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
+<script src="push-notifications.js"></script>
 
 <style>
   .settings-container {
@@ -940,8 +941,28 @@
       </span>
       <span class="st-sw" id="aiLimitToggle"></span>
     </button>
+    <button type="button" class="st-row st-sub" id="expiredItemsRow" aria-pressed="true" onclick="toggleExpiredItemAlerts()">
+      <span class="st-row-main">
+        <span class="st-row-name">Expired items</span>
+        <span class="st-row-why">An item's expiration date has passed</span>
+      </span>
+      <span class="st-sw" id="expiredItemsToggle"></span>
+    </button>
   </div>
   <div class="st-note" id="alertNote"></div>
+
+  <!-- Push notifications: separate from the toggles above, since this needs
+       an explicit browser permission grant rather than just a settings flag. -->
+  <div class="st-sec-head"><span class="st-sec-title">Push notifications</span></div>
+  <div class="st-list">
+    <button type="button" class="st-row" id="pushEnableRow" onclick="handlePushToggleClick()">
+      <span class="st-row-main">
+        <span class="st-row-name" id="pushEnableLabel">Enable push notifications</span>
+        <span class="st-row-why" id="pushEnableSub">Get an alert on this device even when ShelfyAI isn't open</span>
+      </span>
+    </button>
+  </div>
+  <div class="st-note" id="pushIOSNote" style="display:none;">On iPhone/iPad, add ShelfyAI to your Home Screen first (Share → Add to Home Screen), then come back here to enable push.</div>
 
   <!-- 26h: history and reports + download your data -->
   <div class="st-sec-head"><span class="st-sec-title">History and reports</span></div>
@@ -1144,7 +1165,8 @@ async function getOrCreateUserSettings(userId) {
         notifications_enabled: true,
         low_stock_notifications: true,
         out_of_stock_notifications: true,
-        ai_limit_notifications: true
+        ai_limit_notifications: true,
+        expired_item_notifications: true
       })
       .select()
       .single();
@@ -1216,9 +1238,11 @@ async function loadSettings() {
     SET.lowStock = settings.low_stock_notifications !== false;
     SET.outOfStock = settings.out_of_stock_notifications !== false;
     SET.aiLimit = settings.ai_limit_notifications !== false;
+    SET.expiredItems = settings.expired_item_notifications !== false;
     SET.categories = settings.personalized_categories_enabled !== false;
     renderAlerts();
     setRowPressed('personalizedCategoriesToggle', SET.categories);
+    initPushNotificationsUI();
 
     // Load tier information (also renders the scan pool, storage, plan, stores)
     await loadTierInformation(settings);
@@ -1590,7 +1614,7 @@ function updateThemeButtons(theme) {
 
 // Every toggle below persists immediately (no separate Save/Discard step) --
 // each is a single-column user_settings update.
-let SET = { notifications: true, lowStock: true, outOfStock: true, aiLimit: true, categories: true };
+let SET = { notifications: true, lowStock: true, outOfStock: true, aiLimit: true, expiredItems: true, categories: true };
 
 function setRowPressed(id, on) {
   const el = $(id);
@@ -1601,7 +1625,8 @@ function renderAlerts() {
   setRowPressed('lowStockRow', SET.notifications && SET.lowStock);
   setRowPressed('outOfStockRow', SET.notifications && SET.outOfStock);
   setRowPressed('aiLimitRow', SET.notifications && SET.aiLimit);
-  $('alertNote').textContent = SET.notifications ? '' : 'Notifications are off, so the three below are paused — their settings are kept.';
+  setRowPressed('expiredItemsRow', SET.notifications && SET.expiredItems);
+  $('alertNote').textContent = SET.notifications ? '' : 'Notifications are off, so the four below are paused — their settings are kept.';
 }
 
 async function _persistSettings(fields) {
@@ -1624,7 +1649,7 @@ function _tog(key) {
     SET[key] = !SET[key];
   }
   renderAlerts();
-  const fieldMap = { lowStock: 'low_stock_notifications', outOfStock: 'out_of_stock_notifications', aiLimit: 'ai_limit_notifications' };
+  const fieldMap = { lowStock: 'low_stock_notifications', outOfStock: 'out_of_stock_notifications', aiLimit: 'ai_limit_notifications', expiredItems: 'expired_item_notifications' };
   const payload = key === 'notifications'
     ? { notifications_enabled: SET.notifications }
     : { notifications_enabled: SET.notifications, [fieldMap[key]]: SET[key] };
@@ -1634,6 +1659,40 @@ function toggleNotificationsEnabled() { _tog('notifications'); }
 function toggleLowStockAlerts() { _tog('lowStock'); }
 function toggleOutOfStockAlerts() { _tog('outOfStock'); }
 function toggleAILimitAlerts() { _tog('aiLimit'); }
+function toggleExpiredItemAlerts() { _tog('expiredItems'); }
+
+// Reflects actual browser subscription state, not a stored preference --
+// unlike the toggles above, this can't be "on" without the user having
+// already granted the OS permission prompt.
+async function initPushNotificationsUI() {
+  if (isIOSNotStandalone()) $('pushIOSNote').style.display = '';
+  if (!isPushSupported()) {
+    $('pushEnableLabel').textContent = 'Push notifications not supported';
+    $('pushEnableSub').textContent = 'This browser doesn\'t support push notifications';
+    $('pushEnableRow').disabled = true;
+    return;
+  }
+  const subscription = await getCurrentPushSubscription();
+  _renderPushRow(!!subscription);
+}
+
+function _renderPushRow(enabled) {
+  $('pushEnableLabel').textContent = enabled ? 'Push notifications enabled' : 'Enable push notifications';
+  $('pushEnableSub').textContent = enabled
+    ? 'Tap to turn off'
+    : 'Get an alert on this device even when ShelfyAI isn\'t open';
+}
+
+async function handlePushToggleClick() {
+  const subscription = await getCurrentPushSubscription();
+  if (subscription) {
+    await disablePushNotifications();
+    _renderPushRow(false);
+  } else {
+    const ok = await enablePushNotifications();
+    _renderPushRow(ok);
+  }
+}
 
 function togglePersonalizedCategoriesSetting() {
   SET.categories = !SET.categories;

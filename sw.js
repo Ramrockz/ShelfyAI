@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v336';
+const CACHE_NAME = 'shelfy-v337';
 
 const STATIC_ASSETS = [
   '/',
@@ -68,6 +68,33 @@ self.addEventListener('install', (event) => {
     )
   );
   self.skipWaiting();
+});
+
+// Server-sent (api/send-expiry-notifications.js) push for expired items.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) {}
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'ShelfyAI', {
+      body: data.body || '',
+      icon: '/apple-touch-icon-180.png',
+      badge: '/favicon-32.png',
+      data: { url: data.url || '/ingredients' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/ingredients';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((list) => {
+      for (const client of list) {
+        if (client.url.includes(url) && 'focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {

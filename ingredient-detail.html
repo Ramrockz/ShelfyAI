@@ -2752,6 +2752,13 @@
       alert_disabled: !!document.getElementById('alert_disabled')?.checked
     };
 
+    // Editing the expiration date re-arms the one-time "item expired" alert
+    // (see api/send-expiry-notifications.js) -- without this, fixing/extending
+    // a date on an already-alerted item would stay silent forever.
+    if (updateData.expiration_date !== (currentIngredient.expiration_date || null)) {
+      updateData.expiry_alert_sent_at = null;
+    }
+
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
 
