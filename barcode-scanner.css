@@ -1,6 +1,22 @@
 /* Shared "Scan Barcode" sheet -- self-contained styling so it drops into
    any page. Pair with barcode-scanner.js and the #bcScanModal markup
    (copied into each consuming page, same convention as reorder-modal.js). */
+
+/* The button that opens this sheet often lives INSIDE another full-screen
+   overlay (recipes.html's #recipeBuilderOverlay is z-index:10000,
+   order-detail.html's/orders.html's picker sheets are 10000+ too), and
+   #bcScanModal is added to the page as a page-level sibling, not nested
+   inside that overlay -- recipes.html already hit this exact bug once
+   before (see the #recipeIngCatSheet comment) and paid for it by nesting
+   the sheet inside the overlay instead. That fix is fragile (easy to get
+   wrong per page, as this component itself proves) -- a z-index high
+   enough to beat any overlay in this codebase is a general fix that works
+   regardless of where the sheet sits in the DOM. Without this, the camera
+   view renders but stays hidden behind whatever screen opened it, and
+   closing it after a scan is invisible too -- reads as "the screen just
+   closes" with nothing having visibly happened. */
+#bcScanModal { z-index: 999999999 !important; }
+
 .bc-modal { padding: 0; max-width: 420px; border-radius: 20px; overflow: hidden; }
 .bc-head {
   flex-shrink: 0; min-height: 52px; display: flex; align-items: center; gap: 8px;
