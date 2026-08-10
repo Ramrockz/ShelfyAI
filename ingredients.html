@@ -887,13 +887,20 @@
        reintroduces a side gutter that lets the modal's grey background show
        through around .ic-group's white card, plus an unwanted drag-handle
        bar. Higher specificity (.ic-modal vs .modal-content) restores the
-       intended full-screen look. */
+       intended full-screen look. height (not just max-height) is needed --
+       the inline max-height:90vh cap still left it centered with a dimmed
+       gap above/below whenever the form's own content was shorter than the
+       screen, which read as the same "card floating on grey" look as the
+       side gutters did. */
     .ic-modal {
       width: 100% !important;
       max-width: 100% !important;
+      height: 100% !important;
+      max-height: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
-      max-height: 90vh !important;
+      padding-top: env(safe-area-inset-top, 0px) !important;
+      border-radius: 0 !important;
     }
     .ic-modal::before { display: none !important; }
 
