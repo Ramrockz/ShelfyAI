@@ -459,6 +459,35 @@
   .ic-prefix { display: flex; align-items: baseline; gap: 5px; }
   .ic-prefix span { font-size: 15px; font-weight: 600; color: var(--text-faint, var(--text-muted)); }
 
+  .ic-input-wrap { display: flex; align-items: center; gap: 8px; }
+  .ic-input-wrap .ic-input { min-width: 0; }
+  .ic-scan-btn {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px;
+    border: 1px solid var(--border-hair, var(--border)); background: var(--bg-inner);
+    color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .ic-scan-btn:active { color: var(--accent); border-color: var(--accent); }
+  .ic-scan-btn svg, .ic-scan-btn i { width: 17px; height: 17px; }
+
+  /* Barcode scan sheet */
+  .bc-modal { padding: 0; max-width: 420px; }
+  .bc-video-wrap {
+    position: relative; margin: 0 20px; margin-top: 4px; aspect-ratio: 4 / 3;
+    background: #000; border-radius: 14px; overflow: hidden;
+  }
+  .bc-video-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bc-viewfinder {
+    position: absolute; inset: 18% 10%; border: 2px solid rgba(255,255,255,.8);
+    border-radius: 10px; box-shadow: 0 0 0 2000px rgba(0,0,0,.25); pointer-events: none;
+  }
+  .bc-status { text-align: center; font-size: 12.5px; color: var(--text-muted); margin: 12px 20px 0; }
+  .bc-manual { display: flex; gap: 8px; align-items: center; margin: 16px 20px 20px; }
+  .bc-manual .ic-input {
+    flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border-hair, var(--border));
+    border-radius: 10px; background: var(--bg-inner);
+  }
+  .bc-manual .ic-save { width: auto; flex-shrink: 0; height: 40px; padding: 0 18px; margin-top: 0; }
+
   .ic-units { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto;
               scrollbar-width: none; -ms-overflow-style: none; }
   .ic-units::-webkit-scrollbar { display: none; }
@@ -1243,8 +1272,13 @@
           <div class="ic-group">
             <div class="ic-row2">
               <div class="ic-field">
-                <label class="ic-label" for="ing_sku">SKU</label>
-                <input class="ic-input" type="text" id="ing_sku" placeholder="—" oninput="onIngredientEdit()" autocomplete="off">
+                <label class="ic-label" for="ing_sku">SKU / Barcode</label>
+                <span class="ic-input-wrap">
+                  <input class="ic-input" type="text" id="ing_sku" placeholder="Scan or type" oninput="onIngredientEdit()" autocomplete="off">
+                  <button type="button" class="ic-scan-btn" onclick="openBarcodeScan()" aria-label="Scan barcode">
+                    <i data-lucide="scan-line"></i>
+                  </button>
+                </span>
               </div>
               <div class="ic-field">
                 <label class="ic-label" for="ing_estimated_delivery">Delivery days</label>
@@ -1290,6 +1324,29 @@
   <div class="modal-content" style="max-width:420px">
     <h3 class="sheet-title" style="margin-top:0;">Category</h3>
     <div id="icCatSheetList"></div>
+  </div>
+</div>
+
+<!-- Barcode scan sheet for #manualModal's SKU field -- live camera scan
+     (BarcodeDetector, ZXing fallback) plus an always-visible manual entry
+     input, so one sheet covers both "scan" and "type the number" at once. -->
+<div class="modal-overlay modal-sheet" id="bcScanModal">
+  <div class="modal-content bc-modal">
+    <div class="ic-head">
+      <button type="button" class="ic-close" onclick="closeBarcodeScan()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="ic-titles"><span class="ic-title">Scan barcode</span></span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcScanVideo" autoplay playsinline muted></video>
+      <div class="bc-viewfinder"></div>
+    </div>
+    <div class="bc-status" id="bcStatus">Requesting camera…</div>
+    <div class="bc-manual">
+      <input class="ic-input" id="bcManualInput" placeholder="Or type the number" inputmode="numeric" onkeydown="if(event.key==='Enter'){event.preventDefault();useManualBarcode();}">
+      <button type="button" class="ic-save" onclick="useManualBarcode()">Use</button>
+    </div>
   </div>
 </div>
 
@@ -1836,6 +1893,7 @@ function closeMethodModal() {
 }
 
 async function closeManualModal() {
+  closeBarcodeScan(); // no-op if the barcode sheet wasn't open -- guards against a leaked camera stream
   // If this form was pre-filled from a scan that hasn't been saved yet,
   // make sure that's what the user actually wants before discarding it --
   // refundScan() below still gives the scan count back either way, but
@@ -1932,6 +1990,90 @@ function onIngredientEdit() {
   const saveBtn = document.getElementById('icSave');
   if (saveBtn) saveBtn.disabled = disabled;
   renderIcMoreCount();
+}
+
+// ---- Barcode scan sheet (SKU field) ----
+// Native BarcodeDetector where available (Chrome/Android); lazily-loaded
+// ZXing as a fallback everywhere else (Safari/iOS has no BarcodeDetector).
+// Either path -- or the always-visible manual input -- ends at
+// handleBarcodeResult(), so there's exactly one place that writes the value.
+let _bcStream = null;
+let _bcRAF = null;
+let _bcZXingReader = null;
+const _BC_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'codabar', 'itf'];
+
+async function openBarcodeScan() {
+  document.getElementById('bcManualInput').value = '';
+  document.getElementById('bcStatus').textContent = 'Requesting camera…';
+  document.getElementById('bcScanModal').classList.add('active');
+  try {
+    _bcStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('bcScanVideo');
+    video.srcObject = _bcStream;
+    document.getElementById('bcStatus').textContent = 'Point the camera at a barcode';
+    startBarcodeDecodeLoop(video);
+  } catch (e) {
+    document.getElementById('bcStatus').textContent = 'Camera unavailable — enter the number below instead.';
+  }
+}
+
+function startBarcodeDecodeLoop(video) {
+  if ('BarcodeDetector' in window) {
+    BarcodeDetector.getSupportedFormats().then((supported) => {
+      const formats = _BC_FORMATS.filter((f) => supported.includes(f));
+      const detector = new BarcodeDetector(formats.length ? { formats } : undefined);
+      const tick = async () => {
+        if (!_bcStream) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes.length) { handleBarcodeResult(codes[0].rawValue); return; }
+        } catch (e) {}
+        _bcRAF = requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    return;
+  }
+  loadZXing()
+    .then(() => {
+      _bcZXingReader = new ZXing.BrowserMultiFormatReader();
+      _bcZXingReader.decodeFromVideoElement(video, (result) => {
+        if (result) handleBarcodeResult(result.getText());
+      });
+    })
+    .catch(() => {
+      document.getElementById('bcStatus').textContent = 'Scanning isn’t supported on this browser — enter the number below.';
+    });
+}
+
+function loadZXing() {
+  if (window.ZXing) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function handleBarcodeResult(code) {
+  document.getElementById('ing_sku').value = code;
+  onIngredientEdit();
+  closeBarcodeScan();
+}
+
+function useManualBarcode() {
+  const v = document.getElementById('bcManualInput').value.trim();
+  if (!v) return;
+  handleBarcodeResult(v);
+}
+
+function closeBarcodeScan() {
+  document.getElementById('bcScanModal').classList.remove('active');
+  if (_bcRAF) { cancelAnimationFrame(_bcRAF); _bcRAF = null; }
+  if (_bcZXingReader) { try { _bcZXingReader.reset(); } catch (e) {} _bcZXingReader = null; }
+  if (_bcStream) { _bcStream.getTracks().forEach((t) => t.stop()); _bcStream = null; }
 }
 
 function setIcSeed(seed) {
