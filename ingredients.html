@@ -678,6 +678,18 @@
   .status-chips { display: none; }
   @media (max-width: 768px) {
     .status-chips { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
+    /* Swipeable strip -- now up to 5 chips (Out/Low/Expired/Expiring), too
+       many to reliably fit without scrolling on a phone. flex:1/min-width:0
+       lets it take whatever room is left of .status-chips' width, with the
+       category icon button staying outside it (always visible, not part of
+       the swipe) instead of the old flex:1-spacer trick that only worked
+       because there was room to push it to the right in the first place. */
+    .schip-scroll {
+      display: flex; gap: 7px; flex: 1; min-width: 0;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .schip-scroll::-webkit-scrollbar { display: none; }
     .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
              border-radius: 99px; border: 1px solid var(--border); background: var(--bg-panel);
              color: var(--text-muted); font: 700 12.5px inherit; font-family: inherit;
@@ -1119,12 +1131,13 @@
   <main class="main" style="visibility: hidden;">
     <!-- Mobile status chips + category sheet trigger -->
     <div class="status-chips">
-      <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
-      <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
-      <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
-      <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
-      <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
-      <span style="flex:1"></span>
+      <div class="schip-scroll">
+        <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
+        <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
+        <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
+        <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
+        <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
+      </div>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       </button>
