@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
 <link rel="stylesheet" href="onboarding-modal.css" />
+<link rel="stylesheet" href="barcode-scanner.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -45,6 +46,7 @@
 <script src="chat-bot.js"></script>
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
+<script src="barcode-scanner.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -349,6 +351,24 @@
     transition: border-color 0.2s;
   }
   .rb-price-wrap:focus-within { border-color: var(--accent); }
+
+  .rb-sku-wrap {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; box-sizing: border-box;
+    padding: 10px 10px 10px 16px;
+    background: var(--bg-inner);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.2s;
+  }
+  .rb-sku-wrap:focus-within { border-color: var(--accent); }
+  #recipeSkuInput { flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 0;
+                     color: var(--text-main); font-size: 15px; font-weight: 600; font-family: inherit; }
+  .rb-scan-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; border: none;
+                 background: var(--bg-panel); color: var(--text-muted); display: flex; align-items: center;
+                 justify-content: center; cursor: pointer; }
+  .rb-scan-btn:active { color: var(--accent); }
+
   #recipeSalesPriceCurrency { flex-shrink: 0; color: var(--text-muted); font-size: 16px; font-weight: 600; }
   #recipeSalesPriceInput {
     flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 0;
@@ -805,7 +825,8 @@
       display: none;
     }
     #recipeNameInput,
-    .rb-price-wrap {
+    .rb-price-wrap,
+    .rb-sku-wrap {
       width: 100%;
       border: none;
       border-bottom: 1.5px solid var(--border);
@@ -825,7 +846,8 @@
       outline: none;
       border-bottom-color: var(--accent);
     }
-    .rb-price-wrap:focus-within {
+    .rb-price-wrap:focus-within,
+    .rb-sku-wrap:focus-within {
       border-bottom-color: var(--accent);
     }
     #recipeNameInput::placeholder,
@@ -1441,6 +1463,14 @@
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required oninput="updateCreateButtonState()" />
 
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; margin-top: 20px; display: block; letter-spacing: 0.05em; text-align: center;">SKU / Barcode</label>
+        <div class="rb-sku-wrap">
+          <input type="text" id="recipeSkuInput" placeholder="Scan or type" autocomplete="off">
+          <button type="button" class="rb-scan-btn" onclick="openBarcodeScan(code => { document.getElementById('recipeSkuInput').value = code; })" aria-label="Scan barcode">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+          </button>
+        </div>
+
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; margin-top: 20px; display: block; letter-spacing: 0.05em; text-align: center;">Sell for</label>
         <div class="rb-price-wrap" id="rbPriceWrap">
           <span id="recipeSalesPriceCurrency">$</span>
@@ -1558,6 +1588,26 @@
   </div>
 </div>
 
+<!-- Shared barcode scan sheet (barcode-scanner.js/.css) -->
+<div class="modal-overlay modal-sheet" id="bcScanModal">
+  <div class="modal-content bc-modal">
+    <div class="bc-head">
+      <button type="button" class="bc-close" onclick="closeBarcodeScan()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="bc-title">Scan barcode</span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcScanVideo" autoplay playsinline muted></video>
+      <div class="bc-viewfinder"></div>
+    </div>
+    <div class="bc-status" id="bcStatus">Requesting camera…</div>
+    <div class="bc-manual">
+      <input id="bcManualInput" placeholder="Or type the number" inputmode="numeric" onkeydown="if(event.key==='Enter'){event.preventDefault();useManualBarcode();}">
+      <button type="button" onclick="useManualBarcode()">Use</button>
+    </div>
+  </div>
+</div>
 
 <!-- Duplicate Recipe Modal -->
 <!-- Delete Recipe Modal -->
@@ -2486,6 +2536,8 @@ async function openBuilder() {
   document.getElementById('recipeNameInput').value = '';
   const _spd = document.getElementById('recipeSalesPriceInput');
   if (_spd) _spd.value = '';
+  const _skud = document.getElementById('recipeSkuInput');
+  if (_skud) _skud.value = '';
   const _catd = document.getElementById('recipeCategoryInput');
   if (_catd) _catd.value = '';
   renderProductCategoryIconPicker();
@@ -3425,23 +3477,24 @@ async function _doSaveRecipe(name) {
     const _spS = document.getElementById('recipeSalesPriceInput') || document.getElementById('mobileRecipeSalesPriceInput');
     const retailPriceS = parseFloat(_spS?.value) || 0;
     const category = document.getElementById('recipeCategoryInput')?.value || null;
+    const sku = document.getElementById('recipeSkuInput')?.value.trim() || null;
     if (currentEditingRecipeId) {
       const editId = currentEditingRecipeId;
       const returnUrl = currentEditReturnUrl;
-      const { error } = await offlineWrite('recipes', 'update', { name, components, cost: totalCost, retail_price: retailPriceS || null, category }, 'id', editId);
+      const { error } = await offlineWrite('recipes', 'update', { name, components, cost: totalCost, retail_price: retailPriceS || null, category, sku }, 'id', editId);
       if (error) throw error;
       const r = recipes.find(r => r.id === editId);
-      if (r) { r.name = name; r.components = components; r.cost = totalCost; r.retail_price = retailPriceS; r.count = components.length; r.category = category; }
+      if (r) { r.name = name; r.components = components; r.cost = totalCost; r.retail_price = retailPriceS; r.count = components.length; r.category = category; r.sku = sku; }
       localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
       closeRecipeBuilder();
       if (returnUrl) { window.location.href = returnUrl; return; }
       try { render(); } catch (e) {}
       return;
     } else {
-      const payload = { name, components, cost: totalCost, retail_price: retailPriceS || null, category, status: 'ready', profile_id: user.id, store_id: storeId };
+      const payload = { name, components, cost: totalCost, retail_price: retailPriceS || null, category, sku, status: 'ready', profile_id: user.id, store_id: storeId };
       const { data, error } = await offlineWrite('recipes', 'insert', payload);
       if (error) throw error;
-      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPriceS, category, status: 'ready', components, is_favorite: false });
+      recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPriceS, category, sku, status: 'ready', components, is_favorite: false });
       localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
     }
 
@@ -3787,6 +3840,8 @@ async function openBuilderForRecipe(recipeId) {
 
     const _spEdit = document.getElementById('recipeSalesPriceInput');
     if (_spEdit) _spEdit.value = fullRecipe.retail_price > 0 ? fullRecipe.retail_price.toFixed(2) : '';
+    const _skuEdit = document.getElementById('recipeSkuInput');
+    if (_skuEdit) _skuEdit.value = fullRecipe.sku || '';
     // Pre-fill with whatever category this product is actually grouped
     // under today — for products saved before the picker existed, that's
     // the inferred (component-vote) category, not just the raw (null)

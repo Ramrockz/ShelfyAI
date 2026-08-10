@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="barcode-scanner.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -44,6 +45,7 @@
 <script src="import-modal.js"></script>
 <script src="inventory-impact.js"></script>
 <script src="chat-bot.js"></script>
+<script src="barcode-scanner.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -2438,6 +2440,9 @@ document.addEventListener('keydown', (e) => {
                  onkeydown="if(event.key==='Escape'){this.value='';renderOrderRecipeSections()}">
           <button class="op-clear" id="orderSearchClear" type="button" onclick="document.getElementById('orderRecipeSearchInput').value='';renderOrderRecipeSections();" aria-label="Clear">&times;</button>
         </label>
+        <button class="op-filter" onclick="openBarcodeScan(code => { document.getElementById('orderRecipeSearchInput').value = code; renderOrderRecipeSections(); })" aria-label="Scan barcode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+        </button>
         <button class="op-filter" id="opFilterBtn" aria-expanded="false" aria-label="Filter products" onclick="toggleOrderPickerFilters()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19" height="19"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
           <span class="op-filter-n" id="opFilterN" data-on="0"></span>
@@ -2641,6 +2646,9 @@ document.addEventListener('keydown', (e) => {
                  onkeydown="if(event.key==='Escape'){this.value='';renderMatchList()}">
           <button class="op-clear" id="rcmMatchClear" type="button" onclick="document.getElementById('rcmMatchQ').value='';renderMatchList();" aria-label="Clear">&times;</button>
         </label>
+        <button class="op-filter" onclick="openBarcodeScan(code => { document.getElementById('rcmMatchQ').value = code; renderMatchList(); })" aria-label="Scan barcode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+        </button>
         <button class="op-filter" id="rcmFilterBtn" aria-expanded="false" aria-label="Filter products" onclick="toggleRcmMatchFilters()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="19" height="19"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>
           <span class="op-filter-n" id="rcmFilterN" data-on="0"></span>
@@ -2649,6 +2657,28 @@ document.addEventListener('keydown', (e) => {
       <div class="op-chips" id="rcmChips"></div>
     </div>
     <div class="op-scroll" id="rcmMatchList"></div>
+  </div>
+</div>
+
+<!-- Shared barcode scan sheet (barcode-scanner.js/.css) -- serves both
+     #manualOrderModal's and #rcmMatchSheet's search boxes. -->
+<div class="modal-overlay modal-sheet" id="bcScanModal">
+  <div class="modal-content bc-modal">
+    <div class="bc-head">
+      <button type="button" class="bc-close" onclick="closeBarcodeScan()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="bc-title">Scan barcode</span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcScanVideo" autoplay playsinline muted></video>
+      <div class="bc-viewfinder"></div>
+    </div>
+    <div class="bc-status" id="bcStatus">Requesting camera…</div>
+    <div class="bc-manual">
+      <input id="bcManualInput" placeholder="Or type the number" inputmode="numeric" onkeydown="if(event.key==='Enter'){event.preventDefault();useManualBarcode();}">
+      <button type="button" onclick="useManualBarcode()">Use</button>
+    </div>
   </div>
 </div>
 
@@ -2884,10 +2914,10 @@ async function renderOrderRecipeSections() {
 
   let html = '';
   if (q) {
-    // Product name only -- this is a product picker, not an ingredient
+    // Product name or SKU -- this is a product picker, not an ingredient
     // picker, so matching against a component's ingredient name (e.g.
     // typing "wax" and getting every candle back) doesn't make sense here.
-    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q));
+    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q) || (r.sku || '').toLowerCase().includes(q));
     if (hits.length) {
       html = `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
         <div class="op-list">${hits.map(r => _orderRowHtml(r)).join('')}</div>`;
@@ -3917,7 +3947,7 @@ async function renderMatchList() {
 
   let html = '';
   if (q) {
-    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q));
+    const hits = pool.filter(r => (r.name || '').toLowerCase().includes(q) || (r.sku || '').toLowerCase().includes(q));
     html = hits.length
       ? `<div class="op-sec-head"><span class="op-sec-title">Matches</span><span class="op-sec-note">${hits.length}</span></div>
          <div class="op-list">${hits.map(r => _rcmMatchRowHtml(r)).join('')}</div>`

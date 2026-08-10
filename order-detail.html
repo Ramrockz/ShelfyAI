@@ -29,6 +29,7 @@
 <script src="/pwa-install.js" defer></script>
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="notifications.css" />
+<link rel="stylesheet" href="barcode-scanner.css" />
 <script>
   document.documentElement.style.visibility = 'hidden';
 </script>
@@ -40,6 +41,7 @@
 <script src="bottom-nav.js"></script>
 <script src="notifications.js"></script>
 <script src="inventory-impact.js"></script>
+<script src="barcode-scanner.js"></script>
 
 <style>
   .container {
@@ -1477,6 +1479,9 @@
           <i data-lucide="search" style="width:17px;height:17px;color:var(--text-faint);flex-shrink:0;"></i>
           <input id="ecItemQ" type="search" placeholder="Search your products" oninput="ecRenderList()" autocomplete="off">
         </label>
+        <button type="button" class="ec-filter-btn" onclick="openBarcodeScan(code => { document.getElementById('ecItemQ').value = code; ecRenderList(); })" aria-label="Scan barcode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+        </button>
         <button type="button" class="ec-filter-btn" id="ecFilterBtn" onclick="ecOpenCatSheet()" aria-label="Filter by category">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
         </button>
@@ -1550,6 +1555,27 @@
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeDeleteModal()" style="flex: 1;">Cancel</button>
       <button class="btn-primary" style="background: #ef4444; flex: 1;" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shared barcode scan sheet (barcode-scanner.js/.css) -->
+<div class="modal-overlay modal-sheet" id="bcScanModal">
+  <div class="modal-content bc-modal">
+    <div class="bc-head">
+      <button type="button" class="bc-close" onclick="closeBarcodeScan()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="bc-title">Scan barcode</span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcScanVideo" autoplay playsinline muted></video>
+      <div class="bc-viewfinder"></div>
+    </div>
+    <div class="bc-status" id="bcStatus">Requesting camera…</div>
+    <div class="bc-manual">
+      <input id="bcManualInput" placeholder="Or type the number" inputmode="numeric" onkeydown="if(event.key==='Enter'){event.preventDefault();useManualBarcode();}">
+      <button type="button" onclick="useManualBarcode()">Use</button>
     </div>
   </div>
 </div>
@@ -2940,7 +2966,7 @@ function ecRenderList() {
 
   let html = '';
   if (q) {
-    const hits = (recipes || []).filter(matchesCat).filter(r => (r.name || '').toLowerCase().includes(q));
+    const hits = (recipes || []).filter(matchesCat).filter(r => (r.name || '').toLowerCase().includes(q) || (r.sku || '').toLowerCase().includes(q));
     if (hits.length) {
       html += `<div class="ec-sec-head"><span class="ec-sec-title">Matches</span><span class="ec-sec-note">${hits.length}</span></div>${hits.map(rowHtml).join('')}`;
     } else {

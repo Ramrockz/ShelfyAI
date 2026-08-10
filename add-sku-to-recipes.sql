@@ -1,0 +1,2 @@
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS sku TEXT;
+CREATE INDEX IF NOT EXISTS idx_recipes_sku ON recipes(sku);

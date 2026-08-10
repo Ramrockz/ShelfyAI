@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="chat-styles.css" />
 <link rel="stylesheet" href="notifications.css" />
 <link rel="stylesheet" href="reorder-modal.css" />
+<link rel="stylesheet" href="barcode-scanner.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -42,6 +43,7 @@
 <script src="bottom-nav.js"></script>
 <script src="chat-bot.js"></script>
 <script src="reorder-modal.js"></script>
+<script src="barcode-scanner.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -1139,6 +1141,7 @@
       <div><label>Price</label><span>$<input type="number" id="retailPriceInput" min="0" step="0.01" placeholder="0.00" inputmode="decimal" onblur="updateRetailPrice()" onkeydown="if(event.key==='Enter')this.blur();"></span></div>
       <div><label>Margin</label><span id="pdMargin">—</span></div>
       <div class="pd-stat-action" id="pdCategoryRow" onclick="openRdmCategorySheet()"><label>Category</label><span class="empty" id="pdCategoryValue">Not set</span></div>
+      <div class="pd-stat-action" id="pdSkuRow" onclick="openPdSkuSheet()"><label>SKU</label><span class="empty" id="pdSkuValue">Not set</span></div>
     </div>
   </div>
 
@@ -1507,6 +1510,7 @@ async function renderRecipe() {
   rdmRenderMargin();
   rdmRenderRestockRow();
   rdmRenderCategoryValue();
+  rdmRenderSkuValue();
 
   if (statusEl) {
     if (canProduce && maxRecipeCount > 0) {
@@ -1767,6 +1771,27 @@ async function saveRdmRename() {
   await saveMobileRecipeName();
   closeRdmRenameSheet();
   renderMobileOverlay();
+}
+
+function openPdSkuSheet() {
+  document.getElementById('pdSkuInput').value = recipe?.sku || '';
+  document.getElementById('pdSkuSheet').classList.add('active');
+  setTimeout(() => document.getElementById('pdSkuInput')?.focus(), 120);
+}
+function closePdSkuSheet() {
+  document.getElementById('pdSkuSheet').classList.remove('active');
+}
+async function savePdSkuSheet() {
+  recipe.sku = document.getElementById('pdSkuInput').value.trim() || null;
+  closePdSkuSheet();
+  await updateRecipeInDatabase();
+  rdmRenderSkuValue();
+}
+function rdmRenderSkuValue() {
+  const el = document.getElementById('pdSkuValue');
+  if (!el || !recipe) return;
+  el.textContent = recipe.sku || 'Not set';
+  el.classList.toggle('empty', !recipe.sku);
 }
 
 function goToEdit() {
@@ -2667,7 +2692,8 @@ async function updateRecipeInDatabase() {
       .update({
         components: recipe.components,
         cost: totalCost,
-        category: recipe.category
+        category: recipe.category,
+        sku: recipe.sku
       })
       .eq('id', recipeId);
 
@@ -3933,6 +3959,20 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
+<!-- SKU sheet (desktop's #pdSkuRow) — scan or type, writes through recipe.sku -->
+<div class="modal-overlay modal-sheet" id="pdSkuSheet" onclick="if(event.target===this)closePdSkuSheet()">
+  <div class="modal-content">
+    <label class="drow-edit-label" for="pdSkuInput">SKU / Barcode</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input id="pdSkuInput" class="form-input" style="font-size:16px" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();savePdSkuSheet();}">
+      <button type="button" onclick="openBarcodeScan(code => { document.getElementById('pdSkuInput').value = code; })" style="flex-shrink:0; width:44px; height:44px; border-radius:10px; border:1px solid var(--border); background:var(--bg-inner); color:var(--text-muted); display:flex; align-items:center; justify-content:center; cursor:pointer;" aria-label="Scan barcode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+      </button>
+    </div>
+    <button class="drow-edit-save" onclick="savePdSkuSheet()">Save</button>
+  </div>
+</div>
+
 <!-- Category sheet — same PRODUCT_CATEGORIES/icon map as recipes.html's
      builder; tap a category to save immediately (this page has no
      separate Save step the way the builder modal does). -->
@@ -4199,6 +4239,27 @@ document.addEventListener('keydown', (e) => {
         <button class="ro-new-sup-save" onclick="saveNewSupplier()">Save supplier</button>
       </div>
       <button class="ro-sheet-new" id="roNewSupplierToggle" onclick="toggleNewSupplierForm()">New supplier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shared barcode scan sheet (barcode-scanner.js/.css) -->
+<div class="modal-overlay modal-sheet" id="bcScanModal">
+  <div class="modal-content bc-modal">
+    <div class="bc-head">
+      <button type="button" class="bc-close" onclick="closeBarcodeScan()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="bc-title">Scan barcode</span>
+    </div>
+    <div class="bc-video-wrap">
+      <video id="bcScanVideo" autoplay playsinline muted></video>
+      <div class="bc-viewfinder"></div>
+    </div>
+    <div class="bc-status" id="bcStatus">Requesting camera…</div>
+    <div class="bc-manual">
+      <input id="bcManualInput" placeholder="Or type the number" inputmode="numeric" onkeydown="if(event.key==='Enter'){event.preventDefault();useManualBarcode();}">
+      <button type="button" onclick="useManualBarcode()">Use</button>
     </div>
   </div>
 </div>
