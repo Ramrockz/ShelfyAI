@@ -2177,7 +2177,18 @@ let activeStockFilter = 'all'; // 'all' | 'out' | 'low' | 'expiring'
 const EXPIRING_SOON_DAYS = 30;
 function getExpiryState(expirationDate) {
   if (!expirationDate) return '';
-  const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
+  // new Date('2026-08-09') parses as UTC midnight, but new Date().toDateString()
+  // (the old "today" here) builds LOCAL midnight -- for any timezone ahead of
+  // UTC (e.g. Germany), local midnight is later than UTC midnight of the same
+  // calendar date, which was shifting the day count toward 0 by up to a full
+  // day and misclassifying an already-expired item as merely "expiring".
+  // Building both sides as local-midnight Dates from the same y/m/d avoids
+  // the UTC/local mismatch entirely.
+  const [y, m, d] = expirationDate.slice(0, 10).split('-').map(Number);
+  const exp = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((exp - today) / 86400000);
   if (days < 0) return 'expired';
   if (days <= EXPIRING_SOON_DAYS) return 'expiring';
   return '';

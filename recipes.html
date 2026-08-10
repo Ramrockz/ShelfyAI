@@ -1899,8 +1899,15 @@ function hideUndoToast() {
 // either way. Only "expired" blocks; "expiring soon" is informational.
 function isIngredientExpired(expirationDate) {
   if (!expirationDate) return false;
-  const days = Math.ceil((new Date(expirationDate) - new Date(new Date().toDateString())) / 86400000);
-  return days < 0;
+  // See ingredients.html's getExpiryState() for why: mixing a UTC-parsed
+  // date-only string with a local-midnight "today" shifts the day count by
+  // up to a day for any timezone ahead of UTC, sometimes hiding an
+  // already-expired ingredient.
+  const [y, m, d] = expirationDate.slice(0, 10).split('-').map(Number);
+  const exp = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return exp < today;
 }
 
 function checkRecipeAvailability(recipe) {
