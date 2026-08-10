@@ -673,10 +673,10 @@
     .schip.active { background: var(--text-main); color: var(--bg-panel); border-color: var(--text-main); }
     .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; }
     .schip-icon.active { background: rgba(6,182,212,.11); color: #0e7490; border-color: rgba(6,182,212,.4); }
-    .schip-out i, .schip-low i, .schip-expiring i { width: 6px; height: 6px; border-radius: 50%; }
-    .schip-out i { background: var(--danger); }
+    .schip-out i, .schip-low i, .schip-expired i, .schip-expiring i { width: 6px; height: 6px; border-radius: 50%; }
+    .schip-out i, .schip-expired i { background: var(--danger); }
     .schip-low i, .schip-expiring i { background: var(--warning); }
-    .schip-out.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
+    .schip-out.active, .schip-expired.active { background: rgba(239,68,68,.12); color: #b91c1c; border-color: rgba(239,68,68,.45); }
     .schip-low.active, .schip-expiring.active { background: rgba(245,158,11,.14); color: #a16207; border-color: rgba(245,158,11,.45); }
   }
   .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
@@ -1103,6 +1103,7 @@
       <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
       <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
       <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
+      <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
       <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
       <span style="flex:1"></span>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
@@ -2156,18 +2157,23 @@ function updateStockChipCounts() {
   const q = i => i.qty ?? i.quantity;
   const out = ingredients.filter(i => q(i) === 0).length;
   const low = ingredients.filter(i => { const v = q(i); return v > 0 && i.min_stock > 0 && v < i.min_stock; }).length;
-  const expiring = ingredients.filter(i => getExpiryState(i.expiration_date)).length;
+  const expired = ingredients.filter(i => getExpiryState(i.expiration_date) === 'expired').length;
+  const expiring = ingredients.filter(i => getExpiryState(i.expiration_date) === 'expiring').length;
   const allEl = document.getElementById('chipAllN');
   const outEl = document.getElementById('chipOutN');
   const lowEl = document.getElementById('chipLowN');
+  const expiredEl = document.getElementById('chipExpiredN');
+  const expiredChip = document.getElementById('chipExpired');
   const expiringEl = document.getElementById('chipExpiringN');
   const expiringChip = document.getElementById('chipExpiring');
   if (allEl) allEl.textContent = ingredients.length;
   if (outEl) outEl.textContent = out;
   if (lowEl) lowEl.textContent = low;
+  if (expiredEl) expiredEl.textContent = expired;
   if (expiringEl) expiringEl.textContent = expiring;
-  // Only show the chip once someone's actually using expiration dates --
+  // Only show a chip once someone's actually using expiration dates --
   // most businesses never will, and a permanently-zero chip is just clutter.
+  if (expiredChip) expiredChip.style.display = expired > 0 ? '' : 'none';
   if (expiringChip) expiringChip.style.display = expiring > 0 ? '' : 'none';
 }
 
@@ -2791,13 +2797,14 @@ function render() {
       return false;
     }
 
-    // Apply stock-status chip (All / Out / Low / Expiring)
+    // Apply stock-status chip (All / Out / Low / Expired / Expiring)
     if (activeStockFilter === 'out' || activeStockFilter === 'low') {
       const q = i.qty ?? i.quantity;
       if (activeStockFilter === 'out' && q !== 0) return false;
       if (activeStockFilter === 'low' && !(q > 0 && i.min_stock > 0 && q < i.min_stock)) return false;
     }
-    if (activeStockFilter === 'expiring' && !getExpiryState(i.expiration_date)) return false;
+    if (activeStockFilter === 'expired' && getExpiryState(i.expiration_date) !== 'expired') return false;
+    if (activeStockFilter === 'expiring' && getExpiryState(i.expiration_date) !== 'expiring') return false;
 
     // Apply mobile attribute value subfilters — OR within the same key, AND between keys.
     // e.g. (Size=L OR Size=M) AND (Color=Black OR Color=Blue)
