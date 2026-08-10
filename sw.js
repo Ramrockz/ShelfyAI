@@ -78,7 +78,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title || 'ShelfyAI', {
       body: data.body || '',
       icon: '/apple-touch-icon-180.png',
-      badge: '/favicon-32.png',
+      badge: '/badge-96.png',
       data: { url: data.url || '/ingredients' }
     })
   );

@@ -1,7 +1,7 @@
 // Triggered daily by Vercel Cron (see vercel.json). Finds ingredients whose
-// expiration_date has passed and hasn't been alerted yet, creates the
-// matching in-app notification, and pushes to every subscribed device via
-// Web Push. Each ingredient is only ever processed once -- see
+// expiration_date is today or earlier and hasn't been alerted yet, creates
+// the matching in-app notification, and pushes to every subscribed device
+// via Web Push. Each ingredient is only ever processed once -- see
 // expiry_alert_sent_at on the ingredients table.
 const { createClient } = require('@supabase/supabase-js');
 const webPush = require('web-push');
@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
     const { data: expired, error: fetchError } = await supabase
       .from('ingredients')
       .select('id, name, profile_id')
-      .lt('expiration_date', today)
+      .lte('expiration_date', today)
       .is('expiry_alert_sent_at', null);
     if (fetchError) throw fetchError;
 
