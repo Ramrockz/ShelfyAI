@@ -927,10 +927,17 @@
   @media (max-width: 480px) {
     .sidebar { padding: 16px 12px; }
     .main { padding: 20px 12px; }
-    
-    /* Single column cards on very small screens */
+
+    /* Single column cards on very small screens. .recent-grid's edge-to-edge
+       bleed (margin: 0 -16px, set at the 768px breakpoint) matched .main's
+       padding there, but .main's horizontal padding shrinks to 12px at this
+       breakpoint -- the mismatch left every row (and the qty stepper at its
+       right end) extending 4px past the actual screen edge on both sides,
+       clipping the stepper's trailing button on most phones (nearly all of
+       which are <=480px wide). */
     .recent-grid {
       grid-template-columns: 1fr;
+      margin: 0 -12px;
     }
     
     .compact-grid {
