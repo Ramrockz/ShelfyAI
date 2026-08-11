@@ -677,19 +677,7 @@
   /* Mobile status chips + category sheet */
   .status-chips { display: none; }
   @media (max-width: 768px) {
-    /* Swipeable strip -- now up to 5 chips plus the category icon, too many
-       to reliably fit on one row on a phone. Same proven pattern as
-       .ic-units elsewhere in this file: the row itself scrolls (not a
-       nested flex:1 sub-container -- that needed .status-chips to have a
-       constrained width to force the inner container to clip/scroll, which
-       it didn't have, so nothing actually scrolled and .schip-icon just
-       ended up squeezed off along with everything else). */
-    .status-chips {
-      display: flex; gap: 7px; align-items: center; margin-bottom: 10px;
-      overflow-x: auto; -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; -ms-overflow-style: none;
-    }
-    .status-chips::-webkit-scrollbar { display: none; }
+    .status-chips { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
     .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
              border-radius: 99px; border: 1px solid var(--border); background: var(--bg-panel);
              color: var(--text-muted); font: 700 12.5px inherit; font-family: inherit;
@@ -927,17 +915,10 @@
   @media (max-width: 480px) {
     .sidebar { padding: 16px 12px; }
     .main { padding: 20px 12px; }
-
-    /* Single column cards on very small screens. .recent-grid's edge-to-edge
-       bleed (margin: 0 -16px, set at the 768px breakpoint) matched .main's
-       padding there, but .main's horizontal padding shrinks to 12px at this
-       breakpoint -- the mismatch left every row (and the qty stepper at its
-       right end) extending 4px past the actual screen edge on both sides,
-       clipping the stepper's trailing button on most phones (nearly all of
-       which are <=480px wide). */
+    
+    /* Single column cards on very small screens */
     .recent-grid {
       grid-template-columns: 1fr;
-      margin: 0 -12px;
     }
     
     .compact-grid {
@@ -1143,6 +1124,7 @@
       <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
       <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
       <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
+      <span style="flex:1"></span>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       </button>
