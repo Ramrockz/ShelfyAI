@@ -678,12 +678,27 @@
   .status-chips { display: none; }
   @media (max-width: 768px) {
     .status-chips { display: flex; gap: 7px; align-items: center; margin-bottom: 10px; }
+    /* The chip strip scrolls; the category icon stays put as a sibling
+       outside it. flex:1 1 0% + min-width:0 is required for a flex child to
+       be allowed to shrink below its content width -- without min-width:0
+       a flex item's default min-width is its content size, which defeats
+       overflow-x:auto entirely (the classic flexbox-scroll gotcha). Also
+       draggable with the mouse (not just touch), since testing this in a
+       resized desktop browser / devtools device frame doesn't send touch
+       events for a click-drag the way a real phone does. */
+    .schip-scroll {
+      display: flex; gap: 7px; flex: 1 1 0%; min-width: 0;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; -ms-overflow-style: none; cursor: grab;
+    }
+    .schip-scroll::-webkit-scrollbar { display: none; }
+    .schip-scroll.dragging { cursor: grabbing; }
     .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
              border-radius: 99px; border: 1px solid var(--border); background: var(--bg-panel);
              color: var(--text-muted); font: 700 12.5px inherit; font-family: inherit;
              cursor: pointer; flex-shrink: 0; }
     .schip.active { background: var(--text-main); color: var(--bg-panel); border-color: var(--text-main); }
-    .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; }
+    .schip-icon { padding: 0 10px; min-width: 34px; justify-content: center; flex-shrink: 0; }
     .schip-icon.active { background: rgba(6,182,212,.11); color: #0e7490; border-color: rgba(6,182,212,.4); }
     .schip-out i, .schip-low i, .schip-expired i, .schip-expiring i { width: 6px; height: 6px; border-radius: 50%; }
     .schip-out i, .schip-expired i { background: var(--danger); }
@@ -1119,12 +1134,13 @@
   <main class="main" style="visibility: hidden;">
     <!-- Mobile status chips + category sheet trigger -->
     <div class="status-chips">
-      <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
-      <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
-      <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
-      <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
-      <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
-      <span style="flex:1"></span>
+      <div class="schip-scroll" id="schipScroll">
+        <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
+        <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
+        <button class="schip schip-low" data-stock="low" onclick="filterByStock('low')"><i></i>Low <span id="chipLowN">0</span></button>
+        <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
+        <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
+      </div>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       </button>
@@ -4504,6 +4520,37 @@ window.onclick = (e) => {
   // Any scroll closes the open row
   window.addEventListener('scroll', () => close(), { passive: true });
   list.addEventListener('scroll',   () => close(), { passive: true });
+})();
+
+// ---------- Status-chip strip: mouse-drag scroll ----------
+// overflow-x:auto already scrolls on real touch/trackpad input, but a
+// plain mouse click-drag (the only way to "swipe" when testing in a
+// resized desktop browser window or a devtools device frame, neither of
+// which dispatch touch events) doesn't scroll a div by default -- only
+// dragging a visible scrollbar does, and this one's hidden. Mirrors the
+// noClickUntil pattern above: swallow the click that would otherwise fire
+// on mouseup after a real drag, so dragging past a chip doesn't also
+// trigger its filter.
+(function () {
+  const el = document.getElementById('schipScroll');
+  if (!el) return;
+  let down = false, dragging = false, startX = 0, startScroll = 0, noClickUntil = 0;
+  el.addEventListener('mousedown', (e) => {
+    down = true; dragging = false; startX = e.pageX; startScroll = el.scrollLeft;
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!down) return;
+    const dx = e.pageX - startX;
+    if (!dragging && Math.abs(dx) > 4) { dragging = true; el.classList.add('dragging'); }
+    if (dragging) { e.preventDefault(); el.scrollLeft = startScroll - dx; }
+  });
+  window.addEventListener('mouseup', () => {
+    if (dragging) noClickUntil = Date.now() + 50;
+    down = false; dragging = false; el.classList.remove('dragging');
+  });
+  el.addEventListener('click', (e) => {
+    if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
 })();
 
 // ---------- Soft delete with undo ----------
