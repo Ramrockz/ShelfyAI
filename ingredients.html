@@ -693,6 +693,16 @@
     }
     .schip-scroll::-webkit-scrollbar { display: none; }
     .schip-scroll.dragging { cursor: grabbing; }
+    /* Tap-to-scroll arrows -- shown only when the strip actually overflows
+       (see updateSchipNav() in JS), and only the direction that still has
+       something to reveal. A tap can't fail to register the way a swipe
+       gesture apparently can in some environments, so this is the
+       guaranteed-to-work fallback, not just a nice-to-have. */
+    .schip-nav {
+      flex-shrink: 0; width: 22px; height: 34px; border: none; background: none;
+      color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+      padding: 0; cursor: pointer;
+    }
     .schip { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px;
              border-radius: 99px; border: 1px solid var(--border); background: var(--bg-panel);
              color: var(--text-muted); font: 700 12.5px inherit; font-family: inherit;
@@ -931,9 +941,15 @@
     .sidebar { padding: 16px 12px; }
     .main { padding: 20px 12px; }
     
-    /* Single column cards on very small screens */
+    /* Single column cards on very small screens. .recent-grid's edge-to-edge
+       bleed (margin: 0 -16px, set at the 768px breakpoint) matches .main's
+       padding there, but .main's horizontal padding shrinks to 12px at this
+       breakpoint -- without a matching adjustment here, every row (and the
+       qty stepper at its right end) extends 4px past the actual screen edge
+       on both sides, clipping the stepper's trailing button. */
     .recent-grid {
       grid-template-columns: 1fr;
+      margin: 0 -12px;
     }
     
     .compact-grid {
@@ -1134,6 +1150,9 @@
   <main class="main" style="visibility: hidden;">
     <!-- Mobile status chips + category sheet trigger -->
     <div class="status-chips">
+      <button class="schip-nav schip-nav-prev" id="schipNavPrev" onclick="document.getElementById('schipScroll').scrollBy({left:-120,behavior:'smooth'})" aria-label="Scroll filters left" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <div class="schip-scroll" id="schipScroll">
         <button class="schip active" data-stock="all" onclick="filterByStock('all')">All <span id="chipAllN">0</span></button>
         <button class="schip schip-out" data-stock="out" onclick="filterByStock('out')"><i></i>Out <span id="chipOutN">0</span></button>
@@ -1141,6 +1160,9 @@
         <button class="schip schip-expired" data-stock="expired" id="chipExpired" style="display:none;" onclick="filterByStock('expired')"><i></i>Expired <span id="chipExpiredN">0</span></button>
         <button class="schip schip-expiring" data-stock="expiring" id="chipExpiring" style="display:none;" onclick="filterByStock('expiring')"><i></i>Expiring <span id="chipExpiringN">0</span></button>
       </div>
+      <button class="schip-nav schip-nav-next" id="schipNavNext" onclick="document.getElementById('schipScroll').scrollBy({left:120,behavior:'smooth'})" aria-label="Scroll filters right" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
       <button class="schip schip-icon" id="catSheetBtn" onclick="openCatSheet()" aria-label="Filter by category">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
       </button>
@@ -2248,7 +2270,29 @@ function updateStockChipCounts() {
   // most businesses never will, and a permanently-zero chip is just clutter.
   if (expiredChip) expiredChip.style.display = expired > 0 ? '' : 'none';
   if (expiringChip) expiringChip.style.display = expiring > 0 ? '' : 'none';
+  updateSchipNav();
 }
+
+// Shows/hides the tap-to-scroll arrows around #schipScroll -- only the
+// direction that still has something to reveal, and only when the strip
+// actually overflows its box (so nothing shows on wider phones where all
+// chips already fit). Re-run after the chip set changes (a chip appearing/
+// disappearing can flip whether it overflows at all) and on scroll/resize.
+function updateSchipNav() {
+  const el = document.getElementById('schipScroll');
+  const prev = document.getElementById('schipNavPrev');
+  const next = document.getElementById('schipNavNext');
+  if (!el || !prev || !next) return;
+  const overflowing = el.scrollWidth > el.clientWidth + 1;
+  prev.style.display = overflowing && el.scrollLeft > 4 ? 'flex' : 'none';
+  next.style.display = overflowing && el.scrollLeft < el.scrollWidth - el.clientWidth - 4 ? 'flex' : 'none';
+}
+(function () {
+  const el = document.getElementById('schipScroll');
+  if (!el) return;
+  el.addEventListener('scroll', updateSchipNav, { passive: true });
+  window.addEventListener('resize', updateSchipNav);
+})();
 
 function _renderAttrSubfilters(cat) {
   // Build a map grouped by attribute key: { "color": ["Red", "Blue"], "size": ["S", "M", "L"] }
