@@ -130,10 +130,11 @@
         '</div>' +
         '<div id="uimNormalBody">' +
           '<div class="uim-field-wrap">' +
-            '<div class="uim-url" id="uimUrlBox">' + ICON_LINK +
+            '<div class="uim-url" id="uimUrlBox"><span id="uimUrlIcon">' + ICON_LINK + '</span>' +
               '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
               '<button type="button" id="uimUrlBtn">Paste</button>' +
             '</div>' +
+            '<div class="uim-field-hint" id="uimFieldHint" style="display:none;"></div>' +
           '</div>' +
           '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
             '<span id="uimErrorText"></span>' +
@@ -211,7 +212,24 @@
     var btn = document.getElementById('uimUrlBtn');
     if (!raw) { btn.className = ''; btn.textContent = 'Paste'; }
     else { btn.className = 'x'; btn.innerHTML = ICON_X; }
-    document.getElementById('uimUrlBox').dataset.state = l && l.bad ? 'bad' : '';
+    var ok = usable() && !running;
+    document.getElementById('uimUrlBox').dataset.state = l && l.bad ? 'bad' : (ok ? 'ok' : '');
+    var icon = document.getElementById('uimUrlIcon');
+    if (icon) icon.innerHTML = ok ? ICON_CHECK_SM : ICON_LINK;
+    // The field alone doesn't make it obvious the paste registered or what
+    // to do next -- a valid link only otherwise shows up as a subtle border
+    // color and a hostname buried in the footer tally below the scan-cost
+    // section, which is easy to miss (see user report: "not clear the
+    // pasting worked and how to proceed").
+    var hint = document.getElementById('uimFieldHint');
+    if (hint) {
+      if (ok) {
+        hint.style.display = 'flex';
+        hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Read this page” below to continue</span>';
+      } else {
+        hint.style.display = 'none';
+      }
+    }
   }
 
   function renderWork() {
