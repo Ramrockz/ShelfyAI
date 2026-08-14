@@ -1,10 +1,15 @@
-// Triggered daily by Vercel Cron (see vercel.json). Finds ingredients whose
-// expiration_date is today or earlier and hasn't been alerted yet, creates
-// the matching in-app notification, and pushes to every subscribed device
-// via Web Push. Each ingredient is only ever processed once -- see
-// expiry_alert_sent_at on the ingredients table.
+// Triggered daily by Vercel Cron (see vercel.json). Handles two one-time
+// alerts per ingredient:
+//   1. "expired" -- expiration_date is today or earlier, see
+//      expiry_alert_sent_at on the ingredients table.
+//   2. "expiring soon" -- expiration_date is within the next 7 days (but not
+//      yet expired, to avoid double-alerting the same day #1 fires), see
+//      expiry_soon_alert_sent_at on the ingredients table.
+// Both create an in-app notification and push to every subscribed device.
 const { createClient } = require('@supabase/supabase-js');
 const webPush = require('web-push');
+
+const EXPIRING_SOON_DAYS = 7;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,93 +22,146 @@ webPush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
+async function notifyUsers(supabase, itemsByUser, settingsColumn, buildMessage, pushTitle) {
+  let usersNotified = 0;
+
+  for (const [userId, items] of itemsByUser) {
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select(`notifications_enabled, ${settingsColumn}`)
+      .eq('user_id', userId)
+      .single();
+
+    const notifyEnabled = settings
+      ? settings.notifications_enabled !== false && settings[settingsColumn] !== false
+      : true;
+
+    if (!notifyEnabled) continue;
+
+    const { error: insertError } = await supabase.from('notifications').insert(
+      items.map((ing) => ({
+        profile_id: userId,
+        type: ing._notificationType,
+        ingredient_id: ing.id,
+        message: buildMessage(ing),
+        is_read: false
+      }))
+    );
+    if (insertError) console.error('Error inserting notifications:', insertError);
+
+    const { data: subscriptions } = await supabase
+      .from('push_subscriptions')
+      .select('id, endpoint, p256dh, auth_key')
+      .eq('user_id', userId);
+
+    if (subscriptions && subscriptions.length) {
+      const title = pushTitle(items.length);
+      const body = items.map((i) => i.name).slice(0, 5).join(', ') + (items.length > 5 ? ', …' : '');
+      const payload = JSON.stringify({ title, body, url: '/ingredients' });
+
+      for (const sub of subscriptions) {
+        try {
+          await webPush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+            payload
+          );
+        } catch (pushError) {
+          if (pushError.statusCode === 404 || pushError.statusCode === 410) {
+            await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          } else {
+            console.error('Error sending push notification:', pushError);
+          }
+        }
+      }
+    }
+
+    usersNotified++;
+  }
+
+  return usersNotified;
+}
+
+function groupByUser(items) {
+  const byUser = new Map();
+  for (const ing of items) {
+    if (!byUser.has(ing.profile_id)) byUser.set(ing.profile_id, []);
+    byUser.get(ing.profile_id).push(ing);
+  }
+  return byUser;
+}
+
 module.exports = async (req, res) => {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const soonCutoff = new Date(now);
+    soonCutoff.setDate(soonCutoff.getDate() + EXPIRING_SOON_DAYS);
+    const soonCutoffStr = soonCutoff.toISOString().split('T')[0];
 
-    const { data: expired, error: fetchError } = await supabase
-      .from('ingredients')
-      .select('id, name, profile_id')
-      .lte('expiration_date', today)
-      .is('expiry_alert_sent_at', null);
-    if (fetchError) throw fetchError;
-
-    if (!expired || expired.length === 0) {
-      return res.status(200).json({ processed: 0, usersNotified: 0 });
-    }
-
-    const byUser = new Map();
-    for (const ing of expired) {
-      if (!byUser.has(ing.profile_id)) byUser.set(ing.profile_id, []);
-      byUser.get(ing.profile_id).push(ing);
-    }
+    const [{ data: expired, error: expiredError }, { data: expiringSoon, error: soonError }] = await Promise.all([
+      supabase
+        .from('ingredients')
+        .select('id, name, profile_id')
+        .lte('expiration_date', today)
+        .is('expiry_alert_sent_at', null),
+      supabase
+        .from('ingredients')
+        .select('id, name, profile_id, expiration_date')
+        .gt('expiration_date', today)
+        .lte('expiration_date', soonCutoffStr)
+        .is('expiry_soon_alert_sent_at', null)
+    ]);
+    if (expiredError) throw expiredError;
+    if (soonError) throw soonError;
 
     let usersNotified = 0;
 
-    for (const [userId, items] of byUser) {
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('notifications_enabled, expired_item_notifications')
-        .eq('user_id', userId)
-        .single();
+    if (expired && expired.length) {
+      expired.forEach((ing) => { ing._notificationType = 'ingredient_expired'; });
+      usersNotified += await notifyUsers(
+        supabase,
+        groupByUser(expired),
+        'expired_item_notifications',
+        (ing) => `${ing.name} has expired`,
+        (count) => (count === 1 ? '1 item expired' : `${count} items expired`)
+      );
 
-      const notifyEnabled = settings
-        ? settings.notifications_enabled !== false && settings.expired_item_notifications !== false
-        : true;
-
-      if (notifyEnabled) {
-        const { error: insertError } = await supabase.from('notifications').insert(
-          items.map((ing) => ({
-            profile_id: userId,
-            type: 'ingredient_expired',
-            ingredient_id: ing.id,
-            message: `${ing.name} has expired`,
-            is_read: false
-          }))
-        );
-        if (insertError) console.error('Error inserting expiry notifications:', insertError);
-
-        const { data: subscriptions } = await supabase
-          .from('push_subscriptions')
-          .select('id, endpoint, p256dh, auth_key')
-          .eq('user_id', userId);
-
-        if (subscriptions && subscriptions.length) {
-          const title = items.length === 1 ? '1 item expired' : `${items.length} items expired`;
-          const body = items.map((i) => i.name).slice(0, 5).join(', ') + (items.length > 5 ? ', …' : '');
-          const payload = JSON.stringify({ title, body, url: '/ingredients' });
-
-          for (const sub of subscriptions) {
-            try {
-              await webPush.sendNotification(
-                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-                payload
-              );
-            } catch (pushError) {
-              if (pushError.statusCode === 404 || pushError.statusCode === 410) {
-                await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-              } else {
-                console.error('Error sending push notification:', pushError);
-              }
-            }
-          }
-        }
-
-        usersNotified++;
-      }
+      const { error: markError } = await supabase
+        .from('ingredients')
+        .update({ expiry_alert_sent_at: new Date().toISOString() })
+        .in('id', expired.map((ing) => ing.id));
+      if (markError) console.error('Error marking ingredients as alerted:', markError);
     }
 
-    const { error: markError } = await supabase
-      .from('ingredients')
-      .update({ expiry_alert_sent_at: new Date().toISOString() })
-      .in('id', expired.map((ing) => ing.id));
-    if (markError) console.error('Error marking ingredients as alerted:', markError);
+    if (expiringSoon && expiringSoon.length) {
+      expiringSoon.forEach((ing) => { ing._notificationType = 'ingredient_expiring_soon'; });
+      usersNotified += await notifyUsers(
+        supabase,
+        groupByUser(expiringSoon),
+        'expiring_soon_notifications',
+        (ing) => {
+          const days = Math.round((new Date(`${ing.expiration_date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000);
+          return `${ing.name} expires in ${days} day${days === 1 ? '' : 's'}`;
+        },
+        (count) => (count === 1 ? '1 item expiring soon' : `${count} items expiring soon`)
+      );
 
-    return res.status(200).json({ processed: expired.length, usersNotified });
+      const { error: markSoonError } = await supabase
+        .from('ingredients')
+        .update({ expiry_soon_alert_sent_at: new Date().toISOString() })
+        .in('id', expiringSoon.map((ing) => ing.id));
+      if (markSoonError) console.error('Error marking ingredients as soon-alerted:', markSoonError);
+    }
+
+    return res.status(200).json({
+      processedExpired: expired ? expired.length : 0,
+      processedExpiringSoon: expiringSoon ? expiringSoon.length : 0,
+      usersNotified
+    });
   } catch (error) {
     console.error('Error in send-expiry-notifications:', error);
     return res.status(500).json({ error: error.message });

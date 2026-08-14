@@ -1400,7 +1400,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span class="ro-titles">
-        <span class="ro-title">Place reorder</span>
+        <span class="ro-title">Mark to reorder</span>
         <span class="ro-sub" id="roSub"></span>
       </span>
     </div>
@@ -1456,7 +1456,7 @@
       <span class="ro-tally-r" id="roTotal">$0.00</span>
     </div>
     <div id="roWarn"></div>
-    <button class="ro-cont" id="roCont" onclick="placeReorder()">Place reorder</button>
+    <button class="ro-cont" id="roCont" onclick="placeReorder()">Mark to reorder</button>
   </div>
   </div>
 
@@ -2761,11 +2761,13 @@
       alert_disabled: !!document.getElementById('alert_disabled')?.checked
     };
 
-    // Editing the expiration date re-arms the one-time "item expired" alert
-    // (see api/send-expiry-notifications.js) -- without this, fixing/extending
-    // a date on an already-alerted item would stay silent forever.
+    // Editing the expiration date re-arms the one-time "item expired" and
+    // "expiring soon" alerts (see api/send-expiry-notifications.js) --
+    // without this, fixing/extending a date on an already-alerted item
+    // would stay silent forever.
     if (updateData.expiration_date !== (currentIngredient.expiration_date || null)) {
       updateData.expiry_alert_sent_at = null;
+      updateData.expiry_soon_alert_sent_at = null;
     }
 
     try {

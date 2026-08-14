@@ -1818,6 +1818,7 @@ function applyReceiptScanToManualModal(data) {
     `;
     container.appendChild(row);
   }
+  onIngredientEdit();
 }
 
 function startIngredientUpload() {
@@ -1883,6 +1884,7 @@ function applyUrlScanToManualModal(data) {
     `;
     container.appendChild(row);
   }
+  onIngredientEdit();
 }
 
 function startIngredientUrlImport() {
@@ -2234,7 +2236,7 @@ function getExpiryState(expirationDate) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.round((exp - today) / 86400000);
-  if (days < 0) return 'expired';
+  if (days <= 0) return 'expired';
   if (days <= EXPIRING_SOON_DAYS) return 'expiring';
   return '';
 }
