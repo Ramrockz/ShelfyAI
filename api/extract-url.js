@@ -145,7 +145,17 @@ module.exports = async (req, res) => {
         },
         body: JSON.stringify({
           url: url,
-          query: extractionQuery
+          query: extractionQuery,
+          // Defaults are wait_for: 0 / mode: 'fast' / browser_profile: 'light',
+          // which query the raw HTML before JS runs -- many supplier sites (e.g.
+          // Vue/React storefronts) render title/price client-side only, so the
+          // default settings see an empty shell and report "no title or price
+          // found" even though the page has a real product on it.
+          params: {
+            wait_for: 5,
+            mode: 'standard',
+            browser_profile: 'stealth'
+          }
         }),
         signal: AbortSignal.timeout(AGENTQL_TIMEOUT_MS)
       });
