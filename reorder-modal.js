@@ -17,6 +17,9 @@ let _roSupplierId = null;   // selected ingredient_suppliers.id
 let _roAlsoList = [];       // other low/out ingredients sharing the selected supplier
 let _roPicked = {};         // otherIngredientId -> qty, for "ship together"
 let _roOnPlaced = null;
+let _roEditingSupplierId = null; // ingredient_suppliers.id currently being edited via the new-supplier form, or null when the form is adding a brand new one
+
+const RO_ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>';
 
 async function openReorderModal(ingredientId, { onPlaced } = {}) {
   const screen = document.getElementById('roScreen');
@@ -289,17 +292,19 @@ function openRoSupplierSheet() {
   const fastest = _roSuppliers.length ? _roSuppliers.reduce((a, b) => (b.lead && (!a.lead || b.lead < a.lead) ? b : a)) : null;
   document.getElementById('roSupList').innerHTML = _roSuppliers.map(s => {
     const tag = s.id === cheapest?.id ? 'cheapest' : s.id === fastest?.id ? 'fastest' : '';
-    return `<button class="ro-sup-opt" aria-selected="${s.id === _roSupplierId}" onclick="pickRoSupplier('${s.id}')">
-      <span class="ro-drow-label">
-        <span class="ro-drow-name">${escapeHtml(s.name)}</span>
-        <span class="ro-drow-meta">$${s.price.toFixed(2)} each${s.lead ? ` · ~${s.lead} days` : ''}${s.moq ? ` · $${s.moq.toFixed(2)} min` : ''}</span>
-      </span>
-      ${tag ? `<span class="ro-drow-tag">${tag}</span>` : ''}
-      ${s.id === _roSupplierId ? '<svg class="ro-sup-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-    </button>`;
+    return `<div class="ro-sup-row">
+      <button class="ro-sup-opt" aria-selected="${s.id === _roSupplierId}" onclick="pickRoSupplier('${s.id}')">
+        <span class="ro-drow-label">
+          <span class="ro-drow-name">${escapeHtml(s.name)}</span>
+          <span class="ro-drow-meta">$${s.price.toFixed(2)} each${s.lead ? ` · ~${s.lead} days` : ''}${s.moq ? ` · $${s.moq.toFixed(2)} min` : ''}</span>
+        </span>
+        ${tag ? `<span class="ro-drow-tag">${tag}</span>` : ''}
+        ${s.id === _roSupplierId ? '<svg class="ro-sup-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </button>
+      <button class="ro-sup-edit" aria-label="Edit ${escapeHtml(s.name)}" onclick="editRoSupplier('${s.id}')">${RO_ICON_EDIT}</button>
+    </div>`;
   }).join('');
-  document.getElementById('roNewSupplierForm').style.display = 'none';
-  document.getElementById('roNewSupplierToggle').textContent = 'New supplier';
+  clearRoSupplierForm();
   document.getElementById('roSupSheet').classList.add('active');
 }
 function closeRoSupplierSheet() { document.getElementById('roSupSheet').classList.remove('active'); }
@@ -309,12 +314,44 @@ function pickRoSupplier(id) {
   closeRoSupplierSheet();
   loadRoAlso().then(roRenderAll);
 }
+
+// Resets the new/edit-supplier form to its closed, blank "add new" state --
+// shared by opening the sheet fresh and by toggling the form closed, so
+// edit mode never leaks into a subsequent "New supplier" tap.
+function clearRoSupplierForm() {
+  _roEditingSupplierId = null;
+  document.getElementById('roNewSupplierForm').style.display = 'none';
+  document.getElementById('roNewSupplierToggle').textContent = 'New supplier';
+  document.getElementById('roNewSupName').value = '';
+  document.getElementById('roNewSupPrice').value = '';
+  document.getElementById('roNewSupLead').value = '';
+  document.getElementById('roNewSupMoq').value = '';
+  document.getElementById('roNewSupSaveBtn').textContent = 'Save supplier';
+}
 function toggleNewSupplierForm() {
   const form = document.getElementById('roNewSupplierForm');
   const isOpen = form.style.display !== 'none';
-  form.style.display = isOpen ? 'none' : 'flex';
-  document.getElementById('roNewSupplierToggle').textContent = isOpen ? 'New supplier' : 'Cancel';
+  if (isOpen) { clearRoSupplierForm(); return; }
+  form.style.display = 'flex';
+  document.getElementById('roNewSupplierToggle').textContent = 'Cancel';
 }
+
+// Reuses the same form as "New supplier" -- prefilled with this supplier's
+// current price/lead time/minimum order, since there was previously no way
+// back into these values once a supplier existed (only set at creation).
+function editRoSupplier(id) {
+  const s = _roSuppliers.find(x => x.id === id);
+  if (!s) return;
+  _roEditingSupplierId = id;
+  document.getElementById('roNewSupName').value = s.name || '';
+  document.getElementById('roNewSupPrice').value = s.price || '';
+  document.getElementById('roNewSupLead').value = s.lead || '';
+  document.getElementById('roNewSupMoq').value = s.moq || '';
+  document.getElementById('roNewSupplierForm').style.display = 'flex';
+  document.getElementById('roNewSupplierToggle').textContent = 'Cancel';
+  document.getElementById('roNewSupSaveBtn').textContent = 'Save changes';
+}
+
 async function saveNewSupplier() {
   const name = document.getElementById('roNewSupName').value.trim();
   if (!name) { showAlert('Supplier name is required'); return; }
@@ -324,6 +361,28 @@ async function saveNewSupplier() {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
+
+    if (_roEditingSupplierId) {
+      const editing = _roSuppliers.find(x => x.id === _roEditingSupplierId);
+      if (!editing) return;
+      if (name !== editing.name) {
+        const { error: nameErr } = await supabaseClient
+          .from('suppliers').update({ name }).eq('id', editing.supplierId);
+        if (nameErr) throw nameErr;
+      }
+      const { error: updErr } = await supabaseClient
+        .from('ingredient_suppliers')
+        .update({ price, lead_time_days: lead, moq })
+        .eq('id', editing.id);
+      if (updErr) throw updErr;
+
+      await loadRoSuppliers();
+      closeRoSupplierSheet();
+      await loadRoAlso();
+      roRenderAll();
+      return;
+    }
+
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
     const supplierRow = { profile_id: user.id, name };
     if (storeId) supplierRow.store_id = storeId;
