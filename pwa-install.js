@@ -23,7 +23,13 @@
     '#pwa-banner .pwa-install-btn{background:var(--accent,#06b6d4);color:#fff;border:none;',
     'border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}',
     '#pwa-banner .pwa-close{background:none;border:none;color:var(--text-muted,#64748b);',
-    'font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;}'
+    'font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;}',
+    '#pwa-banner.pwa-expanded{align-items:flex-start;padding:16px;}',
+    '#pwa-banner .pwa-steps{flex:1;min-width:0;}',
+    '#pwa-banner .pwa-steps-title{font-weight:700;font-size:14px;color:var(--text-main,#0f172a);margin-bottom:8px;}',
+    '#pwa-banner .pwa-steps-list{margin:0;padding-left:20px;font-size:13px;color:var(--text-main,#0f172a);line-height:1.6;}',
+    '#pwa-banner .pwa-steps-list li{margin-bottom:4px;}',
+    '#pwa-banner .pwa-share-icon{display:inline-flex;vertical-align:-3px;margin:0 2px;color:var(--accent,#06b6d4);}'
   ].join('');
   document.head.appendChild(style);
 
@@ -66,18 +72,38 @@
       document.body.appendChild(banner);
     });
   } else if (isIOS) {
-    // iOS: show manual instructions (no API available)
+    // iOS: Safari has no installation API to trigger -- "How?" used to just
+    // bold the one-line hint already visible in the banner, which read as
+    // "nothing happened" when tapped (see user report). It now expands into
+    // real numbered steps with the actual Safari share-icon glyph instead of
+    // a generic emoji, so someone unfamiliar with the icon can find it.
+    var SHARE_ICON = '<svg viewBox="0 0 24 24" width="15" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>';
+
     window.addEventListener('DOMContentLoaded', function () {
       var banner = createBanner(
-        'Tap \u{1F4E4} Share → "Add to Home Screen"',
+        'Tap the Share icon, then "Add to Home Screen"',
         'How?',
-        function () {
-          // Show the subtitle more prominently
-          var sub = document.querySelector('#pwa-banner .pwa-sub');
-          if (sub) { sub.style.fontWeight = '700'; sub.style.color = 'var(--accent,#06b6d4)'; }
-        }
+        function () { showIOSSteps(banner); }
       );
       document.body.appendChild(banner);
     });
+
+    function showIOSSteps(banner) {
+      banner.classList.add('pwa-expanded');
+      banner.innerHTML =
+        '<div class="pwa-steps">' +
+          '<div class="pwa-steps-title">Install ShelfyAI</div>' +
+          '<ol class="pwa-steps-list">' +
+            '<li>Tap the Share icon <span class="pwa-share-icon">' + SHARE_ICON + '</span> in Safari’s toolbar</li>' +
+            '<li>Scroll down and tap <b>Add to Home Screen</b></li>' +
+            '<li>Tap <b>Add</b> in the top right</li>' +
+          '</ol>' +
+        '</div>' +
+        '<button class="pwa-close" aria-label="Dismiss">&times;</button>';
+      banner.querySelector('.pwa-close').addEventListener('click', function () {
+        banner.remove();
+        sessionStorage.setItem('pwa-banner-dismissed', '1');
+      });
+    }
   }
 })();
