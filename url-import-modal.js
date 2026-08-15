@@ -92,7 +92,7 @@
     // reached that server code at all (not logged in, a 413, a raw network
     // failure) -- those are all definitely pre-charge, same shape/headline,
     // different confidence in the "keep" line (see renderErrCard()).
-    'unknown': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong', uncertain: true },
+    'unknown': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' },
     'client': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' }
   };
 
@@ -140,12 +140,10 @@
             '<span id="uimErrorText"></span>' +
           '</div>' +
           '<div id="uimWorkWrap"></div>' +
-          '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
-          '<div class="aim-quote" id="uimQuote"></div>' +
           '<div class="aim-note">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
+          '<div id="uimOutOfScans" style="display:none;"></div>' +
           '<div class="aim-foot">' +
-            '<div class="aim-tally"><span class="aim-tally-l" id="uimTallyL"></span><span class="aim-tally-r" id="uimTallyR"></span></div>' +
-            '<button type="button" class="aim-cta" id="uimCta">Read this page</button>' +
+            '<button type="button" class="aim-cta" id="uimCta">Scan page</button>' +
             '<button type="button" class="aim-ghost" id="uimManual">Enter this item by hand instead</button>' +
           '</div>' +
         '</div>' +
@@ -178,7 +176,6 @@
       if (e.target.id === 'uimErrBack') { dismissErrCard(); return; }
       if (e.target.id === 'uimErrSupport') { window.location.href = 'mailto:support@shelfyai.com?subject=' + encodeURIComponent('ShelfyAI error ' + (errorCode || 'unknown')); return; }
       if (e.target.id === 'uimErrClose') { close(); return; }
-      if (e.target.id === 'uimErrCopy') { copyErrCode(); return; }
     });
 
     return sheetEl;
@@ -218,14 +215,13 @@
     if (icon) icon.innerHTML = ok ? ICON_CHECK_SM : ICON_LINK;
     // The field alone doesn't make it obvious the paste registered or what
     // to do next -- a valid link only otherwise shows up as a subtle border
-    // color and a hostname buried in the footer tally below the scan-cost
-    // section, which is easy to miss (see user report: "not clear the
-    // pasting worked and how to proceed").
+    // color change, easy to miss (see user report: "not clear the pasting
+    // worked and how to proceed").
     var hint = document.getElementById('uimFieldHint');
     if (hint) {
       if (ok) {
         hint.style.display = 'flex';
-        hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Read this page” below to continue</span>';
+        hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Scan page” below to continue</span>';
       } else {
         hint.style.display = 'none';
       }
@@ -243,30 +239,17 @@
       '</div>';
   }
 
-  function renderQuote() {
+  // Only surfaces when the user is actually short on scans -- the full cost
+  // breakdown (segmented usage bar, "why" explainer, running tally) was
+  // stripped as clutter, but the "buy more scans" path has to survive since
+  // it's a real purchase funnel, not bookkeeping.
+  function renderOutOfScans() {
     var need = cost();
-    var el = document.getElementById('uimQuote');
-    if (!usage) { el.innerHTML = '<div class="aim-q-why">Checking your scan balance…</div>'; return; }
-    var mL = monthlyLeft(), bL = bonusLeft(), left = scansLeft();
-    var fromMonthly = Math.min(need, mL), fromBonus = Math.min(need - fromMonthly, bL);
-    var short = need - fromMonthly - fromBonus;
-    function seg(color, cap, used) {
-      if (!cap) return '';
-      return '<span class="aim-q-seg" style="flex:' + cap + '"><i style="width:' + Math.round((used / cap) * 100) + '%;background:' + color + '"></i></span>';
-    }
-    var why = !need ? 'No readable link yet — nothing will be charged.'
-      : short > 0 ? 'No scans left — buy a pack, or enter it by hand below.'
-      : fromBonus ? 'Taken from your bought scans — your monthly allowance is spent.'
-      : 'Taken from your ' + mL + ' monthly scan' + (mL === 1 ? '' : 's') + '. Bought scans stay untouched.';
-    el.innerHTML =
-      '<div class="aim-q-top">' +
-        '<span class="aim-q-l">' + need + ' scan' + (need === 1 ? '' : 's') + '</span>' +
-        '<span class="aim-q-r">' + left + ' left' + (need ? ' · ' + Math.max(0, left - need) + ' after' : '') + '</span>' +
-      '</div>' +
-      '<div class="aim-q-track">' + seg('var(--accent)', usage.planLimit, fromMonthly) + seg('var(--accent-deep)', usage.bonusScans, fromBonus) + '</div>' +
-      '<div class="aim-q-why"' + (short > 0 ? ' data-state="warn"' : '') + '>' + esc(why) + '</div>' +
-      (short > 0 ? '<button type="button" class="aim-q-buy" id="uimBuyBtn">' + buyLabel() + '</button>' : '');
-    if (short > 0 && !scanPackPrice) {
+    var el = document.getElementById('uimOutOfScans');
+    if (!usage || !need || scansLeft() >= need) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = 'block';
+    el.innerHTML = '<button type="button" class="aim-q-buy" id="uimBuyBtn">' + buyLabel() + '</button>';
+    if (!scanPackPrice) {
       fetch('/api/scan-pack-price').then(function (r) { return r.json(); }).then(function (p) {
         scanPackPrice = p;
         var btn = document.getElementById('uimBuyBtn');
@@ -293,16 +276,9 @@
   }
 
   function renderFoot() {
-    var l = link();
-    document.getElementById('uimTallyL').textContent =
-      running ? 'Reading…'
-      : !raw ? 'No link yet'
-      : (l && l.bad) ? 'Not a full web address'
-      : (l ? l.host : '');
-    document.getElementById('uimTallyR').textContent = usable() && !running ? cost() + ' scan' : '';
     var cta = document.getElementById('uimCta');
     cta.disabled = running || !usable() || !affordable();
-    cta.textContent = running ? 'Reading…' : !usable() ? 'Read this page' : !affordable() ? 'Not enough scans' : 'Read this page · ' + cost() + ' scan';
+    cta.textContent = running ? 'Reading…' : !affordable() ? 'Not enough scans' : 'Scan page';
   }
 
   // Full card takeover for a real, distinguishable scan-step failure (see
@@ -318,10 +294,6 @@
       msg = (l && l.host ? l.host : 'That site') + ' stopped answering.';
     }
     if (errorCode === 'unknown' || errorCode === 'client') msg = errorMsg || msg;
-    var scansLeftTxt = usage ? (' ' + scansLeft() + ' left this month.') : '';
-    var keepHtml = card.uncertain
-      ? '<div class="aim-err-keep" data-tone="warn">' + ICON_WARN + '<span><b>Can’t confirm</b> whether this used a scan.</span></div>'
-      : '<div class="aim-err-keep" data-tone="ok">' + ICON_CHECK_SM + '<span><b>No scan charged.</b>' + esc(scansLeftTxt) + '</span></div>';
     var actsHtml;
     if (errorCode === 'scan.no_match') {
       actsHtml =
@@ -339,14 +311,10 @@
         '<button type="button" class="aim-err-alt" id="uimErrManual">Enter by hand</button>' +
         '<button type="button" class="aim-err-ghost" id="uimErrBack">Back</button>';
     }
-    var reqCode = errorCode + ' · agentql · req_' + Math.random().toString(36).slice(2, 8);
-    el.dataset.reqCode = reqCode;
     el.innerHTML =
       '<div class="aim-err-mark" data-tone="' + card.tone + '">' + card.icon + '</div>' +
       '<h3 class="aim-err-h">' + esc(card.headline) + '</h3>' +
       '<p class="aim-err-p">' + esc(msg) + '</p>' +
-      keepHtml +
-      '<p class="aim-err-code">' + esc(reqCode) + '<button type="button" id="uimErrCopy">Copy</button></p>' +
       '<div class="aim-err-acts">' + actsHtml + '</div>';
   }
 
@@ -378,21 +346,13 @@
     });
   }
 
-  function copyErrCode() {
-    var el = document.getElementById('uimErrCard');
-    var text = (el && el.dataset.reqCode) || '';
-    if (navigator.clipboard && navigator.clipboard.writeText && text) {
-      navigator.clipboard.writeText(text).catch(function () {});
-    }
-  }
-
   function render() {
     var isCard = !!ERR_CARDS[errorCode];
     document.getElementById('uimNormalBody').style.display = isCard ? 'none' : '';
     document.getElementById('uimErrCard').style.display = isCard ? 'block' : 'none';
     renderHead();
     if (isCard) { renderErrCard(); return; }
-    renderField(); renderWork(); renderError(); renderQuote(); renderFoot();
+    renderField(); renderWork(); renderError(); renderOutOfScans(); renderFoot();
   }
 
   function startFakeProgress() {
