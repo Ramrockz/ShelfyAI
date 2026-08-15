@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
         // of being locked to a hardcoded list.
         line_items: [{ price: scanPackPriceId, quantity: 1 }],
         allow_promotion_codes: true,
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl,
         metadata: { supabase_user_id: user.id, type: 'scan_pack' }
       });
@@ -162,7 +162,7 @@ module.exports = async (req, res) => {
       tax_id_collection: {
         enabled: true
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan.html?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com'}/plan?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
       subscription_data: {
         metadata: {

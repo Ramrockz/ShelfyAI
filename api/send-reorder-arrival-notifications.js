@@ -19,6 +19,31 @@ webPush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
+// A dead subscription (404/410) is never retried -- that endpoint will never
+// work again, so the subscription is deleted immediately. Anything else
+// (a transient network blip, the push service briefly unavailable) gets one
+// retry after a short delay before being logged and dropped -- without this,
+// a single momentary failure permanently loses that notification, since the
+// caller already marks the item as alerted right after this runs either way.
+async function sendPushWithRetry(sub, payload, attempt = 0) {
+  try {
+    await webPush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+      payload
+    );
+  } catch (pushError) {
+    if (pushError.statusCode === 404 || pushError.statusCode === 410) {
+      await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+      return;
+    }
+    if (attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return sendPushWithRetry(sub, payload, attempt + 1);
+    }
+    console.error('Error sending push notification (after retry):', pushError);
+  }
+}
+
 function etaIsToday(item, today) {
   const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
   if (!orderBase) return false;
@@ -89,18 +114,7 @@ module.exports = async (req, res) => {
           const payload = JSON.stringify({ title, body, url: '/operations' });
 
           for (const sub of subscriptions) {
-            try {
-              await webPush.sendNotification(
-                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-                payload
-              );
-            } catch (pushError) {
-              if (pushError.statusCode === 404 || pushError.statusCode === 410) {
-                await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-              } else {
-                console.error('Error sending push notification:', pushError);
-              }
-            }
+            await sendPushWithRetry(sub, payload);
           }
         }
 

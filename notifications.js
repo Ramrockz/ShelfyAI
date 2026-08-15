@@ -286,7 +286,13 @@ async function deleteNotification(notificationId) {
 
 // Open ingredient page
 function openIngredient(ingredientId) {
-  window.location.href = `ingredient-detail.html?id=${ingredientId}`;
+  // Clean URL, not the .html form -- the .html path 308-redirects (see
+  // vercel.json's cleanUrls), and sw.js's service worker can't serve a
+  // redirected response for a navigation request once that path falls
+  // through to a live fetch, surfacing as ERR_FAILED / "site can't be
+  // reached" instead of the page (see markAsReordered/openDeliveryForIngredient
+  // below, which already used the clean form).
+  window.location.href = `/ingredient-detail?id=${ingredientId}`;
 }
 
 // Open reorder modal for an ingredient (navigates to ingredient detail with openReorder=true)

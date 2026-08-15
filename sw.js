@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v337';
+const CACHE_NAME = 'shelfy-v338';
 
 const STATIC_ASSETS = [
   '/',
@@ -146,8 +146,17 @@ self.addEventListener('fetch', (event) => {
     // (and get revalidated for) every id.
     event.respondWith(
       caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-        // Revalidate in the background even when serving from cache
-        const networkUpdate = fetch(event.request, { cache: 'no-store' }).then((response) => {
+        // redirect: 'manual' matters here -- a .html link (or an old
+        // bookmark/external redirect like Stripe's success_url) 308s to its
+        // clean-URL form (see vercel.json's cleanUrls). fetch()'s default
+        // 'follow' mode would hand back the FINAL response with
+        // redirected:true, and Chrome refuses to let a service worker
+        // satisfy a *navigation* with a redirected response -- that request
+        // fails outright as ERR_FAILED instead of showing the page. Passing
+        // through the resulting opaqueredirect response as-is lets the
+        // browser perform the redirect itself, exactly as it would without
+        // a service worker in the way.
+        const networkUpdate = fetch(event.request, { cache: 'no-store', redirect: 'manual' }).then((response) => {
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
@@ -161,7 +170,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         // No cache yet — wait for the network.
-        return fetch(event.request, { cache: 'no-store' }).then((response) => {
+        return fetch(event.request, { cache: 'no-store', redirect: 'manual' }).then((response) => {
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));

@@ -2784,7 +2784,7 @@ async function rdmConfirmDelivery() {
     currentReorderIngredient = null;
     if (window.innerWidth > 768) { renderRecipe(); } else { renderMobileOverlay(); }
     const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt');
-    if (upload) window.location.href = `ingredient-detail.html?id=${id}&openExpense=true`;
+    if (upload) window.location.href = `/ingredient-detail?id=${id}&openExpense=true`;
   } catch (err) {
     showAlert('Failed to confirm delivery: ' + err.message);
   }
@@ -2827,7 +2827,7 @@ async function openLegacyReorderModal() {
 
   if (!currentReorderIngredient.source_url || !currentReorderIngredient.source_url.trim()) {
     const goTo = await showConfirm('This item has no source URL. Go to its settings to add one?', 'Source URL Missing');
-    if (goTo) window.location.href = `ingredient-detail.html?id=${currentReorderIngredient.id}`;
+    if (goTo) window.location.href = `/ingredient-detail?id=${currentReorderIngredient.id}`;
     currentReorderIngredient = null;
     return;
   }
