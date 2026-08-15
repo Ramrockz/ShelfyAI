@@ -880,7 +880,12 @@
   .delivery-swipe-btn { width: 48px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .delivery-swipe-btn.cancel  { background: var(--danger); color: #fff; }
   .delivery-swipe-btn.confirm { background: var(--success); color: #fff; }
-  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; touch-action: pan-y; will-change: transform; transition: border-color 0.15s ease, background 0.15s ease; }
+  /* No border-radius here on purpose -- .delivery-swipe's overflow:hidden
+     already renders this rounded at rest since the row fills the container
+     exactly. Giving the row its own radius looked fine at rest but showed
+     as a rounded notch floating next to the square .delivery-swipe-btns
+     once swiped open, since that edge isn't a real corner of anything. */
+  .delivery-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--bg-panel); border: 1px solid var(--border); cursor: pointer; touch-action: pan-y; will-change: transform; transition: border-color 0.15s ease, background 0.15s ease; }
   .delivery-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
   .delivery-info { flex: 1; min-width: 0; overflow: hidden; }
   .delivery-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; transition: color 0.15s; }
