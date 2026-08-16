@@ -332,10 +332,9 @@
 
   function renderDrop() {
     var k = KINDS[currentEntity];
-    document.getElementById('aimDropT').textContent = file ? 'Replace the file' : k.dropLabel;
-    document.getElementById('aimDropS').textContent = file
-      ? 'One file per import — this replaces the one below'
-      : 'JPG, PNG or PDF up to 4MB';
+    document.getElementById('aimDrop').style.display = file ? 'none' : '';
+    document.getElementById('aimDropT').textContent = k.dropLabel;
+    document.getElementById('aimDropS').textContent = 'JPG, PNG or PDF up to 4MB';
   }
 
   function renderFile() {
@@ -361,29 +360,16 @@
   }
 
   function renderQuote() {
-    var need = cost();
     var el = document.getElementById('aimQuote');
     if (!usage) { el.innerHTML = '<div class="aim-q-why">Checking your scan balance…</div>'; return; }
-    var mL = monthlyLeft(), bL = bonusLeft(), left = scansLeft();
-    var fromMonthly = Math.min(need, mL), fromBonus = Math.min(need - fromMonthly, bL);
-    var short = need - fromMonthly - fromBonus;
-    function seg(color, cap, used) {
-      if (!cap) return '';
-      return '<span class="aim-q-seg" style="flex:' + cap + '"><i style="width:' + Math.round((used / cap) * 100) + '%;background:' + color + '"></i></span>';
-    }
-    var why = !need ? ''
-      : short > 0 ? 'No scans left — buy a pack, or enter it by hand below.'
-      : fromBonus ? 'Taken from your bought scans — your monthly allowance is spent.'
-      : 'Taken from your ' + mL + ' monthly scan' + (mL === 1 ? '' : 's') + '. Bought scans stay untouched.';
+    var left = scansLeft();
+    var short = left <= 0;
     el.innerHTML =
-      '<div class="aim-q-top">' +
-        '<span class="aim-q-l">' + need + ' scan' + (need === 1 ? '' : 's') + '</span>' +
-        '<span class="aim-q-r">' + left + ' left' + (need ? ' · ' + Math.max(0, left - need) + ' after' : '') + '</span>' +
+      '<div class="aim-q-why"' + (short ? ' data-state="warn"' : '') + '>' +
+        (short ? 'No scans left — buy a pack, or enter it by hand below.' : 'This costs 1 scan · ' + left + ' left') +
       '</div>' +
-      '<div class="aim-q-track">' + seg('var(--accent)', usage.planLimit, fromMonthly) + seg('var(--accent-deep)', usage.bonusScans, fromBonus) + '</div>' +
-      '<div class="aim-q-why"' + (short > 0 ? ' data-state="warn"' : '') + '>' + esc(why) + '</div>' +
-      (short > 0 ? '<button type="button" class="aim-q-buy" id="aimBuyBtn">' + buyLabel() + '</button>' : '');
-    if (short > 0 && !scanPackPrice) {
+      (short ? '<button type="button" class="aim-q-buy" id="aimBuyBtn">' + buyLabel() + '</button>' : '');
+    if (short && !scanPackPrice) {
       fetch('/api/scan-pack-price').then(function (r) { return r.json(); }).then(function (p) {
         scanPackPrice = p;
         var btn = document.getElementById('aimBuyBtn');
