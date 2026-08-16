@@ -604,8 +604,9 @@
   .op-list { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
              border-bottom: 1px solid var(--border-hair, var(--border)); }
 
-  .op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px 10px 20px;
-            border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
+  .op-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px;
+            padding: 10px 16px 10px 20px; text-align: left; font-family: inherit; color: inherit;
+            background: none; border: none; border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
   .op-list .op-row:first-child { border-top: none; }
   .op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
   .op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -2395,7 +2396,9 @@ async function confirmDelete() {
 // Escape key listener for modals
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.getElementById('rcmMatchSheet').classList.contains('active')) {
+    if (document.getElementById('confirmModal').classList.contains('active')) {
+      resolveConfirm(false);
+    } else if (document.getElementById('rcmMatchSheet').classList.contains('active')) {
       closeMatchSheet();
     } else if (document.getElementById('rcmShotSheet').classList.contains('active')) {
       closeShotSheet();
@@ -2693,7 +2696,19 @@ document.addEventListener('keydown', (e) => {
   </div>
 </div>
 
-
+<!-- Custom Confirm Modal -- mobile-optimized in-app replacement for
+     window.confirm(), which renders as a native browser/OS dialog on the
+     PWA that doesn't match the app's own sheet style. -->
+<div class="modal-overlay modal-sheet" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content-custom">
+    <h3 style="margin-top:0; margin-bottom: 16px; color: var(--text-main);" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button id="confirmCancelBtn" style="background: var(--bg-panel); color: var(--text-main); flex: 1; border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="resolveConfirm(false)">No</button>
+      <button id="confirmOkBtn" style="flex: 1; padding: 12px 24px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;" onclick="resolveConfirm(true)">Yes</button>
+    </div>
+  </div>
+</div>
 
 <footer style="background: var(--bg-inner); border-top: 1px solid var(--border); margin-top: 60px; padding: 40px 0;">
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
@@ -3667,7 +3682,6 @@ const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-const ICON_RCM_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>';
 
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
@@ -3762,24 +3776,31 @@ function _rcmLineState(m) {
 
 function _rcmLineHTML(m, index) {
   const st = _rcmLineState(m);
-  const item = m.itemData;
-  const cleanName = _rcmCleanName(item.name) || 'Unknown item';
   const sel = m.selectedRecipe;
   const why = st === 'ok'
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
     : st === 'todo' ? 'Not sure this is right — check it'
     : 'No product matches this line';
-  return `<div class="rcm-line" data-state="${st}">
-    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
-    <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
+  const matchInner = `
       <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
       <span class="rcm-match-body">
         <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
         <span class="rcm-match-why">${_rcmEsc(why)}</span>
-      </span>
-      ${sel ? ICON_RCM_CHEVRON : '<span class="rcm-match-swap">Pick</span>'}
-    </button>
-    <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
+      </span>`;
+  // Matched: not tappable to reopen the picker -- the X clears the pick,
+  // then the row falls back to the unmatched (tappable) state below to add
+  // a new one. Keeps a single, obvious way to change a match instead of a
+  // "Change"/chevron affordance competing with the clear action.
+  const matchHtml = sel
+    ? `<div class="rcm-match" data-state="${st}">${matchInner}
+        <button type="button" class="rcm-match-clear" onclick="clearMappedMatch(${index})" aria-label="Remove this match">${ICON_RCM_X}</button>
+      </div>`
+    : `<button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">${matchInner}
+        <span class="rcm-match-swap">Pick</span>
+      </button>`;
+  return `<div class="rcm-line" data-state="${st}">
+    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    ${matchHtml}
     <span class="rcm-qty-row">
       <span class="rcm-qty-label">Quantity</span>
       <span class="rcm-step">
@@ -3844,6 +3865,15 @@ function bumpMappedQty(index, delta) {
 
 function removeMappedItem(index) {
   mappedRecipes.splice(index, 1);
+  renderRcmLines(); renderRcmFoot();
+}
+
+// Clears just the matched product on a line (back to "Pick a product"),
+// without touching the scanned line itself -- tap the row again afterwards
+// to search for a replacement.
+function clearMappedMatch(index) {
+  const m = mappedRecipes[index];
+  m.selectedRecipe = null; m.confirmed = false; m.matches = []; m.score = 0;
   renderRcmLines(); renderRcmFoot();
 }
 
@@ -4029,14 +4059,34 @@ function openShotSheet() {
 }
 function closeShotSheet() { document.getElementById('rcmShotSheet').classList.remove('active'); }
 
-function closeRecipeMappingModal() {
+let confirmResolver = null;
+function showConfirm(message, title = 'Confirm', cancelLabel = 'Cancel', confirmLabel = 'Confirm') {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    document.getElementById('confirmCancelBtn').textContent = cancelLabel;
+    document.getElementById('confirmOkBtn').textContent = confirmLabel;
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) { confirmResolver(result); confirmResolver = null; }
+}
+
+async function closeRecipeMappingModal() {
   // If this review came from a scan the user never actually saved, make sure
   // that's what they want before discarding it -- refundScan() below still
   // gives the scan count back either way, but getting this data again means
   // spending another one.
   const pending = window.ShelfyImportModal && window.ShelfyImportModal.hasPending();
-  if (pending && !confirm("Discard this scan? This scan won't count against your limit — but you'll need to scan again if you want this data back.")) {
-    return;
+  if (pending) {
+    const discard = await showConfirm(
+      "This scan won't count against your limit — but you'll need to scan again if you want this data back.",
+      'Discard this scan?', 'Keep editing', 'Discard'
+    );
+    if (!discard) return;
   }
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('recipeMappingModal').classList.remove('active');

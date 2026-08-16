@@ -1394,8 +1394,9 @@
   .op-list { background: var(--bg-panel); border-top: 1px solid var(--border-hair, var(--border));
              border-bottom: 1px solid var(--border-hair, var(--border)); }
 
-  .op-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px 10px 20px;
-            border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
+  .op-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px;
+            padding: 10px 16px 10px 20px; text-align: left; font-family: inherit; color: inherit;
+            background: none; border: none; border-top: 1px solid var(--border-hair, var(--border)); cursor: pointer; }
   .op-list .op-row:first-child { border-top: none; }
   .op-row[data-picked="1"] { background: rgba(6,182,212,.045); }
   .op-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -4293,7 +4294,6 @@ const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-const ICON_RCM_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>';
 
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
@@ -4386,24 +4386,31 @@ function _rcmLineState(m) {
 
 function _rcmLineHTML(m, index) {
   const st = _rcmLineState(m);
-  const item = m.itemData;
-  const cleanName = _rcmCleanName(item.name) || 'Unknown item';
   const sel = m.selectedRecipe;
   const why = st === 'ok'
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
     : st === 'todo' ? 'Not sure this is right — check it'
     : 'No product matches this line';
-  return `<div class="rcm-line" data-state="${st}">
-    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
-    <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
+  const matchInner = `
       <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
       <span class="rcm-match-body">
         <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
         <span class="rcm-match-why">${_rcmEsc(why)}</span>
-      </span>
-      ${sel ? ICON_RCM_CHEVRON : '<span class="rcm-match-swap">Pick</span>'}
-    </button>
-    <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
+      </span>`;
+  // Matched: not tappable to reopen the picker -- the X clears the pick,
+  // then the row falls back to the unmatched (tappable) state below to add
+  // a new one. Keeps a single, obvious way to change a match instead of a
+  // "Change"/chevron affordance competing with the clear action.
+  const matchHtml = sel
+    ? `<div class="rcm-match" data-state="${st}">${matchInner}
+        <button type="button" class="rcm-match-clear" onclick="clearMappedMatch(${index})" aria-label="Remove this match">${ICON_RCM_X}</button>
+      </div>`
+    : `<button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">${matchInner}
+        <span class="rcm-match-swap">Pick</span>
+      </button>`;
+  return `<div class="rcm-line" data-state="${st}">
+    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    ${matchHtml}
     <span class="rcm-qty-row">
       <span class="rcm-qty-label">Quantity</span>
       <span class="rcm-step">
@@ -4465,6 +4472,15 @@ function bumpMappedQty(index, delta) {
 
 function removeMappedItem(index) {
   mappedRecipes.splice(index, 1);
+  renderRcmLines(); renderRcmFoot();
+}
+
+// Clears just the matched product on a line (back to "Pick a product"),
+// without touching the scanned line itself -- tap the row again afterwards
+// to search for a replacement.
+function clearMappedMatch(index) {
+  const m = mappedRecipes[index];
+  m.selectedRecipe = null; m.confirmed = false; m.matches = []; m.score = 0;
   renderRcmLines(); renderRcmFoot();
 }
 
