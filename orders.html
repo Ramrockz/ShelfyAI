@@ -3781,26 +3781,16 @@ function _rcmLineHTML(m, index) {
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
     : st === 'todo' ? 'Not sure this is right — check it'
     : 'No product matches this line';
-  const matchInner = `
+  return `<div class="rcm-line" data-state="${st}">
+    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
       <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
       <span class="rcm-match-body">
         <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
         <span class="rcm-match-why">${_rcmEsc(why)}</span>
-      </span>`;
-  // Matched: not tappable to reopen the picker -- the X clears the pick,
-  // then the row falls back to the unmatched (tappable) state below to add
-  // a new one. Keeps a single, obvious way to change a match instead of a
-  // "Change"/chevron affordance competing with the clear action.
-  const matchHtml = sel
-    ? `<div class="rcm-match" data-state="${st}">${matchInner}
-        <button type="button" class="rcm-match-clear" onclick="clearMappedMatch(${index})" aria-label="Remove this match">${ICON_RCM_X}</button>
-      </div>`
-    : `<button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">${matchInner}
-        <span class="rcm-match-swap">Pick</span>
-      </button>`;
-  return `<div class="rcm-line" data-state="${st}">
-    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
-    ${matchHtml}
+      </span>
+      ${sel ? '' : '<span class="rcm-match-swap">Pick</span>'}
+    </button>
     <span class="rcm-qty-row">
       <span class="rcm-qty-label">Quantity</span>
       <span class="rcm-step">
@@ -3865,15 +3855,6 @@ function bumpMappedQty(index, delta) {
 
 function removeMappedItem(index) {
   mappedRecipes.splice(index, 1);
-  renderRcmLines(); renderRcmFoot();
-}
-
-// Clears just the matched product on a line (back to "Pick a product"),
-// without touching the scanned line itself -- tap the row again afterwards
-// to search for a replacement.
-function clearMappedMatch(index) {
-  const m = mappedRecipes[index];
-  m.selectedRecipe = null; m.confirmed = false; m.matches = []; m.score = 0;
   renderRcmLines(); renderRcmFoot();
 }
 
