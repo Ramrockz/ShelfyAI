@@ -3782,15 +3782,17 @@ function _rcmLineHTML(m, index) {
     : st === 'todo' ? 'Not sure this is right — check it'
     : 'No product matches this line';
   return `<div class="rcm-line" data-state="${st}">
-    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
-    <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
-      <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
-      <span class="rcm-match-body">
-        <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
-        <span class="rcm-match-why">${_rcmEsc(why)}</span>
-      </span>
-      ${sel ? '' : '<span class="rcm-match-swap">Pick</span>'}
-    </button>
+    <div class="rcm-match" data-state="${st}">
+      <button type="button" class="rcm-match-tap" onclick="openMatchSheet(${index})">
+        <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
+        <span class="rcm-match-body">
+          <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
+          <span class="rcm-match-why">${_rcmEsc(why)}</span>
+        </span>
+        ${sel ? '' : '<span class="rcm-match-swap">Pick</span>'}
+      </button>
+      <button type="button" class="rcm-match-remove" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    </div>
     <span class="rcm-qty-row">
       <span class="rcm-qty-label">Quantity</span>
       <span class="rcm-step">
