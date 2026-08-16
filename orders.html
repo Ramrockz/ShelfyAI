@@ -3667,6 +3667,7 @@ const ICON_RCM_ASK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const ICON_RCM_X     = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 const ICON_RCM_PLUS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const ICON_RCM_MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" width="15" height="15"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const ICON_RCM_CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>';
 
 function _rcmEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 function _rcmCleanName(name) { return String(name || '').replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim(); }
@@ -3764,31 +3765,28 @@ function _rcmLineHTML(m, index) {
   const item = m.itemData;
   const cleanName = _rcmCleanName(item.name) || 'Unknown item';
   const sel = m.selectedRecipe;
-  const price = sel ? (parseFloat(sel.retail_price) || parseFloat(sel.cost) * 1.6 || 0) : (item.price || 0);
   const why = st === 'ok'
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
     : st === 'todo' ? 'Not sure this is right — check it'
     : 'No product matches this line';
   return `<div class="rcm-line" data-state="${st}">
-    <span class="rcm-line-main">
-      <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
-      <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
-        <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
-        <span class="rcm-match-body">
-          <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
-          <span class="rcm-match-why">${_rcmEsc(why)}</span>
-        </span>
-        <span class="rcm-match-swap">${sel ? 'Change' : 'Pick'}</span>
-      </button>
-    </span>
-    <span class="rcm-line-side">
-      <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    <button type="button" class="rcm-line-drop" onclick="removeMappedItem(${index})" aria-label="Remove this line">${ICON_RCM_X}</button>
+    <button type="button" class="rcm-match" data-state="${st}" onclick="openMatchSheet(${index})">
+      <span class="rcm-match-ico">${st === 'ok' ? ICON_RCM_BOX : ICON_RCM_ASK}</span>
+      <span class="rcm-match-body">
+        <span class="rcm-match-name">${sel ? _rcmEsc(sel.name) : 'Pick a product'}</span>
+        <span class="rcm-match-why">${_rcmEsc(why)}</span>
+      </span>
+      ${sel ? ICON_RCM_CHEVRON : '<span class="rcm-match-swap">Pick</span>'}
+    </button>
+    <span class="rcm-line-read">Read <b>"${_rcmEsc(cleanName)}"</b></span>
+    <span class="rcm-qty-row">
+      <span class="rcm-qty-label">Quantity</span>
       <span class="rcm-step">
         <button type="button" onclick="bumpMappedQty(${index},-1)" aria-label="One fewer">${ICON_RCM_MINUS}</button>
         <span class="rcm-step-qty">${m.quantity}</span>
         <button type="button" onclick="bumpMappedQty(${index},1)" aria-label="One more">${ICON_RCM_PLUS}</button>
       </span>
-      <span class="rcm-line-money">$${(price * m.quantity).toFixed(2)}</span>
     </span>
   </div>`;
 }
@@ -3796,7 +3794,7 @@ function _rcmLineHTML(m, index) {
 function renderRcmLines() {
   document.getElementById('mappedItemsList').innerHTML = mappedRecipes.length
     ? mappedRecipes.map((m, i) => _rcmLineHTML(m, i)).join('')
-    : '<div class="rcm-line"><span class="rcm-line-main"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></span></div>';
+    : '<div class="rcm-line"><span class="rcm-line-read">No items left — add one, or discard the scan.</span></div>';
 }
 
 function toggleMappedUpdateStock() {
