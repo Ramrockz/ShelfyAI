@@ -186,7 +186,7 @@
   .an-hero-l { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
                color: var(--text-muted); }
   .an-hero-v { font-size: 34px; font-weight: 800; letter-spacing: -.035em; line-height: 1.05; margin-top: 5px;
-               font-variant-numeric: tabular-nums; color: var(--success); }
+               font-variant-numeric: tabular-nums; }
   .an-hero-v[data-state="down"] { color: var(--danger); }
   .an-hero-d { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-top: 5px; }
   .an-kpis { display: flex; margin-top: 15px; border: 1px solid var(--border); border-radius: 12px;
@@ -196,15 +196,29 @@
   .an-kpis label { display: block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
                    text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
   .an-kpis span { font-size: 15px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-  .an-mread { display: none; align-items: baseline; gap: 10px; padding: 11px 4px 0; margin-top: 8px;
+  .an-months { padding: 0; }
+  .an-m-row { display: flex; align-items: flex-end; gap: 8px; height: 132px; }
+  .an-m-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
+              justify-content: flex-end; gap: 6px; height: 100%; background: none; border: none; padding: 0; }
+  .an-m-bars { width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px;
+               flex: 1; min-height: 0; }
+  .an-m-bar { width: 12px; border-radius: 4px 4px 0 0; min-height: 3px; }
+  .an-m-bar.rev { background: var(--accent); }
+  .an-m-bar.exp { background: var(--spend, var(--warning)); opacity: .55; }
+  .an-m-col[aria-pressed="true"] .an-m-bar.rev { background: var(--accent-deep, var(--accent)); }
+  .an-m-col[aria-pressed="true"] .an-m-bar.exp { opacity: .85; }
+  .an-m-lab { font-size: 10.5px; font-weight: 700; color: var(--text-faint, var(--text-muted)); white-space: nowrap; }
+  .an-m-col[aria-pressed="true"] .an-m-lab { color: var(--text-main); }
+  .an-mread { display: flex; align-items: baseline; gap: 10px; padding: 11px 4px 0; margin-top: 11px;
               border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted);
               font-variant-numeric: tabular-nums; }
-  .an-mread[data-on="1"] { display: flex; }
   .an-mread b { font-size: 13px; font-weight: 800; letter-spacing: -.01em; color: var(--text-main); }
   .an-mread i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 5px; }
   .an-mread .out { margin-left: auto; }
-  .an-mread-clear { background: none; border: none; color: var(--accent-deep, var(--accent));
-                    font-size: 12px; font-weight: 700; padding: 0 0 0 8px; cursor: pointer; }
+  .an-fc-svg { width: 100%; height: 118px; display: block; overflow: visible; }
+  .an-fc-keys { display: flex; gap: 14px; margin-top: 12px; }
+  .an-fc-key { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); }
+  .an-fc-key i { width: 14px; height: 2.5px; border-radius: 2px; flex-shrink: 0; }
   .an-rank { padding: 4px 0 6px; }
   .an-r { display: block; width: 100%; padding: 9px 0; background: none; border: none; text-align: left;
           border-top: 1px solid var(--border); }
@@ -219,6 +233,7 @@
   .an-r-track > i { display: block; height: 100%; border-radius: 99px; }
   .an-fc-say { font-size: 12.5px; color: var(--text-muted); margin-top: 11px; padding-top: 11px;
                border-top: 1px solid var(--border); }
+  .chart-card > .an-fc-say:only-child { margin-top: 0; padding-top: 0; border-top: none; }
   .an-fc-say b { color: var(--text-main); font-weight: 800; }
   .an-lrow { display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 9px 12px 9px 4px;
              border-top: 1px solid var(--border); }
@@ -459,14 +474,22 @@
         </div>
       </div>
 
-      <!-- Revenue vs Expenses over time -- shared Chart.js canvas, both
-           screen sizes; tapping a bar/point filters everything below to
-           that month (mobile shows a small readout row for the tapped
-           month, desktop just re-renders its KPIs/lists). -->
-      <div class="chart-card">
-        <h3>Revenue vs Expenses <small class="an-mobile" style="font-weight:400;margin-top:2px;">tap a month to filter</small></h3>
+      <!-- Revenue vs Expenses (desktop): interactive Chart.js bar chart,
+           tapping a bar filters everything below to that month. -->
+      <div class="chart-card an-desktop-only">
+        <h3>Revenue vs Expenses</h3>
         <canvas id="revExpChart"></canvas>
-        <div class="an-mread" id="anMRead"></div>
+      </div>
+      <!-- Month by month (mobile): lightweight tap-to-filter bars instead of
+           a Chart.js canvas -- a legend + axis is more chrome than a maker
+           needs on a 390px screen, and the question is just "which month,
+           by how much" (analytics-24b). -->
+      <div class="chart-card an-mobile">
+        <h3>Month by month <small style="font-weight:400;">tap a month</small></h3>
+        <div class="an-months">
+          <div class="an-m-row" id="anMRow"></div>
+          <div class="an-mread" id="anMRead"></div>
+        </div>
       </div>
 
       <!-- Channel + Category: doughnuts on desktop, ranked bars on mobile
@@ -491,10 +514,23 @@
         <div class="an-rank" id="anCatRank"></div>
       </div>
 
-      <!-- Forecast -->
-      <div class="chart-card">
+      <!-- Forecast (desktop): Chart.js line chart -->
+      <div class="chart-card an-desktop-only">
         <h3>Revenue Forecast <small>— 3 month projection</small></h3>
         <canvas id="forecastChart"></canvas>
+      </div>
+      <!-- Forecast (mobile): lightweight custom SVG instead of a Chart.js
+           line chart, matching analytics-24b -- no axis/gridlines, just the
+           trend. -->
+      <div class="chart-card an-mobile">
+        <h3>Forecast <small style="font-weight:400;">next 3 months</small></h3>
+        <svg id="anFcSvg" class="an-fc-svg" viewBox="0 0 340 118" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="an-fc-keys">
+          <span class="an-fc-key"><i style="background:var(--accent)"></i>Actual</span>
+          <span class="an-fc-key"><i style="background:var(--text-ghost,#cbd5e1)"></i>Projected</span>
+        </div>
+      </div>
+      <div class="chart-card">
         <div class="an-fc-say" id="anFcSay"></div>
       </div>
 
@@ -575,6 +611,7 @@ let tpExpanded = false, roExpanded = false, dsExpanded = false;
 
 const CHART_COLORS = ['#06b6d4','#8b5cf6','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#84cc16','#f97316','#64748b'];
 const PERIOD_DAYS  = { '30d': 30, '3m': 90, '6m': 180, '12m': 365 };
+const PERIOD_LABELS = { '30d': 'last 30 days', '3m': '3 months', '6m': '6 months', '12m': '12 months', 'all': 'all time' };
 const anEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 const anMoney = n => (n < 0 ? '-€' : '€') + Math.abs(n).toFixed(2);
 const anShort = n => Math.abs(n) >= 1000 ? '€' + (n / 1000).toFixed(1) + 'k' : '€' + Math.round(n);
@@ -780,11 +817,13 @@ function renderAnalytics() {
   });
 
   renderRevExpChart(labels, revValues, expValues, months, revMap, expMap);
+  renderMobileMonths(months, labels, revValues, expValues);
   renderDoughnut('channelChart',  channelMap, 'chartChannel');
   renderDoughnut('categoryChart', catMap,     'chartCategory');
   renderRankBars('anChRank', 'anChNote', channelMap, 'channels', totalRev, 'var(--accent)');
   renderRankBars('anCatRank', 'anCatNote', catMap, 'categories', totalExp, 'var(--spend, var(--warning))');
   renderForecastChart(last6.map(fmtMonth), fInput, fLabels, fValues);
+  renderMobileForecastSVG(fInput, fValues);
   renderForecastCaption(fInput, fValues);
   renderTopProducts(productMap, totalRev);
 }
@@ -843,7 +882,7 @@ function renderMobileHero(rev, exp, net, orders) {
   d.textContent = selectedMonth
     ? `${fmtMonth(selectedMonth)} only · ${marg === null ? 'no revenue' : marg + '% of revenue kept'}`
     : marg === null ? 'No revenue in this range'
-    : `${marg}% of revenue kept`;
+    : `${marg}% of revenue kept · ${PERIOD_LABELS[currentPeriod] || ''}`;
   const rEl = document.getElementById('anKRev'), eEl = document.getElementById('anKExp'), oEl = document.getElementById('anKOrd');
   if (rEl) rEl.textContent = anShort(rev);
   if (eEl) eEl.textContent = anShort(exp);
@@ -858,7 +897,6 @@ function destroyChart(key) {
 
 function renderRevExpChart(labels, revValues, expValues, monthKeys, revMap, expMap) {
   destroyChart('revExp');
-  renderMonthReadout(null, monthKeys, revMap, expMap);
   if (!labels.length) return;
   monthKeys = monthKeys || [];
   const selIdx = selectedMonth ? monthKeys.indexOf(selectedMonth) : -1;
@@ -888,21 +926,43 @@ function renderRevExpChart(labels, revValues, expValues, monthKeys, revMap, expM
       }
     }
   );
-  if (selIdx !== -1) renderMonthReadout(selectedMonth, monthKeys, revMap, expMap);
 }
 
-// 28d — tapping a bar on mobile shows an exact readout beneath the chart;
-// desktop already has axis tooltips, so this stays hidden there via the
-// .an-mread[data-on] CSS gate.
-function renderMonthReadout(monthKey, monthKeys, revMap, expMap) {
+// 28d — lightweight tap-to-filter month bars for mobile, replacing the
+// Chart.js canvas (analytics-24b): grouped bars scaled to the tallest month,
+// tapping one narrows the hero/mini-stats/ranked bars/top-products below.
+function renderMobileMonths(monthKeys, labels, revValues, expValues) {
+  const rowEl = document.getElementById('anMRow');
+  if (!rowEl) return;
+  if (!monthKeys.length) {
+    rowEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No months in this range</p>';
+    document.getElementById('anMRead').innerHTML = '';
+    return;
+  }
+  const max = Math.max(1, ...revValues, ...expValues);
+  rowEl.innerHTML = monthKeys.map((k, i) => `
+    <button type="button" class="an-m-col" aria-pressed="${k === selectedMonth}" onclick="setMonth('${k}')">
+      <span class="an-m-bars">
+        <span class="an-m-bar rev" style="height:${Math.round((revValues[i] / max) * 100)}%"></span>
+        <span class="an-m-bar exp" style="height:${Math.round((expValues[i] / max) * 100)}%"></span>
+      </span>
+      <span class="an-m-lab">${anEsc(labels[i])}</span>
+    </button>`).join('');
+  renderMonthReadout(monthKeys, revValues, expValues);
+}
+
+// Readout row under the month bars -- defaults to the latest month when
+// nothing is tapped, same as analytics-24b; tapping the same bar again
+// (via setMonth's toggle) clears the selection and this falls back to latest.
+function renderMonthReadout(monthKeys, revValues, expValues) {
   const el = document.getElementById('anMRead');
   if (!el) return;
-  if (!monthKey) { el.removeAttribute('data-on'); el.innerHTML = ''; return; }
-  const rev = (revMap && revMap[monthKey]) || 0;
-  const exp = (expMap && expMap[monthKey]) || 0;
-  el.setAttribute('data-on', '1');
-  el.innerHTML = `<b>${anEsc(fmtMonth(monthKey))}</b> — revenue ${anMoney(rev)}, expenses ${anMoney(exp)}, net ${anMoney(rev - exp)}
-    <a href="#" onclick="event.preventDefault();setMonth('${monthKey}')" style="color:var(--accent);margin-left:8px">clear</a>`;
+  const idx = selectedMonth ? monthKeys.indexOf(selectedMonth) : monthKeys.length - 1;
+  if (idx < 0) { el.innerHTML = ''; return; }
+  const key = monthKeys[idx];
+  el.innerHTML = `<b>${anEsc(fmtMonth(key))}${selectedMonth ? '' : ' (latest)'}</b>
+    <span><i style="background:var(--accent)"></i>${anShort(revValues[idx])} in</span>
+    <span class="out"><i style="background:var(--spend, var(--warning))"></i>${anShort(expValues[idx])} out</span>`;
 }
 
 function renderDoughnut(canvasId, map, refKey) {
@@ -988,6 +1048,33 @@ function renderForecastChart(histLabels, histValues, fLabels, fValues) {
       }
     }
   );
+}
+
+// 28e — lightweight custom SVG for mobile instead of a Chart.js line chart
+// (analytics-24b): a straight line through the last 6 months plus a dashed
+// 3-month projection, no axis/gridlines -- the forecast caption below already
+// spells out the numbers in words.
+function renderMobileForecastSVG(hist, proj) {
+  const svg = document.getElementById('anFcSvg');
+  if (!svg) return;
+  if (!hist.length) { svg.innerHTML = ''; return; }
+  const all = [...hist, ...proj], n = all.length;
+  if (n < 2) { svg.innerHTML = ''; return; }
+  const max = Math.max(1, ...all), W = 340, H = 118;
+  const x = i => (i / (n - 1)) * W;
+  const y = v => H - (v / max) * (H - 14) - 4;
+  const path = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const hp = hist.map((v, i) => [x(i), y(v)]);
+  const pp = [[x(hist.length - 1), y(hist[hist.length - 1])],
+              ...proj.map((v, i) => [x(hist.length + i), y(v)])];
+  svg.innerHTML = `
+    <path d="${path(hp)} L ${x(hist.length - 1).toFixed(1)} ${H} L 0 ${H} Z" fill="rgba(6,182,212,.09)" stroke="none"/>
+    <path d="${path(hp)}" fill="none" stroke="var(--accent)" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="${path(pp)}" fill="none" stroke="var(--text-ghost, #cbd5e1)" stroke-width="2.5" stroke-dasharray="5 4"
+          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    ${hp.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--accent)"/>`).join('')}
+    ${pp.slice(1).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--text-ghost, #cbd5e1)"/>`).join('')}`;
 }
 
 function renderTopProducts(productMap, totalRev) {
