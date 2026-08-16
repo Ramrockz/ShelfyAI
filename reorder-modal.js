@@ -274,7 +274,7 @@ function renderRoTally() {
     : '';
   const cont = document.getElementById('roCont');
   cont.disabled = !lines || !s;
-  cont.textContent = lines ? `Mark to reorder · $${total.toFixed(2)}` : 'Mark to reorder';
+  cont.textContent = 'Mark to reorder';
 }
 
 function roRenderAll() { renderRoSupplier(); renderRoAlso(); renderRoTally(); }
