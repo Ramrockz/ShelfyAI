@@ -32,7 +32,7 @@
       title: 'Add expense',
       subtitle: "Choose how you'd like to add your expense",
       methods: [
-        { id: 'upload', ai: true, icon: ICON.scan, name: 'PDF / Image Upload', desc: 'Scan receipts or invoices' },
+        { id: 'upload', ai: true, icon: ICON.scan, name: 'File Upload', desc: 'Scan receipts or invoices' },
         { id: 'manual', ai: false, icon: ICON.manual, name: 'Manual Entry', desc: 'Fill out the form yourself' }
       ]
     },
@@ -40,7 +40,7 @@
       title: 'Add order',
       subtitle: 'Pick products and set quantities, or scan an order screenshot',
       methods: [
-        { id: 'upload', ai: true, icon: ICON.scan, name: 'PDF / Image Upload', desc: 'Scan an order screenshot with AI' },
+        { id: 'upload', ai: true, icon: ICON.scan, name: 'File Upload', desc: 'Scan an order screenshot with AI' },
         { id: 'manual', ai: false, icon: ICON.search, name: 'Pick products', desc: 'Search your products and set quantities' }
       ]
     }

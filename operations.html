@@ -3944,7 +3944,12 @@ async function _notifyIfIngredientLimitReached() {
 function startExpenseUpload() {
   // Pre-existing behavior: the scan result maps into the ingredient form
   // fields, not a dedicated expense form — kept as-is.
-  window.ShelfyImportModal.open('ingredient', {
+  // 'file' mode -- straight to the native picker/screen capture, matching
+  // orders.html's startOrderUpload() and ingredients.html's
+  // startIngredientUpload(); skips the redundant "Take photo / Choose file"
+  // screen (the OS's own file-picker sheet already offers camera as one of
+  // its options once you tap "Choose file").
+  window.ShelfyImportModal.quickStart('ingredient', 'file', {
     // Hand off to expenses.html's real #expenseModal instead of opening
     // operations.html's own older copy locally, same as the 'manual' method
     // branch in openExpenseChoiceModal() above already does.
@@ -3965,7 +3970,8 @@ function startExpenseUpload() {
 // copy, same reasoning as startIngredientUrlImport() above -- unless a
 // recipe is mid-build, where navigating away would lose it.
 function startIngredientUpload() {
-  window.ShelfyImportModal.open('ingredient', {
+  // 'file' mode -- see startExpenseUpload() above for why.
+  window.ShelfyImportModal.quickStart('ingredient', 'file', {
     onManual: () => {
       if (addingIngredientFromRecipe) { openManualEntryModal(); return; }
       sessionStorage.setItem('shelfy_open_create', 'manual');
@@ -3985,7 +3991,8 @@ function startIngredientUpload() {
 }
 
 function startOrderUpload() {
-  window.ShelfyImportModal.open('order', {
+  // 'file' mode -- see startExpenseUpload() above for why.
+  window.ShelfyImportModal.quickStart('order', 'file', {
     onManual: openManualOrderModal,
     onImported: (data, receiptUrl) => {
       pendingReceiptUrl = receiptUrl;

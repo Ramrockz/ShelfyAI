@@ -1816,7 +1816,12 @@ function applyReceiptScanToManualModal(data) {
 }
 
 function startIngredientUpload() {
-  window.ShelfyImportModal.open('ingredient', {
+  // 'file' mode -- straight to the native picker (mobile) or screen capture
+  // (desktop), same as orders.html's startOrderUpload(). No "Take photo /
+  // Choose file" screen first: on mobile that pair just duplicated what the
+  // OS's own file-picker sheet already offers (camera included) the moment
+  // you tap "Choose file" -- asking twice for the same choice.
+  window.ShelfyImportModal.quickStart('ingredient', 'file', {
     onManual: openManualIngredientModal,
     onImported: async (data, receiptUrl) => {
       openManualIngredientModal();
