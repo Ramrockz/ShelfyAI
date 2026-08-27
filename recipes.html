@@ -902,9 +902,16 @@
                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ai-row[data-on="1"] .ai-name { color: var(--accent); }
     .ai-meta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .ai-onqty { flex-shrink: 0; height: 26px; padding: 0 9px; border-radius: 8px;
-                background: rgba(6,182,212,.12); color: var(--accent); font-size: 12.5px; font-weight: 800;
-                display: inline-flex; align-items: center; }
+    /* Inline qty stepper, shown in place of a plain "Added" pill once a row
+       is selected -- lets you adjust quantity right there instead of
+       needing a second "Made from" list duplicating the same rows. */
+    .ai-step { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+    .ai-step-btn { width: 26px; height: 26px; border-radius: 8px;
+                   background: rgba(6,182,212,.12); color: var(--accent);
+                   font-size: 15px; font-weight: 800; line-height: 1; font-family: inherit;
+                   display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .ai-step-val { min-width: 16px; text-align: center; font-size: 13px; font-weight: 800;
+                   font-variant-numeric: tabular-nums; color: var(--text-main); }
     .ai-star { flex-shrink: 0; font-size: 18px; cursor: pointer; color: #cbd5e1; }
     .ai-star.favorited { color: #f59e0b; }
 
@@ -1050,28 +1057,6 @@
     }
     .rb-sec-aside { font-size: 12px; color: var(--text-faint, #94a3b8); }
     .rb-empty { padding: 18px 16px; font-size: 13px; color: var(--text-faint, #94a3b8); }
-    .rb-sel-row {
-      display: flex; align-items: center; gap: 10px; min-height: 56px;
-      padding: 8px 14px 8px 16px; background: var(--bg-panel);
-      border-top: 1px solid var(--border); box-sizing: border-box;
-    }
-    .rb-sel-row:last-child { border-bottom: 1px solid var(--border); }
-    .rb-sel-main { flex: 1; min-width: 0; }
-    .rb-sel-top { display: flex; align-items: center; gap: 7px; }
-    .rb-sel-name {
-      font-size: 14px; font-weight: 700; color: var(--text-main);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .rb-sel-sub { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
-    .rb-step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .rb-step button {
-      width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px;
-      background: var(--bg-app, var(--bg-inner)); font-size: 19px; line-height: 1; color: var(--text-main); font-family: inherit;
-    }
-    .rb-step-val {
-      min-width: 30px; text-align: center; font-size: 16px; font-weight: 800;
-      font-variant-numeric: tabular-nums; color: var(--text-main);
-    }
 
     /* Hide all scrollbars on mobile */
     * {
@@ -3217,6 +3202,16 @@ function renderMobileIngredientRow(i) {
     : '';
   const deliveryPill = i.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
   const pill = stockPill + deliveryPill;
+  const selectedQty = selected ? (parseFloat(currentRecipe[i.id].quantity) || 1) : 0;
+
+  // Selected rows get an inline +/- stepper instead of a static "Added"
+  // pill, so quantity can be adjusted right here -- no separate "Made
+  // from" list duplicating the same row just to expose +/-.
+  const trailing = selected ? `<span class="ai-step" onclick="event.stopPropagation()">
+        <span class="ai-step-btn" onclick="adjustMobileQty('${i.id}', -1)" role="button" aria-label="Fewer">&minus;</span>
+        <span class="ai-step-val">${selectedQty}</span>
+        <span class="ai-step-btn" onclick="adjustMobileQty('${i.id}', 1)" role="button" aria-label="More">+</span>
+      </span>` : '';
 
   return `<button type="button" class="ai-row" data-on="${selected ? 1 : 0}" onclick="mobileTapIngredient('${i.id}')">
       <span class="ai-main">
@@ -3226,7 +3221,7 @@ function renderMobileIngredientRow(i) {
         </span>
         <span class="ai-meta">${meta}</span>
       </span>
-      ${selected ? `<span class="ai-onqty">Added</span>` : ''}
+      ${trailing}
       <span class="ai-star${isFavorite ? ' favorited' : ''}" onclick="event.stopPropagation(); toggleIngredientFavorite('${i.id}')">${starIcon}</span>
     </button>`;
 }
@@ -3250,11 +3245,12 @@ function mobilePrimaryAction() {
   saveMobileRecipe();
 }
 
-// 15d — selected items, pinned above the search/library list instead of
-// living only in the desktop dropzone (which stays desktop-only; this
-// renders into the SAME #recipeDropzone element, but only ever runs from a
-// mobile-only call site, so it can't collide with addIngredientToRecipe's
-// desktop rendering of the same element).
+// 15d — a one-line running summary above the item picker, instead of a full
+// "Made from" list that duplicated every row already shown (with its own
+// stepper) in the picker below. Renders into the SAME #recipeDropzone
+// element as the desktop dropzone, but only ever runs from a mobile-only
+// call site, so it can't collide with addIngredientToRecipe's desktop
+// rendering of the same element.
 function renderMobileSelected() {
   const dz = document.getElementById('recipeDropzone');
   if (!dz) return;
@@ -3268,33 +3264,7 @@ function renderMobileSelected() {
     <div class="rb-sec">
       <span class="rb-sec-title">Made from</span>
       <span class="rb-sec-aside">${entries.length} item${entries.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}</span>
-    </div>` + entries.map(([id, item]) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const price = parseFloat(item.price) || 0;
-      const src = ingredientData.find(i => i.id === id);
-      const q = src ? (parseFloat(src.quantity) || 0) : null, min = src ? (parseFloat(src.min_stock) || 0) : 0;
-      const pill = q === null ? '' : q === 0 ? '<span class="stock-pill out">Out</span>' : (min > 0 && q < min) ? '<span class="stock-pill low">Low</span>' : '';
-      return `
-      <div class="rb-sel-row">
-        <span class="rb-sel-main">
-          <span class="rb-sel-top">
-            <span class="rb-sel-name">${_escHtml(item.name)}</span>
-            ${pill}
-          </span>
-          <span class="rb-sel-sub">${qty} × $${price.toFixed(2)} = $${(qty * price).toFixed(2)}</span>
-        </span>
-        <span class="rb-step">
-          <button type="button" onclick="adjustMobileQty('${id}', -1)" aria-label="Less">&minus;</button>
-          <span class="rb-step-val">${qty}</span>
-          <button type="button" onclick="adjustMobileQty('${id}', 1)" aria-label="More">+</button>
-        </span>
-      </div>`;
-    }).join('');
-
-  // Only fade the bottom edge when there's actually more to scroll to --
-  // otherwise a short 1-2 item list would show a phantom fade on its last
-  // row even though nothing is cut off.
-  dz.classList.toggle('scrollable', dz.scrollHeight > dz.clientHeight);
+    </div>`;
 }
 
 // Mobile category sheet — same PRODUCT_CATEGORIES/icon map as the desktop
