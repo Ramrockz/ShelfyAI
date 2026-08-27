@@ -338,20 +338,6 @@
     font-weight: 500;
   }
 
-  /* $ and the typed value as genuine flex siblings on one line -- avoids the
-     absolute-position + top:50% math that never quite lined up the $ with
-     the input's text baseline across browsers. */
-  .rb-price-wrap {
-    display: flex; align-items: center; gap: 2px;
-    width: 100%; box-sizing: border-box;
-    padding: 14px 16px;
-    background: var(--bg-inner);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    transition: border-color 0.2s;
-  }
-  .rb-price-wrap:focus-within { border-color: var(--accent); }
-
   .rb-sku-wrap {
     display: flex; align-items: center; gap: 8px;
     width: 100%; box-sizing: border-box;
@@ -369,12 +355,34 @@
                  justify-content: center; cursor: pointer; }
   .rb-scan-btn:active { color: var(--accent); }
 
-  #recipeSalesPriceCurrency { flex-shrink: 0; color: var(--text-muted); font-size: 16px; font-weight: 600; }
-  #recipeSalesPriceInput {
-    flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 0;
-    color: var(--text-main); font-size: 16px; font-weight: 600; font-family: inherit;
+  /* Unified Sell for / Costs to make / Margin strip -- one bordered row,
+     three columns, so the price you set sits right next to what it costs
+     to make and the margin that leaves, instead of a separate price field
+     stacked above a second strip repeating the same "column of numbers"
+     layout. Visible on both breakpoints -- desktop previously had no
+     Costs-to-make/Margin display at all. */
+  .recipe-cost-strip {
+    display: flex; margin-top: 14px;
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
   }
-  #recipeSalesPriceInput::placeholder { color: var(--text-muted); font-weight: 500; }
+  .recipe-cost-strip > div { flex: 1; min-width: 0; padding: 9px 12px; }
+  .recipe-cost-strip > div + div { border-left: 1px solid var(--border); }
+  .recipe-cost-strip label {
+    display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted);
+    font-weight: 700; letter-spacing: .06em; margin-bottom: 3px;
+  }
+  .recipe-cost-strip span { font-size: 17px; font-weight: 800; color: var(--text-main); }
+  #recipeMarginDisplay[data-state="ok"]  { color: var(--success); }
+  #recipeMarginDisplay[data-state="low"] { color: var(--warning); }
+  #recipeMarginDisplay[data-state="out"] { color: var(--danger); }
+
+  .cs-price-row { display: flex; align-items: baseline; gap: 2px; }
+  .recipe-cost-strip #recipeSalesPriceCurrency { flex-shrink: 0; color: var(--text-muted); font-size: 17px; font-weight: 800; }
+  .recipe-cost-strip #recipeSalesPriceInput {
+    flex: 1; min-width: 0; border: none; background: none; outline: none; padding: 0;
+    color: var(--text-main); font-size: 17px; font-weight: 800; font-family: inherit;
+  }
+  .recipe-cost-strip #recipeSalesPriceInput::placeholder { color: var(--text-faint, #94a3b8); font-weight: 700; }
 
   #recipeDropzone {
     flex-grow: 1; 
@@ -525,9 +533,10 @@
 
   /* Mobile-only builder elements — hidden by default; the <=768px media
      query turns each on. A bare element defaults to visible, so without
-     this these would render on desktop too. */
+     this these would render on desktop too. (.recipe-cost-strip is NOT
+     mobile-only -- it's the shared Sell for/Cost/Margin strip, visible on
+     both breakpoints; see its base rule near .rb-sku-wrap above.) */
   #rbHead,
-  .recipe-cost-strip,
   .rb-row {
     display: none;
   }
@@ -819,13 +828,12 @@
       margin: 0 auto 20px;
     }
     
-    /* Mobile Recipe Name/Price — clean underline typography matching the
+    /* Mobile Recipe Name — clean underline typography matching the
        10b reference (no boxed background, no visible label). */
     .recipe-name-section > label {
       display: none;
     }
     #recipeNameInput,
-    .rb-price-wrap,
     .rb-sku-wrap {
       width: 100%;
       border: none;
@@ -835,10 +843,7 @@
       padding: 0 0 9px;
       box-sizing: border-box;
     }
-    .rb-price-wrap { display: flex; align-items: center; gap: 2px; }
-    #recipeNameInput,
-    #recipeSalesPriceInput,
-    #recipeSalesPriceCurrency {
+    #recipeNameInput {
       font-size: 22px;
       font-weight: 700;
     }
@@ -846,12 +851,10 @@
       outline: none;
       border-bottom-color: var(--accent);
     }
-    .rb-price-wrap:focus-within,
     .rb-sku-wrap:focus-within {
       border-bottom-color: var(--accent);
     }
-    #recipeNameInput::placeholder,
-    #recipeSalesPriceInput::placeholder {
+    #recipeNameInput::placeholder {
       color: var(--text-ghost, #cbd5e1);
       font-weight: 600;
     }
@@ -1006,22 +1009,6 @@
                font-weight: 800; letter-spacing: -.01em; cursor: pointer; }
     .rb-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-ghost, #cbd5e1)); cursor: default; }
 
-    /* ---------- 15b: cost strip ---------- */
-    .recipe-cost-strip {
-      display: flex; margin-top: 14px;
-      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-    }
-    .recipe-cost-strip > div { flex: 1; min-width: 0; padding: 9px 12px; }
-    .recipe-cost-strip > div + div { border-left: 1px solid var(--border); }
-    .recipe-cost-strip label {
-      display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted);
-      font-weight: 700; letter-spacing: .06em; margin-bottom: 3px;
-    }
-    .recipe-cost-strip span { font-size: 17px; font-weight: 800; color: var(--text-main); }
-    #recipeMarginDisplay[data-state="ok"]  { color: var(--success); }
-    #recipeMarginDisplay[data-state="low"] { color: var(--warning); }
-    #recipeMarginDisplay[data-state="out"] { color: var(--danger); }
-
     /* Category row (replaces the icon grid on mobile only — desktop keeps it) */
     #recipeCategoryDesktopGroup { display: none; }
     .rb-row {
@@ -1056,7 +1043,6 @@
       text-transform: uppercase; color: var(--text-muted);
     }
     .rb-sec-aside { font-size: 12px; color: var(--text-faint, #94a3b8); }
-    .rb-empty { padding: 18px 16px; font-size: 13px; color: var(--text-faint, #94a3b8); }
 
     /* Hide all scrollbars on mobile */
     * {
@@ -1494,14 +1480,14 @@
           </button>
         </div>
 
-        <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; margin-top: 20px; display: block; letter-spacing: 0.05em; text-align: center;">Sell for</label>
-        <div class="rb-price-wrap" id="rbPriceWrap">
-          <span id="recipeSalesPriceCurrency">$</span>
-          <input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" oninput="updateCost()" />
-        </div>
-
-        <!-- Mobile-only: 15b — updateCost() finally has somewhere real to render -->
-        <div class="recipe-cost-strip" id="recipeCostStrip">
+        <!-- Sell for / Costs to make / Margin as one strip -- Sell for is
+             the only editable column, the other two are derived by
+             updateCost() as items/quantities change. -->
+        <div class="recipe-cost-strip" id="recipeCostStrip" style="margin-top: 20px;">
+          <div>
+            <label for="recipeSalesPriceInput">Sell for</label>
+            <span class="cs-price-row"><span id="recipeSalesPriceCurrency">$</span><input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" oninput="updateCost()" /></span>
+          </div>
           <div>
             <label>Costs to make</label>
             <span id="recipeTotalCostDisplay">$0.00</span>
@@ -3256,7 +3242,10 @@ function renderMobileSelected() {
   if (!dz) return;
   const entries = Object.entries(currentRecipe);
   if (!entries.length) {
-    dz.innerHTML = '<div class="rb-empty">Pick items below to build this product.</div>';
+    // Nothing selected yet — the item picker right below makes the next
+    // step obvious, so this collapses to nothing instead of reserving
+    // space for an empty-state message.
+    dz.innerHTML = '';
     return;
   }
   const units = entries.reduce((s, [, i]) => s + (parseFloat(i.quantity) || 0), 0);
