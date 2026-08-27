@@ -1268,7 +1268,7 @@
               <input class="ic-input" type="number" id="ing_quantity" step="0.01" required placeholder="0" oninput="onIngredientEdit()">
             </div>
             <div class="ic-field">
-              <label class="ic-label" for="ing_cost">Cost each</label>
+              <label class="ic-label" for="ing_cost" id="ic_cost_label">Cost each</label>
               <span class="ic-prefix"><span>$</span><input class="ic-input" type="number" id="ing_cost" step="0.01" required placeholder="0.00" oninput="onIngredientEdit()"></span>
             </div>
           </div>
@@ -1278,9 +1278,9 @@
             <div class="ic-units" id="icUnits"></div>
           </div>
           <div class="ic-field">
-            <label class="ic-label" for="ing_min_stock">Low stock alert</label>
-            <input class="ic-input" type="number" id="ing_min_stock" step="0.01" placeholder="Off" oninput="onIngredientEdit()">
-            <div class="ic-hint">Flags it on the dashboard once stock drops under this.</div>
+            <label class="ic-label" for="ing_min_stock" id="ic_min_stock_label">Alert below</label>
+            <input class="ic-input" type="number" id="ing_min_stock" step="0.01" placeholder="e.g. 10" oninput="onIngredientEdit()">
+            <div class="ic-hint">Enter a quantity — you'll get a low-stock flag once stock drops below it. Leave blank for no alert.</div>
           </div>
           <div class="ic-field">
             <label class="ic-label">Category <span style="color: var(--danger);">*</span></label>
@@ -2008,18 +2008,36 @@ function renderIcMoreCount() {
   if (el) el.textContent = filled ? `${filled} filled` : 'Optional';
 }
 
-// Stock value is the only number worth deriving here, and it catches the
-// classic slip of typing a pack price into "cost each".
+// For "pcs" the price of one piece is something people actually know off
+// the top of their head, so cost × qty = stock value makes sense. For every
+// other unit (g, ml, L, ...) nobody prices a single gram or milliliter —
+// they know what they paid for what's in front of them. So for those units
+// this field collects the *total* paid instead, and the per-unit rate that
+// recipe costing needs is derived (cost / qty) rather than typed directly.
 function onIngredientEdit() {
   const name = document.getElementById('ing_name').value.trim();
   const q = parseFloat(document.getElementById('ing_quantity').value) || 0;
   const c = parseFloat(document.getElementById('ing_cost').value) || 0;
   const unit = document.getElementById('ing_unit').value || 'pcs';
+  const isPcs = unit === 'pcs';
+
+  const costLabel = document.getElementById('ic_cost_label');
+  if (costLabel) costLabel.textContent = isPcs ? 'Cost each' : 'Total cost';
+
+  const minStockLabel = document.getElementById('ic_min_stock_label');
+  if (minStockLabel) minStockLabel.textContent = `Alert below (${unit})`;
+
   const valueEl = document.getElementById('icValue');
   if (valueEl) {
-    valueEl.innerHTML = q && c
-      ? `${q} ${escapeHtml(unit)} × $${c.toFixed(2)} = <b>$${(q * c).toFixed(2)}</b> of stock`
-      : name ? 'Cost each is optional — add it later from the item page.' : '';
+    if (!q || !c) {
+      valueEl.innerHTML = name
+        ? `${isPcs ? 'Cost each' : 'Total cost'} is optional — add it later from the item page.`
+        : '';
+    } else if (isPcs) {
+      valueEl.innerHTML = `${q} ${escapeHtml(unit)} × $${c.toFixed(2)} = <b>$${(q * c).toFixed(2)}</b> of stock`;
+    } else {
+      valueEl.innerHTML = `${q} ${escapeHtml(unit)} for $${c.toFixed(2)} = <b>$${(c / q).toFixed(4)}</b> per ${escapeHtml(unit)}`;
+    }
   }
   const disabled = !name;
   const saveBtn = document.getElementById('icSave');
@@ -4324,13 +4342,23 @@ async function saveIngredient(event) {
     }
   });
 
+  const icUnit = document.getElementById('ing_unit').value || 'pcs';
+  const icQuantity = parseFloat(document.getElementById('ing_quantity').value) || 0;
+  const icCostInput = parseFloat(document.getElementById('ing_cost').value) || 0;
+  // Non-"pcs" units collect a total cost in the form (see onIngredientEdit),
+  // so it has to be divided back down to a per-unit rate before storage —
+  // cost_per_unit is what recipe costing multiplies against usage elsewhere.
+  const icCostPerUnit = icUnit === 'pcs'
+    ? icCostInput
+    : (icQuantity > 0 ? icCostInput / icQuantity : 0);
+
   const formData = {
     profile_id: user.id,
     store_id: storeId,
     name: document.getElementById('ing_name').value,
-    quantity: parseFloat(document.getElementById('ing_quantity').value) || 0,
-    unit: document.getElementById('ing_unit').value || 'pcs',
-    cost_per_unit: parseFloat(document.getElementById('ing_cost').value) || 0,
+    quantity: icQuantity,
+    unit: icUnit,
+    cost_per_unit: icCostPerUnit,
     category: document.getElementById('ing_category').value || '',
     min_stock: parseFloat(document.getElementById('ing_min_stock').value) || 0,
     estimated_delivery: parseInt(document.getElementById('ing_estimated_delivery').value) || null,
