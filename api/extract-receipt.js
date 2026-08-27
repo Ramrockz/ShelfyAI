@@ -11,30 +11,55 @@ const Anthropic = require('@anthropic-ai/sdk');
 // Claude vision fallback for Item Creation (context === 'ingredient') only,
 // and only when the upload is an image AgentQL couldn't read (or read as
 // empty) -- AgentQL runs first as the primary reader; this is a backup, not
-// a parallel/competing call. Swap this in for your own prompt if you have
-// one already written -- shape matters more than wording here, since
-// extractWithClaude() below parses whatever comes back as JSON against this
-// exact schema.
-const CLAUDE_INGREDIENT_PROMPT = `You are reading a photo of a product, price tag, packaging, or supplier list to help someone add it as inventory in a stock-management app.
+// a parallel/competing call. This prompt describes a SINGLE item (one photo
+// of one thing), unlike AgentQL's ingredientPrompt above which describes a
+// list -- extractWithClaude() below wraps its single result in a one-entry
+// item[] array so it still fits the same result.data envelope everything
+// downstream (usage metering, applyReceiptScanToManualModal() in
+// ingredients.html) already expects from AgentQL.
+const CLAUDE_INGREDIENT_PROMPT = `Du analysierst ein Foto eines Gegenstands, den ein kleines Unternehmen als
+Rohmaterial oder Zutat für seine Produktherstellung einkauft und in seinem
+Lagerbestand erfassen möchte.
 
-Look at the image and identify every distinct item. Respond with ONLY raw JSON -- no markdown, no code fences, no commentary -- matching exactly this shape:
+Deine Aufgabe: Fülle möglichst viele der folgenden Felder aus einem
+Inventar-Formular aus, basierend NUR auf dem, was im Bild sichtbar ist
+(Verpackungstext, Etiketten, Barcodes, Mengenangaben, Marke, etc.).
+
+Antworte ausschließlich mit validem JSON in genau diesem Schema:
 
 {
-  "vendor": string or null (supplier/brand name if visible),
-  "date": string or null (purchase or invoice date if visible, YYYY-MM-DD if you can tell),
-  "amount": number or null (total cost if visible),
-  "item": [
-    {
-      "name": string (the product/ingredient name),
-      "price": number or null (unit cost if visible),
-      "SKU": string or null (SKU, barcode, or product code if visible),
-      "quantity": number (quantity shown; default to 1 if not stated),
-      "attributes": object (e.g. {"color": "Red", "size": "L"} for visible variant attributes; omit or use {} if none)
-    }
-  ]
+  "name": string | null,            // Produktname, z.B. "Olivenöl Extra Vergine"
+  "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
+  "stock_on_hand": number | null,   // nur wenn eindeutig zählbar (z.B. "3 Flaschen sichtbar")
+  "category": string | null,        // grobe Kategorie, z.B. "Speiseöl", "Verpackung", "Rohstoff"
+  "attributes": [                   // z.B. Marke, Herkunft, Farbe, Sorte, Größe
+    { "name": string, "value": string }
+  ],
+  "sku_barcode": string | null,     // nur falls ein Barcode/EAN/Artikelnummer lesbar ist
+  "expiration_date": string | null, // Format TT.MM.JJJJ, nur falls auf der Verpackung sichtbar
+  "notes": string | null            // alles Nützliche, das sonst nirgends reinpasst, inkl. Unsicherheiten
 }
 
-If you can't identify any real item in the image, return {"item": []}. Never invent data that isn't visibly in the image.`;
+Wichtige Regeln:
+- Felder, die aus einem Foto NICHT zuverlässig ableitbar sind
+  (cost_each, low_stock_alert, delivery_days, source_url), lässt du
+  komplett weg bzw. gibst sie nicht zurück — errate sie nicht.
+- stock_on_hand nur setzen, wenn die Anzahl im Bild eindeutig auszählbar ist
+  (z.B. "5 Kartons"). Bei einem einzelnen Gegenstand ohne erkennbare
+  Losgröße: null.
+- Erfinde keine Werte. Wenn ein Feld nicht lesbar/erkennbar ist: null.
+- Text auf der Verpackung (auch klein oder teilweise verdeckt) genau lesen,
+  bevor du ein Feld auf null setzt.
+- Gib NUR das JSON-Objekt zurück, keinen Fließtext, keine Markdown-Codeblöcke.`;
+
+// German dd.mm.yyyy (the format CLAUDE_INGREDIENT_PROMPT asks for) -> the
+// yyyy-mm-dd an <input type="date"> actually needs to display a value.
+function parseGermanDate(value) {
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
 
 async function extractWithClaude(filepath, mimeType) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -59,8 +84,8 @@ async function extractWithClaude(filepath, mimeType) {
   const textBlock = response.content.find(b => b.type === 'text');
   if (!textBlock) return null;
 
-  // Claude was told to return raw JSON, but strip markdown fences / stray
-  // prose defensively rather than trust that instruction held every time.
+  // The prompt asks for raw JSON, but strip markdown fences / stray prose
+  // defensively rather than trust that instruction held every time.
   const raw = textBlock.text;
   const jsonStart = raw.indexOf('{');
   const jsonEnd = raw.lastIndexOf('}');
@@ -74,18 +99,40 @@ async function extractWithClaude(filepath, mimeType) {
     return null;
   }
 
-  const items = Array.isArray(parsed.item) ? parsed.item : [];
+  // No usable item recognized -- an empty item[] matches AgentQL's own
+  // "zero items" shape so the caller's existing no-match handling applies.
+  if (!parsed.name) {
+    return { vendor: null, item: [], amount: null, date: null };
+  }
+
+  // [{name, value}] (the shape the prompt was written against) -> the flat
+  // {key: value} object applyReceiptScanToManualModal() already expects
+  // from AgentQL's own parseAttributes() output.
+  const attributes = {};
+  if (Array.isArray(parsed.attributes)) {
+    parsed.attributes.forEach(attr => {
+      if (attr && attr.name && attr.value) attributes[attr.name] = attr.value;
+    });
+  }
+
   return {
-    vendor: parsed.vendor || null,
-    item: items.map(item => ({
-      name: item.name || null,
-      price: item.price || null,
-      SKU: item.SKU || item.name || null,
-      quantity: item.quantity || 1,
-      attributes: (item.attributes && typeof item.attributes === 'object') ? item.attributes : {}
-    })),
-    amount: parsed.amount || null,
-    date: parsed.date || null
+    vendor: null,
+    item: [{
+      name: parsed.name,
+      price: null, // deliberately not asked for -- the prompt excludes cost_each as unreadable from a photo
+      SKU: parsed.sku_barcode || null,
+      // Left null (not defaulted to 1) when the prompt itself left
+      // stock_on_hand null -- that's it declining to guess a count it
+      // couldn't clearly read, not "one of these."
+      quantity: parsed.stock_on_hand || null,
+      unit: (parsed.unit && parsed.unit !== 'other') ? parsed.unit : null,
+      product_category: parsed.category || null,
+      expiration_date: parseGermanDate(parsed.expiration_date),
+      notes: parsed.notes || null,
+      attributes
+    }],
+    amount: null,
+    date: null
   };
 }
 

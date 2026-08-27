@@ -1796,27 +1796,21 @@ function applyReceiptScanToManualModal(data) {
   if (item.product_category) selectIngCategory(item.product_category);
   if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
   if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
+  // Only the Claude fallback path (extract-receipt.js's ingredient prompt
+  // explicitly asks it not to guess these) currently supplies these two --
+  // AgentQL's own ingredient/URL prompts don't ask for them, so both are
+  // simply absent (and left untouched here) for every other source.
+  if (item.expiration_date) document.getElementById('ing_expiration_date').value = item.expiration_date;
+  if (item.notes) document.getElementById('ing_notes').value = item.notes;
 
-  const container = document.getElementById('customAttributes');
-  if (item.attributes?.color) {
-    const row = document.createElement('div');
-    row.style.cssText = 'display: flex; gap: 8px;';
-    row.innerHTML = `
-      <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <input type="text" value="${escapeHtml(item.attributes.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-    `;
-    container.appendChild(row);
-  }
-  if (item.attributes?.size) {
-    const row = document.createElement('div');
-    row.style.cssText = 'display: flex; gap: 8px;';
-    row.innerHTML = `
-      <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <input type="text" value="${escapeHtml(item.attributes.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-    `;
-    container.appendChild(row);
+  // Every {key: value} pair becomes an attribute row -- not just color/size,
+  // since the Claude fallback's prompt can surface brand/origin/variety/etc
+  // too, and AgentQL's own parseAttributes() (extract-receipt.js) already
+  // returns whatever key it found rather than only ever color or size.
+  if (item.attributes && typeof item.attributes === 'object') {
+    Object.entries(item.attributes).forEach(([key, value]) => {
+      if (key && value) addAttributeRow(key, value);
+    });
   }
   onIngredientEdit();
 }
@@ -4197,26 +4191,33 @@ async function saveDuplicate(keepOpen = false) {
   }
 }
 
-function addAttributeRow(prefillKey) {
+function addAttributeRow(prefillKey, prefillValue) {
   const container = document.getElementById('customAttributes');
   if (prefillKey) {
     // A suggestion chip for a key that's already been added focuses the
-    // existing row's value instead of adding a duplicate.
+    // existing row's value instead of adding a duplicate. A prefillValue
+    // (a scan result populating a real value, not a chip tap) still wins
+    // over an empty existing row instead of just focusing it.
     const existing = [...container.children].find(row => {
       const nameInput = row.querySelector('input');
       return nameInput && nameInput.value.trim().toLowerCase() === prefillKey.toLowerCase();
     });
-    if (existing) { existing.querySelectorAll('input')[1]?.focus(); return; }
+    if (existing) {
+      const valueInput = existing.querySelectorAll('input')[1];
+      if (prefillValue && valueInput && !valueInput.value.trim()) valueInput.value = prefillValue;
+      else valueInput?.focus();
+      return;
+    }
   }
   const row = document.createElement('div');
   row.style.cssText = 'display: flex; gap: 8px;';
   row.innerHTML = `
     <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" value="${prefillKey ? escapeHtml(prefillKey) : ''}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-    <input type="text" placeholder="Value" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
+    <input type="text" placeholder="Value" value="${prefillValue ? escapeHtml(prefillValue) : ''}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
     <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
   `;
   container.appendChild(row);
-  if (prefillKey) row.querySelectorAll('input')[1]?.focus();
+  if (prefillKey && !prefillValue) row.querySelectorAll('input')[1]?.focus();
 }
 
 function selectIngCategory(value) {
