@@ -22,7 +22,7 @@
       title: 'Add item',
       subtitle: "Choose how you'd like to add your item",
       methods: [
-        { id: 'image', ai: true, icon: ICON.scan, name: 'PDF / Image Upload', desc: 'Scan receipts or invoices' },
+        { id: 'image', ai: true, icon: ICON.scan, name: 'File Upload', desc: 'Scan receipts or invoices' },
         { id: 'url', ai: true, icon: ICON.link, name: 'URL Import', desc: 'Extract from product pages' },
         { id: 'manual', ai: false, icon: ICON.manual, name: 'Manual Entry', desc: 'Fill out the form yourself' },
         { id: 'csv', ai: false, icon: ICON.csv, name: 'CSV Import', desc: 'Upload bulk data from Excel', desktopOnly: true }
