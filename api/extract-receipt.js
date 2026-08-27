@@ -516,9 +516,17 @@ module.exports = async (req, res) => {
     // AgentQL can return 200 with zero items read (e.g. a blurry photo or one
     // that isn't actually a receipt/product) -- that's not a usable draft,
     // and the user shouldn't be charged a scan for a photo nothing came from.
+    // A non-empty array with no real name is just as unusable -- AgentQL's
+    // single-item fallback branch can produce e.g. [{ name: null, quantity: 1 }]
+    // for a product photo it couldn't actually read (its "supplier list/price
+    // sheet" prompt isn't tuned for single-product packaging shots the way
+    // Claude's is), and `.length === 0` alone doesn't catch that -- it would
+    // silently accept a blank draft with AgentQL's own quantity-defaults-to-1
+    // filled in, instead of ever trying the Claude fallback.
     // usedClaude guards against re-running the fallback when this AgentQL
     // result already IS the Claude result from the !response.ok branch above.
-    if (!usedClaude && (!result.data.item || result.data.item.length === 0)) {
+    const hasUsableItem = result.data.item && result.data.item.some(i => i.name);
+    if (!usedClaude && !hasUsableItem) {
       if (claudeEligible) {
         console.log('AgentQL found nothing — trying Claude fallback for Item Creation image');
         const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
