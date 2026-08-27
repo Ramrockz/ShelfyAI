@@ -6,6 +6,88 @@ const { IncomingForm } = require('formidable');
 const FormData = require('form-data');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
+const Anthropic = require('@anthropic-ai/sdk');
+
+// Claude vision fallback for Item Creation (context === 'ingredient') only,
+// and only when the upload is an image AgentQL couldn't read (or read as
+// empty) -- AgentQL runs first as the primary reader; this is a backup, not
+// a parallel/competing call. Swap this in for your own prompt if you have
+// one already written -- shape matters more than wording here, since
+// extractWithClaude() below parses whatever comes back as JSON against this
+// exact schema.
+const CLAUDE_INGREDIENT_PROMPT = `You are reading a photo of a product, price tag, packaging, or supplier list to help someone add it as inventory in a stock-management app.
+
+Look at the image and identify every distinct item. Respond with ONLY raw JSON -- no markdown, no code fences, no commentary -- matching exactly this shape:
+
+{
+  "vendor": string or null (supplier/brand name if visible),
+  "date": string or null (purchase or invoice date if visible, YYYY-MM-DD if you can tell),
+  "amount": number or null (total cost if visible),
+  "item": [
+    {
+      "name": string (the product/ingredient name),
+      "price": number or null (unit cost if visible),
+      "SKU": string or null (SKU, barcode, or product code if visible),
+      "quantity": number (quantity shown; default to 1 if not stated),
+      "attributes": object (e.g. {"color": "Red", "size": "L"} for visible variant attributes; omit or use {} if none)
+    }
+  ]
+}
+
+If you can't identify any real item in the image, return {"item": []}. Never invent data that isn't visibly in the image.`;
+
+async function extractWithClaude(filepath, mimeType) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const imageBase64 = fs.readFileSync(filepath).toString('base64');
+  const client = new Anthropic({ apiKey });
+
+  const response = await client.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 4096,
+    output_config: { effort: 'medium' },
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+        { type: 'text', text: CLAUDE_INGREDIENT_PROMPT }
+      ]
+    }]
+  });
+
+  const textBlock = response.content.find(b => b.type === 'text');
+  if (!textBlock) return null;
+
+  // Claude was told to return raw JSON, but strip markdown fences / stray
+  // prose defensively rather than trust that instruction held every time.
+  const raw = textBlock.text;
+  const jsonStart = raw.indexOf('{');
+  const jsonEnd = raw.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+  } catch (parseError) {
+    console.error('Claude fallback: failed to parse JSON response:', parseError, raw);
+    return null;
+  }
+
+  const items = Array.isArray(parsed.item) ? parsed.item : [];
+  return {
+    vendor: parsed.vendor || null,
+    item: items.map(item => ({
+      name: item.name || null,
+      price: item.price || null,
+      SKU: item.SKU || item.name || null,
+      quantity: item.quantity || 1,
+      attributes: (item.attributes && typeof item.attributes === 'object') ? item.attributes : {}
+    })),
+    amount: parsed.amount || null,
+    date: parsed.date || null
+  };
+}
 
 // AgentQL returns attribute keys verbatim from the source document, so a German
 // or Spanish receipt/screenshot produces keys like "Größe"/"Talla" instead of
@@ -149,6 +231,19 @@ module.exports = async (req, res) => {
     const context = (fields.context?.[0] || fields.context || 'ingredient').toLowerCase();
     console.log('Extraction context:', context);
 
+    // Claude fallback only applies to Item Creation, and only for an actual
+    // image (a photo upload or camera capture) -- not PDFs, and not
+    // order/expense scans. formidable v3 exposes the parsed mimetype here;
+    // fall back to the filename extension if a browser ever sends it blank.
+    const fileMimeType = file.mimetype || '';
+    const isImage = fileMimeType
+      ? fileMimeType.startsWith('image/')
+      : !/\.pdf$/i.test(file.originalFilename || '');
+    const claudeEligible = context === 'ingredient' && isImage && !!process.env.ANTHROPIC_API_KEY;
+    // Claude's vision API accepts image/jpeg|png|gif|webp -- "image/jpg" is
+    // not a real media type but some browsers/cameras report it anyway.
+    const claudeMimeType = fileMimeType === 'image/jpg' ? 'image/jpeg' : (fileMimeType || 'image/jpeg');
+
     // Check usage limits — orders and expenses share a single monthly pool
     const { data: settings } = await supabase
       .from('user_settings')
@@ -265,104 +360,135 @@ module.exports = async (req, res) => {
 
     console.log('AgentQL response status:', response.status);
 
+    // Set once a usable result comes from either reader, so the fallback
+    // block below (zero-items case) knows not to re-attempt Claude after
+    // this branch already did.
+    let result;
+    let usedClaude = false;
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AgentQL API error:', errorText);
-      // This return happens before the usage-increment RPC further down,
-      // so a failure here never counts against the user's monthly scan
-      // limit -- say so explicitly since "did this use up my scan?" is the
-      // natural worry after seeing this message.
-      return res.status(response.status).json({
-        error: "Couldn't read this photo — try a clearer, well-lit shot, or enter it manually. This didn't use one of your scans.",
-        code: 'scan.malformed',
-        details: errorText
-      });
-    }
 
-    const data = await response.json();
-    console.log('=== AgentQL Response ===');
-    console.log(JSON.stringify(data, null, 2));
-    
-    // AgentQL wraps the response in a 'data' object
-    const extractedData = data.data || data;
-    console.log('=== Extracted Data ===');
-    console.log(JSON.stringify(extractedData, null, 2));
-    
-    // Parse and return the extracted data based on context
-    let result;
-    
-    if (context === 'order') {
-      // Handle item as array (from prompt: item []{})
-      let items = [];
-      if (Array.isArray(extractedData.item)) {
-        items = extractedData.item.map(item => ({
-          name: item.name || null,
-          quantity: item.quantity || 1,
-          attributes: parseAttributes(item.attributes)
-        }));
-      } else if (extractedData.item) {
-        // Fallback for single item
-        items = [{
-          name: extractedData.item.name || null,
-          quantity: extractedData.item.quantity || 1,
-          attributes: parseAttributes(extractedData.item.attributes)
-        }];
-      }
-      
-      result = {
-        success: true,
-        data: {
-          vendor: extractedData.customer || null, // Map customer to vendor for frontend compatibility
-          customer: extractedData.customer || null,
-          order_reference: extractedData.order_reference || null,
-          revenue: extractedData.revenue || null,
-          date: extractedData.date || null,
-          item: items // Return array of items
+      if (claudeEligible) {
+        console.log('AgentQL failed — trying Claude fallback for Item Creation image');
+        const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
+          .catch(claudeError => { console.error('Claude fallback error:', claudeError); return null; });
+        if (claudeData && claudeData.item.length > 0) {
+          result = { success: true, data: claudeData };
+          usedClaude = true;
         }
-      };
+      }
+
+      if (!usedClaude) {
+        // This return happens before the usage-increment RPC further down,
+        // so a failure here never counts against the user's monthly scan
+        // limit -- say so explicitly since "did this use up my scan?" is the
+        // natural worry after seeing this message.
+        return res.status(response.status).json({
+          error: "Couldn't read this photo — try a clearer, well-lit shot, or enter it manually. This didn't use one of your scans.",
+          code: 'scan.malformed',
+          details: errorText
+        });
+      }
     } else {
-      // Handle item as array (from prompt: item []{})
-      let items = [];
-      if (Array.isArray(extractedData.item) && extractedData.item.length > 0) {
-        items = extractedData.item.map(item => ({
-          name: item.name || null,
-          price: item.price || null,
-          SKU: item.SKU || item.name || null,
-          quantity: item.quantity || 1,
-          attributes: parseAttributes(item.attributes)
-        }));
-      } else if (extractedData.item && typeof extractedData.item === 'object') {
-        // Fallback for single item
-        const singleItem = extractedData.item;
-        items = [{
-          name: singleItem.name || null,
-          price: singleItem.price || null,
-          SKU: singleItem.SKU || singleItem.name || null,
-          quantity: singleItem.quantity || 1,
-          attributes: parseAttributes(singleItem.attributes)
-        }];
-      }
-      
-      result = {
-        success: true,
-        data: {
-          vendor: extractedData.vendor || null,
-          item: items, // Return array of items
-          amount: extractedData.amount || null,
-          date: extractedData.date || null
+      const data = await response.json();
+      console.log('=== AgentQL Response ===');
+      console.log(JSON.stringify(data, null, 2));
+
+      // AgentQL wraps the response in a 'data' object
+      const extractedData = data.data || data;
+      console.log('=== Extracted Data ===');
+      console.log(JSON.stringify(extractedData, null, 2));
+
+      // Parse and return the extracted data based on context
+      if (context === 'order') {
+        // Handle item as array (from prompt: item []{})
+        let items = [];
+        if (Array.isArray(extractedData.item)) {
+          items = extractedData.item.map(item => ({
+            name: item.name || null,
+            quantity: item.quantity || 1,
+            attributes: parseAttributes(item.attributes)
+          }));
+        } else if (extractedData.item) {
+          // Fallback for single item
+          items = [{
+            name: extractedData.item.name || null,
+            quantity: extractedData.item.quantity || 1,
+            attributes: parseAttributes(extractedData.item.attributes)
+          }];
         }
-      };
+
+        result = {
+          success: true,
+          data: {
+            vendor: extractedData.customer || null, // Map customer to vendor for frontend compatibility
+            customer: extractedData.customer || null,
+            order_reference: extractedData.order_reference || null,
+            revenue: extractedData.revenue || null,
+            date: extractedData.date || null,
+            item: items // Return array of items
+          }
+        };
+      } else {
+        // Handle item as array (from prompt: item []{})
+        let items = [];
+        if (Array.isArray(extractedData.item) && extractedData.item.length > 0) {
+          items = extractedData.item.map(item => ({
+            name: item.name || null,
+            price: item.price || null,
+            SKU: item.SKU || item.name || null,
+            quantity: item.quantity || 1,
+            attributes: parseAttributes(item.attributes)
+          }));
+        } else if (extractedData.item && typeof extractedData.item === 'object') {
+          // Fallback for single item
+          const singleItem = extractedData.item;
+          items = [{
+            name: singleItem.name || null,
+            price: singleItem.price || null,
+            SKU: singleItem.SKU || singleItem.name || null,
+            quantity: singleItem.quantity || 1,
+            attributes: parseAttributes(singleItem.attributes)
+          }];
+        }
+
+        result = {
+          success: true,
+          data: {
+            vendor: extractedData.vendor || null,
+            item: items, // Return array of items
+            amount: extractedData.amount || null,
+            date: extractedData.date || null
+          }
+        };
+      }
     }
 
     // AgentQL can return 200 with zero items read (e.g. a blurry photo or one
     // that isn't actually a receipt/product) -- that's not a usable draft,
     // and the user shouldn't be charged a scan for a photo nothing came from.
-    if (!result.data.item || result.data.item.length === 0) {
-      return res.status(200).json({
-        success: false,
-        error: context === 'order' ? 'No order details found in that photo' : 'No item found in that photo',
-        code: 'scan.no_match'
-      });
+    // usedClaude guards against re-running the fallback when this AgentQL
+    // result already IS the Claude result from the !response.ok branch above.
+    if (!usedClaude && (!result.data.item || result.data.item.length === 0)) {
+      if (claudeEligible) {
+        console.log('AgentQL found nothing — trying Claude fallback for Item Creation image');
+        const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
+          .catch(claudeError => { console.error('Claude fallback error:', claudeError); return null; });
+        if (claudeData && claudeData.item.length > 0) {
+          result = { success: true, data: claudeData };
+          usedClaude = true;
+        }
+      }
+
+      if (!usedClaude) {
+        return res.status(200).json({
+          success: false,
+          error: context === 'order' ? 'No order details found in that photo' : 'No item found in that photo',
+          code: 'scan.no_match'
+        });
+      }
     }
 
     // Increment usage counter
