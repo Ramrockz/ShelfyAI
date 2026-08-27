@@ -828,12 +828,13 @@
       margin: 0 auto 20px;
     }
     
-    /* Mobile Recipe Name — clean underline typography matching the
-       10b reference (no boxed background, no visible label). */
+    /* Mobile Recipe SKU — clean underline typography, no visible label.
+       Name keeps its own label + the bordered-box .recipe-name-input look
+       (same convention as ingredients.html's New Item fields) on every
+       breakpoint, so it isn't touched here. */
     .recipe-name-section > label {
       display: none;
     }
-    #recipeNameInput,
     .rb-sku-wrap {
       width: 100%;
       border: none;
@@ -843,20 +844,8 @@
       padding: 0 0 9px;
       box-sizing: border-box;
     }
-    #recipeNameInput {
-      font-size: 22px;
-      font-weight: 700;
-    }
-    #recipeNameInput:focus {
-      outline: none;
-      border-bottom-color: var(--accent);
-    }
     .rb-sku-wrap:focus-within {
       border-bottom-color: var(--accent);
-    }
-    #recipeNameInput::placeholder {
-      color: var(--text-ghost, #cbd5e1);
-      font-weight: 600;
     }
 
     /* Mobile Ingredient Picker — flows naturally in the single scroll
@@ -918,29 +907,13 @@
     .ai-star { flex-shrink: 0; font-size: 18px; cursor: pointer; color: #cbd5e1; }
     .ai-star.favorited { color: #f59e0b; }
 
-    /* Selected Ingredients Area */
+    /* Desktop-only drag/drop target -- mobile selects items directly in the
+       picker below (inline steppers included), so this never needs to take
+       any space here. */
     #recipeDropzone {
-      flex: 0 0 auto;
-      min-height: 100px;
-      max-height: 25vh;
-      padding: 20px 16px;
-      border-radius: 12px;
-      overflow-y: auto;
-      margin-top: 12px;
-      margin-bottom: 16px;
+      display: none;
     }
-    
-    .recipe-drop-placeholder {
-      font-size: 14px;
-      gap: 8px;
-      line-height: 1.6;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-    }
-    
+
     /* Desktop-only Create button — mobile uses #rbCreateBtn in .rb-foot
        instead. This was still visibly sticky-positioned on mobile,
        sitting over the item picker and blocking scroll to the bottom. */
@@ -1023,26 +996,6 @@
     .rb-row-value.empty { font-weight: 400; color: var(--text-faint, #94a3b8); }
     .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
 
-    /* ---------- 15d: selected items, pinned ---------- */
-    /* Capped to ~3 rows + a peek of the 4th (cut off by max-height) plus a
-       bottom fade -- both signal "scroll for more" without extra markup,
-       instead of growing unbounded and silently pushing the search/item
-       list further down the page with no hint that more selected items
-       exist above it. */
-    #recipeDropzone {
-      display: block; margin-top: 12px; padding: 0; background: none; border: none;
-      max-height: 230px; overflow-y: auto;
-    }
-    #recipeDropzone.scrollable {
-      -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
-      mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
-    }
-    .rb-sec { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 16px 6px; }
-    .rb-sec-title {
-      font-size: 11px; font-weight: 700; letter-spacing: .07em;
-      text-transform: uppercase; color: var(--text-muted);
-    }
-    .rb-sec-aside { font-size: 12px; color: var(--text-faint, #94a3b8); }
 
     /* Hide all scrollbars on mobile */
     * {
@@ -1428,11 +1381,14 @@
     </div>
     <div class="recipe-builder">
     <div class="recipe-panel recipe-panel-left">
-      <!-- Name, then category, then the item picker — these three are what
-           you need before a product exists at all. SKU and Sell price (cost/
-           margin only mean anything once items are picked anyway) move to
-           after the picker instead of gating it. -->
-      <div class="recipe-name-section" id="recipeStep1Section">
+      <!-- Order top to bottom: Name, Category, item picker (search + list),
+           Sell for/Cost/Margin, SKU. Name is unwrapped from
+           .recipe-name-section (which hides its label + reduces to an
+           underline on mobile) so it keeps a visible label and the same
+           bordered-box look as ingredients.html's New Item fields
+           (.recipe-name-input already matches that, it was only mobile CSS
+           stripping it down before). -->
+      <div id="recipeStep1Section">
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">Product Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required oninput="updateCreateButtonState()" />
       </div>
@@ -1450,13 +1406,13 @@
         <svg class="rb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
       </button>
 
-      <!-- Mobile-only: 15d — selected items, pinned above the search/library
-           below instead of living only in the desktop dropzone. -->
+      <!-- Desktop-only drop target for drag/drop; hidden on mobile (the
+           picker below handles selection there, inline steppers included --
+           no separate "selected items" list needed). -->
       <div id="recipeDropzone"><div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div></div>
 
       <div class="mobile-ingredient-swiper" id="recipeStep2Section">
-        <div class="rb-sec" id="rbAddMoreSec"><span class="rb-sec-title">Add more</span></div>
-        <div class="rb-find-row" style="margin-bottom: 12px;">
+        <div class="rb-find-row">
           <div class="search-wrapper" style="width: 100%; flex: 1;">
             <i data-lucide="search" class="search-icon"></i>
             <input type="text" id="mobileRecipeSearch" placeholder="Search items…" autocomplete="off" oninput="renderMobileIngList(); toggleSearchClear('mobileRecipeSearch')">
@@ -1470,7 +1426,24 @@
         <div id="mobileRecipeIngList"></div>
       </div>
 
-      <!-- Details, after item selection: SKU + sell price/cost strip. -->
+      <!-- Sell for / Costs to make / Margin as one strip -- Sell for is
+           the only editable column, the other two are derived by
+           updateCost() as items/quantities change. -->
+      <div class="recipe-cost-strip" id="recipeCostStrip">
+        <div>
+          <label for="recipeSalesPriceInput">Sell for</label>
+          <span class="cs-price-row"><span id="recipeSalesPriceCurrency">$</span><input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" oninput="updateCost()" /></span>
+        </div>
+        <div>
+          <label>Costs to make</label>
+          <span id="recipeTotalCostDisplay">$0.00</span>
+        </div>
+        <div>
+          <label>Margin</label>
+          <span id="recipeMarginDisplay">—</span>
+        </div>
+      </div>
+
       <div class="recipe-name-section">
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em; text-align: center;">SKU / Barcode</label>
         <div class="rb-sku-wrap">
@@ -1478,24 +1451,6 @@
           <button type="button" class="rb-scan-btn" onclick="openBarcodeScan(code => { document.getElementById('recipeSkuInput').value = code; })" aria-label="Scan barcode">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
           </button>
-        </div>
-
-        <!-- Sell for / Costs to make / Margin as one strip -- Sell for is
-             the only editable column, the other two are derived by
-             updateCost() as items/quantities change. -->
-        <div class="recipe-cost-strip" id="recipeCostStrip" style="margin-top: 20px;">
-          <div>
-            <label for="recipeSalesPriceInput">Sell for</label>
-            <span class="cs-price-row"><span id="recipeSalesPriceCurrency">$</span><input type="number" id="recipeSalesPriceInput" step="0.01" min="0" placeholder="0.00" oninput="updateCost()" /></span>
-          </div>
-          <div>
-            <label>Costs to make</label>
-            <span id="recipeTotalCostDisplay">$0.00</span>
-          </div>
-          <div>
-            <label>Margin</label>
-            <span id="recipeMarginDisplay">—</span>
-          </div>
         </div>
       </div>
 
@@ -3231,30 +3186,12 @@ function mobilePrimaryAction() {
   saveMobileRecipe();
 }
 
-// 15d — a one-line running summary above the item picker, instead of a full
-// "Made from" list that duplicated every row already shown (with its own
-// stepper) in the picker below. Renders into the SAME #recipeDropzone
-// element as the desktop dropzone, but only ever runs from a mobile-only
-// call site, so it can't collide with addIngredientToRecipe's desktop
-// rendering of the same element.
-function renderMobileSelected() {
-  const dz = document.getElementById('recipeDropzone');
-  if (!dz) return;
-  const entries = Object.entries(currentRecipe);
-  if (!entries.length) {
-    // Nothing selected yet — the item picker right below makes the next
-    // step obvious, so this collapses to nothing instead of reserving
-    // space for an empty-state message.
-    dz.innerHTML = '';
-    return;
-  }
-  const units = entries.reduce((s, [, i]) => s + (parseFloat(i.quantity) || 0), 0);
-  dz.innerHTML = `
-    <div class="rb-sec">
-      <span class="rb-sec-title">Made from</span>
-      <span class="rb-sec-aside">${entries.length} item${entries.length !== 1 ? 's' : ''} · ${units} unit${units !== 1 ? 's' : ''}</span>
-    </div>`;
-}
+// #recipeDropzone is display:none on mobile (the picker below handles
+// selection directly, inline steppers included) and desktop's own
+// addIngredientToRecipe()/removeIngredient() render its "Made from" list
+// there independently -- so on mobile this is a no-op, kept only because
+// mobileTapIngredient()/adjustMobileQty() call it unconditionally.
+function renderMobileSelected() {}
 
 // Mobile category sheet — same PRODUCT_CATEGORIES/icon map as the desktop
 // icon grid (renderProductCategoryIconPicker), just a labelled list instead
