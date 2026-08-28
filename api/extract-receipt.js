@@ -17,6 +17,19 @@ const Anthropic = require('@anthropic-ai/sdk');
 // item[] array so it still fits the same result.data envelope everything
 // downstream (usage metering, applyReceiptScanToManualModal() in
 // ingredients.html) already expects from AgentQL.
+// Must stay in sync with CAT_META in ingredients.html -- that's the only
+// list of categories the New Item form's own picker ever offers, and
+// applyReceiptScanToManualModal() sets ing_category to this value verbatim
+// (selectIngCategory() does an exact-string lookup against CAT_META for the
+// row's icon). Without constraining Claude to these exact strings, it was
+// free to invent its own category label per photo -- never matching the
+// picker's options, so the field looked "set" but couldn't be found again
+// by anything that filters/groups by category.
+const INGREDIENT_CATEGORIES = [
+  'Raw Material', 'Component', 'Base Product', 'Packaging', 'Shipping Supply',
+  'Finished Product', 'Digital Product', 'Equipment', 'Consumable', 'Other'
+];
+
 const CLAUDE_INGREDIENT_PROMPT = `Du analysierst ein Foto eines Gegenstands, den ein kleines Unternehmen als
 Rohmaterial oder Zutat für seine Produktherstellung einkauft und in seinem
 Lagerbestand erfassen möchte.
@@ -31,7 +44,7 @@ Antworte ausschließlich mit validem JSON in genau diesem Schema:
   "name": string | null,            // Produktname, z.B. "Olivenöl Extra Vergine"
   "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
   "stock_on_hand": number | null,   // nur wenn eindeutig zählbar (z.B. "3 Flaschen sichtbar")
-  "category": string | null,        // grobe Kategorie, z.B. "Speiseöl", "Verpackung", "Rohstoff"
+  "category": ${INGREDIENT_CATEGORIES.map((c) => `"${c}"`).join(' | ')} | null,
   "attributes": [                   // z.B. Marke, Herkunft, Farbe, Sorte, Größe
     { "name": string, "value": string }
   ],
@@ -41,6 +54,10 @@ Antworte ausschließlich mit validem JSON in genau diesem Schema:
 }
 
 Wichtige Regeln:
+- category MUSS exakt einer der oben aufgelisteten Werte sein (genau so
+  geschrieben, inkl. Groß-/Kleinschreibung) oder null. Erfinde niemals eine
+  eigene Kategorie, auch wenn keine der Optionen perfekt passt -- wähle in
+  dem Fall die naheliegendste, oder null, falls wirklich keine passt.
 - Felder, die aus einem Foto NICHT zuverlässig ableitbar sind
   (cost_each, low_stock_alert, delivery_days, source_url), lässt du
   komplett weg bzw. gibst sie nicht zurück — errate sie nicht.
@@ -126,7 +143,13 @@ async function extractWithClaude(filepath, mimeType) {
       // couldn't clearly read, not "one of these."
       quantity: parsed.stock_on_hand || null,
       unit: (parsed.unit && parsed.unit !== 'other') ? parsed.unit : null,
-      product_category: parsed.category || null,
+      // Allowlist check, not just a prompt instruction -- the prompt asks
+      // Claude to only use one of INGREDIENT_CATEGORIES, but nothing
+      // guarantees it actually will. A category selectIngCategory() can't
+      // find in CAT_META isn't just cosmetic (wrong icon) -- it also can't
+      // be filtered/grouped by category anywhere else in the app, so a
+      // stray value is worse than leaving the field blank for the user.
+      product_category: INGREDIENT_CATEGORIES.includes(parsed.category) ? parsed.category : null,
       expiration_date: parseGermanDate(parsed.expiration_date),
       notes: parsed.notes || null,
       attributes
