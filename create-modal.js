@@ -16,6 +16,7 @@
     csv: 'file-spreadsheet',
     search: 'search'
   };
+  var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>';
 
   var CONTEXTS = {
     ingredient: {
@@ -128,12 +129,18 @@
     div.className = 'modal-overlay modal-sheet';
     div.id = 'shelfyCreateSheet';
     div.innerHTML =
-      '<div class="modal-content" id="shelfyCreateSheetContent">' +
-        '<h3 id="scmTitle" style="margin-top:0; margin-bottom:4px;"></h3>' +
-        '<p class="scm-subtitle" id="scmSubtitle"></p>' +
-        '<div class="scm-methods" id="scmMethods"></div>' +
-        '<div id="scmUsageArea"></div>' +
-        '<button type="button" class="btn" id="scmCancelBtn" style="width:100%; margin-top:8px; background:var(--bg-panel); border:1px solid var(--border); color:var(--text-main);">Cancel</button>' +
+      '<div class="modal-content aim-content" id="shelfyCreateSheetContent">' +
+        '<div class="aim-head">' +
+          '<button type="button" class="aim-close" id="scmClose" aria-label="Close">' + ICON_BACK + '</button>' +
+          '<span class="aim-titles">' +
+            '<span class="aim-title" id="scmTitle"></span>' +
+            '<span class="aim-sub" id="scmSubtitle"></span>' +
+          '</span>' +
+        '</div>' +
+        '<div class="scm-body">' +
+          '<div class="scm-methods" id="scmMethods"></div>' +
+          '<div id="scmUsageArea"></div>' +
+        '</div>' +
       '</div>';
     document.body.appendChild(div);
     sheetEl = div;
@@ -152,7 +159,7 @@
         nudgeBuyButton();
         return;
       }
-      if (e.target.id === 'scmCancelBtn') { close(); return; }
+      if (e.target.id === 'scmClose') { close(); return; }
       if (e.target.id === 'scmBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
     });
     document.addEventListener('keydown', function (e) {
