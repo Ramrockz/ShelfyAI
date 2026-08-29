@@ -4684,8 +4684,14 @@ function showUploadStatus(message, type) {
 
   // Tapping an open row closes it instead of navigating
   list.addEventListener('click', e => {
+    // The reveal buttons must never be swallowed by the post-drag guard
+    // below -- swiping open ends right where these buttons are, so the very
+    // next tap (the one actually meant for the revealed action) often lands
+    // inside that 300ms window and was getting silently eaten, requiring a
+    // second tap to do anything.
+    if (e.target.closest('.prod-actions')) return;
     if (Date.now() < noClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
-    if (!open || e.target.closest('.prod-actions')) return;
+    if (!open) return;
     if (e.target.closest('.prod-group-row') === open) {
       e.stopPropagation(); e.preventDefault();
       close();
