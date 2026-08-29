@@ -1870,27 +1870,8 @@ function applyUrlScanToManualModal(data) {
   // jump back to the exact page this was scanned from.
   if (data.source_url) document.getElementById('ing_source_url').value = data.source_url;
 
-  const container = document.getElementById('customAttributes');
-  if (data.color) {
-    const row = document.createElement('div');
-    row.style.cssText = 'display: flex; gap: 8px;';
-    row.innerHTML = `
-      <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <input type="text" value="${escapeHtml(data.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-    `;
-    container.appendChild(row);
-  }
-  if (data.size) {
-    const row = document.createElement('div');
-    row.style.cssText = 'display: flex; gap: 8px;';
-    row.innerHTML = `
-      <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <input type="text" value="${escapeHtml(data.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-      <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
-    `;
-    container.appendChild(row);
-  }
+  if (data.color) addAttributeRow('Color', data.color);
+  if (data.size) addAttributeRow('Size', data.size);
   onIngredientEdit();
 }
 

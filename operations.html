@@ -3127,8 +3127,24 @@ async function closeManualEntryModal() {
   document.getElementById('customAttributes').innerHTML = '';
 }
 
-function addAttributeRow() {
+function addAttributeRow(prefillKey, prefillValue) {
   const container = document.getElementById('customAttributes');
+  if (prefillKey) {
+    // A scan result populating a real value reuses an existing empty row
+    // for the same key instead of adding a duplicate (same convention as
+    // ingredients.html's addAttributeRow(), which the URL-scan handoff
+    // below used to duplicate inline with its own un-fixed styling instead
+    // of calling this function).
+    const existing = [...container.children].find(row => {
+      const nameInput = row.querySelector('input');
+      return nameInput && nameInput.value.trim().toLowerCase() === prefillKey.toLowerCase();
+    });
+    if (existing) {
+      const valueInput = existing.querySelectorAll('input')[1];
+      if (prefillValue && valueInput && !valueInput.value.trim()) valueInput.value = prefillValue;
+      return;
+    }
+  }
   const row = document.createElement('div');
   row.style.cssText = 'display: flex; align-items: center; gap: 8px;';
   // margin/box-sizing/height set explicitly on all three (not just the two
@@ -3139,8 +3155,8 @@ function addAttributeRow() {
   const rowFieldStyle = 'flex: 1; height: 40px; margin: 0; padding: 0 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;';
   const rowBtnStyle = 'flex-shrink: 0; width: 40px; height: 40px; margin: 0; padding: 0; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); color: var(--text-main); font-size: 16px; line-height: 1; cursor: pointer;';
   row.innerHTML = `
-    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" style="${rowFieldStyle}">
-    <input type="text" placeholder="Value" style="${rowFieldStyle}">
+    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" value="${prefillKey ? escapeHtml(prefillKey) : ''}" style="${rowFieldStyle}">
+    <input type="text" placeholder="Value" value="${prefillValue ? escapeHtml(prefillValue) : ''}" style="${rowFieldStyle}">
     <button type="button" onclick="this.parentElement.remove()" style="${rowBtnStyle}">&times;</button>
   `;
   container.appendChild(row);
@@ -3337,27 +3353,8 @@ function startIngredientUrlImport() {
       // can jump back to the exact page this was scanned from.
       if (data.source_url) document.getElementById('ing_source_url').value = data.source_url;
 
-      const container = document.getElementById('customAttributes');
-      if (data.color) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Color" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${escapeHtml(data.color)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
-        `;
-        container.appendChild(row);
-      }
-      if (data.size) {
-        const row = document.createElement('div');
-        row.style.cssText = 'display: flex; gap: 8px;';
-        row.innerHTML = `
-          <input type="text" value="Size" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <input type="text" value="${escapeHtml(data.size)}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-          <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">×</button>
-        `;
-        container.appendChild(row);
-      }
+      if (data.color) addAttributeRow('Color', data.color);
+      if (data.size) addAttributeRow('Size', data.size);
 
       await _notifyIfIngredientLimitReached();
     }
