@@ -4215,11 +4215,18 @@ function addAttributeRow(prefillKey, prefillValue) {
     }
   }
   const row = document.createElement('div');
-  row.style.cssText = 'display: flex; gap: 8px;';
+  row.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+  // margin/box-sizing/height set explicitly on all three (not just the two
+  // inputs) because the page's generic `input:not(.ic-input) { margin-bottom:
+  // 12px }` reset (these are plain <input>s, not .ic-input) was landing on
+  // the inputs but not the sibling <button>, pushing the inputs out of
+  // vertical alignment with the remove button next to them.
+  const rowFieldStyle = 'flex: 1; height: 40px; margin: 0; padding: 0 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-main); color: var(--text-main); font-size: 14px;';
+  const rowBtnStyle = 'flex-shrink: 0; width: 40px; height: 40px; margin: 0; padding: 0; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); color: var(--text-main); font-size: 16px; line-height: 1; cursor: pointer;';
   row.innerHTML = `
-    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" value="${prefillKey ? escapeHtml(prefillKey) : ''}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-    <input type="text" placeholder="Value" value="${prefillValue ? escapeHtml(prefillValue) : ''}" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-main); color: var(--text-main);">
-    <button type="button" onclick="this.parentElement.remove()" style="padding: 10px 16px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-main); cursor: pointer;">&times;</button>
+    <input type="text" placeholder="Attribute name (e.g., Brand, Origin)" value="${prefillKey ? escapeHtml(prefillKey) : ''}" style="${rowFieldStyle}">
+    <input type="text" placeholder="Value" value="${prefillValue ? escapeHtml(prefillValue) : ''}" style="${rowFieldStyle}">
+    <button type="button" onclick="this.parentElement.remove()" style="${rowBtnStyle}">&times;</button>
   `;
   container.appendChild(row);
   if (prefillKey && !prefillValue) row.querySelectorAll('input')[1]?.focus();

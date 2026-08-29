@@ -3,6 +3,19 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
+// Must stay in sync with CAT_META in ingredients.html -- that's the only
+// list of categories the New Item form's own picker ever offers, and
+// applyUrlScanToManualModal() sets ing_category to this value verbatim
+// (selectIngCategory() does an exact-string lookup against CAT_META for the
+// row's icon). AgentQL extracts from whatever text is on the supplier page,
+// so without an allowlist check it was free to return the page's own product
+// type (e.g. "T-Shirt") instead of one of these -- looked "set" in the form
+// but couldn't be found again by anything that filters/groups by category.
+const INGREDIENT_CATEGORIES = [
+  'Raw Material', 'Component', 'Base Product', 'Packaging', 'Shipping Supply',
+  'Finished Product', 'Digital Product', 'Equipment', 'Consumable', 'Other'
+];
+
 module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -119,7 +132,7 @@ module.exports = async (req, res) => {
     price
     shipping_time (integer of max days)
     SKU (Stock Keeping Unit)
-    product_category (for example: T-Shirt, Sweater, Packaging)
+    product_category (pick whichever of these fits best based on what this item is used for by a small business stocking it: ${INGREDIENT_CATEGORIES.join(', ')})
     quantity (per order)
     unit (pieces,Kilograms,Liters)
     type (Production, Packaging, Shipping)
@@ -225,7 +238,12 @@ module.exports = async (req, res) => {
         price: extractedData.item?.price || null,
         estimated_delivery: extractedData.item?.shipping_time || null,
         sku: extractedData.item?.SKU || extractedData.item?.name || null,
-        product_category: extractedData.item?.product_category || null,
+        // Allowlist check, not just a prompt instruction -- the query asks
+        // AgentQL to only use one of INGREDIENT_CATEGORIES, but it's reading
+        // freeform page text and nothing guarantees it actually will.
+        product_category: INGREDIENT_CATEGORIES.includes(extractedData.item?.product_category)
+          ? extractedData.item.product_category
+          : null,
         quantity: quantity === 0 ? 1 : quantity,
         unit: extractedData.item?.unit || null,
         color: extractedData.attributes?.color || null,
