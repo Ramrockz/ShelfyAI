@@ -1014,15 +1014,25 @@ input[type="number"] {
                             box-shadow: 0 0 0 3px var(--accent-glow, rgba(6,182,212,.12)); }
 .uim-url[data-state="bad"] { border-color: rgba(220,38,38,.4); }
 .uim-url[data-state="ok"] { border-color: rgba(16,185,129,.4); }
-.uim-url input { flex: 1; min-width: 0; border: none; outline: none; background: none;
+/* #uimUrlBox (an id, not just .uim-url) so this always outranks a host
+   page's own generic `input:not(...)` resets -- ingredients.html's is
+   `input:not(.search-wrapper input):not(.nav-search-input):not(.ic-input)`,
+   which computes higher specificity than a bare `.uim-url input` class
+   selector and was winning, re-adding a border/margin/background straight
+   onto the input itself (this sheet is appended to <body> at runtime, so
+   its input is just a plain <input> as far as that page-wide rule cares).
+   operations.html has no such rule, which is why the same sheet looked
+   fine there and broken on ingredients.html/inventory. */
+#uimUrlBox input { flex: 1; min-width: 0; margin: 0; border: none !important; outline: none;
+                 background: none !important; box-sizing: border-box;
                  -webkit-appearance: none; appearance: none; box-shadow: none; border-radius: 0;
                  font-size: 14.5px; letter-spacing: -.01em; color: var(--text-main); font-family: inherit; }
-.uim-url input::placeholder { color: var(--text-ghost, #cbd5e1); }
-.uim-url button { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
+#uimUrlBox input::placeholder { color: var(--text-ghost, #cbd5e1); }
+#uimUrlBox button { flex-shrink: 0; height: 34px; padding: 0 11px; border-radius: 10px;
                    border: none; background: none; -webkit-appearance: none; appearance: none;
                    font-size: 12.5px; font-weight: 800; color: var(--accent-deep, var(--accent)); font-family: inherit; }
-.uim-url button.x { width: 34px; padding: 0; color: var(--text-ghost, #cbd5e1); }
-.uim-url button.x svg { flex-shrink: 0; }
+#uimUrlBox button.x { width: 34px; padding: 0; color: var(--text-ghost, #cbd5e1); }
+#uimUrlBox button.x svg { flex-shrink: 0; }
 .uim-field-hint { display: flex; align-items: center; gap: 6px; margin: 8px 2px 0;
                   font-size: 12px; font-weight: 700; color: var(--success); }
 .uim-field-hint svg { flex-shrink: 0; }
