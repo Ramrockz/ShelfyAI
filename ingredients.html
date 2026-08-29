@@ -327,6 +327,14 @@
     border-color: var(--danger, #ef4444) !important;
     animation: shake-field 0.45s;
   }
+  /* .ic-cat-row is a borderless button (button row inside a bordered card),
+     so .input-invalid's border-color alone has nothing to color -- give it
+     its own visible outline instead of a layout-shifting border. */
+  .ic-cat-row.input-invalid {
+    outline: 1.5px solid var(--danger, #ef4444);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
 
   .modal-content {
     background: var(--bg-inner) !important;
@@ -1283,7 +1291,7 @@
             <div class="ic-hint">Enter a quantity — you'll get a low-stock flag once stock drops below it. Leave blank for no alert.</div>
           </div>
           <div class="ic-field">
-            <label class="ic-label">Category</label>
+            <label class="ic-label">Category <span style="color: var(--danger);">*</span></label>
             <input type="hidden" id="ing_category">
             <button type="button" class="ic-cat-row" id="icCatRow" onclick="openIcCatSheet()">
               <span class="ic-cat-value empty" id="icCatValue">Not set</span>
@@ -4291,7 +4299,7 @@ async function saveIngredient(event) {
   if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
   const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-  // Only the name is required — everything else (quantity, cost, category,
+  // Name and category are required — everything else (quantity, cost,
   // alert threshold) can be filled in later from the item page.
   const nameEl = document.getElementById('ing_name');
   if (!nameEl.value.trim()) {
@@ -4300,6 +4308,16 @@ async function saveIngredient(event) {
     nameEl.classList.add('input-invalid');
     setTimeout(() => nameEl.classList.remove('input-invalid'), 1500);
     nameEl.focus();
+    return;
+  }
+
+  const catRowEl = document.getElementById('icCatRow');
+  if (!document.getElementById('ing_category').value) {
+    catRowEl.classList.remove('input-invalid');
+    void catRowEl.offsetWidth;
+    catRowEl.classList.add('input-invalid');
+    setTimeout(() => catRowEl.classList.remove('input-invalid'), 1500);
+    openIcCatSheet();
     return;
   }
 
