@@ -1047,7 +1047,7 @@
       </button>
       <span class="ec-titles">
         <span class="ec-title" id="modalTitle">New expense</span>
-        <span class="ec-sub">Vendor, amount, date — items are optional</span>
+        <span class="ec-sub">Vendor and date, then add items — the total is calculated for you</span>
       </span>
     </div>
 
@@ -1067,11 +1067,6 @@
             <div class="ec-chips" id="ecVendors"></div>
           </div>
           <div class="ec-field">
-            <label class="ec-label" for="expense_amount">Total on the receipt</label>
-            <span class="ec-prefix"><span>$</span><input class="ec-input ec-amount" type="number" id="expense_amount" step="0.01" required placeholder="0.00" oninput="onExpenseEdit()"></span>
-            <div class="ec-hint">What you actually paid, including shipping and tax.</div>
-          </div>
-          <div class="ec-field">
             <label class="ec-label" for="expense_date">Date</label>
             <input class="ec-input" type="date" id="expense_date" required oninput="onExpenseEdit()">
           </div>
@@ -1079,12 +1074,11 @@
 
         <div class="ec-sec-head">
           <span class="ec-sec-title">Stock it adds</span>
-          <span class="ec-sec-note" id="ecLineNote">Optional</span>
+          <span class="ec-sec-note" id="ecLineNote">Add at least one item</span>
         </div>
         <div class="ec-group" id="ecLines"></div>
 
-        <div id="ecRec"></div>
-        <div class="ec-note">Stock goes up when you save. Anything you leave off the item list is still counted in the total.</div>
+        <div class="ec-note">Stock goes up when you save. The total is the sum of the items below.</div>
       </div>
 
       <div class="ec-foot">
@@ -2430,42 +2424,21 @@ function ecRemoveLine() {
   onExpenseEdit();
 }
 
-// ---------- The gap between lines and total, said out loud (21d) ----------
-function renderExpenseReconcile() {
-  const box = document.getElementById('ecRec');
-  if (!box) return;
-  const total = parseFloat(document.getElementById('expense_amount').value) || 0;
-  const sum = _expenseLinesTotal();
-  if (!selectedExpenseIngredients.length || !total) { box.innerHTML = ''; return; }
-  const gap = total - sum;
-  const over = gap < -0.005;
-  box.innerHTML = `
-    <div class="ec-rec">
-      <div class="ec-rec-r">Items on this receipt <b>$${sum.toFixed(2)}</b></div>
-      <div class="ec-rec-r">Receipt total <b>$${total.toFixed(2)}</b></div>
-      <div class="ec-rec-r ec-rec-gap">${over ? 'Over the total by' : 'Not stocked'} <b>$${Math.abs(gap).toFixed(2)}</b></div>
-      <div class="ec-rec-note"${over ? ' data-over="1"' : ''}>${over
-        ? 'The item lines cost more than the receipt total — check a quantity or a unit cost.'
-        : "Shipping, tax and anything you didn't list. Counted as spend, not as stock."}</div>
-    </div>`;
-}
-
 // One re-render entry point for every field/line change.
 function onExpenseEdit() {
   renderExpenseVendorChips();
   renderExpenseLines();
-  renderExpenseReconcile();
 
   const vendor = document.getElementById('expense_vendor').value.trim();
-  const total = parseFloat(document.getElementById('expense_amount').value) || 0;
+  const total = _expenseLinesTotal();
   const tallyEl = document.getElementById('ecTally');
   if (tallyEl) {
     tallyEl.innerHTML = selectedExpenseIngredients.length
       ? `${selectedExpenseIngredients.length} item${selectedExpenseIngredients.length !== 1 ? 's' : ''} → stock<b>$${total.toFixed(2)}</b>`
-      : `Spend only, no stock change<b>$${total.toFixed(2)}</b>`;
+      : `Add an item to calculate the total<b>$0.00</b>`;
   }
   const saveBtn = document.getElementById('ecSave');
-  if (saveBtn) saveBtn.disabled = !(vendor && total > 0);
+  if (saveBtn) saveBtn.disabled = !(vendor && selectedExpenseIngredients.length && total > 0);
 }
 
 // expenses.html called this in two catch blocks (saveExpense,
@@ -2512,7 +2485,6 @@ async function editExpense(expenseId) {
 
   document.getElementById('modalTitle').textContent = 'Edit expense';
   document.getElementById('expense_id').value = expense.id;
-  document.getElementById('expense_amount').value = expense.amount || 0;
   document.getElementById('expense_date').value = expense.expense_date || '';
   document.getElementById('expense_vendor').value = expense.vendor || '';
 
@@ -2535,8 +2507,9 @@ async function editExpense(expenseId) {
 async function saveExpense(event) {
   event.preventDefault();
 
-  // Items are optional (16b) — a vendor and a valid total are the only
-  // requirements now. Explicit checks instead of relying on the inputs'
+  // The total is no longer entered — it's the sum of the item lines, so at
+  // least one is now required (there'd be no other way to give the expense
+  // a nonzero amount). Explicit checks instead of relying on the inputs'
   // native `required` — native constraint validation runs BEFORE the submit
   // event even fires, so an empty required field blocks the form silently
   // here on some mobile browsers (the native "please fill this field"
@@ -2549,9 +2522,8 @@ async function saveExpense(event) {
     alert('Please enter a vendor');
     return;
   }
-  const amountVal = document.getElementById('expense_amount').value;
-  if (amountVal === '' || isNaN(parseFloat(amountVal)) || parseFloat(amountVal) <= 0) {
-    alert('Please enter a valid amount');
+  if (!selectedExpenseIngredients.length) {
+    alert('Please add at least one item');
     return;
   }
   if (!document.getElementById('expense_date').value) {
@@ -2571,7 +2543,7 @@ async function saveExpense(event) {
       profile_id: user.id,
       store_id: storeId,
       description: `${vendor} Purchase`,
-      amount: parseFloat(document.getElementById('expense_amount').value) || 0,
+      amount: _expenseLinesTotal(),
       expense_date: document.getElementById('expense_date').value,
       vendor: vendor,
       category: null,
@@ -2606,8 +2578,10 @@ async function saveExpense(event) {
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
-    // Stock goes up whenever there are lines, on a fresh (non-edit) save —
-    // no separate opt-out toggle: no lines already means spend-only.
+    // At least one line is now required to save at all (see saveExpense()'s
+    // validation above), so this is always true for a fresh save -- kept as
+    // a length check (rather than hardcoded true) since it still guards
+    // correctly when editing an expense saved before items were required.
     const inventoryUpdated = selectedExpenseIngredients.length > 0;
     const changesSummary = [];
     if (inventoryUpdated && !editingExpenseId) {
