@@ -2631,7 +2631,7 @@ function resolveConfirm(result) {
             </span>
             ${ing.reorder_pending
               ? `<span class="stock-alert-pending">On the way</span>`
-              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); openReorderModal('${ing.id}', { onPlaced: () => loadInventoryStatus() })">Reorder</button>`}
+              : `<button class="stock-alert-reorder" onclick="event.stopPropagation(); openReorderModal('${ing.id}', { onPlaced: () => { loadInventoryStatus(); loadInboundStatus(); } })">Reorder</button>`}
           </div>`;
   }
 
@@ -2901,6 +2901,13 @@ function resolveConfirm(result) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
 
+      const { data: ing, error: fetchError } = await supabaseClient
+        .from('ingredients')
+        .select('id, name, quantity, unit, min_stock, reorder_quantity')
+        .eq('id', ingredientId)
+        .single();
+      if (fetchError) throw fetchError;
+
       const { error } = await supabaseClient
         .from('ingredients')
         .update({ reorder_pending: false })
@@ -2913,9 +2920,73 @@ function resolveConfirm(result) {
       loadInventoryStatus();
 
       const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
-      if (upload) window.location.href = '/expenses';
+      if (upload) { window.location.href = '/expenses'; return; }
+
+      // Declining the receipt used to leave inventory untouched even though
+      // a delivery was just confirmed -- offer to add the quantity that was
+      // placed on this reorder straight to stock instead (same follow-up as
+      // ingredient-detail.html's confirmDeliveryReceived()).
+      const reorderQty = parseFloat(ing.reorder_quantity) || 0;
+      if (reorderQty <= 0) return;
+      const unitLabel = ing.unit ? ` ${ing.unit}` : '';
+      const applyStock = await showConfirm(
+        `Add ${ShelfyInventoryImpact.fmt(reorderQty)}${unitLabel} to your inventory for ${ing.name}?`,
+        'Update inventory', 'No', 'Yes'
+      );
+      if (applyStock) await applyOpsReorderToStock(ing, reorderQty, user.id);
     } catch (error) {
       console.error('Error confirming delivery:', error);
+    }
+  }
+
+  // Adds a delivered reorder's quantity straight to stock -- the path taken
+  // when confirmOpsDelivery()'s receipt-upload prompt is declined.
+  // reorder_quantity is cleared afterward so it isn't offered again on the
+  // next delivery before a new reorder records a fresh amount.
+  async function applyOpsReorderToStock(ing, qty, userId) {
+    const oldQty = parseFloat(ing.quantity) || 0;
+    const newQty = oldQty + qty;
+
+    try {
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ quantity: newQty, reorder_quantity: null })
+        .eq('id', ing.id);
+      if (error) throw error;
+
+      await supabaseClient.from('ingredient_history').insert([{
+        ingredient_id: ing.id,
+        profile_id: userId,
+        field_name: 'quantity',
+        old_value: String(oldQty),
+        new_value: String(newQty),
+        reason: 'reorder',
+        reference_text: 'Reorder delivered'
+      }]);
+
+      loadInventoryStatus();
+      loadInboundStatus();
+
+      const minStock = parseFloat(ing.min_stock) || 0;
+      ShelfyInventoryImpact.render(document.getElementById('reorderStockSuccessBody'), {
+        title: 'Inventory updated',
+        sub: 'Reorder delivered',
+        figs: [],
+        secTitle: 'Stock updated',
+        secNote: '1 item',
+        rows: [{
+          name: ing.name,
+          from: oldQty,
+          to: newQty,
+          unit: ing.unit,
+          href: `/ingredient-detail?id=${encodeURIComponent(ing.id)}`,
+          state: newQty === 0 ? 'out' : (minStock > 0 && newQty <= minStock) ? 'low' : ''
+        }]
+      });
+      document.getElementById('reorderStockSuccessModal').classList.add('active');
+    } catch (error) {
+      console.error('Error updating inventory from reorder:', error);
+      showAlert('Failed to update inventory');
     }
   }
 
@@ -7007,6 +7078,18 @@ function hideGlobalLoader(){document.getElementById('globalLoader').style.displa
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Reorder-delivered success screen (inventory-impact.js) -- shown after
+     declining the receipt-upload prompt in confirmOpsDelivery() and
+     choosing to add the reordered quantity straight to stock instead. -->
+<div class="modal-overlay" id="reorderStockSuccessModal">
+  <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0;">
+    <div id="reorderStockSuccessBody" style="flex:1; min-height:0; overflow-y:auto; padding:24px 24px 8px; scrollbar-width:thin; scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn primary" onclick="document.getElementById('reorderStockSuccessModal').classList.remove('active')">Done</button>
+    </div>
   </div>
 </div>
 
