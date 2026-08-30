@@ -43,6 +43,7 @@
 <script src="notifications.js"></script>
 <script src="chat-bot.js"></script>
 <script src="reorder-modal.js"></script>
+<script src="inventory-impact.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -1494,6 +1495,18 @@
   </div>
 </div>
 
+<!-- Reorder-delivered success screen (inventory-impact.js) -- shown after
+     declining the receipt-upload prompt and choosing to add the reordered
+     quantity straight to stock instead. -->
+<div class="modal-overlay" id="reorderStockSuccessModal">
+  <div class="modal-content" style="max-width: 480px; display: flex; flex-direction: column; padding: 0;">
+    <div id="reorderStockSuccessBody" style="flex:1; min-height:0; overflow-y:auto; padding:24px 24px 8px; scrollbar-width:thin; scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn primary" onclick="document.getElementById('reorderStockSuccessModal').classList.remove('active')">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Expense Upload Modal -->
 <div class="modal-overlay" id="expenseModal" onclick="if(event.target === this) closeExpenseModal()">
   <div class="modal-content" style="max-width: 600px;">
@@ -2215,10 +2228,79 @@
       renderRestockRow();
 
       const upload = await showConfirm('Want to upload a receipt to update your inventory?', 'Receipt', 'No', 'Yes');
-      if (upload) openExpenseModal();
+      if (upload) { openExpenseModal(); return; }
+
+      // Declining the receipt used to leave inventory untouched even though
+      // a delivery was just confirmed -- offer to add the quantity that was
+      // placed on this reorder straight to stock instead.
+      const reorderQty = parseFloat(currentIngredient.reorder_quantity) || 0;
+      if (reorderQty <= 0) return;
+      const unitLabel = currentIngredient.unit ? ` ${currentIngredient.unit}` : '';
+      const applyStock = await showConfirm(
+        `Add ${ShelfyInventoryImpact.fmt(reorderQty)}${unitLabel} to your inventory for ${currentIngredient.name}?`,
+        'Update inventory', 'No', 'Yes'
+      );
+      if (applyStock) await applyReorderToStock(reorderQty);
     } catch (err) {
       showAlert('Failed to confirm delivery: ' + err.message);
     }
+  }
+
+  // Adds a delivered reorder's quantity straight to stock -- the path taken
+  // when the receipt-upload prompt is declined (see confirmDeliveryReceived
+  // above). reorder_quantity is cleared afterward so it isn't offered again
+  // on the next delivery before a new reorder records a fresh amount.
+  async function applyReorderToStock(qty) {
+    const oldQty = parseFloat(currentIngredient.quantity) || 0;
+    const newQty = oldQty + qty;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      const { error } = await supabaseClient
+        .from('ingredients')
+        .update({ quantity: newQty, reorder_quantity: null })
+        .eq('id', currentIngredient.id);
+      if (error) throw error;
+
+      currentIngredient.quantity = newQty;
+      currentIngredient.reorder_quantity = null;
+
+      if (user) {
+        await supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: currentIngredient.id,
+          profile_id: user.id,
+          field_name: 'quantity',
+          old_value: String(oldQty),
+          new_value: String(newQty),
+          reason: 'reorder',
+          reference_text: 'Reorder delivered'
+        }]);
+      }
+
+      updateStatsDisplay();
+      showReorderDeliverySuccess(oldQty, newQty);
+    } catch (err) {
+      showAlert('Failed to update inventory: ' + err.message);
+    }
+  }
+
+  function showReorderDeliverySuccess(oldQty, newQty) {
+    const minStock = parseFloat(currentIngredient.min_stock) || 0;
+    ShelfyInventoryImpact.render(document.getElementById('reorderStockSuccessBody'), {
+      title: 'Inventory updated',
+      sub: 'Reorder delivered',
+      figs: [],
+      secTitle: 'Stock updated',
+      secNote: '1 item',
+      rows: [{
+        name: currentIngredient.name,
+        from: oldQty,
+        to: newQty,
+        unit: currentIngredient.unit,
+        state: newQty === 0 ? 'out' : (minStock > 0 && newQty <= minStock) ? 'low' : ''
+      }]
+    });
+    document.getElementById('reorderStockSuccessModal').classList.add('active');
   }
 
   async function cancelOrder() {
