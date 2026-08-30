@@ -1172,6 +1172,20 @@
   </div>
 </div>
 
+<!-- Generic confirm modal (showConfirm()/resolveConfirm()) -- used by
+     closeIngredientMappingModal()'s "discard this scan?" prompt so it's the
+     app's own themed modal instead of a native browser confirm(). -->
+<div class="modal-overlay modal-sheet" id="confirmModal" onclick="if(event.target === this) resolveConfirm(false)">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3 style="margin-top:0; margin-bottom: 16px;" id="confirmTitle">Confirm</h3>
+    <p id="confirmMessage" style="color: var(--text-main); font-size: 14px; margin-bottom: 24px; line-height: 1.5;"></p>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn" style="background: var(--bg-inner); color: var(--text-main); flex: 1; border: 1px solid var(--border);" onclick="resolveConfirm(false)">Cancel</button>
+      <button id="confirmOkBtn" class="btn btn-primary" style="flex: 1;" onclick="resolveConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div class="modal-overlay modal-sheet" id="deleteExpenseModal">
   <div class="modal-content" style="max-width: 400px;">
@@ -1887,10 +1901,12 @@ function closeMethodSelectionModal() {
 // scan-cost quote and the actual /api/extract-receipt call. This page only
 // needs to say what to do with the result.
 function startReceiptScan() {
-  // Quick CTA on purpose -- straight to the camera (mobile) or screen
-  // capture (desktop), no picker sheet shown first. Cancelling leaves
-  // nothing open; the sheet only appears once a file actually comes back.
-  window.ShelfyImportModal.quickStart('expense', 'camera', {
+  // Quick CTA on purpose -- straight to the plain file/gallery picker on
+  // mobile (matching this button's "File Upload" label, not a camera-first
+  // "Scan" shortcut -- same as orders.html's startOrderUpload()), or screen
+  // capture on desktop. Cancelling leaves nothing open; the sheet only
+  // appears once a file actually comes back.
+  window.ShelfyImportModal.quickStart('expense', 'file', {
     onImported: (data, receiptUrl) => {
       pendingExpenseReceiptUrl = receiptUrl;
       showIngredientMappingModal(data);
@@ -2449,6 +2465,33 @@ function onExpenseEdit() {
 // of this same toast pattern (expense-detail.html, order-detail.html,
 // operations.html); this reuses the existing @keyframes slideIn already
 // defined above rather than adding a duplicate.
+// Generic confirm modal -- same shape as ingredients.html's showConfirm()/
+// resolveConfirm(), added here so closeIngredientMappingModal()'s "discard
+// this scan?" prompt uses the app's own themed modal instead of a native
+// browser confirm().
+let confirmResolver = null;
+function showConfirm(message, title = 'Confirm', confirmLabel = 'Confirm', isDanger = false) {
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    const okBtn = document.getElementById('confirmOkBtn');
+    if (okBtn) {
+      okBtn.textContent = confirmLabel;
+      okBtn.style.background = isDanger ? 'var(--danger)' : '';
+      okBtn.style.color = isDanger ? '#fff' : '';
+    }
+    document.getElementById('confirmModal').classList.add('active');
+  });
+}
+function resolveConfirm(result) {
+  document.getElementById('confirmModal').classList.remove('active');
+  if (confirmResolver) {
+    confirmResolver(result);
+    confirmResolver = null;
+  }
+}
+
 function showNotification(message, type = 'success') {
   console.log(`[${type.toUpperCase()}] ${message}`);
   const notification = document.createElement('div');
@@ -3297,7 +3340,7 @@ function renderDetectedItems() {
       </div>
 
       <div style="position: relative; margin-bottom: 12px;">
-        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Item: <span style="color: var(--danger);">*</span></label>
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Item</label>
         <div style="position: relative;">
           <input type="text" 
             id="ingredient_search_${index}" 
@@ -3653,14 +3696,18 @@ async function saveQuickIngredient(e) {
   }
 }
 
-function closeIngredientMappingModal() {
+async function closeIngredientMappingModal() {
   // If this review came from a scan the user never actually saved, make sure
   // that's what they want before discarding it -- refundScan() below still
   // gives the scan count back either way, but getting this data again means
   // spending another one.
   const pending = window.ShelfyImportModal && window.ShelfyImportModal.hasPending();
-  if (pending && !confirm("Discard this scan? This scan won't count against your limit — but you'll need to scan again if you want this data back.")) {
-    return;
+  if (pending) {
+    const discard = await showConfirm(
+      "This scan won't count against your limit — but you'll need to scan again if you want this data back.",
+      'Discard this scan?', 'Discard', true
+    );
+    if (!discard) return;
   }
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   document.getElementById('ingredientMappingModal').classList.remove('active');
