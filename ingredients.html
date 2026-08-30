@@ -1299,10 +1299,10 @@
             </button>
           </div>
           <div class="ic-field">
-            <label class="ic-label">Attributes</label>
+            <label class="ic-label">Attributes <span style="color: var(--danger);">*</span></label>
             <div id="attrSuggestChips" class="attr-chips"></div>
             <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;"></div>
-            <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
+            <button type="button" class="btn" id="icAddAttrBtn" style="margin-top: 8px; width: 100%; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
           </div>
         </div>
 
@@ -4299,6 +4299,21 @@ async function saveIngredient(event) {
     catRowEl.classList.add('input-invalid');
     setTimeout(() => catRowEl.classList.remove('input-invalid'), 1500);
     openIcCatSheet();
+    return;
+  }
+
+  const hasValidAttr = [...document.querySelectorAll('#customAttributes > div')].some(row => {
+    const inputs = row.querySelectorAll('input:not([type="hidden"])');
+    return inputs.length >= 2 && inputs[0].value.trim() && inputs[1].value.trim();
+  });
+  if (!hasValidAttr) {
+    const addAttrBtn = document.getElementById('icAddAttrBtn');
+    addAttrBtn.classList.remove('input-invalid');
+    void addAttrBtn.offsetWidth;
+    addAttrBtn.classList.add('input-invalid');
+    setTimeout(() => addAttrBtn.classList.remove('input-invalid'), 1500);
+    addAttrBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (document.querySelectorAll('#customAttributes > div').length === 0) addAttributeRow();
     return;
   }
 

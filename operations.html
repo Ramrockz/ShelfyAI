@@ -3277,6 +3277,21 @@ async function saveIngredient(event) {
     return;
   }
 
+  const hasValidAttr = [...document.querySelectorAll('#customAttributes > div')].some(row => {
+    const inputs = row.querySelectorAll('input:not([type="hidden"])');
+    return inputs.length >= 2 && inputs[0].value.trim() && inputs[1].value.trim();
+  });
+  if (!hasValidAttr) {
+    const addAttrBtn = document.getElementById('icAddAttrBtn');
+    addAttrBtn.classList.remove('input-invalid');
+    void addAttrBtn.offsetWidth;
+    addAttrBtn.classList.add('input-invalid');
+    setTimeout(() => addAttrBtn.classList.remove('input-invalid'), 1500);
+    addAttrBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (document.querySelectorAll('#customAttributes > div').length === 0) addAttributeRow();
+    return;
+  }
+
   // Capitalize attribute keys consistently
   function capitalizeAttributeKey(key) {
     const commonKeys = {
@@ -3291,18 +3306,18 @@ async function saveIngredient(event) {
       'type': 'Type',
       'variant': 'Variant'
     };
-    
+
     const lowerKey = key.toLowerCase();
     if (commonKeys[lowerKey]) {
       return commonKeys[lowerKey];
     }
-    
+
     // Capitalize first letter of each word
-    return key.split(' ').map(word => 
+    return key.split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
     ).join(' ');
   }
-  
+
   // Collect custom attributes
   const customAttrs = {};
   const attrRows = document.querySelectorAll('#customAttributes > div');
@@ -3509,11 +3524,11 @@ function startIngredientUrlImport() {
       </div>
 
       <div class="form-group">
-        <label>Custom Attributes</label>
+        <label>Custom Attributes <span style="color: var(--danger);">*</span></label>
         <div id="customAttributes" style="display: flex; flex-direction: column; gap: 8px;">
           <!-- Dynamic attribute rows will be added here -->
         </div>
-        <button type="button" class="btn" style="margin-top: 8px; width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
+        <button type="button" class="btn" id="icAddAttrBtn" style="margin-top: 8px; width: 100%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);" onclick="addAttributeRow()">+ Add Attribute</button>
       </div>
 
       <div class="form-group">
