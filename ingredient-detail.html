@@ -1275,6 +1275,15 @@
           <input type="text" id="name" class="form-input" placeholder="e.g., Tomatoes, Flour" required onblur="autoSave()">
         </div>
 
+        <div class="form-group">
+          <label>Unit</label>
+          <input type="hidden" id="unit">
+          <button type="button" class="cat-picker-row" id="unitPickerRow" onclick="openUnitSheet()">
+            <span class="cat-picker-value" id="unitPickerValue">pcs</span>
+            <svg class="drow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label for="cost_per_unit">Cost per Unit *</label>
@@ -1591,6 +1600,83 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  // ---------- Unit picker + recalculation ----------
+  // Metric pairs the SAME physical amount can be re-expressed in --
+  // switching between them rescales quantity/cost together instead of
+  // leaving the old numbers meaningless in the new unit. Any other change
+  // (crossing families entirely, e.g. m -> L, or into/out of "pcs") can't
+  // be converted at all, so it just prompts for a fresh cost instead.
+  const UNIT_CONVERSIONS = {
+    m:  { unit: 'cm', factor: 100 },
+    cm: { unit: 'm',  factor: 0.01 },
+    kg: { unit: 'g',  factor: 1000 },
+    g:  { unit: 'kg', factor: 0.001 },
+    L:  { unit: 'ml', factor: 1000 },
+    ml: { unit: 'L',  factor: 0.001 }
+  };
+  const UNIT_OPTIONS = ['pcs', 'g', 'kg', 'ml', 'L', 'oz', 'lb', 'm', 'cm'];
+
+  function updateUnitPickerValue() {
+    const val = document.getElementById('unit').value || 'pcs';
+    const el = document.getElementById('unitPickerValue');
+    if (el) el.textContent = val;
+  }
+
+  function openUnitSheet() {
+    const current = document.getElementById('unit').value || 'pcs';
+    document.getElementById('unitSheetList').innerHTML = UNIT_OPTIONS.map(u => `
+      <div class="cat-row${u === current ? ' active' : ''}" onclick="pickUnit('${u}')">
+        <span class="cat-row-label">${u}</span>
+      </div>`).join('');
+    document.getElementById('unitSheet').classList.add('active');
+  }
+
+  function closeUnitSheet() {
+    document.getElementById('unitSheet').classList.remove('active');
+  }
+
+  function pickUnit(value) {
+    closeUnitSheet();
+    selectUnit(value);
+  }
+
+  async function selectUnit(newUnit) {
+    const oldUnit = document.getElementById('unit').value || 'pcs';
+    if (newUnit === oldUnit) return;
+
+    document.getElementById('unit').value = newUnit;
+    updateUnitPickerValue();
+
+    const pair = UNIT_CONVERSIONS[oldUnit];
+    if (pair && pair.unit === newUnit) {
+      // Same physical amount, re-expressed: rescale the on-hand quantity
+      // and cost together so the total stock value doesn't change.
+      const oldQty = parseFloat(currentIngredient?.quantity) || 0;
+      const oldCost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
+      const newQty = oldQty * pair.factor;
+      const newCost = oldCost / pair.factor;
+      document.getElementById('cost_per_unit').value = newCost.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        await supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', currentIngredient.id);
+        currentIngredient.quantity = newQty;
+        updateStatsDisplay();
+      } catch (err) {
+        showAlert('Failed to update quantity: ' + err.message);
+      }
+      autoSave();
+      renderDetailRows();
+    } else {
+      // A totally different kind of unit (or into/out of "pcs") -- the old
+      // cost no longer means anything, so clear it and prompt for a fresh
+      // one instead of silently keeping a now-wrong number.
+      document.getElementById('cost_per_unit').value = '';
+      autoSave();
+      renderDetailRows();
+      editField(['cost_per_unit'], 'Cost per Unit');
+    }
+  }
+
   function autoSave() {
     clearTimeout(_autoSaveTimer);
     _autoSaveTimer = setTimeout(() => saveAllChanges(), 600);
@@ -1675,6 +1761,8 @@
     const mobileNameDisplay = document.getElementById('name-mobile-display');
     if (mobileNameDisplay) mobileNameDisplay.textContent = ing.name || '';
     document.getElementById('cost_per_unit').value = ing.cost_per_unit || 0;
+    document.getElementById('unit').value = ing.unit || 'pcs';
+    updateUnitPickerValue();
     document.getElementById('category').value = ing.category || '';
     document.getElementById('min_stock').value = ing.min_stock != null ? ing.min_stock : '';
     document.getElementById('sku').value = ing.sku || '';
@@ -2474,8 +2562,8 @@
   }
 
   // ---------- Mobile detail rows ----------
-  // Order matches the approved mockup: Cost each, Alert below, Category,
-  // Attributes, SKU · Notes. Source URL has no row of its own here — it's
+  // Order matches the approved mockup: Cost each, Alert below, Unit,
+  // Category, Attributes, SKU · Notes. Source URL has no row of its own here — it's
   // set via the Details editor / restock flow, and suppliers (with their
   // own price/lead time) are managed from the reorder screen.
   const DETAIL_ROWS_TOP = [
@@ -2504,7 +2592,7 @@
     if (!el) return;
     el.innerHTML = DETAIL_ROWS_TOP.map(_renderDetailRow).join('')
       + alertToggleRow()
-      + catRow() + attrRow()
+      + unitRow() + catRow() + attrRow()
       + DETAIL_ROWS_BOTTOM.map(_renderDetailRow).join('');
     if (window.lucide) lucide.createIcons();
   }
@@ -2556,6 +2644,14 @@
         <span class="drow-value${val ? '' : ' empty'}">
           ${val ? `<i data-lucide="${icon}" style="width:16px;height:16px"></i>${escapeHtml(val)}` : 'Not set'}
         </span>${_drowChev}
+      </div>`;
+  }
+
+  function unitRow() {
+    const val = document.getElementById('unit')?.value || 'pcs';
+    return `<div class="drow" onclick="openUnitSheet()">
+        <span class="drow-label">Unit</span>
+        <span class="drow-value">${escapeHtml(val)}</span>${_drowChev}
       </div>`;
   }
 
@@ -2833,7 +2929,7 @@
 
     const updateData = {
       name: document.getElementById('name').value,
-      unit: currentIngredient?.unit || '',
+      unit: document.getElementById('unit').value || 'pcs',
       cost_per_unit: parseFloat(document.getElementById('cost_per_unit').value) || 0,
       category: document.getElementById('category').value,
       min_stock: _numOrNull(document.getElementById('min_stock').value),
@@ -3357,6 +3453,16 @@ document.addEventListener('keydown', (e) => {
       <span onclick="pickCat(null)" style="font-size:13px;font-weight:600;color:var(--accent);cursor:pointer">Clear</span>
     </div>
     <div id="catSheetList"></div>
+  </div>
+</div>
+
+<!-- Unit sheet -- picking a unit here can rescale quantity/cost (same
+     physical amount, different unit) or reset cost (unit changed families
+     entirely) -- see selectUnit(). -->
+<div class="modal-overlay modal-sheet" id="unitSheet" onclick="if(event.target===this)closeUnitSheet()">
+  <div class="modal-content" style="max-width:420px">
+    <h3 style="margin:0 0 12px;font-size:16px;">Unit</h3>
+    <div id="unitSheetList"></div>
   </div>
 </div>
 

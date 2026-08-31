@@ -44,7 +44,7 @@ Respond with valid JSON only, in exactly this schema:
 
 {
   "name": string | null,            // product name in English, e.g. "Extra Virgin Olive Oil"
-  "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
+  "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "cm" | "other" | null,
   "stock_on_hand": number | null,   // only if clearly countable (e.g. "3 bottles visible")
   "category": ${INGREDIENT_CATEGORIES.map((c) => `"${c}"`).join(' | ')} | null,
   "attributes": [                   // e.g. brand, origin, color, variety, size
@@ -54,7 +54,7 @@ Respond with valid JSON only, in exactly this schema:
   "expiration_date": string | null, // format DD.MM.YYYY, only if visible on the packaging
   "notes": string | null,           // anything useful that doesn't fit elsewhere, including uncertainties
   "guesses": {                      // separately-flagged estimates, see below -- omit or null if there's nothing to guess
-    "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
+    "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "cm" | "other" | null,
     "stock_on_hand": number | null,
     "cost_per_unit": number | null,
     "reasoning": string | null
@@ -109,6 +109,57 @@ typically has about 30m and costs around $0.50".
   explaining the estimate (e.g. typical package size and unit price that
   cost_per_unit was derived from).
 - Return ONLY the JSON object, no prose, no markdown code fences.`;
+
+// Metric unit pairs the New Item form's "Claude has ideas" sheet can offer
+// as two alternate options for the SAME physical quantity (e.g. "25 m" or
+// "2500 cm") -- factor is how many of `unit` make up 1 of the paired key.
+// Deliberately computed here rather than asked of the model: keeping the
+// two option's numbers internally consistent (same total stock value) is
+// just arithmetic, and doing it in code guarantees that instead of hoping
+// the model's own multiplication is exact.
+const UNIT_CONVERSIONS = {
+  m:  { unit: 'cm', factor: 100 },
+  cm: { unit: 'm',  factor: 0.01 },
+  kg: { unit: 'g',  factor: 1000 },
+  g:  { unit: 'kg', factor: 0.001 },
+  L:  { unit: 'ml', factor: 1000 },
+  ml: { unit: 'L',  factor: 0.001 }
+};
+function roundGuess(n) {
+  return Math.round(n * 10000) / 10000;
+}
+
+// "Claude has ideas" suggestion FAB on the New Item form (ingredients.html)
+// -- turns the model's raw "guesses" object (unit/stock/cost estimates for
+// a clearly-recognizable product whose photo doesn't show them) into one or
+// two ready-to-apply options. Kept out of the strict fields above (which
+// only ever reflect what's actually visible) so a guess never silently
+// looks like a read value -- the client shows these behind an explicit
+// opt-in affordance with a "select" per option instead.
+function buildGuessOptions(g) {
+  if (!g || typeof g !== 'object') return null;
+  const guessedUnit = (g.unit && g.unit !== 'other') ? g.unit : null;
+  const guessedStock = typeof g.stock_on_hand === 'number' && isFinite(g.stock_on_hand) ? g.stock_on_hand : null;
+  const guessedCost = typeof g.cost_per_unit === 'number' && isFinite(g.cost_per_unit) ? g.cost_per_unit : null;
+  if (!guessedUnit && !guessedStock && !guessedCost) return null;
+
+  const primary = { unit: guessedUnit, stock_on_hand: guessedStock, cost_per_unit: guessedCost };
+  const options = [primary];
+
+  // Only offer a second unit option when the unit itself is actually in
+  // question (guessedUnit set -- the strict "unit" field was null) and both
+  // numbers needed to convert it are present.
+  const pair = guessedUnit && UNIT_CONVERSIONS[guessedUnit];
+  if (pair && guessedStock != null && guessedCost != null) {
+    options.push({
+      unit: pair.unit,
+      stock_on_hand: roundGuess(guessedStock * pair.factor),
+      cost_per_unit: roundGuess(guessedCost / pair.factor)
+    });
+  }
+
+  return { reasoning: g.reasoning || null, options };
+}
 
 // German dd.mm.yyyy (the format CLAUDE_INGREDIENT_PROMPT asks for) -> the
 // yyyy-mm-dd an <input type="date"> actually needs to display a value.
@@ -173,28 +224,7 @@ async function extractWithClaude(filepath, mimeType) {
     });
   }
 
-  // "Chat with Claude" suggestion bubble on the New Item form (ingredients.html)
-  // -- educated guesses for unit/stock/cost when a clearly-recognizable
-  // product has no visible label for them (e.g. a single roll of toilet
-  // paper with no printed size or price). Deliberately kept out of the
-  // fields above (which only ever reflect what's actually visible) so a
-  // guess never silently looks like a read value -- the client shows these
-  // behind an explicit opt-in affordance with a "select" per field instead.
-  const g = parsed.guesses;
-  let guesses = null;
-  if (g && typeof g === 'object') {
-    const guessedUnit = (g.unit && g.unit !== 'other') ? g.unit : null;
-    const guessedStock = typeof g.stock_on_hand === 'number' && isFinite(g.stock_on_hand) ? g.stock_on_hand : null;
-    const guessedCost = typeof g.cost_per_unit === 'number' && isFinite(g.cost_per_unit) ? g.cost_per_unit : null;
-    if (guessedUnit || guessedStock || guessedCost) {
-      guesses = {
-        unit: guessedUnit,
-        stock_on_hand: guessedStock,
-        cost_per_unit: guessedCost,
-        reasoning: g.reasoning || null
-      };
-    }
-  }
+  const guesses = buildGuessOptions(parsed.guesses);
 
   return {
     vendor: null,

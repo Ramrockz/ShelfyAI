@@ -1869,7 +1869,8 @@ function applyReceiptScanToManualModal(data) {
       'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
       'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb',
       'ounces': 'oz', 'oz': 'oz',
-      'meters': 'm', 'm': 'm'
+      'meters': 'm', 'm': 'm',
+      'centimeters': 'cm', 'cm': 'cm'
     };
     setManualItemUnit(unitMap[rawUnit] || rawUnit);
   }
@@ -1904,12 +1905,7 @@ function applyReceiptScanToManualModal(data) {
 // printed size or price). Kept behind an explicit tap-to-reveal FAB rather
 // than pre-filling the form, so a guess never looks like something the
 // photo itself confirmed.
-let pendingClaudeGuesses = null;
-const CLAUDE_GUESS_FIELDS = [
-  { key: 'unit', label: 'Unit' },
-  { key: 'stock_on_hand', label: 'Stock on hand' },
-  { key: 'cost_per_unit', label: 'Cost each' }
-];
+let pendingClaudeGuesses = null; // { reasoning, options: [{unit, stock_on_hand, cost_per_unit}, ...] }
 
 // Strips a fixed-decimal number string down to only the digits it needs --
 // toFixed(4) alone left e.g. 2.5 showing as "2.5000" -- while preserving
@@ -1934,25 +1930,30 @@ function setClaudeGuesses(guesses) {
   if (fab) fab.style.display = guesses ? 'flex' : 'none';
 }
 
+// One line per option summarizing whichever fields it actually carries --
+// a 2-option guess (e.g. unit itself uncertain) shows both an option like
+// "Unit: m · Stock: 25 m · Cost each: $0.02" and its converted pair
+// ("Unit: cm · Stock: 2500 cm · Cost each: $0.0002"); a cost-only guess
+// (unit/stock already known) shows a single "Cost each: $X" option.
+function formatGuessOption(opt) {
+  const parts = [];
+  if (opt.unit != null) parts.push(`Unit: ${opt.unit}`);
+  if (opt.stock_on_hand != null) parts.push(`Stock: ${trimGuessDecimals(opt.stock_on_hand, 4)}${opt.unit ? ' ' + opt.unit : ''}`);
+  if (opt.cost_per_unit != null) parts.push(`Cost each: $${trimGuessNumber(opt.cost_per_unit, 4)}`);
+  return parts.join(' · ');
+}
+
 function openClaudeGuessSheet() {
   if (!pendingClaudeGuesses) return;
   const g = pendingClaudeGuesses;
   document.getElementById('claudeGuessReasoning').textContent = g.reasoning || 'Estimated for this kind of product.';
-  document.getElementById('claudeGuessRows').innerHTML = CLAUDE_GUESS_FIELDS
-    .filter(f => g[f.key] !== null && g[f.key] !== undefined)
-    .map(f => {
-      const display = f.key === 'cost_per_unit' ? `$${trimGuessNumber(g[f.key], 4)}`
-        : f.key === 'stock_on_hand' ? trimGuessDecimals(g[f.key], 4)
-        : String(g[f.key]);
-      return `
-        <div class="claude-guess-row" data-field="${f.key}">
+  document.getElementById('claudeGuessRows').innerHTML = (g.options || []).map((opt, i) => `
+        <div class="claude-guess-row">
           <span class="claude-guess-row-main">
-            <span class="claude-guess-row-label">${f.label}</span>
-            <span class="claude-guess-row-value" id="claudeGuessValue_${f.key}">${escapeHtml(display)}</span>
+            <span class="claude-guess-row-value" id="claudeGuessValue_${i}">${escapeHtml(formatGuessOption(opt))}</span>
           </span>
-          <button type="button" class="claude-guess-select" id="claudeGuessBtn_${f.key}" onclick="applyClaudeGuess('${f.key}')">Select</button>
-        </div>`;
-    }).join('');
+          <button type="button" class="claude-guess-select" id="claudeGuessBtn_${i}" onclick="applyClaudeGuessOption(${i})">Select</button>
+        </div>`).join('');
   document.getElementById('claudeGuessSheet').classList.add('active');
 }
 
@@ -1960,33 +1961,39 @@ function closeClaudeGuessSheet() {
   document.getElementById('claudeGuessSheet').classList.remove('active');
 }
 
-function applyClaudeGuess(field) {
+function applyClaudeGuessOption(index) {
   if (!pendingClaudeGuesses) return;
-  const value = pendingClaudeGuesses[field];
-  if (value === null || value === undefined) return;
+  const opt = pendingClaudeGuesses.options[index];
+  if (!opt) return;
 
-  if (field === 'unit') {
-    setManualItemUnit(value);
-  } else if (field === 'stock_on_hand') {
-    document.getElementById('ing_quantity').value = value;
+  if (opt.unit != null) setManualItemUnit(opt.unit);
+  if (opt.stock_on_hand != null) {
+    document.getElementById('ing_quantity').value = opt.stock_on_hand;
     onIngredientEdit();
-  } else if (field === 'cost_per_unit') {
+  }
+  if (opt.cost_per_unit != null) {
     // #ing_cost means two different things depending on unit (see
     // onIngredientEdit()'s own comment): for "pcs" it's the cost of ONE
-    // piece (matches guesses.cost_per_unit directly); for every other unit
-    // it's the TOTAL paid for the whole stock-on-hand quantity, so the
+    // piece (matches cost_per_unit directly); for every other unit it's
+    // the TOTAL paid for the whole stock-on-hand quantity, so the
     // per-unit guess has to be scaled up by however much is on hand.
+    // Read AFTER applying unit/stock above so this reflects what was just
+    // selected, not whatever the form had before.
     const unit = document.getElementById('ing_unit').value || 'pcs';
     const qty = parseFloat(document.getElementById('ing_quantity').value) || 1;
-    const fieldValue = unit === 'pcs' ? parseFloat(value) : parseFloat(value) * qty;
+    const fieldValue = unit === 'pcs' ? opt.cost_per_unit : opt.cost_per_unit * qty;
     document.getElementById('ing_cost').value = trimGuessNumber(fieldValue, 4);
     onIngredientEdit();
   }
 
-  const valueEl = document.getElementById(`claudeGuessValue_${field}`);
+  // Two options describe the SAME physical quantity in different units --
+  // picking one makes the other moot, so lock the whole sheet once any
+  // option is applied rather than leaving a stale alternative selectable.
+  document.querySelectorAll('.claude-guess-select').forEach(btn => { btn.disabled = true; });
+  const valueEl = document.getElementById(`claudeGuessValue_${index}`);
   if (valueEl) valueEl.classList.add('applied');
-  const btn = document.getElementById(`claudeGuessBtn_${field}`);
-  if (btn) { btn.textContent = 'Applied'; btn.disabled = true; }
+  const btn = document.getElementById(`claudeGuessBtn_${index}`);
+  if (btn) btn.textContent = 'Applied';
 }
 
 function startIngredientUpload() {
@@ -2126,7 +2133,7 @@ async function closeManualModal() {
 // ---------- New-item form (#manualModal) — 15b reference ----------
 
 // Common-first unit list; "Other" opens a prompt for anything not listed.
-const MANUAL_ITEM_UNITS = ['pcs', 'g', 'kg', 'ml', 'L', 'oz', 'lb', 'm'];
+const MANUAL_ITEM_UNITS = ['pcs', 'g', 'kg', 'ml', 'L', 'oz', 'lb', 'm', 'cm'];
 
 function renderManualItemUnits() {
   const current = document.getElementById('ing_unit').value || 'pcs';
