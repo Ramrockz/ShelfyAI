@@ -602,7 +602,7 @@
     if (cb) cb();
   }
 
-  async function open(entityType, opts) {
+  async function open(entityType, opts, pendingFile) {
     opts = opts || {};
     if (!KINDS[entityType]) { console.error('[ShelfyImportModal] Unknown entity type:', entityType); return; }
     currentEntity = entityType; currentOpts = opts;
@@ -610,7 +610,13 @@
     clearInterval(fakeTimer); fakeTimer = null;
     ensureSheet();
     sheetEl.classList.add('active');
-    render();
+    // quickStart() already picked (or shot) a file before calling this --
+    // rendering the plain empty drop-zone first and only calling setFile()
+    // once this async function resumes let that already-skipped "Take a
+    // photo / Upload file" screen flash on screen for a frame. setFile()
+    // renders its own "processing" state synchronously before doing
+    // anything async, so calling it here instead goes straight there.
+    if (pendingFile) setFile(pendingFile); else render();
     usage = (window.ShelfyCreateModal && typeof window.ShelfyCreateModal.checkUsage === 'function')
       ? await window.ShelfyCreateModal.checkUsage()
       : null;
@@ -649,7 +655,7 @@
     quickFileInput.addEventListener('change', function (e) {
       var f = e.target.files[0];
       quickFileInput.value = '';
-      if (f && quickEntity) open(quickEntity, quickOpts).then(function () { setFile(f); });
+      if (f && quickEntity) open(quickEntity, quickOpts, f);
     });
 
     quickCameraInput = document.createElement('input');
@@ -661,7 +667,7 @@
     quickCameraInput.addEventListener('change', function (e) {
       var f = e.target.files[0];
       quickCameraInput.value = '';
-      if (f && quickEntity) open(quickEntity, quickOpts).then(function () { setFile(f); });
+      if (f && quickEntity) open(quickEntity, quickOpts, f);
     });
   }
 

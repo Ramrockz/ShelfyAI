@@ -486,7 +486,10 @@
   /* "Claude has ideas" FAB + sheet -- see #claudeGuessFab markup below
      #manualModal for context. */
   .claude-guess-fab {
-    position: fixed; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); right: 20px;
+    /* .ic-foot (the sticky Save-item footer) is ~104px tall including its
+       own safe-area padding -- clear it with room to spare, or the FAB
+       sits on top of the Save button on mobile. */
+    position: fixed; bottom: calc(116px + env(safe-area-inset-bottom, 0px)); right: 20px;
     width: 52px; height: 52px; border-radius: 50%; border: none;
     background: var(--accent-deep, var(--accent)); color: #fff; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -1908,6 +1911,23 @@ const CLAUDE_GUESS_FIELDS = [
   { key: 'cost_per_unit', label: 'Cost each' }
 ];
 
+// Strips a fixed-decimal number string down to only the digits it needs --
+// toFixed(4) alone left e.g. 2.5 showing as "2.5000" -- while preserving
+// real precision for a small per-unit rate like 0.0167.
+function trimGuessDecimals(n, maxDecimals) {
+  return parseFloat(n).toFixed(maxDecimals).replace(/0+$/, '').replace(/\.$/, '');
+}
+// Same, but pads back to 2 decimals once there IS a fractional part, for a
+// currency-like look ("2.5000" -> "2.50" rather than the bare "2.5").
+function trimGuessNumber(n, maxDecimals) {
+  let s = trimGuessDecimals(n, maxDecimals);
+  if (s.includes('.')) {
+    const [intPart, decPart] = s.split('.');
+    if (decPart.length < 2) s = `${intPart}.${decPart.padEnd(2, '0')}`;
+  }
+  return s;
+}
+
 function setClaudeGuesses(guesses) {
   pendingClaudeGuesses = guesses;
   const fab = document.getElementById('claudeGuessFab');
@@ -1921,7 +1941,9 @@ function openClaudeGuessSheet() {
   document.getElementById('claudeGuessRows').innerHTML = CLAUDE_GUESS_FIELDS
     .filter(f => g[f.key] !== null && g[f.key] !== undefined)
     .map(f => {
-      const display = f.key === 'cost_per_unit' ? `$${parseFloat(g[f.key]).toFixed(4)}` : String(g[f.key]);
+      const display = f.key === 'cost_per_unit' ? `$${trimGuessNumber(g[f.key], 4)}`
+        : f.key === 'stock_on_hand' ? trimGuessDecimals(g[f.key], 4)
+        : String(g[f.key]);
       return `
         <div class="claude-guess-row" data-field="${f.key}">
           <span class="claude-guess-row-main">
@@ -1957,7 +1979,7 @@ function applyClaudeGuess(field) {
     const unit = document.getElementById('ing_unit').value || 'pcs';
     const qty = parseFloat(document.getElementById('ing_quantity').value) || 1;
     const fieldValue = unit === 'pcs' ? parseFloat(value) : parseFloat(value) * qty;
-    document.getElementById('ing_cost').value = fieldValue.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    document.getElementById('ing_cost').value = trimGuessNumber(fieldValue, 4);
     onIngredientEdit();
   }
 

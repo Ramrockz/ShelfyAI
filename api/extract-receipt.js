@@ -30,28 +30,30 @@ const INGREDIENT_CATEGORIES = [
   'Finished Product', 'Digital Product', 'Equipment', 'Consumable', 'Other'
 ];
 
-const CLAUDE_INGREDIENT_PROMPT = `Du analysierst ein Foto eines Gegenstands, den ein kleines Unternehmen als
-Rohmaterial oder Zutat für seine Produktherstellung einkauft und in seinem
-Lagerbestand erfassen möchte.
+const CLAUDE_INGREDIENT_PROMPT = `You are analyzing a photo of an item that a small business buys as a raw
+material or ingredient for making its products, and wants to log into its
+inventory.
 
-Deine Aufgabe: Fülle möglichst viele der folgenden Felder aus einem
-Inventar-Formular aus, basierend NUR auf dem, was im Bild sichtbar ist
-(Verpackungstext, Etiketten, Barcodes, Mengenangaben, Marke, etc.).
+Your task: fill in as many of the following inventory-form fields as you
+can, based ONLY on what's actually visible in the photo (packaging text,
+labels, barcodes, printed quantities, brand, etc.). Respond in English
+regardless of any language printed on the packaging itself — e.g. translate
+a German product name into English rather than copying it verbatim.
 
-Antworte ausschließlich mit validem JSON in genau diesem Schema:
+Respond with valid JSON only, in exactly this schema:
 
 {
-  "name": string | null,            // Produktname, z.B. "Olivenöl Extra Vergine"
+  "name": string | null,            // product name in English, e.g. "Extra Virgin Olive Oil"
   "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
-  "stock_on_hand": number | null,   // nur wenn eindeutig zählbar (z.B. "3 Flaschen sichtbar")
+  "stock_on_hand": number | null,   // only if clearly countable (e.g. "3 bottles visible")
   "category": ${INGREDIENT_CATEGORIES.map((c) => `"${c}"`).join(' | ')} | null,
-  "attributes": [                   // z.B. Marke, Herkunft, Farbe, Sorte, Größe
+  "attributes": [                   // e.g. brand, origin, color, variety, size
     { "name": string, "value": string }
   ],
-  "sku_barcode": string | null,     // nur falls ein Barcode/EAN/Artikelnummer lesbar ist
-  "expiration_date": string | null, // Format TT.MM.JJJJ, nur falls auf der Verpackung sichtbar
-  "notes": string | null,           // alles Nützliche, das sonst nirgends reinpasst, inkl. Unsicherheiten
-  "guesses": {                      // separat gekennzeichnete Schätzungen, siehe unten -- weglassen oder null, wenn nichts zu schätzen ist
+  "sku_barcode": string | null,     // only if a barcode/UPC/product code is readable
+  "expiration_date": string | null, // format DD.MM.YYYY, only if visible on the packaging
+  "notes": string | null,           // anything useful that doesn't fit elsewhere, including uncertainties
+  "guesses": {                      // separately-flagged estimates, see below -- omit or null if there's nothing to guess
     "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
     "stock_on_hand": number | null,
     "cost_per_unit": number | null,
@@ -59,46 +61,54 @@ Antworte ausschließlich mit validem JSON in genau diesem Schema:
   } | null
 }
 
-Wichtige Regeln:
-- category MUSS exakt einer der oben aufgelisteten Werte sein (genau so
-  geschrieben, inkl. Groß-/Kleinschreibung) oder null. Erfinde niemals eine
-  eigene Kategorie, auch wenn keine der Optionen perfekt passt -- wähle in
-  dem Fall die naheliegendste, oder null, falls wirklich keine passt.
-- Felder, die aus einem Foto NICHT zuverlässig ableitbar sind
-  (cost_each, low_stock_alert, delivery_days, source_url), lässt du
-  komplett weg bzw. gibst sie nicht zurück — errate sie nicht in den
-  Hauptfeldern oben. Ein Kostenschätzwert gehört ausschließlich in
-  "guesses.cost_per_unit" (siehe unten), niemals in ein anderes Feld.
-- stock_on_hand nur setzen, wenn die Anzahl im Bild eindeutig auszählbar ist
-  (z.B. "5 Kartons"). Bei einem einzelnen Gegenstand ohne erkennbare
-  Losgröße: null.
-- Erfinde keine Werte in den Hauptfeldern oben. Wenn ein Feld nicht
-  lesbar/erkennbar ist: null.
-- Text auf der Verpackung (auch klein oder teilweise verdeckt) genau lesen,
-  bevor du ein Feld auf null setzt.
+Important rules:
+- category MUST be exactly one of the values listed above (written exactly
+  like that, including case) or null. Never invent your own category, even
+  if none of the options is a perfect fit -- pick the closest one, or null
+  if truly nothing fits.
+- Fields that can't be reliably determined from a photo (cost_each,
+  low_stock_alert, delivery_days, source_url) are left out entirely /
+  returned as absent -- don't guess them in the main fields above. A cost
+  estimate belongs exclusively in "guesses.cost_per_unit" (see below),
+  never in any other field.
+- "unit" should only be "pcs" when the product is actually tracked piece
+  by piece for inventory purposes (e.g. bottles, boxes, tools, individually
+  packaged units) -- NOT for goods normally tracked by weight, volume, or
+  length (e.g. a roll of paper/fabric, a liquid, loose/bulk material), even
+  when only a single one is visible in the photo. For those, leave "unit"
+  null here and let guesses.unit supply the practical tracking unit
+  instead (e.g. "m" for a roll) -- don't default to "pcs" just because one
+  discrete object is visible.
+- stock_on_hand: only set it when the count is clearly readable in the
+  image (e.g. "5 boxes"). For a single item with no visible batch size:
+  null.
+- Don't invent values in the main fields above. If a field isn't
+  readable/recognizable: null.
+- Read packaging text carefully (even small or partially obscured) before
+  setting a field to null.
 
-"guesses" -- begründete Schätzungen für ein klar erkennbares Produkt, wenn
-Einheit, Menge und/oder Preis NICHT auf dem Foto ablesbar sind (z.B. ein
-einzelner Gegenstand ohne Preisschild oder Mengenangabe). Anders als bei
-den Feldern oben ist hier ausdrücklich erwünscht, dein allgemeines Wissen
-über dieses Produkt zu nutzen (nicht nur was im Bild steht) -- z.B. "eine
-Rolle Toilettenpapier hat typischerweise ca. 30m und kostet ca. 0,50€".
-- guesses komplett weglassen (oder null), wenn Name nicht erkennbar ist,
-  ODER wenn unit, stock_on_hand UND der Preis bereits mit hoher
-  Sicherheit aus dem Foto ablesbar sind (dann gibt es nichts zu schätzen).
-- guesses.unit: nur setzen, wenn das obige "unit" null ist.
-- guesses.stock_on_hand: die typische GESAMTMENGE in der (ggf. geschätzten)
-  Einheit für die im Bild tatsächlich sichtbare Stückzahl (z.B. 1 sichtbare
-  Rolle × ~30m/Rolle = 30). Nur setzen, wenn das obige "stock_on_hand"
-  null ist.
-- guesses.cost_per_unit: der typische Preis PRO EINHEIT (nicht pro
-  Stück/Packung!) in der (ggf. geschätzten) Einheit, in Euro -- z.B. für
-  eine Rolle zu ~0,50€ mit ~30m: cost_per_unit ≈ 0.0167. Praktisch immer
-  setzen, da der Preis nie aus den Hauptfeldern oben kommt.
-- guesses.reasoning: EIN kurzer, für den Nutzer verständlicher Satz auf
-  Deutsch, der die Schätzung erklärt (z.B. übliche Packungsgröße und
-  Stückpreis, aus denen sich cost_per_unit ergibt).
-- Gib NUR das JSON-Objekt zurück, keinen Fließtext, keine Markdown-Codeblöcke.`;
+"guesses" -- reasoned estimates for a clearly-recognizable product, when
+unit, quantity, and/or price aren't readable from the photo (e.g. a single
+item with no price tag or quantity marking). Unlike the fields above, here
+it's explicitly fine to draw on your general knowledge of this product
+(not just what's shown in the photo) -- e.g. "a roll of toilet paper
+typically has about 30m and costs around $0.50".
+- Omit guesses entirely (or null) if the name isn't recognizable, OR if
+  unit, stock_on_hand, AND the price are already readable from the photo
+  with high confidence (then there's nothing to guess).
+- guesses.unit: only set it when the "unit" field above is null.
+- guesses.stock_on_hand: the typical TOTAL quantity, in the (possibly
+  guessed) unit, for however many items are actually visible in the photo
+  (e.g. 1 visible roll × ~30m/roll = 30). Only set it when the
+  "stock_on_hand" field above is null.
+- guesses.cost_per_unit: the typical price PER UNIT (not per
+  piece/package!) in the (possibly guessed) unit, in US dollars -- e.g. for
+  a roll costing ~$0.50 with ~30m: cost_per_unit ≈ 0.0167. Set this
+  practically always, since price never comes from the main fields above.
+- guesses.reasoning: ONE short, user-friendly sentence in English
+  explaining the estimate (e.g. typical package size and unit price that
+  cost_per_unit was derived from).
+- Return ONLY the JSON object, no prose, no markdown code fences.`;
 
 // German dd.mm.yyyy (the format CLAUDE_INGREDIENT_PROMPT asks for) -> the
 // yyyy-mm-dd an <input type="date"> actually needs to display a value.
