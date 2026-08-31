@@ -483,6 +483,46 @@
   .ic-scan-btn:active { color: var(--accent); border-color: var(--accent); }
   .ic-scan-btn svg, .ic-scan-btn i { width: 17px; height: 17px; }
 
+  /* "Claude has ideas" FAB + sheet -- see #claudeGuessFab markup below
+     #manualModal for context. */
+  .claude-guess-fab {
+    position: fixed; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); right: 20px;
+    width: 52px; height: 52px; border-radius: 50%; border: none;
+    background: var(--accent-deep, var(--accent)); color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px var(--accent-glow, rgba(6,182,212,.35));
+    z-index: 10005; animation: claudeGuessPop .3s ease;
+  }
+  @keyframes claudeGuessPop { 0% { transform: scale(0); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  .claude-guess-fab-badge {
+    position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--success, #10b981); border: 2px solid var(--bg-panel);
+  }
+  #claudeGuessSheet .modal-content { max-width: 400px; padding: 0 !important; }
+  #claudeGuessSheet { z-index: 10006 !important; }
+  .claude-guess-head { display: flex; align-items: flex-start; gap: 10px; padding: 18px 16px 14px; }
+  .claude-guess-icon { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+                        background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent));
+                        display: flex; align-items: center; justify-content: center; }
+  .claude-guess-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-top: 2px; }
+  .claude-guess-title { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+  .claude-guess-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+  .claude-guess-close { flex-shrink: 0; width: 30px; height: 30px; border: none; background: none;
+                         color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .claude-guess-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+                       border-top: 1px solid var(--border-hair, var(--border)); }
+  .claude-guess-row-main { flex: 1; min-width: 0; }
+  .claude-guess-row-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+                             text-transform: uppercase; color: var(--text-muted); }
+  .claude-guess-row-value { display: block; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .claude-guess-row-value.applied { color: var(--success, #10b981); }
+  .claude-guess-select { flex-shrink: 0; height: 34px; padding: 0 14px; border-radius: 10px; border: none;
+                          background: var(--accent-deep, var(--accent)); color: #fff; font-size: 12.5px; font-weight: 800;
+                          cursor: pointer; }
+  .claude-guess-select:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+  .claude-guess-note { padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+                        font-size: 11.5px; color: var(--text-faint, var(--text-muted)); }
+
   .ic-units { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto;
               scrollbar-width: none; -ms-overflow-style: none; }
   .ic-units::-webkit-scrollbar { display: none; }
@@ -1359,6 +1399,35 @@
   </div>
 </div>
 
+<!-- "Claude has ideas" FAB -- appears over #manualModal only when a photo
+     scan came back with educated guesses (unit/stock/cost the photo itself
+     didn't show clearly enough to read, e.g. a single unlabeled item) --
+     see applyReceiptScanToManualModal()'s use of item.guesses
+     (api/extract-receipt.js's CLAUDE_INGREDIENT_PROMPT "guesses" section). -->
+<button type="button" class="claude-guess-fab" id="claudeGuessFab" onclick="openClaudeGuessSheet()" style="display:none;" aria-label="Claude has suggestions">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+  <span class="claude-guess-fab-badge"></span>
+</button>
+
+<div class="modal-overlay" id="claudeGuessSheet" onclick="if(event.target===this)closeClaudeGuessSheet()">
+  <div class="modal-content claude-guess-modal">
+    <div class="claude-guess-head">
+      <span class="claude-guess-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+      </span>
+      <span class="claude-guess-titles">
+        <span class="claude-guess-title">Claude's best guess</span>
+        <span class="claude-guess-sub" id="claudeGuessReasoning"></span>
+      </span>
+      <button type="button" class="claude-guess-close" onclick="closeClaudeGuessSheet()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="claudeGuessRows"></div>
+    <div class="claude-guess-note">These aren't read from the photo — they're typical values for this kind of product. Review before saving.</div>
+  </div>
+</div>
+
 <!-- Category sheet for #manualModal's #icCatRow above. Separate from
      #catSheet (the ingredient-LIST category filter, further up this file) —
      different id, same sort-by-count-descending + .cat-row-count markup as
@@ -1755,6 +1824,7 @@ async function checkAIUsage() {
 function openManualIngredientModal() {
   document.getElementById('manualModal').classList.add('active');
   renderAttrSuggestChips();
+  setClaudeGuesses(null);
 }
 
 async function _notifyIfIngredientLimitReached() {
@@ -1821,6 +1891,80 @@ function applyReceiptScanToManualModal(data) {
     });
   }
   onIngredientEdit();
+  setClaudeGuesses(item.guesses || null);
+}
+
+// "Claude has ideas" -- api/extract-receipt.js's Claude vision fallback can
+// return educated guesses (based on general product knowledge, not what's
+// actually visible) for unit/stock/cost when a clearly-recognizable item's
+// photo doesn't show them (e.g. a single roll of toilet paper with no
+// printed size or price). Kept behind an explicit tap-to-reveal FAB rather
+// than pre-filling the form, so a guess never looks like something the
+// photo itself confirmed.
+let pendingClaudeGuesses = null;
+const CLAUDE_GUESS_FIELDS = [
+  { key: 'unit', label: 'Unit' },
+  { key: 'stock_on_hand', label: 'Stock on hand' },
+  { key: 'cost_per_unit', label: 'Cost each' }
+];
+
+function setClaudeGuesses(guesses) {
+  pendingClaudeGuesses = guesses;
+  const fab = document.getElementById('claudeGuessFab');
+  if (fab) fab.style.display = guesses ? 'flex' : 'none';
+}
+
+function openClaudeGuessSheet() {
+  if (!pendingClaudeGuesses) return;
+  const g = pendingClaudeGuesses;
+  document.getElementById('claudeGuessReasoning').textContent = g.reasoning || 'Estimated for this kind of product.';
+  document.getElementById('claudeGuessRows').innerHTML = CLAUDE_GUESS_FIELDS
+    .filter(f => g[f.key] !== null && g[f.key] !== undefined)
+    .map(f => {
+      const display = f.key === 'cost_per_unit' ? `$${parseFloat(g[f.key]).toFixed(4)}` : String(g[f.key]);
+      return `
+        <div class="claude-guess-row" data-field="${f.key}">
+          <span class="claude-guess-row-main">
+            <span class="claude-guess-row-label">${f.label}</span>
+            <span class="claude-guess-row-value" id="claudeGuessValue_${f.key}">${escapeHtml(display)}</span>
+          </span>
+          <button type="button" class="claude-guess-select" id="claudeGuessBtn_${f.key}" onclick="applyClaudeGuess('${f.key}')">Select</button>
+        </div>`;
+    }).join('');
+  document.getElementById('claudeGuessSheet').classList.add('active');
+}
+
+function closeClaudeGuessSheet() {
+  document.getElementById('claudeGuessSheet').classList.remove('active');
+}
+
+function applyClaudeGuess(field) {
+  if (!pendingClaudeGuesses) return;
+  const value = pendingClaudeGuesses[field];
+  if (value === null || value === undefined) return;
+
+  if (field === 'unit') {
+    setManualItemUnit(value);
+  } else if (field === 'stock_on_hand') {
+    document.getElementById('ing_quantity').value = value;
+    onIngredientEdit();
+  } else if (field === 'cost_per_unit') {
+    // #ing_cost means two different things depending on unit (see
+    // onIngredientEdit()'s own comment): for "pcs" it's the cost of ONE
+    // piece (matches guesses.cost_per_unit directly); for every other unit
+    // it's the TOTAL paid for the whole stock-on-hand quantity, so the
+    // per-unit guess has to be scaled up by however much is on hand.
+    const unit = document.getElementById('ing_unit').value || 'pcs';
+    const qty = parseFloat(document.getElementById('ing_quantity').value) || 1;
+    const fieldValue = unit === 'pcs' ? parseFloat(value) : parseFloat(value) * qty;
+    document.getElementById('ing_cost').value = fieldValue.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    onIngredientEdit();
+  }
+
+  const valueEl = document.getElementById(`claudeGuessValue_${field}`);
+  if (valueEl) valueEl.classList.add('applied');
+  const btn = document.getElementById(`claudeGuessBtn_${field}`);
+  if (btn) { btn.textContent = 'Applied'; btn.disabled = true; }
 }
 
 function startIngredientUpload() {
@@ -1933,6 +2077,8 @@ async function closeManualModal() {
   if (window.ShelfyImportModal) window.ShelfyImportModal.refundScan();
   if (window.ShelfyUrlImportModal) window.ShelfyUrlImportModal.refundScan();
   document.getElementById('manualModal').classList.remove('active');
+  closeClaudeGuessSheet();
+  setClaudeGuesses(null); // the FAB lives outside #manualModal, so closing it must hide the FAB explicitly
   // Clear form
   document.getElementById('ing_name').value = '';
   document.getElementById('ing_quantity').value = '';

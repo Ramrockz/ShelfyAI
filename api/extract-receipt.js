@@ -50,7 +50,13 @@ Antworte ausschließlich mit validem JSON in genau diesem Schema:
   ],
   "sku_barcode": string | null,     // nur falls ein Barcode/EAN/Artikelnummer lesbar ist
   "expiration_date": string | null, // Format TT.MM.JJJJ, nur falls auf der Verpackung sichtbar
-  "notes": string | null            // alles Nützliche, das sonst nirgends reinpasst, inkl. Unsicherheiten
+  "notes": string | null,           // alles Nützliche, das sonst nirgends reinpasst, inkl. Unsicherheiten
+  "guesses": {                      // separat gekennzeichnete Schätzungen, siehe unten -- weglassen oder null, wenn nichts zu schätzen ist
+    "unit": "pcs" | "g" | "kg" | "ml" | "L" | "oz" | "lb" | "m" | "other" | null,
+    "stock_on_hand": number | null,
+    "cost_per_unit": number | null,
+    "reasoning": string | null
+  } | null
 }
 
 Wichtige Regeln:
@@ -60,13 +66,38 @@ Wichtige Regeln:
   dem Fall die naheliegendste, oder null, falls wirklich keine passt.
 - Felder, die aus einem Foto NICHT zuverlässig ableitbar sind
   (cost_each, low_stock_alert, delivery_days, source_url), lässt du
-  komplett weg bzw. gibst sie nicht zurück — errate sie nicht.
+  komplett weg bzw. gibst sie nicht zurück — errate sie nicht in den
+  Hauptfeldern oben. Ein Kostenschätzwert gehört ausschließlich in
+  "guesses.cost_per_unit" (siehe unten), niemals in ein anderes Feld.
 - stock_on_hand nur setzen, wenn die Anzahl im Bild eindeutig auszählbar ist
   (z.B. "5 Kartons"). Bei einem einzelnen Gegenstand ohne erkennbare
   Losgröße: null.
-- Erfinde keine Werte. Wenn ein Feld nicht lesbar/erkennbar ist: null.
+- Erfinde keine Werte in den Hauptfeldern oben. Wenn ein Feld nicht
+  lesbar/erkennbar ist: null.
 - Text auf der Verpackung (auch klein oder teilweise verdeckt) genau lesen,
   bevor du ein Feld auf null setzt.
+
+"guesses" -- begründete Schätzungen für ein klar erkennbares Produkt, wenn
+Einheit, Menge und/oder Preis NICHT auf dem Foto ablesbar sind (z.B. ein
+einzelner Gegenstand ohne Preisschild oder Mengenangabe). Anders als bei
+den Feldern oben ist hier ausdrücklich erwünscht, dein allgemeines Wissen
+über dieses Produkt zu nutzen (nicht nur was im Bild steht) -- z.B. "eine
+Rolle Toilettenpapier hat typischerweise ca. 30m und kostet ca. 0,50€".
+- guesses komplett weglassen (oder null), wenn Name nicht erkennbar ist,
+  ODER wenn unit, stock_on_hand UND der Preis bereits mit hoher
+  Sicherheit aus dem Foto ablesbar sind (dann gibt es nichts zu schätzen).
+- guesses.unit: nur setzen, wenn das obige "unit" null ist.
+- guesses.stock_on_hand: die typische GESAMTMENGE in der (ggf. geschätzten)
+  Einheit für die im Bild tatsächlich sichtbare Stückzahl (z.B. 1 sichtbare
+  Rolle × ~30m/Rolle = 30). Nur setzen, wenn das obige "stock_on_hand"
+  null ist.
+- guesses.cost_per_unit: der typische Preis PRO EINHEIT (nicht pro
+  Stück/Packung!) in der (ggf. geschätzten) Einheit, in Euro -- z.B. für
+  eine Rolle zu ~0,50€ mit ~30m: cost_per_unit ≈ 0.0167. Praktisch immer
+  setzen, da der Preis nie aus den Hauptfeldern oben kommt.
+- guesses.reasoning: EIN kurzer, für den Nutzer verständlicher Satz auf
+  Deutsch, der die Schätzung erklärt (z.B. übliche Packungsgröße und
+  Stückpreis, aus denen sich cost_per_unit ergibt).
 - Gib NUR das JSON-Objekt zurück, keinen Fließtext, keine Markdown-Codeblöcke.`;
 
 // German dd.mm.yyyy (the format CLAUDE_INGREDIENT_PROMPT asks for) -> the
@@ -132,6 +163,29 @@ async function extractWithClaude(filepath, mimeType) {
     });
   }
 
+  // "Chat with Claude" suggestion bubble on the New Item form (ingredients.html)
+  // -- educated guesses for unit/stock/cost when a clearly-recognizable
+  // product has no visible label for them (e.g. a single roll of toilet
+  // paper with no printed size or price). Deliberately kept out of the
+  // fields above (which only ever reflect what's actually visible) so a
+  // guess never silently looks like a read value -- the client shows these
+  // behind an explicit opt-in affordance with a "select" per field instead.
+  const g = parsed.guesses;
+  let guesses = null;
+  if (g && typeof g === 'object') {
+    const guessedUnit = (g.unit && g.unit !== 'other') ? g.unit : null;
+    const guessedStock = typeof g.stock_on_hand === 'number' && isFinite(g.stock_on_hand) ? g.stock_on_hand : null;
+    const guessedCost = typeof g.cost_per_unit === 'number' && isFinite(g.cost_per_unit) ? g.cost_per_unit : null;
+    if (guessedUnit || guessedStock || guessedCost) {
+      guesses = {
+        unit: guessedUnit,
+        stock_on_hand: guessedStock,
+        cost_per_unit: guessedCost,
+        reasoning: g.reasoning || null
+      };
+    }
+  }
+
   return {
     vendor: null,
     item: [{
@@ -152,7 +206,8 @@ async function extractWithClaude(filepath, mimeType) {
       product_category: INGREDIENT_CATEGORIES.includes(parsed.category) ? parsed.category : null,
       expiration_date: parseGermanDate(parsed.expiration_date),
       notes: parsed.notes || null,
-      attributes
+      attributes,
+      guesses
     }],
     amount: null,
     date: null
