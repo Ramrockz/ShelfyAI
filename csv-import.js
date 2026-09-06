@@ -276,15 +276,25 @@
       </div></div>
       <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;" onchange="window._csvHandleFile(event.target.files[0])">
     `;
-    document.body.appendChild(frame);
-
+    // Nested INSIDE #csvImportFrame (not a separate <body> child) on purpose:
+    // reported as opening "behind" something and only becoming visible after
+    // navigating away from the importer -- i.e. it was rendering under
+    // #csvImportFrame's own content despite a higher explicit z-index, on
+    // whatever page/condition that happened on. As a sibling of <body>, its
+    // stacking position was only as reliable as every *other* z-index on the
+    // host page happening to be lower. As a descendant of #csvImportFrame
+    // (z-index 999999999, its own stacking context), a much smaller z-index
+    // here is enough to always paint above the rest of the frame's content,
+    // and nothing outside the frame can ever come between them again.
     const dstSheet = document.createElement('div');
     dstSheet.className = 'modal-overlay modal-sheet';
     dstSheet.id = 'csvDstSheet';
-    dstSheet.style.zIndex = '1000000000';
+    dstSheet.style.zIndex = '10';
     dstSheet.setAttribute('onclick', "if(event.target===this)window._csvCloseDstSheet()");
     dstSheet.innerHTML = `<div class="modal-content" style="max-width:360px"><div id="csvDstList"></div></div>`;
-    document.body.appendChild(dstSheet);
+    frame.appendChild(dstSheet);
+
+    document.body.appendChild(frame);
   }
 
   // ─── Open / close ──────────────────────────────────────────────────────────
