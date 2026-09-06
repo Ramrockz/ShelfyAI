@@ -4875,7 +4875,20 @@ function softDeleteIng(id) {
 
   const commit = () => {
     _pendingDelete = null;
-    deleteIng(id, { skipConfirm: true });
+    // Enqueue durably (IndexedDB, no network round-trip) instead of letting
+    // deleteIng() try a live network delete first -- this can be called from
+    // `pagehide`, and a live request started there can be killed by the
+    // browser mid-flight (especially on a hard refresh) before it either
+    // succeeds or falls back to the offline queue, silently dropping the
+    // delete. Queuing first guarantees the intent survives even an instant
+    // refresh; the queue drains for real on this load (if online) or the next.
+    if (window.offlineQueueWrite) {
+      window.offlineQueueWrite('ingredients', 'delete', null, 'id', id);
+    } else {
+      deleteIng(id, { skipConfirm: true });
+    }
+    ingredients = ingredients.filter(i => i.id !== id);
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
   };
 
   _pendingDelete = { id, shell, timer: setTimeout(commit, 5000), commit };

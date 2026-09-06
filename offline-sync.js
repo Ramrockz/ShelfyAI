@@ -318,6 +318,31 @@
     return { data: optimisticData ? [optimisticData] : null, error: null, queued: true, tempId };
   }
 
+  // Enqueue-first write for callers that can't tolerate a live network call
+  // (e.g. a delete committed from a `pagehide` handler): offlineWrite() tries
+  // the network first and only falls back to the durable queue if that call
+  // throws, but a request started during page teardown can be killed by the
+  // browser before it ever resolves/rejects -- silently dropping the write.
+  // This instead persists to IndexedDB immediately (fast, local, not
+  // network-dependent) so the write survives even an instant refresh, then
+  // opportunistically drains the queue right away if we're online.
+  async function queueWrite(table, operation, payload, matchField, matchValue) {
+    await enqueue({
+      table,
+      operation,
+      payload: Array.isArray(payload) ? payload[0] : payload,
+      matchField: matchField || null,
+      matchValue: matchValue || null,
+      tempId: null,
+      createdAt: new Date().toISOString(),
+      retries: 0,
+    });
+
+    refreshBannerCount();
+    if (navigator.onLine) drainQueue();
+    return { data: null, error: null, queued: true };
+  }
+
   // ─── Online / offline events ─────────────────────────────────────────────────
 
   window.addEventListener('offline', () => {
@@ -350,6 +375,7 @@
   // ─── Expose globals ───────────────────────────────────────────────────────────
 
   window.offlineWrite = offlineWrite;
+  window.offlineQueueWrite = queueWrite;
   window.drainQueue = drainQueue;
 
 })();
