@@ -512,15 +512,16 @@
   .claude-guess-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
   .claude-guess-close { flex-shrink: 0; width: 30px; height: 30px; border: none; background: none;
                          color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  .claude-guess-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-                       border-top: 1px solid var(--border-hair, var(--border)); }
-  .claude-guess-row-main { flex: 1; min-width: 0; }
-  .claude-guess-row-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  .claude-guess-option { padding: 14px 16px; border-top: 1px solid var(--border-hair, var(--border)); }
+  .claude-guess-stats { display: flex; gap: 10px; margin-bottom: 12px; }
+  .claude-guess-stat { flex: 1; min-width: 0; }
+  .claude-guess-stat-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
                              text-transform: uppercase; color: var(--text-muted); }
-  .claude-guess-row-value { display: block; font-size: 16px; font-weight: 700; margin-top: 2px; }
-  .claude-guess-row-value.applied { color: var(--success, #10b981); }
-  .claude-guess-select { flex-shrink: 0; height: 34px; padding: 0 14px; border-radius: 10px; border: none;
-                          background: var(--accent-deep, var(--accent)); color: #fff; font-size: 12.5px; font-weight: 800;
+  .claude-guess-stat-value { display: block; font-size: 15px; font-weight: 700; margin-top: 3px;
+                              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .claude-guess-option.applied .claude-guess-stat-value { color: var(--success, #10b981); }
+  .claude-guess-select { display: block; width: 100%; height: 38px; border-radius: 10px; border: none;
+                          background: var(--accent-deep, var(--accent)); color: #fff; font-size: 13px; font-weight: 800;
                           cursor: pointer; }
   .claude-guess-select:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
   .claude-guess-note { padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
@@ -1407,7 +1408,7 @@
      didn't show clearly enough to read, e.g. a single unlabeled item) --
      see applyReceiptScanToManualModal()'s use of item.guesses
      (api/extract-receipt.js's CLAUDE_INGREDIENT_PROMPT "guesses" section). -->
-<button type="button" class="claude-guess-fab" id="claudeGuessFab" onclick="openClaudeGuessSheet()" style="display:none;" aria-label="Claude has suggestions">
+<button type="button" class="claude-guess-fab" id="claudeGuessFab" onclick="openClaudeGuessSheet()" style="display:none;" aria-label="Shelfy has suggestions">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
   <span class="claude-guess-fab-badge"></span>
 </button>
@@ -1419,7 +1420,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
       </span>
       <span class="claude-guess-titles">
-        <span class="claude-guess-title">Claude's best guess</span>
+        <span class="claude-guess-title">Shelfy's best guess</span>
         <span class="claude-guess-sub" id="claudeGuessReasoning"></span>
       </span>
       <button type="button" class="claude-guess-close" onclick="closeClaudeGuessSheet()" aria-label="Close">
@@ -1930,17 +1931,17 @@ function setClaudeGuesses(guesses) {
   if (fab) fab.style.display = guesses ? 'flex' : 'none';
 }
 
-// One line per option summarizing whichever fields it actually carries --
-// a 2-option guess (e.g. unit itself uncertain) shows both an option like
-// "Unit: m · Stock: 25 m · Cost each: $0.02" and its converted pair
-// ("Unit: cm · Stock: 2500 cm · Cost each: $0.0002"); a cost-only guess
-// (unit/stock already known) shows a single "Cost each: $X" option.
-function formatGuessOption(opt) {
-  const parts = [];
-  if (opt.unit != null) parts.push(`Unit: ${opt.unit}`);
-  if (opt.stock_on_hand != null) parts.push(`Stock: ${trimGuessDecimals(opt.stock_on_hand, 4)}${opt.unit ? ' ' + opt.unit : ''}`);
-  if (opt.cost_per_unit != null) parts.push(`Cost each: $${trimGuessNumber(opt.cost_per_unit, 4)}`);
-  return parts.join(' · ');
+// One labeled stat per field an option actually carries -- a 2-option guess
+// (e.g. unit itself uncertain) shows both an option like Unit "m" / Stock
+// "25 m" / Cost each "$0.02" and its converted pair (Unit "cm" / Stock
+// "2500 cm" / Cost each "$0.0002"); a cost-only guess (unit/stock already
+// known) shows just a single "Cost each" stat.
+function guessOptionStats(opt) {
+  const stats = [];
+  if (opt.unit != null) stats.push({ label: 'Unit', value: opt.unit });
+  if (opt.stock_on_hand != null) stats.push({ label: 'Stock', value: `${trimGuessDecimals(opt.stock_on_hand, 4)}${opt.unit ? ' ' + opt.unit : ''}` });
+  if (opt.cost_per_unit != null) stats.push({ label: 'Cost each', value: `$${trimGuessNumber(opt.cost_per_unit, 4)}` });
+  return stats;
 }
 
 function openClaudeGuessSheet() {
@@ -1948,11 +1949,15 @@ function openClaudeGuessSheet() {
   const g = pendingClaudeGuesses;
   document.getElementById('claudeGuessReasoning').textContent = g.reasoning || 'Estimated for this kind of product.';
   document.getElementById('claudeGuessRows').innerHTML = (g.options || []).map((opt, i) => `
-        <div class="claude-guess-row">
-          <span class="claude-guess-row-main">
-            <span class="claude-guess-row-value" id="claudeGuessValue_${i}">${escapeHtml(formatGuessOption(opt))}</span>
-          </span>
-          <button type="button" class="claude-guess-select" id="claudeGuessBtn_${i}" onclick="applyClaudeGuessOption(${i})">Select</button>
+        <div class="claude-guess-option" id="claudeGuessOption_${i}">
+          <div class="claude-guess-stats">
+            ${guessOptionStats(opt).map(s => `
+              <div class="claude-guess-stat">
+                <span class="claude-guess-stat-label">${escapeHtml(s.label)}</span>
+                <span class="claude-guess-stat-value">${escapeHtml(s.value)}</span>
+              </div>`).join('')}
+          </div>
+          <button type="button" class="claude-guess-select" id="claudeGuessBtn_${i}" onclick="applyClaudeGuessOption(${i})">Select this option</button>
         </div>`).join('');
   document.getElementById('claudeGuessSheet').classList.add('active');
 }
@@ -1990,8 +1995,8 @@ function applyClaudeGuessOption(index) {
   // picking one makes the other moot, so lock the whole sheet once any
   // option is applied rather than leaving a stale alternative selectable.
   document.querySelectorAll('.claude-guess-select').forEach(btn => { btn.disabled = true; });
-  const valueEl = document.getElementById(`claudeGuessValue_${index}`);
-  if (valueEl) valueEl.classList.add('applied');
+  const optEl = document.getElementById(`claudeGuessOption_${index}`);
+  if (optEl) optEl.classList.add('applied');
   const btn = document.getElementById(`claudeGuessBtn_${index}`);
   if (btn) btn.textContent = 'Applied';
 }
