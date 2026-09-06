@@ -1633,7 +1633,7 @@ function renderMobileOverlay() {
       : '';
     const deliveryPill = stock?.reorder_pending ? '<span class="stock-pill delivery">On the way</span>' : '';
     const cost = parseFloat(comp.cost) || 0;
-    const stepSize = (comp.unit === 'pcs' || comp.unit === 'ea' || !comp.unit) ? 1 : 0.25;
+    const stepSize = 1;
     const atMin = need <= stepSize;
     return `
     <div class="rdm-item-swipe">
@@ -3475,8 +3475,7 @@ function aiSetQty(n) {
   aiRenderLine();
 }
 function aiStepQty(d) {
-  const step = (_aiDraft.unit === 'pcs' || _aiDraft.unit === 'ea') ? 1 : 0.25;
-  aiSetQty(Math.max(0, Math.round((_aiDraft.qty + d * step) * 100) / 100));
+  aiSetQty(Math.max(0, Math.round((_aiDraft.qty + d) * 100) / 100));
 }
 
 function aiOpenUnitSheet() {
@@ -3582,7 +3581,7 @@ async function aiRemoveLine() {
 async function rdmStepQty(index, delta) {
   const comp = recipe.components[index];
   if (!comp) return;
-  const step = (comp.unit === 'pcs' || comp.unit === 'ea' || !comp.unit) ? 1 : 0.25;
+  const step = 1;
   // The row's "-" button is already disabled once quantity <= step (see
   // renderMobileOverlay), so this only guards against a stray call --
   // it used to clamp to a floor of 0.01, which meant going down from a
