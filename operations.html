@@ -425,10 +425,52 @@
     overflow: hidden;
   }
   
-  .recipe-panel-left { 
-    border-right: 1px solid var(--border); 
-    background: var(--bg-panel); 
+  .recipe-panel-left {
+    border-right: 1px solid var(--border);
+    background: var(--bg-panel);
+    overflow-y: auto;
   }
+
+  /* Cancel/Create anchored to the bottom of the panel at all times, instead
+     of flowing at the end of the scrollable content -- matches recipes.html's
+     Create Product panel. Desktop had no explicit styling of its own before
+     (mobile's rules didn't apply here), just a bare stacked <button> look. */
+  .mobile-recipe-actions {
+    position: sticky;
+    bottom: -32px;
+    margin: 12px -32px -32px;
+    padding: 12px 32px calc(12px + 32px);
+    display: flex;
+    gap: 10px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+  }
+  .mobile-recipe-actions .btn { flex: 1; padding: 13px; font-size: 15px; font-weight: 700; border-radius: 10px; }
+  .mobile-recipe-actions .btn-cancel { background: var(--bg-inner); color: var(--text-main); border: 1.5px solid var(--border); }
+  .mobile-recipe-actions .btn-cancel:hover { border-color: var(--text-muted); }
+  .mobile-recipe-actions .btn-primary { background: var(--accent); color: #fff; border: 1.5px solid var(--accent); }
+  .mobile-recipe-actions .btn-primary:hover { background: var(--accent-deep, #0891ac); }
+
+  /* Category row + sheet -- matches recipes.html's Create Product panel.
+     Category previously had no picker at all in this modal. */
+  .rb-row {
+    display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
+    padding: 0 14px 0 16px; text-align: left;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    font-family: inherit; cursor: pointer;
+  }
+  .rb-row-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
+  .rb-row-value { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-main); }
+  .rb-row-value.empty { font-weight: 400; color: var(--text-faint, #94a3b8); }
+  .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
+
+  .cat-row { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 12px;
+             border-radius: 12px; cursor: pointer; }
+  .cat-row.active { background: rgba(6,182,212,.1); color: #0e7490; }
+  .cat-row i, .cat-row svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .cat-row-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   
   .recipe-name-input {
     width: 100%;
@@ -494,25 +536,63 @@
     gap: 12px;
   }
   
-  .recipe-drop-item { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    background: var(--bg-panel); 
-    border: 2px solid var(--border); 
-    border-radius: 16px; 
-    padding: 20px 24px; 
-    margin-bottom: 12px; 
-    font-size: 15px; 
+  /* A left accent bar plus a real name/attribute hierarchy -- these rows
+     often ARE the only thing telling several near-identical entries apart
+     (the same product in different sizes/colors); matches recipes.html's
+     Create Product panel. */
+  .drop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    font-size: 15px;
     transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  
-  .recipe-drop-item:hover {
+
+  .drop-item:hover {
     border-color: var(--accent);
-    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
+
+  .drop-item-main { flex: 1; min-width: 0; }
+  .drop-item-main strong {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .drop-item-attrs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .drop-item-attr {
+    display: inline-flex; align-items: center;
+    padding: 2px 9px; border-radius: 6px;
+    background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent));
+    font-size: 12px; font-weight: 700;
+  }
+
+  .drop-item-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .drop-item-step {
+    background: var(--bg-inner); border: 1.5px solid var(--border); color: var(--text-main);
+    width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+    font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .drop-item-step:hover { border-color: var(--accent); color: var(--accent-deep, var(--accent)); }
+  .drop-item-qty { color: var(--text-main); font-size: 15px; min-width: 28px; text-align: center; font-weight: 700; }
+  .drop-item-remove {
+    color: var(--text-faint, var(--text-muted)); font-size: 22px; cursor: pointer; font-weight: 400;
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; transition: all 0.15s;
+  }
+  .drop-item-remove:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
   
   .recipe-ingredient-scroll { 
     overflow-y: auto; 
@@ -1299,7 +1379,7 @@
     .search-bar { font-size: 14px; }
     
     /* Recipe drop items - adjust padding */
-    .recipe-drop-item {
+    .drop-item {
       padding: 16px;
     }
   }
@@ -3841,7 +3921,14 @@ function startIngredientUrlImport() {
         <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; display: block; letter-spacing: 0.05em;">Product Name <span style="color: var(--danger);">*</span></label>
         <input type="text" id="recipeNameInput" class="recipe-name-input" placeholder="Enter product name..." required />
       </div>
-      
+
+      <input type="hidden" id="recipeCategoryInput" value="">
+      <button type="button" class="rb-row" id="rbCatRow" onclick="openRbCatSheet()">
+        <span class="rb-row-label">Category <span style="color:var(--danger)">*</span></span>
+        <span class="rb-row-value" id="rbCatValue"></span>
+        <svg class="rb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="15" height="15"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+
       <!-- Mobile Ingredient Swiper (visible only on mobile) -->
       <div class="mobile-ingredient-swiper">
         <div class="mobile-type-filters">
@@ -3874,6 +3961,16 @@ function startIngredientUrlImport() {
       <div id="recipeCatChips" class="recipe-cat-chips" style="margin-top: 8px;"></div>
       <div id="recipeAttrSubfilter" class="recipe-attr-subfilter"></div>
       <div class="recipe-ingredient-scroll" id="recipeIngredientList"></div>
+    </div>
+  </div>
+
+  <!-- Category sheet for #rbCatRow above -- nested inside #recipeBuilderOverlay
+       (not a page-level sibling) so its z-index only has to beat its siblings
+       within this overlay's own stacking context. -->
+  <div class="modal-overlay modal-sheet" id="rbCatSheet" onclick="if(event.target===this)closeRbCatSheet()">
+    <div class="modal-content">
+      <h3 class="sheet-title" style="margin-top:0;">Category</h3>
+      <div id="rbCatList"></div>
     </div>
   </div>
 </div>
@@ -4867,17 +4964,72 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
+// Same 26-category list/icons as recipes.html's Create Product panel --
+// category previously had no picker at all in this modal.
+const PRODUCT_CATEGORIES = [
+  'Jewelry', 'Clothing & Apparel', 'Accessories', 'Bags & Purses', 'Shoes & Footwear',
+  'Home Decor', 'Furniture', 'Kitchen & Dining', 'Art & Prints', 'Craft Supplies',
+  'Digital Downloads', 'Paper Goods & Stationery', 'Wedding & Party', 'Toys & Games',
+  'Baby & Kids', 'Beauty & Personal Care', 'Candles & Home Fragrance', 'Bath & Body',
+  'Pet Products', 'Seasonal & Holiday', 'Vintage Items', 'Collectibles',
+  'Electronics & Accessories', 'Books', 'Patterns & Tutorials', 'Other Handmade Goods'
+];
+const _productCategIconMap = {
+  'Jewelry': 'gem', 'Clothing & Apparel': 'shirt', 'Accessories': 'watch',
+  'Bags & Purses': 'shopping-bag', 'Shoes & Footwear': 'footprints',
+  'Home Decor': 'home', 'Furniture': 'armchair', 'Kitchen & Dining': 'utensils-crossed',
+  'Art & Prints': 'image', 'Craft Supplies': 'scissors', 'Digital Downloads': 'download',
+  'Paper Goods & Stationery': 'notebook-pen', 'Wedding & Party': 'party-popper',
+  'Toys & Games': 'gamepad-2', 'Baby & Kids': 'baby', 'Beauty & Personal Care': 'sparkles',
+  'Candles & Home Fragrance': 'flame', 'Bath & Body': 'droplet', 'Pet Products': 'paw-print',
+  'Seasonal & Holiday': 'gift', 'Vintage Items': 'clock', 'Collectibles': 'star',
+  'Electronics & Accessories': 'plug', 'Books': 'book-open', 'Patterns & Tutorials': 'file-text',
+  'Other Handmade Goods': 'tag'
+};
+
+function renderRbCatValue() {
+  const v = document.getElementById('recipeCategoryInput')?.value || '';
+  const el = document.getElementById('rbCatValue');
+  if (!el) return;
+  el.className = 'rb-row-value' + (v ? '' : ' empty');
+  const icon = _productCategIconMap[v] || 'tag';
+  el.innerHTML = v ? `<i data-lucide="${icon}" style="width:15px;height:15px"></i>${escapeHtml(v)}` : 'Not set';
+  if (window.lucide) lucide.createIcons();
+}
+function openRbCatSheet() {
+  const current = document.getElementById('recipeCategoryInput')?.value || '';
+  document.getElementById('rbCatList').innerHTML = PRODUCT_CATEGORIES.map(cat => {
+    const icon = _productCategIconMap[cat] || 'tag';
+    return `<div class="cat-row${cat === current ? ' active' : ''}" onclick="pickRbCat('${escapeHtml(cat)}')">
+        <i data-lucide="${icon}"></i><span class="cat-row-label">${escapeHtml(cat)}</span>
+      </div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+  document.getElementById('rbCatSheet').classList.add('active');
+}
+function closeRbCatSheet() {
+  document.getElementById('rbCatSheet').classList.remove('active');
+}
+function pickRbCat(cat) {
+  const input = document.getElementById('recipeCategoryInput');
+  input.value = input.value === cat ? '' : cat; // tap the selected one again to clear
+  renderRbCatValue();
+  closeRbCatSheet();
+}
+
 async function openRecipeBuilder() {
   document.getElementById('recipeBuilderOverlay').classList.add('active');
   document.getElementById('recipeNameInput').value = '';
   document.getElementById('recipeDropzone').innerHTML = '<div class="recipe-drop-placeholder">Select items from the list to add them to your product.</div>';
+  document.getElementById('recipeCategoryInput').value = '';
+  renderRbCatValue();
 
   // Only update cost display if element exists (desktop only)
   const costDisplay = document.getElementById('recipeTotalCostDisplay');
   if (costDisplay) {
     costDisplay.textContent = '$0.00';
   }
-  
+
   currentRecipeComponents = {};
   recipeActiveCategoryFilter = null;
   recipeActiveAttrValueFilters = new Set();
@@ -5272,35 +5424,38 @@ function addIngredientToRecipe(item, quantity = 1) {
   // Update disabled state
   renderRecipeIngredientList();
   
-  // Get ingredient attributes
+  // Get ingredient attributes -- shown as small pill badges (not a faint
+  // muted line), matching recipes.html's Create Product panel: these are
+  // usually the ONLY thing telling apart otherwise-identical rows (e.g. the
+  // same T-shirt in several sizes).
   const fullIng = recipeIngredientData.find(i => i.id === item.id);
   let attributesText = '';
   if (fullIng && fullIng.attributes) {
     const attrs = Object.entries(fullIng.attributes).slice(0, 3);
     if (attrs.length > 0) {
-      attributesText = ' · ' + attrs.map(([key, val]) => `${val}`).join(' · ');
+      attributesText = '<div class="drop-item-attrs">' +
+        attrs.map(([key, val]) => `<span class="drop-item-attr">${val}</span>`).join('') +
+        '</div>';
     }
   }
-  
+
   // Create drop item with +/- buttons
   const row = document.createElement('div');
-  row.className = 'recipe-drop-item';
+  row.className = 'drop-item';
   row.dataset.id = item.id;
   row.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0;">
-      <div style="flex: 1; min-width: 0;">
-        <strong style="display: block; margin-bottom: 2px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%;" title="${item.name}">${item.name}</strong>
-        ${attributesText ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${attributesText.replace(' · ', '')}</div>` : ''}
-      </div>
-      <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-        <button onclick="adjustRecipeQuantity('${item.id}', -1)" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center;">-</button>
-        <span style="color: var(--text-main); font-size: 14px; min-width: 60px; text-align: center; font-weight: 600;" data-qty="${item.id}">${quantity}</span>
-        <button onclick="adjustRecipeQuantity('${item.id}', 1)" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center;">+</button>
-        <span style="color: #ef4444; font-size: 20px; cursor: pointer; font-weight: 300; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;" onclick="removeRecipeIngredient('${item.id}')">&times;</span>
-      </div>
+    <div class="drop-item-main">
+      <strong>${item.name}</strong>
+      ${attributesText}
+    </div>
+    <div class="drop-item-controls">
+      <button class="drop-item-step" onclick="adjustRecipeQuantity('${item.id}', -1)">-</button>
+      <span class="drop-item-qty" data-qty="${item.id}">${quantity}</span>
+      <button class="drop-item-step" onclick="adjustRecipeQuantity('${item.id}', 1)">+</button>
+      <span class="drop-item-remove" onclick="removeRecipeIngredient('${item.id}')">&times;</span>
     </div>
   `;
-  
+
   dz.appendChild(row);
   updateRecipeTotalCost();
 }
@@ -5332,7 +5487,7 @@ function removeRecipeIngredient(id) {
   renderRecipeIngredientList();
   updateRecipeTotalCost();
   
-  const row = document.querySelector(`#recipeDropzone .recipe-drop-item[data-id="${id}"]`);
+  const row = document.querySelector(`#recipeDropzone .drop-item[data-id="${id}"]`);
   if (row) row.remove();
   
   const dz = document.getElementById('recipeDropzone');
@@ -5370,12 +5525,19 @@ async function saveRecipe() {
     setTimeout(() => nameInput.classList.remove('shake'), 500);
     return;
   }
-  
+
+  if (!document.getElementById('recipeCategoryInput')?.value) {
+    const catRow = document.getElementById('rbCatRow');
+    catRow?.classList.add('input-invalid');
+    setTimeout(() => catRow?.classList.remove('input-invalid'), 450);
+    return;
+  }
+
   if (Object.keys(currentRecipeComponents).length === 0) {
     showNotification('Please add at least one item', 'error');
     return;
   }
-  
+
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
@@ -5408,6 +5570,7 @@ async function saveRecipe() {
         name: name,
         components: components,
         cost: totalCost,
+        category: document.getElementById('recipeCategoryInput')?.value || null,
         status: 'ready',
         profile_id: user.id,
         store_id: storeId
