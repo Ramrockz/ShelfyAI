@@ -281,9 +281,15 @@
     overflow: hidden;
   }
   
-  .recipe-panel-left { 
-    border-right: 1px solid var(--border); 
-    background: var(--bg-panel); 
+  .recipe-panel-left {
+    border-right: 1px solid var(--border);
+    background: var(--bg-panel);
+    /* This panel's content (name, category grid, item picker, cost strip,
+       SKU, Cancel/Create) is taller than the fixed-height modal once a
+       few categories are showing -- .recipe-panel's own overflow:hidden
+       clipped the overflow instead of scrolling it, so the Cancel/Create
+       row at the very bottom was simply unreachable. */
+    overflow-y: auto;
   }
   
   .recipe-name-input {
