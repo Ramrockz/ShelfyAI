@@ -284,13 +284,38 @@
   .recipe-panel-left {
     border-right: 1px solid var(--border);
     background: var(--bg-panel);
-    /* This panel's content (name, category grid, item picker, cost strip,
-       SKU, Cancel/Create) is taller than the fixed-height modal once a
-       few categories are showing -- .recipe-panel's own overflow:hidden
-       clipped the overflow instead of scrolling it, so the Cancel/Create
-       row at the very bottom was simply unreachable. */
+    /* This panel's content (name, category row, item picker, cost strip,
+       SKU, Cancel/Create) can be taller than the fixed-height modal --
+       .recipe-panel's own overflow:hidden clipped the overflow instead of
+       scrolling it, so the bottom of the form was simply unreachable. */
     overflow-y: auto;
   }
+
+  /* Cancel/Create anchored to the bottom of the panel at all times, instead
+     of flowing at the end of the scrollable content where they required
+     scrolling all the way down to even see -- position:sticky within this
+     scrolling panel, with negative margins to escape .recipe-panel's own
+     32px padding so the footer bar reaches the panel's actual edges, then
+     its own padding to re-add breathing room around the buttons. */
+  .mobile-recipe-actions {
+    position: sticky;
+    bottom: -32px;
+    margin: 12px -32px -32px;
+    padding: 12px 32px calc(12px + 32px);
+    display: flex;
+    gap: 10px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+  }
+  /* Real, explicit styling for both breakpoints -- this container's name
+     predates it being shown on desktop too, but the buttons themselves had
+     no non-mobile styling of their own, just whatever a bare <button> looks
+     like by default. */
+  .mobile-recipe-actions .btn { flex: 1; padding: 13px; font-size: 15px; font-weight: 700; border-radius: 10px; }
+  .mobile-recipe-actions .btn-cancel { background: var(--bg-inner); color: var(--text-main); border: 1.5px solid var(--border); }
+  .mobile-recipe-actions .btn-cancel:hover { border-color: var(--text-muted); }
+  .mobile-recipe-actions .btn-primary { background: var(--accent); color: #fff; border: 1.5px solid var(--accent); }
+  .mobile-recipe-actions .btn-primary:hover { background: var(--accent-deep, #0891ac); }
   
   .recipe-name-input {
     width: 100%;
@@ -426,36 +451,69 @@
     gap: 12px;
   }
   
-  .drop-item { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    background: var(--bg-panel); 
-    border: 2px solid var(--border); 
-    border-radius: 16px; 
-    padding: 20px 24px; 
-    margin-bottom: 12px; 
-    font-size: 15px; 
+  /* A left accent bar plus a real name/attribute hierarchy -- these rows
+     often ARE the only thing telling several near-identical entries apart
+     (the same product in different sizes/colors), and stacked together
+     with a same-color background, a thin border, and a name aggressively
+     ellipsis-truncated right before the one differentiating word (the
+     size), they read as one repeated card rather than distinct items. */
+  .drop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    font-size: 15px;
     transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  
-  .drop-item > div {
-    overflow: hidden;
-  }
-  
-  .drop-item strong {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
-  
+
   .drop-item:hover {
     border-color: var(--accent);
-    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
+
+  .drop-item-main { flex: 1; min-width: 0; }
+  .drop-item-main strong {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    /* Wraps instead of ellipsis-truncating -- there's room now that the
+       controls below are tighter, and a cut-off name used to hide exactly
+       the word (a size, a variant) that distinguishes one row from the
+       next. */
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .drop-item-attrs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .drop-item-attr {
+    display: inline-flex; align-items: center;
+    padding: 2px 9px; border-radius: 6px;
+    background: var(--accent-glow, rgba(6,182,212,.12)); color: var(--accent-deep, var(--accent));
+    font-size: 12px; font-weight: 700;
+  }
+
+  .drop-item-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .drop-item-step {
+    background: var(--bg-inner); border: 1.5px solid var(--border); color: var(--text-main);
+    width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+    font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .drop-item-step:hover { border-color: var(--accent); color: var(--accent-deep, var(--accent)); }
+  .drop-item-qty { color: var(--text-main); font-size: 15px; min-width: 28px; text-align: center; font-weight: 700; }
+  .drop-item-remove {
+    color: var(--text-faint, var(--text-muted)); font-size: 22px; cursor: pointer; font-weight: 400;
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; transition: all 0.15s;
+  }
+  .drop-item-remove:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
   
   .recipe-ingredient-scroll {
     overflow-y: auto;
@@ -549,11 +607,28 @@
      query turns each on. A bare element defaults to visible, so without
      this these would render on desktop too. (.recipe-cost-strip is NOT
      mobile-only -- it's the shared Sell for/Cost/Margin strip, visible on
-     both breakpoints; see its base rule near .rb-sku-wrap above.) */
-  #rbHead,
-  .rb-row {
+     both breakpoints; see its base rule near .rb-sku-wrap above. .rb-row
+     is ALSO not mobile-only -- see its own base rule below.) */
+  #rbHead {
     display: none;
   }
+
+  /* Category row + sheet, both breakpoints -- the desktop icon grid ate a
+     large fixed chunk of the panel's height (7 rows for ~26 categories)
+     before you'd even reached the item picker or SKU field. Category stays
+     required; it's just picked from the same compact row + sheet mobile
+     already used, instead of shown inline. */
+  #recipeCategoryDesktopGroup { display: none; }
+  .rb-row {
+    display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
+    margin-top: 0; padding: 0 14px 0 16px; text-align: left;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    font-family: inherit; cursor: pointer;
+  }
+  .rb-row-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
+  .rb-row-value { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-main); }
+  .rb-row-value.empty { font-weight: 400; color: var(--text-faint, #94a3b8); }
+  .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
 
   /* Modal Overlay for Switch Account */
   .modal-overlay { 
@@ -996,20 +1071,11 @@
                font-weight: 800; letter-spacing: -.01em; cursor: pointer; }
     .rb-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-ghost, #cbd5e1)); cursor: default; }
 
-    /* Category row (replaces the icon grid on mobile only — desktop keeps it) */
-    #recipeCategoryDesktopGroup { display: none; }
-    .rb-row {
-      display: flex; align-items: center; gap: 12px; height: 46px; width: 100%;
-      margin-top: 12px; padding: 0 14px 0 16px; text-align: left;
-      background: var(--bg-panel); border: none; border-radius: 10px;
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-      font-family: inherit;
-    }
-    .rb-row-label { flex: 1; font-size: 13.5px; color: var(--text-muted); }
-    .rb-row-value { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-main); }
-    .rb-row-value.empty { font-weight: 400; color: var(--text-faint, #94a3b8); }
-    .rb-chev { color: var(--text-ghost, #cbd5e1); flex-shrink: 0; }
-
+    /* Category row's own base rule (both breakpoints) lives up near
+       #recipeCategoryDesktopGroup now -- just a small mobile spacing tweak
+       here since it sits directly under the Product Name field on mobile,
+       not next to Sell for/Cost/Margin like on desktop. */
+    .rb-row { margin-top: 12px; }
 
     /* Hide all scrollbars on mobile */
     * {
@@ -2994,37 +3060,39 @@ function addIngredientToRecipe(item) {
   // Update disabled state
   updateDisabledState();
   
-  // Get ingredient attributes from ingredientData
+  // Get ingredient attributes from ingredientData -- shown as small pill
+  // badges (not a faint muted line) since these are usually the ONLY thing
+  // telling apart otherwise-identical rows (e.g. the same T-shirt in
+  // several sizes), and a barely-there gray sub-line made them easy to miss
+  // entirely when several similar variants were stacked.
   const fullIng = ingredientData.find(i => i.id === item.id);
   let attributesText = '';
   if (fullIng && fullIng.attributes && typeof fullIng.attributes === 'object') {
     const attrs = Object.entries(fullIng.attributes).slice(0, 3);
     if (attrs.length > 0) {
-      attributesText = '<div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">' + 
-        attrs.map(([key, val]) => val).join(' · ') + 
+      attributesText = '<div class="drop-item-attrs">' +
+        attrs.map(([key, val]) => `<span class="drop-item-attr">${val}</span>`).join('') +
         '</div>';
     }
   }
-  
+
   // Create drop item with +/- buttons
   const row = document.createElement("div");
   row.className = "drop-item";
   row.dataset.id = item.id;
   row.innerHTML = `
-    <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1; min-width: 0;">
-      <div style="flex: 1; min-width: 0;">
-        <strong style="display: block; font-size: 16px; margin-bottom: 2px;">${item.name}</strong>
-        ${attributesText}
-      </div>
-      <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-        <button onclick="adjustQuantity('${item.id}', -1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">-</button>
-        <span style="color: var(--text-main); font-size: 16px; min-width: 60px; text-align: center; font-weight: 700;" data-qty="${item.id}">${qty}</span>
-        <button onclick="adjustQuantity('${item.id}', 1)" style="background: var(--bg-inner); border: 2px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">+</button>
-        <span style="color: var(--danger); font-size: 24px; cursor: pointer; font-weight: 300; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onclick="removeIngredient('${item.id}')">&times;</span>
-      </div>
+    <div class="drop-item-main">
+      <strong>${item.name}</strong>
+      ${attributesText}
+    </div>
+    <div class="drop-item-controls">
+      <button class="drop-item-step" onclick="adjustQuantity('${item.id}', -1)">-</button>
+      <span class="drop-item-qty" data-qty="${item.id}">${qty}</span>
+      <button class="drop-item-step" onclick="adjustQuantity('${item.id}', 1)">+</button>
+      <span class="drop-item-remove" onclick="removeIngredient('${item.id}')">&times;</span>
     </div>
   `;
-  
+
   dz.appendChild(row);
   updateCost();
 }
