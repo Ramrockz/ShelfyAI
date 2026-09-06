@@ -1527,9 +1527,18 @@
         </div>
         <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this order</button>
       </div>
-      <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
-        <div class="ec-tally" id="ecLineTally"></div>
-        <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to order</button>
+      <div class="ec-foot" style="padding:0 0 calc(12px + env(safe-area-inset-bottom));">
+        <button type="button" class="rcm-tog" id="ecUpdateStockTog" aria-pressed="true" onclick="toggleEcUpdateStock()" hidden>
+          <span class="rcm-tog-main">
+            <span class="rcm-tog-name">Update inventory</span>
+            <span class="rcm-tog-why" id="ecUpdateStockWhy"></span>
+          </span>
+          <span class="rcm-tog-sw"></span>
+        </button>
+        <div style="padding:10px 16px 0;">
+          <div class="ec-tally" id="ecLineTally"></div>
+          <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to order</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2712,6 +2721,7 @@ let _ecEditingIndex = null; // index into orderData.items being edited, or null 
 let _ecIngredient = null;   // the recipe row currently open in pane 2
 let _ecDraft = null;        // { qty, cost } being edited in pane 2
 let _ecOriginalQty = 0;     // this line's quantity when pane 2 was opened -- already reflected in current stock
+let _ecUpdateStock = true;  // whether adding a brand-new line should deduct its recipe's components
 let _ecCategoryFilter = null;
 let _ecAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter scoped to _ecCategoryFilter
 
@@ -3020,6 +3030,15 @@ function ecOpenLine(recipeId, existingIndex) {
   document.getElementById('ecLRemove').hidden = !item;
   document.getElementById('ecLineSaveBtn').textContent = item ? 'Save changes' : 'Add to order';
 
+  // Only asked when adding a brand-new line -- editing an already-recorded
+  // line's quantity keeps adjusting stock proportionally as it always has
+  // (that's correcting a sale already reflected in inventory, not a fresh
+  // "should this deduct" decision).
+  _ecUpdateStock = true;
+  const stockTog = document.getElementById('ecUpdateStockTog');
+  stockTog.hidden = !!item;
+  _ecRenderUpdateStockTog();
+
   ecSyncTotal();
   // Tapping an existing mobile row calls this directly, without going
   // through openOrderItemPicker() first -- that's the only other place
@@ -3106,6 +3125,17 @@ function ecStepQty(d) {
   ecSyncTotal();
 }
 
+function _ecRenderUpdateStockTog() {
+  document.getElementById('ecUpdateStockTog').setAttribute('aria-pressed', _ecUpdateStock ? 'true' : 'false');
+  document.getElementById('ecUpdateStockWhy').textContent = _ecUpdateStock
+    ? 'This product’s recipe items are deducted when you save'
+    : 'Records the sale only — no items are deducted';
+}
+function toggleEcUpdateStock() {
+  _ecUpdateStock = !_ecUpdateStock;
+  _ecRenderUpdateStockTog();
+}
+
 async function ecSaveLine() {
   if (!(_ecDraft.qty > 0)) return;
   const recipe = _ecIngredient;
@@ -3137,7 +3167,10 @@ async function ecSaveLine() {
     orderData.revenue = totalRevenue;
 
     const delta = qty - _ecOriginalQty;
-    if (delta !== 0) await _ordAdjustStock(recipe, delta, user);
+    // A new line only deducts when the toggle above is left on -- an edit to
+    // an already-recorded line always adjusts proportionally, same as before.
+    const shouldAdjustStock = isNewLine ? _ecUpdateStock : true;
+    if (delta !== 0 && shouldAdjustStock) await _ordAdjustStock(recipe, delta, user);
     _ecInsights = null; // stock just moved -- next open reloads fresh
 
     displayOrder();
