@@ -85,6 +85,10 @@ Important rules:
   readable/recognizable: null.
 - Read packaging text carefully (even small or partially obscured) before
   setting a field to null.
+- attributes: list EVERY distinguishing printed detail as its own entry, not
+  just whichever one or two feel most prominent -- e.g. a label showing
+  material, origin, color, weight-per-unit, length-per-unit, and a batch
+  number is six attributes, not one. Skip only what's genuinely not printed.
 
 "guesses" -- reasoned estimates for a clearly-recognizable product, when
 unit, quantity, and/or price aren't readable from the photo (e.g. a single
@@ -177,7 +181,12 @@ async function extractWithClaude(filepath, mimeType) {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: 'claude-opus-5',
+    // Sonnet, not Opus -- this is a bounded single-photo read-and-fill-a-
+    // schema task (plus a modest "typical price/size for this kind of
+    // product" guess), not the kind of deep multi-step reasoning Opus is
+    // worth paying for. Meaningfully cheaper per scan with no quality loss
+    // for this task (verified side-by-side against Opus on real photos).
+    model: 'claude-sonnet-5',
     max_tokens: 4096,
     output_config: { effort: 'medium' },
     messages: [{
