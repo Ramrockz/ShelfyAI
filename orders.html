@@ -3733,12 +3733,20 @@ async function showRecipeMappingModal(orderData) {
     };
     const matches = await matchItemToRecipes(itemData);
     const bestMatch = matches.length > 0 ? matches[0].recipe : null;
+    // Two+ products can score identically (e.g. two different products that
+    // both use the same "T-Shirt White M" ingredient) -- matches[0] is then
+    // an arbitrary pick, not actually a confident one, even though its own
+    // score alone would read as "Perfect match". Flag it instead of
+    // silently auto-confirming a coin flip; _rcmLineState() below routes an
+    // ambiguous, unconfirmed line to "check this" regardless of score.
+    const tiedCount = matches.length > 1 ? matches.filter(m => m.score === matches[0].score).length : 1;
     mappedRecipes.push({
       itemData,
       selectedRecipe: bestMatch,
       matches,
       quantity: itemData.quantity || 1,
       score: matches.length > 0 ? matches[0].score : 0,
+      ambiguous: tiedCount > 1,
       confirmed: false
     });
   }
@@ -3771,15 +3779,17 @@ function renderRcmSrc() {
 
 function _rcmLineState(m) {
   if (!m.selectedRecipe) return 'none';
+  if (m.ambiguous && !m.confirmed) return 'todo';
   return (m.confirmed || (m.score || 0) >= 0.8) ? 'ok' : 'todo';
 }
 
 function _rcmLineHTML(m, index) {
   const st = _rcmLineState(m);
   const sel = m.selectedRecipe;
+  const tiedCount = m.matches?.length ? m.matches.filter(x => x.score === m.matches[0].score).length : 0;
   const why = st === 'ok'
     ? (m.confirmed ? 'You picked this' : (m.matches?.[0]?.matchReason || 'Matched'))
-    : st === 'todo' ? 'Not sure this is right — check it'
+    : st === 'todo' ? (m.ambiguous ? `Matches ${tiedCount} products equally — check which one` : 'Not sure this is right — check it')
     : 'No product matches this line';
   return `<div class="rcm-line" data-state="${st}">
     <div class="rcm-match" data-state="${st}">
