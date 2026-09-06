@@ -159,6 +159,12 @@
 #csvImportFrame .steps i { flex:1; height:3px; border-radius:99px; background:var(--bg-inner); }
 #csvImportFrame .steps i[data-on="1"] { background:var(--accent); }
 #csvImportFrame .im-scroll { flex:1; overflow-y:auto; padding-bottom:8px; }
+#csvImportFrame .cd-toast { position:absolute; left:50%; top:18px; transform:translate(-50%,-14px); z-index:20;
+  display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:99px;
+  background:var(--text-main); color:var(--bg-panel); font-size:13px; font-weight:700;
+  box-shadow:0 8px 20px rgba(0,0,0,.18); opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; }
+#csvImportFrame .cd-toast.show { opacity:1; transform:translate(-50%,0); }
+#csvImportFrame .cd-toast svg { flex-shrink:0; color:var(--success, #10b981); }
 #csvImportFrame .im-sec-head { display:flex; align-items:baseline; padding:22px 4px 9px; }
 #csvImportFrame .im-sec-title { font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--text-muted); }
 #csvImportFrame .im-sec-note { margin-left:auto; font-size:11.5px; color:var(--text-faint, var(--text-muted)); }
@@ -270,6 +276,7 @@
     const frame = document.createElement('div');
     frame.id = 'csvImportFrame';
     frame.innerHTML = `
+      <div class="cd-toast" id="csvMapToast"></div>
       <div class="im-head">
         <div class="wrap"><div class="im-bar">
           <button class="im-back" onclick="window._csvBack()" aria-label="Back">
@@ -495,19 +502,48 @@
     $('csvDstSheet').classList.add('active');
   }
   function closeDstSheet() { $('csvDstSheet')?.classList.remove('active'); }
+
+  // Brief top-of-frame confirmation whenever a mapping actually changes --
+  // one word for which of the three things just happened, not a full modal
+  // that needs dismissing. No-ops (re-picking the same field, or "Don't
+  // import" on an already-unmapped column) show nothing, since nothing
+  // changed.
+  let _toastTimer = null;
+  function showMapToast(msg) {
+    const el = $('csvMapToast');
+    if (!el) return;
+    el.innerHTML = `${ICON_CHECK}<span>${esc(msg)}</span>`;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+  function _mapToastFor(prevKey, nextKey) {
+    if (prevKey === nextKey) return null;
+    if (!prevKey && nextKey) return 'Mapping added';
+    if (prevKey && !nextKey) return 'Mapping deleted';
+    return 'Mapping changed';
+  }
+
   function quickUnmap(colIdx) {
+    const prev = state.mapping[colIdx];
     state.mapping[colIdx] = null;
     render();
+    const msg = _mapToastFor(prev, null);
+    if (msg) showMapToast(msg);
   }
   function setDst(fieldKey) {
     if (state.dstPickerCol == null) return;
+    const colIdx = state.dstPickerCol;
+    const prev = state.mapping[colIdx];
     if (fieldKey) {
       // a field can only be mapped from one column at a time
       for (const idx in state.mapping) if (state.mapping[idx] === fieldKey) state.mapping[idx] = null;
     }
-    state.mapping[state.dstPickerCol] = fieldKey || null;
+    state.mapping[colIdx] = fieldKey || null;
     closeDstSheet();
     render();
+    const msg = _mapToastFor(prev, fieldKey || null);
+    if (msg) showMapToast(msg);
   }
 
   // ─── Stage 3: preview (row verdicts) ──────────────────────────────────────
