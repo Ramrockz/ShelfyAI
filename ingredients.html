@@ -1879,17 +1879,14 @@ function applyReceiptScanToManualModal(data) {
   if (item.product_category) selectIngCategory(item.product_category);
   if (item.shipping_time) document.getElementById('ing_estimated_delivery').value = item.shipping_time;
   if (data.vendor) document.getElementById('ing_source_url').value = data.vendor;
-  // Only the Claude fallback path (extract-receipt.js's ingredient prompt
-  // explicitly asks it not to guess these) currently supplies these two --
-  // AgentQL's own ingredient/URL prompts don't ask for them, so both are
-  // simply absent (and left untouched here) for every other source.
+  // extract-receipt.js's ingredient prompt (Claude's vision, the only
+  // reader this path uses) explicitly asks for these two -- absent (and
+  // left untouched here) if it didn't find them in the photo.
   if (item.expiration_date) document.getElementById('ing_expiration_date').value = item.expiration_date;
   if (item.notes) document.getElementById('ing_notes').value = item.notes;
 
   // Every {key: value} pair becomes an attribute row -- not just color/size,
-  // since the Claude fallback's prompt can surface brand/origin/variety/etc
-  // too, and AgentQL's own parseAttributes() (extract-receipt.js) already
-  // returns whatever key it found rather than only ever color or size.
+  // since Claude's prompt can surface brand/origin/variety/etc too.
   if (item.attributes && typeof item.attributes === 'object') {
     Object.entries(item.attributes).forEach(([key, value]) => {
       if (key && value) addAttributeRow(key, value);

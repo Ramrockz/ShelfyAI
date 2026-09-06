@@ -8,15 +8,14 @@ const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
 
-// Claude vision fallback for Item Creation (context === 'ingredient') only,
-// and only when the upload is an image AgentQL couldn't read (or read as
-// empty) -- AgentQL runs first as the primary reader; this is a backup, not
-// a parallel/competing call. This prompt describes a SINGLE item (one photo
-// of one thing), unlike AgentQL's ingredientPrompt above which describes a
-// list -- extractWithClaude() below wraps its single result in a one-entry
-// item[] array so it still fits the same result.data envelope everything
-// downstream (usage metering, applyReceiptScanToManualModal() in
-// ingredients.html) already expects from AgentQL.
+// Claude vision reader for Item Creation (context === 'ingredient') only --
+// AgentQL isn't used for this context at all; its ingredientPrompt further
+// down is tuned for a vendor/price-sheet document with a list of line items,
+// not a single product-packaging photo. This prompt describes a SINGLE item
+// (one photo of one thing) -- extractWithClaude() below wraps its single
+// result in a one-entry item[] array so it still fits the same result.data
+// envelope everything downstream (usage metering,
+// applyReceiptScanToManualModal() in ingredients.html) expects.
 // Must stay in sync with CAT_META in ingredients.html -- that's the only
 // list of categories the New Item form's own picker ever offers, and
 // applyReceiptScanToManualModal() sets ing_category to this value verbatim
@@ -324,15 +323,13 @@ module.exports = async (req, res) => {
     console.log('Method:', req.method);
     console.log('Content-Type:', req.headers['content-type']);
 
-    // Get API keys from environment variables
+    // Get API keys from environment variables. AGENTQL_API_KEY is checked
+    // further down, once `context` is known -- Item Creation (context ===
+    // 'ingredient') reads photos with Claude exclusively now and never
+    // touches AgentQL, so it shouldn't fail here over a key it doesn't need.
     const AGENTQL_API_KEY = process.env.AGENTQL_KEY;
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    if (!AGENTQL_API_KEY) {
-      console.error('AGENTQL_KEY not configured');
-      return res.status(500).json({ error: 'API key not configured' });
-    }
 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       console.error('Supabase not configured');
@@ -396,18 +393,23 @@ module.exports = async (req, res) => {
     const context = (fields.context?.[0] || fields.context || 'ingredient').toLowerCase();
     console.log('Extraction context:', context);
 
-    // Claude fallback only applies to Item Creation, and only for an actual
-    // image (a photo upload or camera capture) -- not PDFs, and not
-    // order/expense scans. formidable v3 exposes the parsed mimetype here;
-    // fall back to the filename extension if a browser ever sends it blank.
+    // Item Creation (context === 'ingredient') reads photos with Claude's
+    // vision exclusively -- not PDFs, and not order/expense scans (those
+    // still go through AgentQL below). formidable v3 exposes the parsed
+    // mimetype here; fall back to the filename extension if a browser ever
+    // sends it blank.
     const fileMimeType = file.mimetype || '';
     const isImage = fileMimeType
       ? fileMimeType.startsWith('image/')
       : !/\.pdf$/i.test(file.originalFilename || '');
-    const claudeEligible = context === 'ingredient' && isImage && !!process.env.ANTHROPIC_API_KEY;
     // Claude's vision API accepts image/jpeg|png|gif|webp -- "image/jpg" is
     // not a real media type but some browsers/cameras report it anyway.
     const claudeMimeType = fileMimeType === 'image/jpg' ? 'image/jpeg' : (fileMimeType || 'image/jpeg');
+
+    if (context !== 'ingredient' && !AGENTQL_API_KEY) {
+      console.error('AGENTQL_KEY not configured');
+      return res.status(500).json({ error: 'API key not configured' });
+    }
 
     // Check usage limits — orders and expenses share a single monthly pool
     const { data: settings } = await supabase
@@ -481,71 +483,91 @@ module.exports = async (req, res) => {
 }
 `.trim();
 
-    const extractionPrompt = context === 'order' ? orderPrompt : ingredientPrompt;
-    
-    // Use form-data package for proper multipart encoding
-    const formData = new FormData();
-    
-    // Use createReadStream for proper file upload
-    formData.append('file', fs.createReadStream(file.filepath));
-    formData.append(
-      'body',
-      JSON.stringify({
-        query: extractionPrompt
-      })
-    );
-    
-    // No documented SLA from AgentQL and no timeout of our own -- without
-    // this, a hung upstream call just runs until Vercel's platform-level
-    // function timeout kills it as an undiagnosable raw failure.
-    const AGENTQL_TIMEOUT_MS = 25000;
-    let response;
-    try {
-      response = await fetch(
-        'https://api.agentql.com/v1/query-document',
-        {
-          method: 'POST',
-          headers: {
-            'X-API-Key': AGENTQL_API_KEY,
-            ...formData.getHeaders() // Sets Content-Type with boundary
-          },
-          body: formData,
-          signal: AbortSignal.timeout(AGENTQL_TIMEOUT_MS)
-        }
-      );
-    } catch (fetchError) {
-      if (fetchError.name === 'TimeoutError' || fetchError.name === 'AbortError') {
-        return res.status(504).json({
-          error: 'The read took too long',
-          code: 'scan.timeout'
+    let result;
+
+    if (context === 'ingredient') {
+      // Item Creation reads photos with Claude's vision exclusively --
+      // AgentQL's ingredientPrompt is tuned for a vendor/price-sheet
+      // document with a list of line items, not a single product-packaging
+      // photo, and its occasional wrong-schema reads made it a worse
+      // primary reader than the Claude vision fallback that used to sit
+      // behind it. One path instead of "try AgentQL, fall back to Claude
+      // on failure/empty".
+      if (!isImage) {
+        return res.status(400).json({
+          error: 'Item Creation only reads photos, not PDFs',
+          code: 'scan.unsupported_file'
         });
       }
-      throw fetchError;
-    }
-
-    console.log('AgentQL response status:', response.status);
-
-    // Set once a usable result comes from either reader, so the fallback
-    // block below (zero-items case) knows not to re-attempt Claude after
-    // this branch already did.
-    let result;
-    let usedClaude = false;
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AgentQL API error:', errorText);
-
-      if (claudeEligible) {
-        console.log('AgentQL failed — trying Claude fallback for Item Creation image');
-        const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
-          .catch(claudeError => { console.error('Claude fallback error:', claudeError); return null; });
-        if (claudeData && claudeData.item.length > 0) {
-          result = { success: true, data: claudeData };
-          usedClaude = true;
-        }
+      if (!process.env.ANTHROPIC_API_KEY) {
+        console.error('ANTHROPIC_API_KEY not configured');
+        return res.status(500).json({ error: 'Item scanning is not configured' });
       }
 
-      if (!usedClaude) {
+      const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
+        .catch(claudeError => { console.error('Claude extraction error:', claudeError); return null; });
+
+      // Not a usable draft -- the user shouldn't be charged a scan for a
+      // photo nothing came from. This return happens before the
+      // usage-increment RPC further down, so it never counts against the
+      // monthly scan limit.
+      if (!claudeData || claudeData.item.length === 0) {
+        return res.status(200).json({
+          success: false,
+          error: 'No item found in that photo',
+          code: 'scan.no_match'
+        });
+      }
+
+      result = { success: true, data: claudeData };
+    } else {
+      const extractionPrompt = context === 'order' ? orderPrompt : ingredientPrompt;
+
+      // Use form-data package for proper multipart encoding
+      const formData = new FormData();
+
+      // Use createReadStream for proper file upload
+      formData.append('file', fs.createReadStream(file.filepath));
+      formData.append(
+        'body',
+        JSON.stringify({
+          query: extractionPrompt
+        })
+      );
+
+      // No documented SLA from AgentQL and no timeout of our own -- without
+      // this, a hung upstream call just runs until Vercel's platform-level
+      // function timeout kills it as an undiagnosable raw failure.
+      const AGENTQL_TIMEOUT_MS = 25000;
+      let response;
+      try {
+        response = await fetch(
+          'https://api.agentql.com/v1/query-document',
+          {
+            method: 'POST',
+            headers: {
+              'X-API-Key': AGENTQL_API_KEY,
+              ...formData.getHeaders() // Sets Content-Type with boundary
+            },
+            body: formData,
+            signal: AbortSignal.timeout(AGENTQL_TIMEOUT_MS)
+          }
+        );
+      } catch (fetchError) {
+        if (fetchError.name === 'TimeoutError' || fetchError.name === 'AbortError') {
+          return res.status(504).json({
+            error: 'The read took too long',
+            code: 'scan.timeout'
+          });
+        }
+        throw fetchError;
+      }
+
+      console.log('AgentQL response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AgentQL API error:', errorText);
         // This return happens before the usage-increment RPC further down,
         // so a failure here never counts against the user's monthly scan
         // limit -- say so explicitly since "did this use up my scan?" is the
@@ -556,7 +578,7 @@ module.exports = async (req, res) => {
           details: errorText
         });
       }
-    } else {
+
       const data = await response.json();
       console.log('=== AgentQL Response ===');
       console.log(JSON.stringify(data, null, 2));
@@ -629,33 +651,12 @@ module.exports = async (req, res) => {
           }
         };
       }
-    }
 
-    // AgentQL can return 200 with zero items read (e.g. a blurry photo or one
-    // that isn't actually a receipt/product) -- that's not a usable draft,
-    // and the user shouldn't be charged a scan for a photo nothing came from.
-    // A non-empty array with no real name is just as unusable -- AgentQL's
-    // single-item fallback branch can produce e.g. [{ name: null, quantity: 1 }]
-    // for a product photo it couldn't actually read (its "supplier list/price
-    // sheet" prompt isn't tuned for single-product packaging shots the way
-    // Claude's is), and `.length === 0` alone doesn't catch that -- it would
-    // silently accept a blank draft with AgentQL's own quantity-defaults-to-1
-    // filled in, instead of ever trying the Claude fallback.
-    // usedClaude guards against re-running the fallback when this AgentQL
-    // result already IS the Claude result from the !response.ok branch above.
-    const hasUsableItem = result.data.item && result.data.item.some(i => i.name);
-    if (!usedClaude && !hasUsableItem) {
-      if (claudeEligible) {
-        console.log('AgentQL found nothing — trying Claude fallback for Item Creation image');
-        const claudeData = await extractWithClaude(file.filepath, claudeMimeType)
-          .catch(claudeError => { console.error('Claude fallback error:', claudeError); return null; });
-        if (claudeData && claudeData.item.length > 0) {
-          result = { success: true, data: claudeData };
-          usedClaude = true;
-        }
-      }
-
-      if (!usedClaude) {
+      // AgentQL can return 200 with zero items read (e.g. a blurry photo or
+      // one that isn't actually a receipt) -- not a usable draft, and the
+      // user shouldn't be charged a scan for a photo nothing came from.
+      const hasUsableItem = result.data.item && result.data.item.some(i => i.name);
+      if (!hasUsableItem) {
         return res.status(200).json({
           success: false,
           error: context === 'order' ? 'No order details found in that photo' : 'No item found in that photo',
