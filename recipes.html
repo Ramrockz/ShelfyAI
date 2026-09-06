@@ -324,7 +324,15 @@
     20%, 40%, 60%, 80% { transform: translateX(5px); }
   }
 
-  .recipe-cat-icon-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  /* minmax(0, 1fr), not bare 1fr -- a bare 1fr track still won't shrink
+     below its content's min-content width, so a long label (e.g. "Candles &
+     Home Fragrance") forced every column wider than an even quarter-share,
+     overflowing the grid past the panel's edge where overflow:hidden (see
+     .recipe-panel above) clipped it -- cutting off whichever categories
+     landed in the last column. minmax(0, 1fr) lets columns actually shrink
+     to the available width so the label's own ellipsis (.cat-icon-btn span)
+     kicks in instead. */
+  .recipe-cat-icon-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .cat-icon-btn { display: flex; flex-direction: column; align-items: center; gap: 6px;
                   padding: 10px 4px; border: 1.5px solid var(--border); border-radius: 12px;
                   background: var(--bg-inner); color: var(--text-muted); cursor: pointer;
@@ -1363,7 +1371,7 @@
 </div>
 
 <!-- Recipe Builder Modal -->
-<div class="recipe-overlay" id="recipeBuilderOverlay">
+<div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target===this)closeRecipeBuilder()">
   <!-- Mobile-only wrapper: turns #rbHead + .recipe-builder into one bottom
        sheet (same half-screen convention as every other Create screen —
        .modal-sheet, just applied by hand since this component predates
@@ -1454,8 +1462,13 @@
         </div>
       </div>
 
-      <!-- Desktop-only Create button — mobile uses #rbCreateBtn in .rb-foot -->
+      <!-- Desktop-only Create button — mobile uses #rbCreateBtn in .rb-foot.
+           Cancel was missing here (unlike operations.html's copy of this same
+           builder, which has it) -- desktop had no way to close this dialog
+           short of the small unlabeled back-arrow up in the Item Library
+           panel, easy to miss entirely if you never scroll/look over there. -->
       <div class="mobile-recipe-actions" id="mobileActions1">
+        <button class="btn btn-cancel" onclick="closeRecipeBuilder()">Cancel</button>
         <button class="btn btn-primary" id="saveRecipeBtn" onclick="mobilePrimaryAction()" style="flex:1;">Create</button>
       </div>
     </div>
