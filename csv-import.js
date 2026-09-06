@@ -6,11 +6,16 @@
  * call these through the shared method-picker sheet, so neither needed
  * updating for this rewrite.
  *
- * Five stages: pick -> map -> preview -> work -> done. The real capability
- * the old version didn't have: a row whose SKU matches an existing
- * ingredient is an UPDATE (quantity/price overwritten), not a duplicate --
- * and a row missing something required is SKIPPED with a stated reason
- * instead of silently inserting with placeholder values.
+ * Five stages: pick -> map -> preview -> work -> done. A row missing
+ * something required is SKIPPED with a stated reason instead of silently
+ * inserting with placeholder values.
+ *
+ * Updates (not just inserts) are opt-in, from the preview stage's "Existing
+ * items" card: off by default (every row is a fresh insert), or on with a
+ * choice of match key (Name or SKU) -- see updatesCard()/recomputeVerdicts().
+ * A row that matches gets its own "Overwrite" checkbox (on by default once
+ * matching is on) so a specific row can be excluded without turning the
+ * whole feature off.
  */
 (function () {
   'use strict';
@@ -111,7 +116,10 @@
       mapping: {},        // colIdx -> fieldKey | null
       stage: 'pick',      // pick | map | preview | work | done
       showAllRows: false,
-      verdicts: [],       // [{ n, name, note, tone, kind:'new'|'update'|'skip', record, matchedId, before }]
+      allowUpdates: false, // whether a name/SKU match against an existing item updates it at all
+      matchBy: 'sku',      // 'sku' | 'name' -- which field decides a match, only used when allowUpdates
+      existingRecords: null, // cached id/sku/name/quantity/cost_per_unit rows, fetched once per preview
+      verdicts: [],       // [{ n, name, note, tone, kind:'new'|'update'|'skip', record, matchedId, before, overwrite }]
       counts: { new: 0, update: 0, skip: 0 },
       pct: 0, running: false,
       result: null,       // { updated: [...], skippedCsv: string }
@@ -193,6 +201,8 @@
 #csvImportFrame .r-s { display:block; font-size:11.5px; color:var(--text-faint, var(--text-muted)); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #csvImportFrame .r-s[data-tone="warn"] { color:var(--warning); font-weight:600; }
 #csvImportFrame .r-s[data-tone="bad"] { color:var(--danger); font-weight:600; }
+#csvImportFrame .ow-toggle { flex-shrink:0; display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; color:var(--text-main); cursor:pointer; }
+#csvImportFrame .ow-toggle input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-deep, var(--accent)); cursor:pointer; margin:0; }
 #csvImportFrame .r-tag { flex-shrink:0; height:22px; padding:0 9px; border-radius:7px; background:var(--bg-inner); color:var(--text-muted); font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; display:flex; align-items:center; }
 #csvImportFrame .r-tag[data-tone="new"] { background:rgba(16,185,129,.12); color:var(--success); }
 #csvImportFrame .r-tag[data-tone="warn"] { background:rgba(245,158,11,.14); color:var(--warning); }
@@ -434,18 +444,34 @@
   }
 
   // ─── Stage 3: preview (row verdicts) ──────────────────────────────────────
+  // Existing records are fetched once and cached on state; recomputeVerdicts()
+  // re-derives verdicts from that cache synchronously whenever the "allow
+  // updates" toggle or the name/SKU match choice changes, so flipping either
+  // doesn't re-hit the network.
   async function computeVerdicts() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('You must be logged in to import.');
     if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
     const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
-    let q = supabaseClient.from('ingredients').select('id, sku, quantity, cost_per_unit').eq('profile_id', user.id);
+    let q = supabaseClient.from('ingredients').select('id, sku, name, quantity, cost_per_unit').eq('profile_id', user.id);
     if (storeId) q = q.eq('store_id', storeId);
     const { data: existing, error } = await q;
     if (error) throw error;
-    const bySku = new Map();
-    (existing || []).forEach(r => { if (r.sku && r.sku.trim()) bySku.set(r.sku.trim().toLowerCase(), r); });
+    state.existingRecords = existing || [];
+    recomputeVerdicts();
+  }
+
+  function recomputeVerdicts() {
+    const bySku = new Map(), byName = new Map();
+    (state.existingRecords || []).forEach(r => {
+      if (r.sku && r.sku.trim()) bySku.set(r.sku.trim().toLowerCase(), r);
+      if (r.name && r.name.trim()) byName.set(r.name.trim().toLowerCase(), r);
+    });
+    // Preserve a manually-flipped overwrite choice across a recompute (e.g.
+    // re-mapping a column) by row number, so toggling "allow updates" off
+    // and back on doesn't forget it.
+    const prevOverwrite = new Map((state.verdicts || []).map(v => [v.n, v.overwrite]));
 
     const verdicts = state.rows.map((row, i) => {
       const n = i + 2; // header is row 1
@@ -475,12 +501,21 @@
         source_url: cellFor(row, 'source_url') || null,
       };
 
-      const match = sku ? bySku.get(sku.trim().toLowerCase()) : null;
+      // Matching only runs at all once the user has said updates are
+      // allowed -- otherwise every row is a fresh insert, same as if this
+      // matching feature didn't exist.
+      let match = null;
+      if (state.allowUpdates) {
+        if (state.matchBy === 'sku' && sku) match = bySku.get(sku.trim().toLowerCase());
+        else if (state.matchBy === 'name') match = byName.get(name.trim().toLowerCase());
+      }
       if (match) {
+        const matchLabel = state.matchBy === 'sku' ? `SKU ${sku}` : `“${name}”`;
         return {
           n, name, tone: 'warn', kind: 'update', record, matchedId: match.id,
           before: { quantity: match.quantity, cost_per_unit: match.cost_per_unit },
-          note: `SKU ${sku} already in your inventory — quantity and price will be overwritten.`,
+          overwrite: prevOverwrite.has(n) ? prevOverwrite.get(n) : true,
+          note: `${matchLabel} already in your inventory — quantity and price will be overwritten.`,
         };
       }
       const bits = [`${qty} ${qty === 1 ? 'unit' : 'units'}`, `$${price.toFixed(2)}`];
@@ -489,25 +524,80 @@
     });
 
     state.verdicts = verdicts;
+    // A row whose overwrite toggle was flipped off counts (and displays) as
+    // a skip -- it's neither inserted nor updated, so it shouldn't read as
+    // an "update" in the tally either.
     state.counts = {
       new: verdicts.filter(v => v.kind === 'new').length,
-      update: verdicts.filter(v => v.kind === 'update').length,
-      skip: verdicts.filter(v => v.kind === 'skip').length,
+      update: verdicts.filter(v => v.kind === 'update' && v.overwrite !== false).length,
+      skip: verdicts.filter(v => v.kind === 'skip' || (v.kind === 'update' && v.overwrite === false)).length,
     };
+  }
+
+  function setAllowUpdates(on) {
+    state.allowUpdates = on;
+    recomputeVerdicts();
+    render();
+  }
+  function setMatchBy(by) {
+    state.matchBy = by;
+    recomputeVerdicts();
+    render();
+  }
+  function toggleOverwrite(n) {
+    const v = state.verdicts.find(v => v.n === n);
+    if (!v) return;
+    v.overwrite = v.overwrite === false ? true : false;
+    // Recount without touching matches -- toggling one row's checkbox
+    // shouldn't re-run the (identical) match lookup for every other row.
+    state.counts.update = state.verdicts.filter(v => v.kind === 'update' && v.overwrite !== false).length;
+    state.counts.skip = state.verdicts.filter(v => v.kind === 'skip' || (v.kind === 'update' && v.overwrite === false)).length;
+    render();
   }
 
   function renderPreview() {
     const shown = state.showAllRows ? state.verdicts : state.verdicts.slice(0, 6);
     const tagFor = { new: 'Create', update: 'Update', skip: 'Skip' };
-    return fileCard() +
+    return fileCard() + updatesCard() +
       `<div class="im-sec-head"><span class="im-sec-title">What will happen</span><span class="im-sec-note">nothing saved yet</span></div>
-      <div class="rows">${shown.map(v => `
+      <div class="rows">${shown.map(v => {
+        const isUpdate = v.kind === 'update';
+        const overwrite = isUpdate && v.overwrite !== false;
+        const tagKind = isUpdate && !overwrite ? 'skip' : v.kind;
+        return `
         <div class="r-row">
           <span class="r-num">${v.n}</span>
-          <span class="r-m"><span class="r-n">${esc(v.name)}</span><span class="r-s"${v.tone ? ` data-tone="${v.tone}"` : ''}>${esc(v.note)}</span></span>
-          <span class="r-tag" data-tone="${v.kind}">${tagFor[v.kind]}</span>
-        </div>`).join('')}
+          <span class="r-m"><span class="r-n">${esc(v.name)}</span><span class="r-s"${v.tone ? ` data-tone="${v.tone}"` : ''}>${esc(overwrite || !isUpdate ? v.note : 'Kept as-is — this row will not touch it.')}</span></span>
+          ${isUpdate
+            ? `<label class="ow-toggle"><input type="checkbox" ${overwrite ? 'checked' : ''} onchange="window._csvToggleOverwrite(${v.n})"><span>Overwrite</span></label>`
+            : `<span class="r-tag" data-tone="${tagKind}">${tagFor[tagKind]}</span>`}
+        </div>`;
+      }).join('')}
         ${state.showAllRows ? '' : (state.verdicts.length > shown.length ? `<button type="button" class="r-more" onclick="window._csvShowAllRows()">Show the other ${state.verdicts.length - shown.length} rows</button>` : '')}
+      </div>`;
+  }
+
+  // "Allow updates?" gate + name/SKU match choice -- matching (and any
+  // overwrite) only happens once this is explicitly turned on.
+  function updatesCard() {
+    const matchColumnMapped = state.matchBy === 'sku' ? !!colForField('sku') : true;
+    return `<div class="im-sec-head"><span class="im-sec-title">Existing items</span></div>
+      <div class="host" style="flex-direction:column;align-items:stretch;gap:10px;">
+        <label class="ow-toggle" style="gap:10px;">
+          <input type="checkbox" ${state.allowUpdates ? 'checked' : ''} onchange="window._csvSetAllowUpdates(this.checked)">
+          <span><b>Allow this import to update existing items</b><br>
+            <span style="font-weight:400;color:var(--text-muted);">Off by default — every row creates a new item, even if something similar already exists.</span></span>
+        </label>
+        ${state.allowUpdates ? `
+        <div style="display:flex;gap:18px;padding-top:2px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="csvMatchBy" value="name" ${state.matchBy === 'name' ? 'checked' : ''} onchange="window._csvSetMatchBy('name')"> Match by Name
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="radio" name="csvMatchBy" value="sku" ${state.matchBy === 'sku' ? 'checked' : ''} onchange="window._csvSetMatchBy('sku')"> Match by SKU
+          </label>
+        </div>
+        ${!matchColumnMapped ? `<div style="font-size:12px;color:var(--warning);">No column is mapped to SKU, so nothing will match — map one on the previous step, or match by Name instead.</div>` : ''}` : ''}
       </div>`;
   }
 
@@ -552,7 +642,7 @@
       const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
 
       const newRows = state.verdicts.filter(v => v.kind === 'new');
-      const updateRows = state.verdicts.filter(v => v.kind === 'update');
+      const updateRows = state.verdicts.filter(v => v.kind === 'update' && v.overwrite !== false);
       const total = newRows.length + updateRows.length || 1;
 
       const supplierNames = newRows.map(v => v.record.supplier).filter(Boolean);
@@ -749,6 +839,9 @@
   window._csvCloseDstSheet = closeDstSheet;
   window._csvSetDst = setDst;
   window._csvShowAllRows = () => { state.showAllRows = true; render(); };
+  window._csvSetAllowUpdates = setAllowUpdates;
+  window._csvSetMatchBy = setMatchBy;
+  window._csvToggleOverwrite = toggleOverwrite;
   window._csvDownloadTemplate = downloadTemplate;
   window._csvDownloadSkipped = downloadSkipped;
 })();
