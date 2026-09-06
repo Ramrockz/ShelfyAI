@@ -22,16 +22,16 @@
 
   // ─── Field definitions ────────────────────────────────────────────────────
   const FIELDS = [
-    { key: 'name',               label: 'Name',          required: true },
-    { key: 'quantity',           label: 'Quantity',      required: true,  number: true },
-    { key: 'cost_per_unit',      label: 'Unit price',    required: true,  number: true },
-    { key: 'min_stock',          label: 'Alert level',   required: false, number: true },
-    { key: 'category',           label: 'Category',      required: false },
-    { key: 'sku',                label: 'SKU',           required: false },
-    { key: 'variant',            label: 'Variant',       required: false },
-    { key: 'supplier',           label: 'Supplier',      required: false },
-    { key: 'estimated_delivery', label: 'Delivery days', required: false, number: true },
-    { key: 'source_url',         label: 'Source URL',    required: false },
+    { key: 'name',               label: 'Name',          required: true,  icon: 'type' },
+    { key: 'quantity',           label: 'Quantity',      required: true,  number: true, icon: 'hash' },
+    { key: 'cost_per_unit',      label: 'Unit price',    required: true,  number: true, icon: 'dollar-sign' },
+    { key: 'min_stock',          label: 'Alert level',   required: false, number: true, icon: 'bell' },
+    { key: 'category',           label: 'Category',      required: false, icon: 'shapes' },
+    { key: 'sku',                label: 'SKU',           required: false, icon: 'scan-line' },
+    { key: 'variant',            label: 'Variant',       required: false, icon: 'palette' },
+    { key: 'supplier',           label: 'Supplier',      required: false, icon: 'truck' },
+    { key: 'estimated_delivery', label: 'Delivery days', required: false, number: true, icon: 'clock' },
+    { key: 'source_url',         label: 'Source URL',    required: false, icon: 'link' },
   ];
   const REQUIRED_KEYS = FIELDS.filter(f => f.required).map(f => f.key);
   const fieldLabel = key => FIELDS.find(f => f.key === key)?.label || key;
@@ -134,6 +134,8 @@
   const arrowIcon = '<svg class="m-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="4" y1="12" x2="18" y2="12"/><polyline points="13 7 18 12 13 17"/></svg>';
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><line x1="12" y1="7.6" x2="12" y2="7.7"/></svg>';
   const ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><path d="M12 3.6L1.8 20.4h20.4z"/><line x1="12" y1="10" x2="12" y2="15"/><line x1="12" y1="17.6" x2="12" y2="17.7"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>';
+  const ICON_BAN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" width="18" height="18"><circle cx="12" cy="12" r="9.5"/><line x1="5.3" y1="18.7" x2="18.7" y2="5.3"/></svg>';
 
   const mappedFields = () => new Set(Object.values(state.mapping).filter(Boolean));
   const missingRequired = () => REQUIRED_KEYS.filter(k => !mappedFields().has(k));
@@ -237,9 +239,24 @@
 #csvImportFrame .im-cta { flex-shrink:0; height:46px; padding:0 26px; border:none; border-radius:12px; background:var(--accent-deep, var(--accent)); color:#fff; font-size:15px; font-weight:800; letter-spacing:-.01em; cursor:pointer; }
 #csvImportFrame .im-cta:disabled { background:var(--bg-inner); color:var(--text-faint, var(--text-muted)); cursor:default; }
 #csvImportFrame .im-ghost { flex-shrink:0; height:46px; padding:0 14px; background:none; border:none; color:var(--text-muted); font-size:13.5px; font-weight:600; cursor:pointer; }
-#csvDstSheet .cd-row { display:flex; align-items:center; gap:12px; height:48px; padding:0 16px; border-radius:12px; cursor:pointer; border:none; background:none; width:100%; text-align:left; font:inherit; color:var(--text-main); }
-#csvDstSheet .cd-row:hover, #csvDstSheet .cd-row.active { background:var(--bg-inner); color:var(--accent-ink, var(--accent-deep, var(--accent))); }
-#csvDstSheet .cd-req { margin-left:auto; font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint, var(--text-muted)); }
+#csvDstSheet .modal-content.cd-modal { max-width:380px; padding:0; display:flex; flex-direction:column; max-height:80vh; }
+#csvDstSheet .cd-head { flex-shrink:0; display:flex; align-items:flex-start; gap:10px; padding:20px 16px 14px; border-bottom:1px solid var(--border-hair, var(--border)); }
+#csvDstSheet .cd-titles { flex:1; min-width:0; display:flex; flex-direction:column; }
+#csvDstSheet .cd-title { font-size:16px; font-weight:800; letter-spacing:-.01em; }
+#csvDstSheet .cd-sub { font-size:12px; color:var(--text-faint, var(--text-muted)); margin-top:3px; font-family:ui-monospace,Menlo,monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#csvDstSheet .cd-close { flex-shrink:0; width:28px; height:28px; margin-top:-2px; border:none; background:none; color:var(--text-faint, var(--text-muted)); display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:8px; }
+#csvDstSheet .cd-close:hover { background:var(--bg-inner); color:var(--text-main); }
+#csvDstSheet .cd-list { overflow-y:auto; padding:8px; }
+#csvDstSheet .cd-div { height:1px; margin:6px 8px; background:var(--border-hair, var(--border)); }
+#csvDstSheet .cd-row { display:flex; align-items:center; gap:12px; min-height:46px; padding:0 10px; border-radius:11px; cursor:pointer; border:none; background:none; width:100%; text-align:left; font:inherit; font-size:14px; color:var(--text-main); }
+#csvDstSheet .cd-row:hover { background:var(--bg-inner); }
+#csvDstSheet .cd-row.active { background:var(--accent-glow, rgba(6,182,212,.1)); color:var(--accent-ink, var(--accent-deep, var(--accent))); }
+#csvDstSheet .cd-ic { flex-shrink:0; width:20px; height:20px; display:flex; align-items:center; justify-content:center; color:var(--text-faint, var(--text-muted)); }
+#csvDstSheet .cd-row.active .cd-ic { color:inherit; }
+#csvDstSheet .cd-ic svg, #csvDstSheet .cd-ic i { width:17px; height:17px; }
+#csvDstSheet .cd-label { flex:1; min-width:0; font-weight:600; }
+#csvDstSheet .cd-req { margin-left:8px; font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint, var(--text-muted)); vertical-align:middle; }
+#csvDstSheet .cd-check { flex-shrink:0; width:16px; height:16px; display:flex; color:var(--accent-deep, var(--accent)); }
 `;
 
   function ensureFrame() {
@@ -291,7 +308,17 @@
     dstSheet.id = 'csvDstSheet';
     dstSheet.style.zIndex = '10';
     dstSheet.setAttribute('onclick', "if(event.target===this)window._csvCloseDstSheet()");
-    dstSheet.innerHTML = `<div class="modal-content" style="max-width:360px"><div id="csvDstList"></div></div>`;
+    dstSheet.innerHTML = `
+      <div class="modal-content cd-modal">
+        <div class="cd-head">
+          <span class="cd-titles">
+            <span class="cd-title">Map to which field?</span>
+            <span class="cd-sub" id="csvDstSub"></span>
+          </span>
+          <button type="button" class="cd-close" onclick="window._csvCloseDstSheet()" aria-label="Close">${xIcon}</button>
+        </div>
+        <div class="cd-list" id="csvDstList"></div>
+      </div>`;
     frame.appendChild(dstSheet);
 
     document.body.appendChild(frame);
@@ -446,12 +473,25 @@
           : '');
   }
 
+  function dstRow(key, iconHtml, label, reqBadge, isActive) {
+    return `<button type="button" class="cd-row${isActive ? ' active' : ''}" onclick="window._csvSetDst(${key === null ? 'null' : `'${key}'`})">
+        <span class="cd-ic">${iconHtml}</span>
+        <span class="cd-label">${label}${reqBadge}</span>
+        <span class="cd-check">${isActive ? ICON_CHECK : ''}</span>
+      </button>`;
+  }
   function openDstSheet(colIdx) {
     state.dstPickerCol = colIdx;
     const cur = state.mapping[colIdx];
+    const titleSub = $('csvDstSub');
+    if (titleSub) titleSub.textContent = state.headers[colIdx] || '';
     const list = $('csvDstList');
-    list.innerHTML = `<button type="button" class="cd-row${cur ? '' : ' active'}" onclick="window._csvSetDst(null)">Don’t import</button>` +
-      FIELDS.map(f => `<button type="button" class="cd-row${cur === f.key ? ' active' : ''}" onclick="window._csvSetDst('${f.key}')">${esc(f.label)}${f.required ? '<span class="cd-req">required</span>' : ''}</button>`).join('');
+    list.innerHTML =
+      dstRow(null, ICON_BAN, 'Don’t import', '', !cur) +
+      `<div class="cd-div"></div>` +
+      FIELDS.map(f => dstRow(f.key, `<i data-lucide="${f.icon}"></i>`, esc(f.label),
+        f.required ? '<span class="cd-req">required</span>' : '', cur === f.key)).join('');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     $('csvDstSheet').classList.add('active');
   }
   function closeDstSheet() { $('csvDstSheet')?.classList.remove('active'); }
