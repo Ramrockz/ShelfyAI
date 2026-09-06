@@ -130,6 +130,7 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const chev = '<svg class="m-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>';
+  const xIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const arrowIcon = '<svg class="m-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="4" y1="12" x2="18" y2="12"/><polyline points="13 7 18 12 13 17"/></svg>';
   const ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><circle cx="12" cy="12" r="9.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><line x1="12" y1="7.6" x2="12" y2="7.7"/></svg>';
   const ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><path d="M12 3.6L1.8 20.4h20.4z"/><line x1="12" y1="10" x2="12" y2="15"/><line x1="12" y1="17.6" x2="12" y2="17.7"/></svg>';
@@ -190,6 +191,8 @@
 #csvImportFrame .m-dst small { display:block; font-size:11px; font-weight:600; color:var(--text-faint, var(--text-muted)); margin-top:3px; }
 #csvImportFrame .m-dst[data-state="off"] { color:var(--text-faint, var(--text-muted)); font-weight:600; }
 #csvImportFrame .m-dst[data-state="need"] { color:var(--danger); }
+#csvImportFrame .m-x { flex-shrink:0; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--text-faint, var(--text-muted)); }
+#csvImportFrame .m-row:hover .m-x:hover { background:rgba(220,38,38,.1); color:var(--danger); }
 #csvImportFrame .m-chev { flex-shrink:0; color:var(--text-ghost, var(--border)); }
 #csvImportFrame .m-req { display:inline-block; margin-left:5px; font-size:10.5px; font-weight:800; color:var(--text-faint, var(--text-muted)); letter-spacing:.04em; text-transform:uppercase; }
 #csvImportFrame .rows { background:var(--bg-panel); border:1px solid var(--border-hair, var(--border)); border-radius:16px; overflow:hidden; }
@@ -404,12 +407,22 @@
       const dst = state.mapping[i];
       const field = FIELDS.find(f => f.key === dst);
       const samples = state.rows.slice(0, 3).map(r => (r[i] || '').trim()).filter(Boolean).join(', ');
+      // Optional fields (Supplier, Category, ...) get their own quick-remove
+      // "x" right on the row -- not just reachable by opening the field
+      // picker and finding "Don't import" at the top of its list. A <span>,
+      // not a nested <button> (the row itself already is one); stopPropagation
+      // keeps it from also triggering the row's own onclick and reopening the
+      // picker right after unmapping.
+      const quickX = (field && !field.required)
+        ? `<span class="m-x" onclick="event.stopPropagation();window._csvQuickUnmap(${i})" role="button" aria-label="Don't import this column" title="Don't import this column">${xIcon}</span>`
+        : '';
       return `<button type="button" class="m-row" onclick="window._csvOpenDstSheet(${i})">
           <span class="m-src"><span class="m-src-h">${esc(header)}</span>${samples ? `<span class="m-src-x">${esc(samples)}</span>` : ''}</span>
           ${arrowIcon}
           <span class="m-dst"${field ? '' : ' data-state="off"'}>${field ? esc(field.label) : 'Don’t import'}
             ${field && field.required ? '<i class="m-req">required</i>' : ''}
             <small>${field ? 'mapped' : 'this column is skipped'}</small></span>
+          ${quickX}
           ${chev}
         </button>`;
     }).join('');
@@ -432,6 +445,10 @@
     $('csvDstSheet').classList.add('active');
   }
   function closeDstSheet() { $('csvDstSheet')?.classList.remove('active'); }
+  function quickUnmap(colIdx) {
+    state.mapping[colIdx] = null;
+    render();
+  }
   function setDst(fieldKey) {
     if (state.dstPickerCol == null) return;
     if (fieldKey) {
@@ -838,6 +855,7 @@
   window._csvOpenDstSheet = openDstSheet;
   window._csvCloseDstSheet = closeDstSheet;
   window._csvSetDst = setDst;
+  window._csvQuickUnmap = quickUnmap;
   window._csvShowAllRows = () => { state.showAllRows = true; render(); };
   window._csvSetAllowUpdates = setAllowUpdates;
   window._csvSetMatchBy = setMatchBy;
