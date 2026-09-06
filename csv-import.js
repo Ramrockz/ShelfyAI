@@ -930,6 +930,26 @@
     URL.revokeObjectURL(url);
   }
 
+  // ─── Warn before an unnoticed reload/close discards import progress ───────
+  // A hard refresh (or the service worker's own auto-reload-on-update, or
+  // just an accidental tab close) wipes ALL in-memory state unconditionally
+  // -- there's no way to "preserve" the importer through that. This can't
+  // stop it, but it does give the browser's own native "leave site?" prompt
+  // a chance to let the user cancel, instead of a file pick + column mapping
+  // just vanishing with no warning. Only fires once there's something
+  // meaningful to lose: a file is loaded, the wizard hasn't reached "done"
+  // (nothing left to protect once results are on screen), and the frame is
+  // actually open (closing it first already means giving up the import on
+  // purpose, same as ghostAction()'s reset()).
+  window.addEventListener('beforeunload', function (e) {
+    const frame = $('csvImportFrame');
+    const hasProgress = state && state.rows && state.rows.length > 0 && state.stage !== 'done';
+    if (frame && frame.classList.contains('open') && hasProgress) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
   // ─── Expose globals ─────────────────────────────────────────────────────────
   window.openCSVImport = openCSVImport;
   window.closeCSVImport = closeCSVImport;
