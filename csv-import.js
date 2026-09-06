@@ -214,6 +214,19 @@
 #csvImportFrame .r-s[data-tone="bad"] { color:var(--danger); font-weight:600; }
 #csvImportFrame .ow-toggle { flex-shrink:0; display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; color:var(--text-main); cursor:pointer; }
 #csvImportFrame .ow-toggle input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-deep, var(--accent)); cursor:pointer; margin:0; }
+#csvImportFrame .r-row-head { padding-top:9px; padding-bottom:9px; }
+#csvImportFrame .r-row-head .r-num { font-weight:800; color:var(--text-faint, var(--text-muted)); text-transform:uppercase; letter-spacing:.04em; font-size:10px; }
+#csvImportFrame .ow-yn-head { flex-shrink:0; width:112px; font-weight:800; color:var(--text-faint, var(--text-muted)); text-transform:uppercase; letter-spacing:.04em; font-size:10px; }
+#csvImportFrame .ow-yn { flex-shrink:0; width:112px; display:flex; gap:4px; }
+#csvImportFrame .ow-yn-btn { flex:1; height:28px; border-radius:8px; border:1px solid var(--border-hair, var(--border)); background:var(--bg-panel); color:var(--text-muted); font-size:11.5px; font-weight:800; cursor:pointer; }
+#csvImportFrame .ow-yn-btn.active { border-color:transparent; }
+#csvImportFrame .ow-yn-btn.active:first-child { background:var(--accent-glow, rgba(6,182,212,.14)); color:var(--accent-ink, var(--accent-deep, var(--accent))); }
+#csvImportFrame .ow-yn-btn.active:last-child { background:rgba(239,68,68,.1); color:var(--danger); }
+#csvImportFrame .cd-recap { margin-top:4px; padding-top:10px; border-top:1px solid var(--border-hair, var(--border)); }
+#csvImportFrame .cd-recap-title { font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint, var(--text-muted)); margin-bottom:8px; }
+#csvImportFrame .cd-recap-chips { display:flex; flex-wrap:wrap; gap:6px; }
+#csvImportFrame .cd-recap-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:99px; background:var(--bg-inner); font-size:12px; font-weight:600; color:var(--text-main); }
+#csvImportFrame .cd-recap-arrow { color:var(--text-ghost, var(--border)); }
 #csvImportFrame .r-tag { flex-shrink:0; height:22px; padding:0 9px; border-radius:7px; background:var(--bg-inner); color:var(--text-muted); font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; display:flex; align-items:center; }
 #csvImportFrame .r-tag[data-tone="new"] { background:rgba(16,185,129,.12); color:var(--success); }
 #csvImportFrame .r-tag[data-tone="warn"] { background:rgba(245,158,11,.14); color:var(--warning); }
@@ -647,11 +660,11 @@
     recomputeVerdicts();
     render();
   }
-  function toggleOverwrite(n) {
+  function setOverwrite(n, value) {
     const v = state.verdicts.find(v => v.n === n);
     if (!v) return;
-    v.overwrite = v.overwrite === false ? true : false;
-    // Recount without touching matches -- toggling one row's checkbox
+    v.overwrite = value;
+    // Recount without touching matches -- flipping one row's choice
     // shouldn't re-run the (identical) match lookup for every other row.
     state.counts.update = state.verdicts.filter(v => v.kind === 'update' && v.overwrite !== false).length;
     state.counts.skip = state.verdicts.filter(v => v.kind === 'skip' || (v.kind === 'update' && v.overwrite === false)).length;
@@ -663,17 +676,26 @@
     const tagFor = { new: 'Create', update: 'Update', skip: 'Skip' };
     return fileCard() + updatesCard() +
       `<div class="im-sec-head"><span class="im-sec-title">What will happen</span><span class="im-sec-note">nothing saved yet</span></div>
-      <div class="rows">${shown.map(v => {
+      <div class="rows">
+        <div class="r-row r-row-head">
+          <span class="r-num">Row</span>
+          ${state.allowUpdates ? `<span class="ow-yn-head">Overwrite?</span>` : ''}
+          <span class="r-m"></span>
+        </div>
+        ${shown.map(v => {
         const isUpdate = v.kind === 'update';
         const overwrite = isUpdate && v.overwrite !== false;
         const tagKind = isUpdate && !overwrite ? 'skip' : v.kind;
         return `
         <div class="r-row">
           <span class="r-num">${v.n}</span>
+          ${isUpdate ? `
+          <span class="ow-yn">
+            <button type="button" class="ow-yn-btn${overwrite ? ' active' : ''}" onclick="window._csvSetOverwrite(${v.n}, true)">Yes</button>
+            <button type="button" class="ow-yn-btn${!overwrite ? ' active' : ''}" onclick="window._csvSetOverwrite(${v.n}, false)">No</button>
+          </span>` : ''}
           <span class="r-m"><span class="r-n">${esc(v.name)}</span><span class="r-s"${v.tone ? ` data-tone="${v.tone}"` : ''}>${esc(overwrite || !isUpdate ? v.note : 'Kept as-is — this row will not touch it.')}</span></span>
-          ${isUpdate
-            ? `<label class="ow-toggle"><input type="checkbox" ${overwrite ? 'checked' : ''} onchange="window._csvToggleOverwrite(${v.n})"><span>Overwrite</span></label>`
-            : `<span class="r-tag" data-tone="${tagKind}">${tagFor[tagKind]}</span>`}
+          ${!isUpdate ? `<span class="r-tag" data-tone="${tagKind}">${tagFor[tagKind]}</span>` : ''}
         </div>`;
       }).join('')}
         ${state.showAllRows ? '' : (state.verdicts.length > shown.length ? `<button type="button" class="r-more" onclick="window._csvShowAllRows()">Show the other ${state.verdicts.length - shown.length} rows</button>` : '')}
@@ -682,6 +704,22 @@
 
   // "Allow updates?" gate + name/SKU match choice -- matching (and any
   // overwrite) only happens once this is explicitly turned on.
+  // Column -> field mapping, again -- shown once updates are on so the user
+  // can see what's actually feeding the match/overwrite decision below
+  // without navigating back to the column-matching step.
+  function mappingRecapHtml() {
+    const rows = state.headers
+      .map((h, i) => ({ header: h, field: FIELDS.find(f => f.key === state.mapping[i]) }))
+      .filter(r => r.field);
+    if (!rows.length) return '';
+    return `<div class="cd-recap">
+        <div class="cd-recap-title">Your column mapping</div>
+        <div class="cd-recap-chips">${rows.map(r =>
+          `<span class="cd-recap-chip">${esc(r.header)} <span class="cd-recap-arrow">${arrowIcon}</span> ${esc(r.field.label)}</span>`
+        ).join('')}</div>
+      </div>`;
+  }
+
   function updatesCard() {
     const matchColumnMapped = state.matchBy === 'sku' ? !!colForField('sku') : true;
     return `<div class="im-sec-head"><span class="im-sec-title">Existing items</span></div>
@@ -700,7 +738,8 @@
             <input type="radio" name="csvMatchBy" value="sku" ${state.matchBy === 'sku' ? 'checked' : ''} onchange="window._csvSetMatchBy('sku')"> Match by SKU
           </label>
         </div>
-        ${!matchColumnMapped ? `<div style="font-size:12px;color:var(--warning);">No column is mapped to SKU, so nothing will match — map one on the previous step, or match by Name instead.</div>` : ''}` : ''}
+        ${!matchColumnMapped ? `<div style="font-size:12px;color:var(--warning);">No column is mapped to SKU, so nothing will match — map one on the previous step, or match by Name instead.</div>` : ''}
+        ${mappingRecapHtml()}` : ''}
       </div>`;
   }
 
@@ -965,7 +1004,7 @@
   window._csvShowAllRows = () => { state.showAllRows = true; render(); };
   window._csvSetAllowUpdates = setAllowUpdates;
   window._csvSetMatchBy = setMatchBy;
-  window._csvToggleOverwrite = toggleOverwrite;
+  window._csvSetOverwrite = setOverwrite;
   window._csvDownloadTemplate = downloadTemplate;
   window._csvDownloadSkipped = downloadSkipped;
 })();
