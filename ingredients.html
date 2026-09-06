@@ -2199,7 +2199,7 @@ function onIngredientEdit() {
     } else if (isPcs) {
       valueEl.innerHTML = `${q} ${escapeHtml(unit)} × $${c.toFixed(2)} = <b>$${(q * c).toFixed(2)}</b> of stock`;
     } else {
-      valueEl.innerHTML = `${q} ${escapeHtml(unit)} for $${c.toFixed(2)} = <b>$${(c / q).toFixed(4)}</b> per ${escapeHtml(unit)}`;
+      valueEl.innerHTML = `${q} ${escapeHtml(unit)} for $${c.toFixed(2)} = <b>$${trimGuessNumber(c / q, 4)}</b> per ${escapeHtml(unit)}`;
     }
   }
   const disabled = !name;
