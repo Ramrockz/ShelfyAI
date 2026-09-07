@@ -524,6 +524,11 @@
     100% { transform: translateX(300%); }
   }
 
+  @keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -1507,7 +1512,6 @@
                 <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
                 <span class="ec-qty-unit" id="ecLUnit"></span>
               </span>
-              <span class="ec-qty-status" id="ecLStatus"></span>
             </span>
             <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
           </div>
@@ -2418,8 +2422,18 @@ async function selectChannel(channel) {
 }
 
 
-function showNotification(message, type = 'success') {
-  if (type === 'error') console.error(message);
+// Was a no-op for anything but 'error' (a bare console.error, nothing
+// visible) -- every "Product added"/"Failed to save" call on this page was
+// silently invisible to the user. Same visible toast orders.html already uses.
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
+  notification.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.style.animation = 'slideInRight 0.3s ease reverse';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
 
 function showDeleteModal() {
@@ -2716,7 +2730,7 @@ function ecBackToList() {
 // picker, adapted to products: a product has no stock of its own, so
 // adding/editing/removing a line here deducts (or restores) stock through
 // the product's recipe components instead of on the product directly. ----
-let _ecInsights = null;     // { lastSold: Map<recipeId,{price,date}>, recentIds: [...], stockMap: Map<ingId,{quantity,minStock}> }
+let _ecInsights = null;     // { lastSold: Map<recipeId,{price,date}>, recentIds: [...] }
 let _ecEditingIndex = null; // index into orderData.items being edited, or null when adding a new line
 let _ecIngredient = null;   // the recipe row currently open in pane 2
 let _ecDraft = null;        // { qty, cost } being edited in pane 2
@@ -2724,6 +2738,37 @@ let _ecOriginalQty = 0;     // this line's quantity when pane 2 was opened -- al
 let _ecUpdateStock = true;  // whether adding a brand-new line should deduct its recipe's components
 let _ecCategoryFilter = null;
 let _ecAttrValueFilters = new Map(); // key -> Set<value>, cascading sub-filter scoped to _ecCategoryFilter
+
+// ---------- Undo toast (same component as orders.html's) ----------
+let _toastTimer = null;
+function showUndoToast(message, onUndo, ms = 5000) {
+  let el = document.getElementById('undoToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'undoToast';
+    el.innerHTML = '<span class="undo-msg"></span><button class="undo-btn" type="button">Undo</button>';
+    document.body.appendChild(el);
+  }
+
+  clearTimeout(_toastTimer);
+  el.querySelector('.undo-msg').textContent = message;
+
+  // Replace the button so the previous toast's handler can't fire
+  const oldBtn = el.querySelector('.undo-btn');
+  const btn = oldBtn.cloneNode(true);
+  oldBtn.replaceWith(btn);
+  btn.addEventListener('click', () => {
+    clearTimeout(_toastTimer);
+    hideUndoToast();
+    onUndo();
+  });
+
+  requestAnimationFrame(() => el.classList.add('visible'));
+  _toastTimer = setTimeout(hideUndoToast, ms);
+}
+function hideUndoToast() {
+  document.getElementById('undoToast')?.classList.remove('visible');
+}
 
 // This picker chooses PRODUCTS (recipes), which use their own general
 // handmade-marketplace taxonomy -- independent of the ingredient category
@@ -2756,7 +2801,7 @@ function _ordFindRecipe(item) {
 
 async function _ecLoadInsights() {
   if (_ecInsights) return _ecInsights;
-  _ecInsights = { lastSold: new Map(), recentIds: [], stockMap: new Map() };
+  _ecInsights = { lastSold: new Map(), recentIds: [] };
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return _ecInsights;
@@ -2764,14 +2809,8 @@ async function _ecLoadInsights() {
 
     let sq = window.supabaseClient.from('sales').select('id, sale_date, items').eq('profile_id', user.id).not('items', 'is', null);
     if (storeId) sq = sq.eq('store_id', storeId);
-    const [salesRes, ingRes] = await Promise.all([
-      sq.order('sale_date', { ascending: false }),
-      window.supabaseClient.from('ingredients').select('id, quantity, min_stock').eq('profile_id', user.id)
-    ]);
+    const salesRes = await sq.order('sale_date', { ascending: false });
     if (salesRes.error) throw salesRes.error;
-    (ingRes.data || []).forEach(ing => _ecInsights.stockMap.set(ing.id, {
-      quantity: parseFloat(ing.quantity) || 0, minStock: parseFloat(ing.min_stock) || 0
-    }));
 
     const seenRecent = new Set();
     (salesRes.data || []).forEach(sale => {
@@ -2809,25 +2848,57 @@ function _ecDaysAgo(dateStr) {
 // line removed) ingredient stock through the recipe's components -- a
 // product itself has no stock number, so a "line" here always resolves to
 // N ingredient writes instead of one.
+//
+// Returns { ok, adjusted } -- ok is false if ANY component failed to write,
+// adjusted lists the ones that actually succeeded (for the undo path below).
+// Previously this neither checked nor returned anything: supabase-js
+// resolves a rejected write as {data:null, error:{...}} rather than
+// throwing, so a bad update here (RLS denial, stale/deleted ingredient row,
+// etc.) was silently ignored -- the ingredient_history row still got
+// written as if it had succeeded, and the caller had no way to know
+// anything was wrong, let alone tell the user.
 async function _ordAdjustStock(recipe, deltaQty, user) {
-  if (!recipe || !Array.isArray(recipe.components) || !recipe.components.length || !deltaQty) return;
+  if (!recipe || !Array.isArray(recipe.components) || !recipe.components.length || !deltaQty) return { ok: true, adjusted: [] };
+  const adjusted = [];
+  let ok = true;
   for (const comp of recipe.components) {
     const ingId = comp.ingredient_id || comp.id;
     if (!ingId) continue;
     const needed = (parseFloat(comp.quantity) || 0) * deltaQty;
     if (!needed) continue;
     try {
-      const { data: ing } = await window.supabaseClient.from('ingredients').select('id, quantity').eq('id', ingId).single();
-      if (!ing) continue;
+      const { data: ing, error: readError } = await window.supabaseClient.from('ingredients').select('id, quantity').eq('id', ingId).single();
+      if (readError || !ing) { ok = false; console.error('Error reading ingredient for stock adjustment', ingId, readError); continue; }
       const oldQty = parseFloat(ing.quantity) || 0;
       const newQty = Math.max(0, oldQty - needed);
-      await window.supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', ingId);
-      await window.supabaseClient.from('ingredient_history').insert([{
-        ingredient_id: ingId, profile_id: user.id, field_name: 'quantity',
-        old_value: String(oldQty), new_value: String(newQty),
-        reason: 'order', reference_id: String(orderId)
-      }]);
-    } catch (e) { console.error('Error adjusting stock for component', ingId, e); }
+      const { error: writeError } = await window.supabaseClient.from('ingredients').update({ quantity: newQty }).eq('id', ingId);
+      if (writeError) { ok = false; console.error('Error writing ingredient stock adjustment', ingId, writeError); continue; }
+      adjusted.push({ ingredientId: ingId, oldQty, newQty });
+      // Own try/catch, deliberately not folded into the outer one -- this is
+      // an audit-trail write, not the actual stock change (already committed
+      // above). Failing to log it shouldn't report the adjustment itself as
+      // failed.
+      try {
+        const { error: historyError } = await window.supabaseClient.from('ingredient_history').insert([{
+          ingredient_id: ingId, profile_id: user.id, field_name: 'quantity',
+          old_value: String(oldQty), new_value: String(newQty),
+          reason: 'order', reference_id: String(orderId)
+        }]);
+        if (historyError) console.error('Error recording stock-adjustment history', ingId, historyError);
+      } catch (e) { console.error('Error recording stock-adjustment history', ingId, e); }
+    } catch (e) { ok = false; console.error('Error adjusting stock for component', ingId, e); }
+  }
+  return { ok, adjusted };
+}
+
+// Reverts exactly the writes _ordAdjustStock() reported as successful --
+// used by the "Undo" action on the add-item success toast, and by a failed
+// save's own partial-rollback (some components adjusted before one failed).
+async function _ordRevertStockAdjustment(adjusted) {
+  for (const a of adjusted) {
+    try {
+      await window.supabaseClient.from('ingredients').update({ quantity: a.oldQty }).eq('id', a.ingredientId);
+    } catch (e) { console.error('Error reverting stock adjustment', a.ingredientId, e); }
   }
 }
 
@@ -3049,34 +3120,6 @@ function ecOpenLine(recipeId, existingIndex) {
   ecShowPane('line');
 }
 
-function ecRenderProjection() {
-  const recipe = _ecIngredient;
-  const q = _ecDraft.qty;
-  const delta = q - _ecOriginalQty; // additional deduction this save would cause
-  const comps = recipe.components || [];
-  const insights = _ecInsights || { stockMap: new Map() };
-  const st = document.getElementById('ecLStatus');
-  if (!comps.length) {
-    st.textContent = '';
-    st.removeAttribute('data-state');
-    return;
-  }
-  let worstRemain = null, state = '';
-  comps.forEach(c => {
-    const ingId = c.ingredient_id || c.id;
-    const info = insights.stockMap.get(ingId) || { quantity: 0, minStock: 0 };
-    const needed = (parseFloat(c.quantity) || 0) * delta;
-    const remain = info.quantity - needed;
-    if (worstRemain === null || remain < worstRemain) worstRemain = remain;
-    if (remain < 0) state = 'short';
-    else if (remain === 0 && state !== 'short') state = 'out';
-    else if (info.minStock > 0 && remain <= info.minStock && !state) state = 'low';
-  });
-  const remainR = Math.round((worstRemain || 0) * 100) / 100;
-  st.innerHTML = q ? `stock <b>${remainR}</b> left${state === 'short' ? ` · short ${Math.abs(remainR)}` : ''}` : '';
-  state ? st.setAttribute('data-state', state) : st.removeAttribute('data-state');
-}
-
 function ecRenderCostHint() {
   const recipe = _ecIngredient;
   const insights = _ecInsights || { lastSold: new Map() };
@@ -3103,7 +3146,6 @@ function ecRenderLineFoot() {
     ? `${q} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
     : `Set a quantity<b>$0.00</b>`;
   document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
-  ecRenderProjection();
   ecRenderCostHint();
 }
 function ecSyncTotal() {
@@ -3146,7 +3188,12 @@ async function ecSaveLine() {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) { showNotification('You must be logged in', 'error'); return; }
 
-    const items = Array.isArray(orderData.items) ? [...orderData.items] : [];
+    // Captured before mutating -- what the Undo action below restores.
+    const prevItems = Array.isArray(orderData.items) ? [...orderData.items] : [];
+    const prevTotalQuantity = orderData.total_quantity;
+    const prevRevenue = orderData.revenue;
+
+    const items = [...prevItems];
     // Standardized line shape (19b) -- recipe_id/name/quantity/price; older
     // lines only ever had {name, quantity, price}, still read via
     // _ordFindRecipe()'s name-match fallback.
@@ -3170,12 +3217,45 @@ async function ecSaveLine() {
     // A new line only deducts when the toggle above is left on -- an edit to
     // an already-recorded line always adjusts proportionally, same as before.
     const shouldAdjustStock = isNewLine ? _ecUpdateStock : true;
-    if (delta !== 0 && shouldAdjustStock) await _ordAdjustStock(recipe, delta, user);
+    let stockResult = { ok: true, adjusted: [] };
+    if (delta !== 0 && shouldAdjustStock) stockResult = await _ordAdjustStock(recipe, delta, user);
     _ecInsights = null; // stock just moved -- next open reloads fresh
 
     displayOrder();
     closeOrderItemPicker();
-    showNotification(isNewLine ? 'Product added' : 'Product updated', 'success');
+
+    if (!stockResult.ok) {
+      // The order line itself saved fine -- only the inventory side failed.
+      // Say so explicitly instead of a generic success message: silently
+      // treating this as "done" is exactly how a failed deduction went
+      // unnoticed before.
+      showNotification(
+        `${isNewLine ? 'Product added' : 'Product updated'}, but inventory couldn't be fully updated — check stock manually.`,
+        'error'
+      );
+      return;
+    }
+
+    if (isNewLine) {
+      showUndoToast(`Added ${recipe.name}`, async () => {
+        try {
+          await window.supabaseClient.from('sales')
+            .update({ items: prevItems, total_quantity: prevTotalQuantity, revenue: prevRevenue })
+            .eq('id', orderId).eq('profile_id', user.id);
+          orderData.items = prevItems;
+          orderData.total_quantity = prevTotalQuantity;
+          orderData.revenue = prevRevenue;
+          if (stockResult.adjusted.length) await _ordRevertStockAdjustment(stockResult.adjusted);
+          _ecInsights = null;
+          displayOrder();
+        } catch (undoError) {
+          console.error('Error undoing added product:', undoError);
+          showNotification('Failed to undo: ' + undoError.message, 'error');
+        }
+      });
+    } else {
+      showNotification('Product updated', 'success');
+    }
   } catch (error) {
     console.error('Error saving order line:', error);
     showNotification('Failed to save product: ' + error.message, 'error');
