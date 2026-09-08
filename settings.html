@@ -501,6 +501,17 @@
     width: 90%;
   }
 
+  /* Settings groups: a settings section's markup/ids move into one of
+     these verbatim, so all the existing population/toggle JS keeps
+     working unchanged -- only the surrounding chrome (header + scroll)
+     is new. */
+  .st-group-content { max-height: 80vh; overflow-y: auto; text-align: left; }
+  .st-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .st-group-head h3 { margin: 0; }
+  .st-group-close { background: var(--bg-inner); border: none; width: 30px; height: 30px; border-radius: 50%;
+                     color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; flex-shrink: 0; }
+  .st-group-content .st-sec-head:first-of-type { padding-top: 4px; }
+
   .modal-content h3 {
     margin: 0 0 16px 0;
     font-size: 20px;
@@ -895,231 +906,323 @@
     <button type="button" style="background:none;border:none;color:var(--accent-deep,var(--accent));font-size:11.5px;font-weight:700;padding:0;cursor:pointer;font-family:inherit;" onclick="removeAvatar()">Remove photo</button>
   </div>
 
-  <!-- 26b: the scan pool, two sources -->
-  <div class="st-sec-head">
-    <span class="st-sec-title">AI scans</span>
-    <span class="st-sec-note">shared by items, orders, expenses</span>
-  </div>
-  <div class="st-pool" id="stPool"></div>
-  <div class="st-note" id="stPoolNote"></div>
-
-  <!-- 26c: storage -->
-  <div class="st-sec-head"><span class="st-sec-title">Receipt storage</span></div>
-  <div class="st-storage" id="stStorage"></div>
-
-  <!-- 26d: plan -->
-  <div class="st-sec-head"><span class="st-sec-title">Plan</span></div>
-  <div class="st-list" id="stPlanRows"></div>
-  <!-- Populated by the existing loadSubscriptionInfo()/updateSubscriptionUI() (below, unchanged) when the
-       user has an active paid subscription -- real Stripe customer-portal link, just needed a home. -->
-  <div class="st-list" id="upgradeRow" style="display:none;margin-top:10px;"></div>
-
-  <!-- 26e: stores -->
-  <div class="st-sec-head">
-    <span class="st-sec-title">Stores</span>
-    <span class="st-sec-note" id="stStoreNote"></span>
-  </div>
-  <div class="st-list" id="stStoreRows"></div>
-
-  <!-- 26f: appearance -->
-  <div class="st-sec-head"><span class="st-sec-title">Appearance</span></div>
+  <!-- 26: settings, grouped into a short list -- each row opens the
+       group's actual content (unchanged ids/markup, just relocated) in a
+       modal, instead of every section scrolling by on one long page. -->
   <div class="st-list">
-    <div class="st-row" style="cursor:default" onclick="event.preventDefault()">
+    <button type="button" class="st-row" onclick="openSettingsGroup('usage')">
       <span class="st-row-main">
-        <span class="st-row-name">Theme</span>
-        <span class="st-row-why">Applies on every device you sign in on</span>
+        <span class="st-row-name">AI &amp; Plan</span>
+        <span class="st-row-why">Scans, receipt storage, subscription</span>
       </span>
-      <span class="st-seg">
-        <button type="button" id="lightThemeOption" aria-pressed="true" onclick="setTheme('light')">Light</button>
-        <button type="button" id="darkThemeOption" aria-pressed="false" onclick="setTheme('dark')">Dark</button>
-      </span>
-    </div>
-    <button type="button" class="st-row" id="personalizedCategoriesToggle" aria-pressed="true" onclick="togglePersonalizedCategoriesSetting()">
-      <span class="st-row-main">
-        <span class="st-row-name">Personalized categories</span>
-        <span class="st-row-why">Show only item/expense categories relevant to your business</span>
-      </span>
-      <span class="st-sw"></span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-  </div>
-
-  <!-- 26g: notifications -->
-  <div class="st-sec-head"><span class="st-sec-title">Notifications</span></div>
-  <div class="st-list">
-    <button type="button" class="st-row" id="notificationsToggle" aria-pressed="true" onclick="toggleNotificationsEnabled()">
+    <button type="button" class="st-row" onclick="openSettingsGroup('stores')">
+      <span class="st-row-main">
+        <span class="st-row-name">Stores</span>
+        <span class="st-row-why">Manage the businesses on your account</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button type="button" class="st-row" onclick="openSettingsGroup('appearance')">
+      <span class="st-row-main">
+        <span class="st-row-name">Appearance</span>
+        <span class="st-row-why">Theme and category display</span>
+      </span>
+      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button type="button" class="st-row" onclick="openSettingsGroup('notifications')">
       <span class="st-row-main">
         <span class="st-row-name">Notifications</span>
-        <span class="st-row-why">Master switch for everything below</span>
-      </span>
-      <span class="st-sw"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="lowStockRow" aria-pressed="true" onclick="toggleLowStockAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">Low stock</span>
-        <span class="st-row-why">An item dropped under its alert level</span>
-      </span>
-      <span class="st-sw" id="lowStockToggle"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="outOfStockRow" aria-pressed="true" onclick="toggleOutOfStockAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">Out of stock</span>
-        <span class="st-row-why">An item hit zero</span>
-      </span>
-      <span class="st-sw" id="outOfStockToggle"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="aiLimitRow" aria-pressed="true" onclick="toggleAILimitAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">AI limit reached</span>
-        <span class="st-row-why">No scans left this month</span>
-      </span>
-      <span class="st-sw" id="aiLimitToggle"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="expiredItemsRow" aria-pressed="true" onclick="toggleExpiredItemAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">Expired items</span>
-        <span class="st-row-why">An item's expiration date has passed</span>
-      </span>
-      <span class="st-sw" id="expiredItemsToggle"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="expiringSoonRow" aria-pressed="true" onclick="toggleExpiringSoonAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">Expiring soon</span>
-        <span class="st-row-why">An item expires within 7 days</span>
-      </span>
-      <span class="st-sw" id="expiringSoonToggle"></span>
-    </button>
-    <button type="button" class="st-row st-sub" id="reorderArrivalRow" aria-pressed="true" onclick="toggleReorderArrivalAlerts()">
-      <span class="st-row-main">
-        <span class="st-row-name">Reorder arriving today</span>
-        <span class="st-row-why">A pending delivery is expected today</span>
-      </span>
-      <span class="st-sw" id="reorderArrivalToggle"></span>
-    </button>
-  </div>
-  <div class="st-note" id="alertNote"></div>
-
-  <!-- Push notifications: separate from the toggles above, since this needs
-       an explicit browser permission grant rather than just a settings flag. -->
-  <div class="st-sec-head"><span class="st-sec-title">Push notifications</span></div>
-  <div class="st-list">
-    <button type="button" class="st-row" id="pushEnableRow" aria-pressed="false" onclick="handlePushToggleClick()">
-      <span class="st-row-main">
-        <span class="st-row-name">Push notifications</span>
-        <span class="st-row-why" id="pushEnableSub">Get an alert on this device even when ShelfyAI isn't open</span>
-      </span>
-      <span class="st-sw"></span>
-    </button>
-  </div>
-  <div class="st-note" id="pushIOSNote" style="display:none;">On iPhone/iPad, add ShelfyAI to your Home Screen first (Share → Add to Home Screen), then come back here to enable push.</div>
-
-  <!-- 26h: history and reports + download your data -->
-  <div class="st-sec-head"><span class="st-sec-title">History and reports</span></div>
-  <div class="st-list">
-    <button type="button" class="st-row" onclick="window.location.href='/change-log'">
-      <span class="st-row-main">
-        <span class="st-row-name">Inventory change history</span>
-        <span class="st-row-why">Every stock movement, and what caused it</span>
+        <span class="st-row-why">Alerts and push notifications</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-    <button type="button" class="st-row" onclick="window.location.href='/analytics'">
+    <button type="button" class="st-row" onclick="openSettingsGroup('data')">
       <span class="st-row-main">
-        <span class="st-row-name">Analytics</span>
-        <span class="st-row-why">Revenue, dead stock, reorder predictions</span>
+        <span class="st-row-name">Data &amp; Reports</span>
+        <span class="st-row-why">History, analytics, CSV exports</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-    <button type="button" class="st-row" onclick="window.location.href='/expenses'">
+    <button type="button" class="st-row" onclick="openSettingsGroup('help')">
       <span class="st-row-main">
-        <span class="st-row-name">Expenses</span>
-        <span class="st-row-why">Spend by category, month over month</span>
+        <span class="st-row-name">Help</span>
+        <span class="st-row-why">Quick guide and onboarding</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-  </div>
-
-  <div class="st-sec-head">
-    <span class="st-sec-title">Download your data</span>
-    <span class="st-sec-note">CSV</span>
-  </div>
-  <div class="st-list">
-    <button type="button" class="st-row" onclick="downloadIngredients(event)">
-      <span class="st-row-main"><span class="st-row-name">Items</span><span class="st-row-why">Stock, costs, suppliers</span></span>
-      <span class="st-row-val">.csv</span>
-    </button>
-    <button type="button" class="st-row" onclick="downloadOrders(event)">
-      <span class="st-row-main"><span class="st-row-name">Orders</span><span class="st-row-why">Orders and their product lines</span></span>
-      <span class="st-row-val">.csv</span>
-    </button>
-    <button type="button" class="st-row" onclick="downloadExpenses(event)">
-      <span class="st-row-main"><span class="st-row-name">Expenses</span><span class="st-row-why">Expenses with itemised lines</span></span>
-      <span class="st-row-val">.csv</span>
-    </button>
-    <button type="button" class="st-row" onclick="downloadChangeLogs(event)">
-      <span class="st-row-main"><span class="st-row-name">Change log</span><span class="st-row-why">Every inventory movement</span></span>
-      <span class="st-row-val">.csv</span>
-    </button>
-  </div>
-
-  <!-- 26i: help -->
-  <div class="st-sec-head"><span class="st-sec-title">Help</span></div>
-  <div class="st-list">
-    <button type="button" class="st-row" onclick="window.location.href='/quick-guide'">
+    <button type="button" class="st-row" onclick="openSettingsGroup('account')">
       <span class="st-row-main">
-        <span class="st-row-name">Quick guide</span>
-        <span class="st-row-why">How items, products, orders and expenses fit together</span>
+        <span class="st-row-name">Account</span>
+        <span class="st-row-why">Email, password, sign out</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-    <button type="button" class="st-row" onclick="retakeOnboarding()">
+    <button type="button" class="st-row danger" onclick="openSettingsGroup('danger')">
       <span class="st-row-main">
-        <span class="st-row-name">Retake onboarding</span>
-        <span class="st-row-why">Walk through setup again</span>
+        <span class="st-row-name">Danger zone</span>
+        <span class="st-row-why">Delete data, files, or your account</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
-  </div>
-
-  <!-- Account -->
-  <div class="st-sec-head"><span class="st-sec-title">Account</span></div>
-  <div class="st-list">
-    <div class="st-row">
-      <span class="st-row-main"><span class="st-row-name">Email</span></span>
-      <span class="st-row-val" id="userEmailVal">Loading…</span>
-    </div>
-    <button type="button" class="st-row" onclick="openChangePasswordModal()">
-      <span class="st-row-main"><span class="st-row-name">Password</span></span>
-      <span class="st-row-val">Change</span>
-    </button>
-    <button type="button" class="st-row" onclick="logout()">
-      <span class="st-row-main"><span class="st-row-name">Sign out</span></span>
-    </button>
-  </div>
-
-  <!-- 26j: danger zone — each row states exactly what it destroys -->
-  <div class="st-sec-head"><span class="st-sec-title">Danger zone</span></div>
-  <div class="st-list">
-    <button type="button" class="st-row danger" onclick="openDeleteDataModal()">
-      <span class="st-row-main">
-        <span class="st-row-name">Delete all data</span>
-        <span class="st-row-why">Items, products, orders and expenses. Your account stays.</span>
-      </span>
-    </button>
-    <button type="button" class="st-row danger" onclick="openDeleteFilesModal()">
-      <span class="st-row-main">
-        <span class="st-row-name">Delete all files</span>
-        <span class="st-row-why" id="deleteFilesWhy">Receipts and screenshots</span>
-      </span>
-    </button>
-    <button type="button" class="st-row danger" onclick="openDeleteAccountModal()">
-      <span class="st-row-main">
-        <span class="st-row-name">Delete account</span>
-        <span class="st-row-why">Everything, permanently. Cancels your subscription.</span>
-      </span>
     </button>
   </div>
   <div class="st-note">ShelfyAI 2.4.1</div>
 
+</div>
+
+<!-- Settings group modals -- content moved verbatim out of the single
+     long scroll above; every id/onclick inside is untouched, so the
+     existing population/toggle code needs no changes at all. -->
+<div class="modal-overlay" id="stGroupModal-usage" onclick="if(event.target===this)closeSettingsGroup('usage')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>AI &amp; Plan</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('usage')" aria-label="Close">&times;</button></div>
+
+    <div class="st-sec-head">
+      <span class="st-sec-title">AI scans</span>
+      <span class="st-sec-note">shared by items, orders, expenses</span>
+    </div>
+    <div class="st-pool" id="stPool"></div>
+    <div class="st-note" id="stPoolNote"></div>
+
+    <div class="st-sec-head"><span class="st-sec-title">Receipt storage</span></div>
+    <div class="st-storage" id="stStorage"></div>
+
+    <div class="st-sec-head"><span class="st-sec-title">Plan</span></div>
+    <div class="st-list" id="stPlanRows"></div>
+    <!-- Populated by the existing loadSubscriptionInfo()/updateSubscriptionUI() (below, unchanged) when the
+         user has an active paid subscription -- real Stripe customer-portal link, just needed a home. -->
+    <div class="st-list" id="upgradeRow" style="display:none;margin-top:10px;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-stores" onclick="if(event.target===this)closeSettingsGroup('stores')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Stores</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('stores')" aria-label="Close">&times;</button></div>
+    <div class="st-sec-head">
+      <span class="st-sec-title">Stores</span>
+      <span class="st-sec-note" id="stStoreNote"></span>
+    </div>
+    <div class="st-list" id="stStoreRows"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-appearance" onclick="if(event.target===this)closeSettingsGroup('appearance')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Appearance</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('appearance')" aria-label="Close">&times;</button></div>
+    <div class="st-list">
+      <div class="st-row" style="cursor:default" onclick="event.preventDefault()">
+        <span class="st-row-main">
+          <span class="st-row-name">Theme</span>
+          <span class="st-row-why">Applies on every device you sign in on</span>
+        </span>
+        <span class="st-seg">
+          <button type="button" id="lightThemeOption" aria-pressed="true" onclick="setTheme('light')">Light</button>
+          <button type="button" id="darkThemeOption" aria-pressed="false" onclick="setTheme('dark')">Dark</button>
+        </span>
+      </div>
+      <button type="button" class="st-row" id="personalizedCategoriesToggle" aria-pressed="true" onclick="togglePersonalizedCategoriesSetting()">
+        <span class="st-row-main">
+          <span class="st-row-name">Personalized categories</span>
+          <span class="st-row-why">Show only item/expense categories relevant to your business</span>
+        </span>
+        <span class="st-sw"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-notifications" onclick="if(event.target===this)closeSettingsGroup('notifications')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Notifications</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('notifications')" aria-label="Close">&times;</button></div>
+    <div class="st-list">
+      <button type="button" class="st-row" id="notificationsToggle" aria-pressed="true" onclick="toggleNotificationsEnabled()">
+        <span class="st-row-main">
+          <span class="st-row-name">Notifications</span>
+          <span class="st-row-why">Master switch for everything below</span>
+        </span>
+        <span class="st-sw"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="lowStockRow" aria-pressed="true" onclick="toggleLowStockAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">Low stock</span>
+          <span class="st-row-why">An item dropped under its alert level</span>
+        </span>
+        <span class="st-sw" id="lowStockToggle"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="outOfStockRow" aria-pressed="true" onclick="toggleOutOfStockAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">Out of stock</span>
+          <span class="st-row-why">An item hit zero</span>
+        </span>
+        <span class="st-sw" id="outOfStockToggle"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="aiLimitRow" aria-pressed="true" onclick="toggleAILimitAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">AI limit reached</span>
+          <span class="st-row-why">No scans left this month</span>
+        </span>
+        <span class="st-sw" id="aiLimitToggle"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="expiredItemsRow" aria-pressed="true" onclick="toggleExpiredItemAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">Expired items</span>
+          <span class="st-row-why">An item's expiration date has passed</span>
+        </span>
+        <span class="st-sw" id="expiredItemsToggle"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="expiringSoonRow" aria-pressed="true" onclick="toggleExpiringSoonAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">Expiring soon</span>
+          <span class="st-row-why">An item expires within 7 days</span>
+        </span>
+        <span class="st-sw" id="expiringSoonToggle"></span>
+      </button>
+      <button type="button" class="st-row st-sub" id="reorderArrivalRow" aria-pressed="true" onclick="toggleReorderArrivalAlerts()">
+        <span class="st-row-main">
+          <span class="st-row-name">Reorder arriving today</span>
+          <span class="st-row-why">A pending delivery is expected today</span>
+        </span>
+        <span class="st-sw" id="reorderArrivalToggle"></span>
+      </button>
+    </div>
+    <div class="st-note" id="alertNote"></div>
+
+    <!-- Push notifications: separate from the toggles above, since this needs
+         an explicit browser permission grant rather than just a settings flag. -->
+    <div class="st-sec-head"><span class="st-sec-title">Push notifications</span></div>
+    <div class="st-list">
+      <button type="button" class="st-row" id="pushEnableRow" aria-pressed="false" onclick="handlePushToggleClick()">
+        <span class="st-row-main">
+          <span class="st-row-name">Push notifications</span>
+          <span class="st-row-why" id="pushEnableSub">Get an alert on this device even when ShelfyAI isn't open</span>
+        </span>
+        <span class="st-sw"></span>
+      </button>
+    </div>
+    <div class="st-note" id="pushIOSNote" style="display:none;">On iPhone/iPad, add ShelfyAI to your Home Screen first (Share → Add to Home Screen), then come back here to enable push.</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-data" onclick="if(event.target===this)closeSettingsGroup('data')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Data &amp; Reports</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('data')" aria-label="Close">&times;</button></div>
+    <div class="st-sec-head"><span class="st-sec-title">History and reports</span></div>
+    <div class="st-list">
+      <button type="button" class="st-row" onclick="window.location.href='/change-log'">
+        <span class="st-row-main">
+          <span class="st-row-name">Inventory change history</span>
+          <span class="st-row-why">Every stock movement, and what caused it</span>
+        </span>
+        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <button type="button" class="st-row" onclick="window.location.href='/analytics'">
+        <span class="st-row-main">
+          <span class="st-row-name">Analytics</span>
+          <span class="st-row-why">Revenue, dead stock, reorder predictions</span>
+        </span>
+        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <button type="button" class="st-row" onclick="window.location.href='/expenses'">
+        <span class="st-row-main">
+          <span class="st-row-name">Expenses</span>
+          <span class="st-row-why">Spend by category, month over month</span>
+        </span>
+        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+
+    <div class="st-sec-head">
+      <span class="st-sec-title">Download your data</span>
+      <span class="st-sec-note">CSV</span>
+    </div>
+    <div class="st-list">
+      <button type="button" class="st-row" onclick="downloadIngredients(event)">
+        <span class="st-row-main"><span class="st-row-name">Items</span><span class="st-row-why">Stock, costs, suppliers</span></span>
+        <span class="st-row-val">.csv</span>
+      </button>
+      <button type="button" class="st-row" onclick="downloadOrders(event)">
+        <span class="st-row-main"><span class="st-row-name">Orders</span><span class="st-row-why">Orders and their product lines</span></span>
+        <span class="st-row-val">.csv</span>
+      </button>
+      <button type="button" class="st-row" onclick="downloadExpenses(event)">
+        <span class="st-row-main"><span class="st-row-name">Expenses</span><span class="st-row-why">Expenses with itemised lines</span></span>
+        <span class="st-row-val">.csv</span>
+      </button>
+      <button type="button" class="st-row" onclick="downloadChangeLogs(event)">
+        <span class="st-row-main"><span class="st-row-name">Change log</span><span class="st-row-why">Every inventory movement</span></span>
+        <span class="st-row-val">.csv</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-help" onclick="if(event.target===this)closeSettingsGroup('help')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Help</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('help')" aria-label="Close">&times;</button></div>
+    <div class="st-list">
+      <button type="button" class="st-row" onclick="window.location.href='/quick-guide'">
+        <span class="st-row-main">
+          <span class="st-row-name">Quick guide</span>
+          <span class="st-row-why">How items, products, orders and expenses fit together</span>
+        </span>
+        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <button type="button" class="st-row" onclick="retakeOnboarding()">
+        <span class="st-row-main">
+          <span class="st-row-name">Retake onboarding</span>
+          <span class="st-row-why">Walk through setup again</span>
+        </span>
+        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stGroupModal-account" onclick="if(event.target===this)closeSettingsGroup('account')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Account</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('account')" aria-label="Close">&times;</button></div>
+    <div class="st-list">
+      <div class="st-row">
+        <span class="st-row-main"><span class="st-row-name">Email</span></span>
+        <span class="st-row-val" id="userEmailVal">Loading…</span>
+      </div>
+      <button type="button" class="st-row" onclick="openChangePasswordModal()">
+        <span class="st-row-main"><span class="st-row-name">Password</span></span>
+        <span class="st-row-val">Change</span>
+      </button>
+      <button type="button" class="st-row" onclick="logout()">
+        <span class="st-row-main"><span class="st-row-name">Sign out</span></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Danger zone: each row states exactly what it destroys -->
+<div class="modal-overlay" id="stGroupModal-danger" onclick="if(event.target===this)closeSettingsGroup('danger')">
+  <div class="modal-content st-group-content">
+    <div class="st-group-head"><h3>Danger zone</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('danger')" aria-label="Close">&times;</button></div>
+    <div class="st-list">
+      <button type="button" class="st-row danger" onclick="openDeleteDataModal()">
+        <span class="st-row-main">
+          <span class="st-row-name">Delete all data</span>
+          <span class="st-row-why">Items, products, orders and expenses. Your account stays.</span>
+        </span>
+      </button>
+      <button type="button" class="st-row danger" onclick="openDeleteFilesModal()">
+        <span class="st-row-main">
+          <span class="st-row-name">Delete all files</span>
+          <span class="st-row-why" id="deleteFilesWhy">Receipts and screenshots</span>
+        </span>
+      </button>
+      <button type="button" class="st-row danger" onclick="openDeleteAccountModal()">
+        <span class="st-row-main">
+          <span class="st-row-name">Delete account</span>
+          <span class="st-row-why">Everything, permanently. Cancels your subscription.</span>
+        </span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Change Password Modal -->
@@ -1602,6 +1705,17 @@ async function removeAvatar() {
 
   $('stAvatar').innerHTML = '<span id="avatarInitial">U</span>';
   $('avatarRemoveNote').style.display = 'none';
+}
+
+// Settings groups -- each row on the main list opens the matching
+// stGroupModal-<key> overlay. The content inside was moved here verbatim
+// from the old single-scroll page, so nothing about how it's populated or
+// how its own toggles/buttons work needed to change.
+function openSettingsGroup(key) {
+  document.getElementById('stGroupModal-' + key)?.classList.add('active');
+}
+function closeSettingsGroup(key) {
+  document.getElementById('stGroupModal-' + key)?.classList.remove('active');
 }
 
 // Password functions
