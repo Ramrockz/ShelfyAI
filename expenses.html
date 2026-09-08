@@ -2006,17 +2006,6 @@ function _escExpenseAttr(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-// Recent vendor/date chips (16b) — vendors are derived from the expenses
-// already loaded for this page, no extra query needed.
-function _recentExpenseVendors() {
-  const seen = new Set(), out = [];
-  for (const e of expenses) {
-    const v = (e.vendor || '').trim();
-    if (v && !seen.has(v)) { seen.add(v); out.push(v); }
-    if (out.length >= 5) break;
-  }
-  return out;
-}
 // Same hostname -> label extraction ingredient-detail.html's reorder row
 // already uses for a source_url ("https://www.bramblesupply.com/..." ->
 // "Bramblesupply") -- most vendor info in this app lives there, on the
@@ -2056,18 +2045,19 @@ function _allExpenseVendors() {
   _ingredientVendorNames().forEach(add);
   return out;
 }
-// Blank field: the 5 most recent vendors, same as before. Once typing
-// starts, this switches to a live filter of every known vendor containing
-// what's typed so far (e.g. "tex" -> "Textilgroßhandel") -- an exact match
-// already fully typed isn't offered again.
+// Nothing shows until the user actually types something -- a blank-field
+// default of "recent vendors" surfaced stray/test data (e.g. a leftover
+// expense with vendor "Test") with no typing at all, which read as a bug
+// rather than a suggestion.
 function renderExpenseVendorChips() {
   const box = document.getElementById('ecVendors');
   if (!box) return;
   const current = document.getElementById('expense_vendor').value.trim();
+  if (!current) { box.innerHTML = ''; return; }
   const currentLc = current.toLowerCase();
-  const matches = current
-    ? _allExpenseVendors().filter(v => v.toLowerCase().includes(currentLc) && v.toLowerCase() !== currentLc).slice(0, 5)
-    : _recentExpenseVendors();
+  const matches = _allExpenseVendors()
+    .filter(v => v.toLowerCase().includes(currentLc) && v.toLowerCase() !== currentLc)
+    .slice(0, 5);
   box.innerHTML = matches.map(v =>
     `<button type="button" class="ec-chip" onclick="setExpenseVendor('${_escExpenseAttr(v)}')">${_escExpenseAttr(v)}</button>`
   ).join('');
