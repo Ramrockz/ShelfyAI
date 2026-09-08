@@ -167,10 +167,9 @@
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
             '<span id="aimErrorText"></span>' +
           '</div>' +
-          '<div class="aim-sec-head"><span class="aim-sec-title">Scan cost</span></div>' +
           '<div class="aim-quote" id="aimQuote"></div>' +
           '<div class="aim-foot">' +
-            '<button type="button" class="aim-cta" id="aimCta">Read</button>' +
+            '<button type="button" class="aim-cta" id="aimCta">Scan</button>' +
             '<button type="button" class="aim-ghost" id="aimManual"></button>' +
           '</div>' +
         '</div>' +
@@ -285,6 +284,13 @@
 
   var processingFile = false;
 
+  // This modal instance is a long-lived singleton (appended to <body> once,
+  // reused across every open) -- without revoking, each file swap/clear
+  // leaks the previous blob: URL for the life of the page.
+  function _revokePreview() {
+    if (file && file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+  }
+
   function setFile(raw) {
     processingFile = true; errorMsg = null; errorCode = null; render();
     compressImage(raw).then(function (processed) {
@@ -292,11 +298,16 @@
       var err = validate(processed);
       if (err) { errorMsg = err; render(); return; }
       if (file) replaced = file.name;
-      file = { raw: processed, name: processed.name, sizeMB: processed.size / 1048576, isPdf: /\.pdf$/i.test(processed.name) };
+      _revokePreview();
+      file = {
+        raw: processed, name: processed.name, sizeMB: processed.size / 1048576,
+        isPdf: /\.pdf$/i.test(processed.name),
+        previewUrl: /^image\//.test(processed.type) ? URL.createObjectURL(processed) : null
+      };
       render();
     });
   }
-  function clearFile() { file = null; replaced = null; errorMsg = null; errorCode = null; render(); }
+  function clearFile() { _revokePreview(); file = null; replaced = null; errorMsg = null; errorCode = null; render(); }
 
   // Desktop "Take photo" doesn't have a camera to open -- reuse the same
   // screen-capture pattern already established in expenses.html/orders.html
@@ -340,18 +351,22 @@
   function renderFile() {
     var wrap = document.getElementById('aimFileWrap');
     if (!file) { wrap.innerHTML = ''; return; }
-    var meta = running
-      ? 'Reading… ' + Math.round(fakePct) + '%'
-      : file.sizeMB.toFixed(1) + ' MB · ' + cost() + ' scan';
+    // File size and scan count aren't useful here -- size is meaningless to
+    // the user and the scan cost already has its own line below -- so the
+    // meta line now only appears during the actual read, showing progress.
+    var meta = running ? 'Scanning… ' + Math.round(fakePct) + '%' : '';
+    var thumb = file.previewUrl
+      ? '<img src="' + file.previewUrl + '" alt="">'
+      : (file.isPdf ? 'PDF' : 'IMG');
     wrap.innerHTML =
       '<div class="aim-sec-head"><span class="aim-sec-title">File</span>' +
         (replaced ? '<span class="aim-sec-note">replaced ' + esc(replaced) + '</span>' : '') + '</div>' +
       '<div class="aim-card">' +
         '<div class="aim-f">' +
-          '<span class="aim-f-thumb">' + (file.isPdf ? 'PDF' : 'IMG') + '</span>' +
+          '<span class="aim-f-thumb">' + thumb + '</span>' +
           '<span class="aim-f-main">' +
             '<span class="aim-f-name">' + esc(file.name) + '</span>' +
-            '<span class="aim-f-meta">' + esc(meta) + '</span>' +
+            (meta ? '<span class="aim-f-meta">' + esc(meta) + '</span>' : '') +
             (running ? '<span class="aim-f-track"><i style="width:' + fakePct + '%"></i></span>' : '') +
           '</span>' +
           (running ? '' : '<button type="button" class="aim-f-x" id="aimFileRemove" aria-label="Remove file">' + ICON_X + '</button>') +
@@ -366,7 +381,7 @@
     var short = left <= 0;
     el.innerHTML =
       '<div class="aim-q-why"' + (short ? ' data-state="warn"' : '') + '>' +
-        (short ? 'No scans left — buy a pack, or enter it by hand below.' : 'This costs 1 scan · ' + left + ' left') +
+        (short ? 'No scans left — buy a pack, or enter it by hand below.' : 'This scan reduces your AI scans by 1. You have ' + left + ' left this month.') +
       '</div>' +
       (short ? '<button type="button" class="aim-q-buy" id="aimBuyBtn">' + buyLabel() + '</button>' : '');
     if (short && !scanPackPrice) {
@@ -399,7 +414,7 @@
     var k = KINDS[currentEntity];
     var cta = document.getElementById('aimCta');
     cta.disabled = running || processingFile || !usable() || !affordable();
-    cta.textContent = running ? 'Reading…' : processingFile ? 'Preparing…' : !affordable() ? 'Not enough scans' : 'Read';
+    cta.textContent = running ? 'Scanning…' : processingFile ? 'Preparing…' : !affordable() ? 'Not enough scans' : 'Scan';
     document.getElementById('aimManual').textContent = 'Enter this ' + k.manualLabel + ' by hand instead';
   }
 
@@ -606,6 +621,7 @@
     opts = opts || {};
     if (!KINDS[entityType]) { console.error('[ShelfyImportModal] Unknown entity type:', entityType); return; }
     currentEntity = entityType; currentOpts = opts;
+    _revokePreview();
     file = null; replaced = null; running = false; errorMsg = null; errorCode = null; usage = null;
     clearInterval(fakeTimer); fakeTimer = null;
     ensureSheet();

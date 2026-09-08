@@ -907,7 +907,12 @@ input[type="number"] {
 #shelfyUrlImportSheet .modal-content { max-width: 440px; padding: 0 !important; }
 .aim-content { display: flex; flex-direction: column; }
 .aim-head { display: flex; align-items: center; gap: 4px; padding: 8px 20px 4px 8px; }
-.aim-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-top: 6px; }
+/* padding-top only when there's a 2nd line (.aim-sub, e.g. url-import-modal.js's
+   subtitle) to visually balance against -- applied unconditionally before,
+   it pushed a single-line title (e.g. import-modal.js's "Import Item", no
+   .aim-sub) down out of vertical center against the close button beside it. */
+.aim-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.aim-titles:has(.aim-sub) { padding-top: 6px; }
 .aim-title { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
 .aim-sub { font-size: 12px; color: var(--text-faint, var(--text-muted)); margin-top: 2px; }
 .aim-close { flex-shrink: 0; width: 40px; height: 40px; border: none;
@@ -969,7 +974,8 @@ input[type="number"] {
 .aim-f { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; }
 .aim-f-thumb { width: 40px; height: 50px; flex-shrink: 0; border-radius: 8px; background: var(--bg-inner);
                border: 1px solid var(--border-hair, var(--border)); display: flex; align-items: center; justify-content: center;
-               color: var(--text-faint, var(--text-muted)); font-size: 9.5px; font-weight: 800; letter-spacing: .04em; }
+               color: var(--text-faint, var(--text-muted)); font-size: 9.5px; font-weight: 800; letter-spacing: .04em; overflow: hidden; }
+.aim-f-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .aim-f-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .aim-f-name { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aim-f-meta { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
@@ -979,14 +985,14 @@ input[type="number"] {
            color: var(--text-ghost, #cbd5e1); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .aim-f-x:active { background: var(--bg-inner); color: var(--danger); }
 
-.aim-quote { margin: 0 20px; padding: 12px 14px; border-radius: 14px; background: var(--bg-inner); }
+.aim-quote { margin: 14px 20px 0; padding: 10px 14px; border-radius: 12px; background: var(--bg-inner); }
 .aim-q-top { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
 .aim-q-l { font-size: 13.5px; font-weight: 700; }
 .aim-q-r { margin-left: auto; font-size: 12px; color: var(--text-muted); }
 .aim-q-track { display: flex; gap: 3px; height: 6px; margin-top: 8px; }
 .aim-q-seg { border-radius: 99px; background: var(--border-hair, var(--border)); overflow: hidden; }
 .aim-q-seg > i { display: block; height: 100%; border-radius: 99px; }
-.aim-q-why { font-size: 11.5px; color: var(--text-muted); margin-top: 7px; }
+.aim-q-why { font-size: 12px; color: var(--text-muted); }
 .aim-q-why[data-state="warn"] { color: var(--warning, #b45309); font-weight: 700; }
 .aim-q-buy { margin-top: 10px; width: 100%; height: 40px; border: none; border-radius: 10px;
              background: var(--accent-deep, var(--accent)); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit; }
