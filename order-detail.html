@@ -1523,11 +1523,6 @@
             <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"></span>
             <div class="ec-hint" id="ecLCostHint"></div>
           </div>
-          <div class="ec-field">
-            <label class="ec-label" for="ecLTotal">Line total</label>
-            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
-            <div class="ec-hint">Type either one — the other follows.</div>
-          </div>
         </div>
         <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this order</button>
       </div>
@@ -3199,24 +3194,13 @@ function ecRenderCostHint() {
 
 function ecRenderLineFoot() {
   const q = _ecDraft.qty, c = _ecDraft.cost;
-  document.getElementById('ecLineTally').innerHTML = q
-    ? `${q} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
-    : `Set a quantity<b>$0.00</b>`;
+  document.getElementById('ecLineTally').innerHTML = `<b>$${(q * c).toFixed(2)}</b>`;
   document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
   ecRenderCostHint();
 }
 function ecSyncTotal() {
   _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
   _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
-  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
-  ecRenderLineFoot();
-}
-function ecSyncFromTotal() {
-  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
-  if (_ecDraft.qty > 0) {
-    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
-    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
-  }
   ecRenderLineFoot();
 }
 function ecStepQty(d) {
