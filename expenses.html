@@ -431,7 +431,11 @@
     font: 800 14.5px inherit; font-family: inherit; cursor: pointer;
   }
   .fab-pill:active { transform: scale(0.96); }
-  @media (min-width: 769px) { .fab-pill { bottom: 24px; } }
+  /* Desktop: hidden, not just repositioned -- a camera-first quick action
+     doesn't make sense without a phone camera, and it was overlapping the
+     chat widget's own FAB in the same corner. The sidebar "+ New Expense"
+     button and empty-state CTAs still reach the same method-selection menu. */
+  @media (min-width: 769px) { .fab-pill { display: none; } }
 
   .exp-summary { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 20px; }
   .exp-summary-main { flex: 1; }
