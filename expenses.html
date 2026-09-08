@@ -754,10 +754,13 @@
                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ec-cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   /* Attribute sub-filter (19d) -- cascading chips scoped to whichever
-     category is currently selected. */
-  .ec-attr-bar { display: none; gap: 6px; padding: 0 16px 10px; overflow-x: auto;
-                 scrollbar-width: none; -ms-overflow-style: none; }
-  .ec-attr-bar::-webkit-scrollbar { display: none; }
+     category is currently selected. Wraps instead of scrolling horizontally
+     -- a single scrollable row squeezed several chips (colors + sizes both)
+     into a sliver of width with no visible scroll affordance, cutting the
+     later ones off entirely instead of just requiring a scroll. Wrapping
+     grows the bar's own height as needed instead of clipping; the results
+     list below it is flex:1 so it simply gives up the room. */
+  .ec-attr-bar { display: none; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
   .ec-attr-bar.visible { display: flex; }
   /* Was .ec-chip (a near-invisible light-gray-on-light-gray tag meant for
      the vendor quick-picks, not this) -- same pill look/accent color as
