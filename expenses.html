@@ -1153,9 +1153,7 @@
               <span class="ec-qty-center">
                 <span class="ec-qty-line">
                   <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
-                  <span class="ec-qty-unit" id="ecLUnit"></span>
                 </span>
-                <span class="ec-qty-status" id="ecLStatus"></span>
               </span>
               <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
             </div>
@@ -1166,11 +1164,6 @@
               <label class="ec-label" for="ecLCost">Unit cost</label>
               <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"><span id="ecLPerUnit" style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-faint,var(--text-muted));"></span></span>
               <div class="ec-hint" id="ecLCostHint"></div>
-            </div>
-            <div class="ec-field">
-              <label class="ec-label" for="ecLTotal">Line total</label>
-              <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
-              <div class="ec-hint">Type either one — the other follows.</div>
             </div>
           </div>
           <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
@@ -2404,7 +2397,6 @@ function ecOpenLine(ingredientId, existingId) {
   _ecDraft = { qty: sel ? sel.quantity : 1, cost: defaultCost };
 
   document.getElementById('ecLineName').textContent = ing.name;
-  document.getElementById('ecLUnit').textContent = ing.unit || '';
   document.getElementById('ecLPerUnit').textContent = 'per ' + (ing.unit || 'unit');
   document.getElementById('ecLQty').value = _ecDraft.qty;
   document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
@@ -2413,20 +2405,6 @@ function ecOpenLine(ingredientId, existingId) {
 
   ecSyncTotal();
   ecShowPane('line');
-}
-
-function ecRenderProjection() {
-  const ing = _ecIngredient;
-  const q = _ecDraft.qty;
-  const stock = parseFloat(ing.quantity) || 0;
-  const minStock = parseFloat(ing.min_stock) || 0;
-  const after = Math.round((stock + q) * 100) / 100;
-  const clears = minStock > 0 && stock < minStock && after >= minStock;
-  const st = document.getElementById('ecLStatus');
-  st.innerHTML = q
-    ? `${_escExpenseAttr(ing.unit || '')} · stock ${stock} → <b>${after}</b>${clears ? ' · clears the alert' : ''}`
-    : _escExpenseAttr(ing.unit || '');
-  clears ? st.setAttribute('data-state', 'clears') : st.removeAttribute('data-state');
 }
 
 function ecRenderCostHint() {
@@ -2449,26 +2427,13 @@ function ecRenderCostHint() {
 
 function ecRenderLineFoot() {
   const q = _ecDraft.qty, c = _ecDraft.cost;
-  document.getElementById('ecLineTally').innerHTML = q
-    ? `${q} ${_escExpenseAttr(_ecIngredient.unit || '')} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
-    : `Set a quantity<b>$0.00</b>`;
+  document.getElementById('ecLineTally').innerHTML = `<b>$${(q * c).toFixed(2)}</b>`;
   document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
-  ecRenderProjection();
   ecRenderCostHint();
 }
 function ecSyncTotal() {
   _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
   _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
-  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
-  ecRenderLineFoot();
-}
-// Typing a line total derives the unit cost — receipts print totals, not unit costs.
-function ecSyncFromTotal() {
-  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
-  if (_ecDraft.qty > 0) {
-    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
-    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
-  }
   ecRenderLineFoot();
 }
 function ecStepQty(d) {
