@@ -30,16 +30,44 @@ if (typeof window.supabaseClient === 'undefined') {
 
 const supabaseClient = window.supabaseClient;
 
-// When a new service worker takes control (after a deploy), reload once so the
-// page runs the freshly-cached code instead of the previous version. Without
-// this, code changes only take effect on the SECOND visit after a deploy.
+// When a new service worker takes control (after a deploy), offer a refresh
+// so the page can run the freshly-cached code instead of the previous
+// version. This used to reload immediately and unconditionally -- but the
+// new worker finishes installing in the background on its own schedule,
+// which could land at ANY moment (mid-form, mid-upload, mid-anything), and
+// an unannounced reload silently threw away whatever the user was doing.
+// Now it's the user's call, not a surprise.
 if ('serviceWorker' in navigator) {
-  let _swRefreshing = false;
+  let _bannerShown = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (_swRefreshing) return;
-    _swRefreshing = true;
-    window.location.reload();
+    if (_bannerShown) return;
+    _bannerShown = true;
+    showUpdateAvailableBanner();
   });
+}
+
+function showUpdateAvailableBanner() {
+  if (document.getElementById('shelfy-update-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'shelfy-update-banner';
+  bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;'
+    + 'display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;'
+    + 'padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));'
+    + 'background:#0f172a;color:#fff;font-size:13px;font-weight:600;'
+    + 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;'
+    + 'box-shadow:0 -2px 10px rgba(0,0,0,.2);';
+  bar.innerHTML =
+    '<span>A new version of ShelfyAI is available.</span>' +
+    '<button type="button" id="shelfy-update-refresh" style="background:#06b6d4;color:#fff;border:none;'
+      + 'border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Refresh</button>' +
+    '<button type="button" id="shelfy-update-dismiss" aria-label="Dismiss" style="background:none;border:none;'
+      + 'color:#94a3b8;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;font-family:inherit;">&times;</button>';
+  document.body.appendChild(bar);
+  document.getElementById('shelfy-update-refresh').addEventListener('click', () => window.location.reload());
+  document.getElementById('shelfy-update-dismiss').addEventListener('click', () => bar.remove());
+  // Dismissing doesn't lose the update -- the new worker already controls
+  // this page's future requests regardless; it just applies on whatever
+  // reload/navigation happens next instead of this exact moment.
 }
 
 // List of protected pages (without .html extension to match clean URLs)
