@@ -1100,11 +1100,10 @@
 
         <div class="ec-sec-head">
           <span class="ec-sec-title">Stock it adds</span>
-          <span class="ec-sec-note" id="ecLineNote">Add at least one item</span>
         </div>
         <div class="ec-group" id="ecLines"></div>
 
-        <div class="ec-note">Stock goes up when you save. The total is the sum of the items below.</div>
+        <div class="ec-note">Stock goes up when you save.</div>
       </div>
 
       <div class="ec-foot">
@@ -2039,27 +2038,17 @@ function _expenseLinesTotal() {
 }
 
 function renderExpenseLines() {
-  const noteEl = document.getElementById('ecLineNote');
   const box = document.getElementById('ecLines');
   if (!box) return;
   const lines = selectedExpenseIngredients;
-  if (noteEl) {
-    noteEl.textContent = lines.length
-      ? `${lines.length} item${lines.length !== 1 ? 's' : ''} · $${_expenseLinesTotal().toFixed(2)}`
-      : 'Optional';
-  }
 
   const rowsHtml = lines.map(sel => {
-    const ing = allIngredients.find(i => i.id === sel.id);
     const cost = parseFloat(sel.cost) || 0;
-    const stock = ing ? (parseFloat(ing.quantity) || 0) : 0;
-    const unit = ing ? (ing.unit || '') : '';
     const qty = parseFloat(sel.quantity) || 0;
     return `
       <div class="ec-line" onclick="ecOpenLine(null, '${sel.id}')">
         <span class="ec-l-main">
           <span class="ec-l-name">${_escExpenseAttr(sel.name)}</span>
-          <span class="ec-l-meta">$${cost.toFixed(2)}${unit ? '/' + _escExpenseAttr(unit) : ''} · stock <b>${stock} → ${stock + qty}</b></span>
         </span>
         <span class="ec-step">
           <button type="button" onclick="event.stopPropagation(); bumpExpenseLine('${sel.id}', -1)" aria-label="One fewer">−</button>
@@ -2474,11 +2463,7 @@ function onExpenseEdit() {
   const vendor = document.getElementById('expense_vendor').value.trim();
   const total = _expenseLinesTotal();
   const tallyEl = document.getElementById('ecTally');
-  if (tallyEl) {
-    tallyEl.innerHTML = selectedExpenseIngredients.length
-      ? `${selectedExpenseIngredients.length} item${selectedExpenseIngredients.length !== 1 ? 's' : ''} → stock<b>$${total.toFixed(2)}</b>`
-      : `Add an item to calculate the total<b>$0.00</b>`;
-  }
+  if (tallyEl) tallyEl.innerHTML = `<b>$${total.toFixed(2)}</b>`;
   const saveBtn = document.getElementById('ecSave');
   if (saveBtn) saveBtn.disabled = !(vendor && selectedExpenseIngredients.length && total > 0);
 }
