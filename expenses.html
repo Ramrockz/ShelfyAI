@@ -730,7 +730,7 @@
   .ec-save { width: 100%; height: 50px; margin-top: 8px; border: none; border-radius: 13px;
              background: var(--accent-deep, var(--accent)); color: #fff; font-size: 16px; font-weight: 800;
              letter-spacing: -.01em; cursor: pointer; }
-  .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; }
+  .ec-save:disabled { background: var(--bg-inner); color: var(--text-faint, var(--text-muted)); cursor: default; opacity: .6; pointer-events: none; }
 
   /* Item picker, as a sheet — positioned within the modal overlay itself */
   .ec-sheet { position: fixed; inset: 0; z-index: 10020; background: rgba(15,23,42,.45);
@@ -1092,8 +1092,8 @@
         <div class="ec-glabel">The receipt</div>
         <div class="ec-group">
           <div class="ec-field">
-            <label class="ec-label" for="expense_vendor">Vendor</label>
-            <input class="ec-input" type="text" id="expense_vendor" placeholder="e.g., Bramble Supply Co" oninput="onExpenseEdit()" autocomplete="off">
+            <label class="ec-label" for="expense_vendor">Vendor <span style="color:var(--danger);">*</span></label>
+            <input class="ec-input" type="text" id="expense_vendor" placeholder="e.g., Bramble Supply Co" oninput="onExpenseEdit()" autocomplete="off" required>
             <div class="ec-chips" id="ecVendors"></div>
           </div>
           <div class="ec-field">
@@ -1168,9 +1168,18 @@
           </div>
           <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
         </div>
-        <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
-          <div class="ec-tally" id="ecLineTally"></div>
-          <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+        <div class="ec-foot" style="padding:0 0 calc(12px + env(safe-area-inset-bottom));">
+          <button type="button" class="rcm-tog" id="ecUpdateStockTog" aria-pressed="true" onclick="toggleEcUpdateStock()">
+            <span class="rcm-tog-main">
+              <span class="rcm-tog-name">Update inventory</span>
+              <span class="rcm-tog-why" id="ecUpdateStockWhy"></span>
+            </span>
+            <span class="rcm-tog-sw"></span>
+          </button>
+          <div style="padding:10px 16px 0;">
+            <div class="ec-tally" id="ecLineTally"></div>
+            <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2117,6 +2126,7 @@ function bumpExpenseLine(id, delta) {
 // ---------- Item picker (18b) — pick, then set quantity + what it cost ----------
 let _ecInsights = null;   // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }, loaded once per picker session
 let _ecEditingId = null;  // id of the selectedExpenseIngredients line being edited, or null when adding new
+let _ecUpdateStock = true;  // whether saving this line should top up the ingredient's stock
 let _ecIngredient = null; // the ingredients-table row currently open in pane 2
 let _ecDraft = null;      // { qty, cost } being edited in pane 2
 let _ecCategoryFilter = null; // category name to filter pane 1's item list by, or null for all
@@ -2403,8 +2413,22 @@ function ecOpenLine(ingredientId, existingId) {
   document.getElementById('ecLRemove').hidden = !sel;
   document.getElementById('ecLineSaveBtn').textContent = sel ? 'Save changes' : 'Add to expense';
 
+  _ecUpdateStock = sel ? (sel.updateStock !== false) : true;
+  _ecRenderUpdateStockTog();
+
   ecSyncTotal();
   ecShowPane('line');
+}
+
+function _ecRenderUpdateStockTog() {
+  document.getElementById('ecUpdateStockTog').setAttribute('aria-pressed', _ecUpdateStock ? 'true' : 'false');
+  document.getElementById('ecUpdateStockWhy').textContent = _ecUpdateStock
+    ? 'This item’s stock is topped up when you save'
+    : 'Records the cost only — stock isn’t changed';
+}
+function toggleEcUpdateStock() {
+  _ecUpdateStock = !_ecUpdateStock;
+  _ecRenderUpdateStockTog();
 }
 
 function ecRenderCostHint() {
@@ -2446,9 +2470,9 @@ function ecSaveLine() {
   const ing = _ecIngredient;
   if (_ecEditingId) {
     const sel = selectedExpenseIngredients.find(s => s.id === _ecEditingId);
-    if (sel) { sel.quantity = _ecDraft.qty; sel.cost = _ecDraft.cost; }
+    if (sel) { sel.quantity = _ecDraft.qty; sel.cost = _ecDraft.cost; sel.updateStock = _ecUpdateStock; }
   } else {
-    selectedExpenseIngredients.push({ id: ing.id, name: ing.name, quantity: _ecDraft.qty, cost: _ecDraft.cost });
+    selectedExpenseIngredients.push({ id: ing.id, name: ing.name, quantity: _ecDraft.qty, cost: _ecDraft.cost, updateStock: _ecUpdateStock });
   }
   closeExpenseItemPicker();
   onExpenseEdit();
@@ -2615,7 +2639,8 @@ async function saveExpense(event) {
         ingredient_id: sel.id,
         name: sel.name,
         quantity: sel.quantity,
-        cost_per_unit: parseFloat(sel.cost) || 0
+        cost_per_unit: parseFloat(sel.cost) || 0,
+        update_stock: sel.updateStock !== false
       }))
     };
 
@@ -2638,14 +2663,15 @@ async function saveExpense(event) {
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
-    // At least one line is now required to save at all (see saveExpense()'s
-    // validation above), so this is always true for a fresh save -- kept as
-    // a length check (rather than hardcoded true) since it still guards
-    // correctly when editing an expense saved before items were required.
-    const inventoryUpdated = selectedExpenseIngredients.length > 0;
+    // Per-line "Update inventory" toggle (see ecOpenLine/toggleEcUpdateStock)
+    // lets a line be recorded as spend only, so this can no longer just be
+    // "were there any lines at all" -- it now reflects whether any of them
+    // actually opted in to topping up stock.
+    const inventoryUpdated = selectedExpenseIngredients.some(i => i.updateStock !== false);
     const changesSummary = [];
     if (inventoryUpdated && !editingExpenseId) {
       for (const item of selectedExpenseIngredients) {
+        if (item.updateStock === false) continue;
         const ing = allIngredients.find(i => i.id === item.id);
         if (ing && item.quantity > 0) {
           const oldQty = parseFloat(ing.quantity) || 0;
