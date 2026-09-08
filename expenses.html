@@ -2017,12 +2017,31 @@ function _recentExpenseVendors() {
   }
   return out;
 }
+// Every distinct vendor ever used (not capped at 5 like the recent list
+// above) -- the pool renderExpenseVendorChips() filters against once the
+// user actually starts typing.
+function _allExpenseVendors() {
+  const seen = new Set(), out = [];
+  for (const e of expenses) {
+    const v = (e.vendor || '').trim();
+    if (v && !seen.has(v)) { seen.add(v); out.push(v); }
+  }
+  return out;
+}
+// Blank field: the 5 most recent vendors, same as before. Once typing
+// starts, this switches to a live filter of every known vendor containing
+// what's typed so far (e.g. "tex" -> "Textilgroßhandel") -- an exact match
+// already fully typed isn't offered again.
 function renderExpenseVendorChips() {
   const box = document.getElementById('ecVendors');
   if (!box) return;
   const current = document.getElementById('expense_vendor').value.trim();
-  box.innerHTML = _recentExpenseVendors().map(v =>
-    `<button type="button" class="ec-chip" aria-pressed="${v === current}" onclick="setExpenseVendor('${_escExpenseAttr(v)}')">${_escExpenseAttr(v)}</button>`
+  const currentLc = current.toLowerCase();
+  const matches = current
+    ? _allExpenseVendors().filter(v => v.toLowerCase().includes(currentLc) && v.toLowerCase() !== currentLc).slice(0, 5)
+    : _recentExpenseVendors();
+  box.innerHTML = matches.map(v =>
+    `<button type="button" class="ec-chip" onclick="setExpenseVendor('${_escExpenseAttr(v)}')">${_escExpenseAttr(v)}</button>`
   ).join('');
 }
 function setExpenseVendor(name) {
