@@ -754,11 +754,20 @@
                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ec-cat-row-count { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   /* Attribute sub-filter (19d) -- cascading chips scoped to whichever
-     category is currently selected. Reuses .ec-chip's existing look. */
+     category is currently selected. */
   .ec-attr-bar { display: none; gap: 6px; padding: 0 16px 10px; overflow-x: auto;
                  scrollbar-width: none; -ms-overflow-style: none; }
   .ec-attr-bar::-webkit-scrollbar { display: none; }
   .ec-attr-bar.visible { display: flex; }
+  /* Was .ec-chip (a near-invisible light-gray-on-light-gray tag meant for
+     the vendor quick-picks, not this) -- same pill look/accent color as
+     recipes.html's .prod-attr-chip and operations.html's .recipe-attr-chip,
+     so this matches the category/attribute filter styling used everywhere
+     else instead of blending into the sheet's own background. */
+  .ec-attr-chip { flex-shrink: 0; padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+                  background: var(--bg-panel); color: var(--text-muted); font-size: 12px; font-weight: 600;
+                  cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .ec-attr-chip[aria-pressed="true"] { background: rgba(6,182,212,0.13); border-color: var(--accent); color: var(--accent); }
   /* Opens on top of #ecItemSheet (z-index 10020) -- ID selector so it can't
      lose a cascade tie the way a class-selector override has before. */
   #ecCatSheet { z-index: 10030 !important; }
@@ -2160,7 +2169,7 @@ function _ecRenderAttrSubfilter(cat) {
     const sorted = Array.from(groupedByKey.get(key).entries()).sort((a, b) => sortValues(key, a[1], b[1]));
     sorted.forEach(([valueKey, displayValue]) => {
       const active = _ecAttrValueFilters.has(key) && _ecAttrValueFilters.get(key).has(valueKey);
-      chips.push(`<button type="button" class="ec-chip" aria-pressed="${active}" onclick="ecToggleAttrFilter('${key.replace(/'/g,"\\'")}','${valueKey.replace(/'/g,"\\'")}')">${_escExpenseAttr(displayValue)}</button>`);
+      chips.push(`<button type="button" class="ec-attr-chip" aria-pressed="${active}" onclick="ecToggleAttrFilter('${key.replace(/'/g,"\\'")}','${valueKey.replace(/'/g,"\\'")}')">${_escExpenseAttr(displayValue)}</button>`);
     });
   });
   el.innerHTML = chips.join('');
