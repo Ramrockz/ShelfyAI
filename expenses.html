@@ -2017,15 +2017,43 @@ function _recentExpenseVendors() {
   }
   return out;
 }
-// Every distinct vendor ever used (not capped at 5 like the recent list
-// above) -- the pool renderExpenseVendorChips() filters against once the
-// user actually starts typing.
-function _allExpenseVendors() {
+// Same hostname -> label extraction ingredient-detail.html's reorder row
+// already uses for a source_url ("https://www.bramblesupply.com/..." ->
+// "Bramblesupply") -- most vendor info in this app lives there, on the
+// ingredient that was bought FROM that vendor, not on any expense record.
+function _vendorNameFromUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    const label = host.split('.')[0];
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  } catch (e) {
+    return null;
+  }
+}
+function _ingredientVendorNames() {
   const seen = new Set(), out = [];
+  for (const ing of allIngredients) {
+    const url = ing.source_url;
+    if (!url || !url.trim()) continue;
+    const name = _vendorNameFromUrl(url);
+    if (name && !seen.has(name)) { seen.add(name); out.push(name); }
+  }
+  return out;
+}
+// Every distinct vendor ever used on an expense, PLUS every vendor name
+// derivable from an ingredient's own source_url (not capped at 5 like the
+// recent list above) -- the pool renderExpenseVendorChips() filters
+// against once the user actually starts typing. Case-insensitive dedup so
+// an ingredient-derived guess doesn't shadow/duplicate a vendor name
+// that's already been typed exactly on a past expense.
+function _allExpenseVendors() {
+  const seenLc = new Set(), out = [];
+  const add = v => { const lc = v.toLowerCase(); if (!seenLc.has(lc)) { seenLc.add(lc); out.push(v); } };
   for (const e of expenses) {
     const v = (e.vendor || '').trim();
-    if (v && !seen.has(v)) { seen.add(v); out.push(v); }
+    if (v) add(v);
   }
+  _ingredientVendorNames().forEach(add);
   return out;
 }
 // Blank field: the 5 most recent vendors, same as before. Once typing
