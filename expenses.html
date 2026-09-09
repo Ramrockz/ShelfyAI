@@ -3255,11 +3255,23 @@ async function showIngredientMappingModal(expenseData) {
     console.log('Available ingredients to match:', allIngredientsCache.length);
 
     let bestMatch = null;
+    let topScore = 0;
+    let ambiguous = false;
     if (itemName && allIngredientsCache.length > 0) {
       const scored = allIngredientsCache
         .map(ing => ({ ing, score: matchIngredientWithAttributes(item, ing) }))
         .filter(x => x.score > 0)
         .sort((a, b) => b.score - a.score);
+
+      // Two+ items can score identically (e.g. a Black M and a Black L both
+      // partially matching a scanned "Black" line with no size read) --
+      // matches[0] is then an arbitrary pick, not a confident one. Flagged
+      // below regardless of the actual score, same as orders.html's own
+      // recipe-matching does for sales.
+      if (scored.length > 0) {
+        topScore = scored[0].score;
+        ambiguous = scored.filter(s => s.score === topScore).length > 1;
+      }
 
       console.log('Top 3 matches:', scored.slice(0, 3).map(s => {
         let attrs = s.ing.attributes || s.ing.custom_attributes;
@@ -3342,7 +3354,10 @@ async function showIngredientMappingModal(expenseData) {
       ingredientName: bestMatch?.name || '',
       matchedIngredient: bestMatch || null,
       quantity: itemQty || 1,
-      price: bestMatch ? ((bestMatch.cost_per_unit || bestMatch.price || 0) * itemQty) : itemPrice
+      price: bestMatch ? ((bestMatch.cost_per_unit || bestMatch.price || 0) * itemQty) : itemPrice,
+      matchScore: bestMatch ? topScore : 0,
+      ambiguous,
+      confirmed: false
     });
   });
 
@@ -3353,9 +3368,25 @@ async function showIngredientMappingModal(expenseData) {
   document.getElementById('ingredientMappingModal').classList.add('active');
 }
 
+// "ok"/"todo"/"none" mirrors orders.html's own _rcmLineState() for matching
+// a scanned order line to a product -- same three states, same idea: only a
+// confident, unambiguous auto-match is trusted silently, everything else
+// gets flagged for a look instead of being applied without comment.
+function _expItemState(item) {
+  if (!item.ingredientId) return 'none';
+  if (item.ambiguous && !item.confirmed) return 'todo';
+  return (item.confirmed || (item.matchScore || 0) >= 0.85) ? 'ok' : 'todo';
+}
+function _expItemWhy(item, state) {
+  if (state === 'ok') return item.confirmed ? 'You picked this' : 'Likely match';
+  if (state === 'todo') return item.ambiguous ? 'Matches multiple items equally — check which one' : 'Not sure this is right — check it';
+  return 'No item matches this';
+}
+const _EXP_STATE_COLOR = { ok: 'var(--text-muted)', todo: 'var(--warning)', none: 'var(--danger)' };
+
 function renderDetectedItems() {
   const container = document.getElementById('detectedItemsList');
-  
+
   if (mappedItems.length === 0) {
     container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No items detected. Add manually below.</div>';
     return;
@@ -3370,9 +3401,13 @@ function renderDetectedItems() {
         .join(' · ');
       attributesText = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attrs}</div>`;
     }
-    
+
+    const state = _expItemState(item);
+    const why = _expItemWhy(item, state);
+    const detectedNameEsc = (item.detectedName || 'this item').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
     return `
-    <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+    <div style="background: var(--bg-panel); border: 1px solid ${state === 'ok' ? 'var(--border)' : _EXP_STATE_COLOR[state]}; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
           <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;">Detected Item</div>
@@ -3382,21 +3417,27 @@ function renderDetectedItems() {
         <button onclick="removeDetectedItem(${index})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 0 8px;">×</button>
       </div>
 
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: ${_EXP_STATE_COLOR[state]};">
+        <span>${state === 'ok' ? '✓' : state === 'todo' ? '⚠' : '✕'}</span>
+        <span>${why}</span>
+      </div>
+
       <div style="position: relative; margin-bottom: 12px;">
         <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Item</label>
         <div style="position: relative;">
-          <input type="text" 
-            id="ingredient_search_${index}" 
+          <input type="text"
+            id="ingredient_search_${index}"
             value="${item.ingredientName}"
             placeholder="Search items..."
             autocomplete="off"
             oninput="searchIngredientForItem(${index}, this.value)"
             onfocus="showDropdownForItem(${index})"
             onkeydown="if(event.key==='Escape') hideDropdown()"
-            style="width: 100%; padding: 10px ${item.ingredientId ? '38px' : '10px'} 10px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+            style="width: 100%; padding: 10px ${item.ingredientId ? '38px' : '10px'} 10px 10px; border: 1px solid ${state === 'ok' ? 'var(--border)' : _EXP_STATE_COLOR[state]}; border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
           ${item.ingredientId ? `<button onclick="clearIngredientMatch(${index})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)';this.style.color='var(--text-main)'" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)'">×</button>` : ''}
         </div>
         <div id="dropdown_${index}" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 150px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+        ${state === 'none' ? `<button type="button" onclick="openQuickCreateIngredient(${index}, '${detectedNameEsc}')" style="margin-top: 8px; width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer;">+ Create "${item.detectedName ? item.detectedName.replace(/</g,'&lt;') : 'new item'}" as a new item</button>` : ''}
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -3576,6 +3617,10 @@ function selectIngredientForItem(index, ingredientId) {
     mappedItems[index].ingredientId = ing.id;
     mappedItems[index].ingredientName = ing.name;
     mappedItems[index].matchedIngredient = ing;
+    // A deliberate pick is always trusted, regardless of what the
+    // auto-match's own score/ambiguity said about the ingredient it landed
+    // on (which may not even be this one).
+    mappedItems[index].confirmed = true;
     // Auto-calculate price: unit price * quantity
     const unitPrice = parseFloat(ing.cost_per_unit || ing.price) || 0;
     const quantity = parseFloat(mappedItems[index].quantity) || 1;
@@ -3590,6 +3635,9 @@ function clearIngredientMatch(index) {
   mappedItems[index].ingredientId = null;
   mappedItems[index].ingredientName = '';
   mappedItems[index].matchedIngredient = null;
+  mappedItems[index].confirmed = false;
+  mappedItems[index].matchScore = 0;
+  mappedItems[index].ambiguous = false;
   document.getElementById(`ingredient_search_${index}`).value = '';
   renderDetectedItems();
 }
@@ -3722,9 +3770,16 @@ async function saveQuickIngredient(e) {
     // expense form's item picker (21c) rather than the receipt-mapping flow
     // — add it straight to this expense's lines instead.
     if (quickCreateTargetIndex !== null && mappedItems[quickCreateTargetIndex]) {
-      mappedItems[quickCreateTargetIndex].ingredientId = newIngredient.id;
-      mappedItems[quickCreateTargetIndex].ingredientName = newIngredient.name;
-      document.getElementById(`ingredient_search_${quickCreateTargetIndex}`).value = newIngredient.name;
+      const target = mappedItems[quickCreateTargetIndex];
+      target.ingredientId = newIngredient.id;
+      target.ingredientName = newIngredient.name;
+      target.matchedIngredient = newIngredient;
+      // Creating it right here from a "no match" line is itself a
+      // deliberate pick -- same as choosing one from the search dropdown.
+      target.confirmed = true;
+      const unitPrice = parseFloat(newIngredient.cost_per_unit) || 0;
+      target.price = unitPrice * (parseFloat(target.quantity) || 1);
+      renderDetectedItems();
     } else if (quickCreateTargetIndex === null && typeof ecOpenLine === 'function') {
       document.getElementById('ecItemSheet').dataset.open = '1';
       ecOpenLine(newIngredient.id, null);
