@@ -495,6 +495,34 @@
     });
   }
 
+  // Storage-limit check before pre-uploading the file (see the "expenses"
+  // bucket upload below) -- mirrors order-detail.html's/expense-detail.html's
+  // own checkStorageLimit(), just without a page to call it from since this
+  // sheet is shared across ingredient/expense/order intake. Failing the
+  // check never blocks the scan itself (the AI read already happened by the
+  // time this runs) -- it only skips saving the photo, which caller pages
+  // already handle gracefully via a null receiptUrl.
+  async function hasStorageSpace(sb, userId, fileSize) {
+    try {
+      var res = await sb.from('user_settings').select('storage_used_bytes, storage_limit_bytes').eq('user_id', userId).single();
+      var settings = res && res.data;
+      if (!settings) return true;
+      var available = (settings.storage_limit_bytes || 0) - (settings.storage_used_bytes || 0);
+      return fileSize <= available;
+    } catch (e) { return true; } // allow upload if the check itself fails
+  }
+
+  function showStorageFullNotice() {
+    var el = document.createElement('div');
+    el.textContent = 'Storage is full — saved without the photo.';
+    el.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);'
+      + 'background:var(--bg-panel,#fff);color:var(--text-main,#0f172a);border:1px solid var(--border,#e2e8f0);'
+      + 'padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);'
+      + 'z-index:99999;max-width:calc(100vw - 32px);text-align:center;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 4000);
+  }
+
   function copyErrCode() {
     var el = document.getElementById('aimErrCard');
     var text = (el && el.dataset.reqCode) || '';
@@ -583,15 +611,22 @@
       }
 
       // Pre-upload the file for a receipt/reference URL, same "expenses"
-      // storage bucket every entity's own flow already uses today.
+      // storage bucket every entity's own flow already uses today. Skipped
+      // (not blocked -- the scan above already succeeded) when there's no
+      // room left, same as the manual "attach a receipt" flows elsewhere.
       var receiptUrl = null;
+      var storageFull = false;
       try {
-        var ts = Date.now();
-        var path = session.user.id + '/' + ts + '_' + file.raw.name;
-        var upRes = await sb.storage.from('expenses').upload(path, file.raw, { cacheControl: '3600', upsert: false });
-        if (!upRes.error) {
-          var pub = sb.storage.from('expenses').getPublicUrl(path);
-          receiptUrl = pub && pub.data && pub.data.publicUrl;
+        if (await hasStorageSpace(sb, session.user.id, file.raw.size)) {
+          var ts = Date.now();
+          var path = session.user.id + '/' + ts + '_' + file.raw.name;
+          var upRes = await sb.storage.from('expenses').upload(path, file.raw, { cacheControl: '3600', upsert: false });
+          if (!upRes.error) {
+            var pub = sb.storage.from('expenses').getPublicUrl(path);
+            receiptUrl = pub && pub.data && pub.data.publicUrl;
+          }
+        } else {
+          storageFull = true;
         }
       } catch (upEx) { console.error('[ShelfyImportModal] Receipt upload failed:', upEx); }
 
@@ -600,6 +635,7 @@
       var cb = currentOpts.onImported;
       lastScanEntity = currentEntity;
       close();
+      if (storageFull) showStorageFullNotice();
       if (cb) cb(data, receiptUrl);
     } catch (err) {
       stopFakeProgress();
