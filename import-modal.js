@@ -343,13 +343,27 @@
 
   function renderDrop() {
     var k = KINDS[currentEntity];
-    document.getElementById('aimDrop').style.display = file ? 'none' : '';
+    // Also hidden while processingFile -- quickStart() hands a file straight
+    // to setFile() before this sheet is ever shown, but setFile() only
+    // populates `file` itself once compressImage() resolves. Checking `file`
+    // alone here left the "Take a photo / Upload a file" chooser visible
+    // for that whole stretch, right after the user had already picked one.
+    document.getElementById('aimDrop').style.display = (file || processingFile) ? 'none' : '';
     document.getElementById('aimDropT').textContent = k.dropLabel;
     document.getElementById('aimDropS').textContent = 'JPG, PNG or PDF up to 4MB';
   }
 
   function renderFile() {
     var wrap = document.getElementById('aimFileWrap');
+    if (!file && processingFile) {
+      wrap.innerHTML =
+        '<div class="aim-sec-head"><span class="aim-sec-title">File</span></div>' +
+        '<div class="aim-card"><div class="aim-f">' +
+          '<span class="aim-f-thumb">…</span>' +
+          '<span class="aim-f-main"><span class="aim-f-name">Preparing your file…</span></span>' +
+        '</div></div>';
+      return;
+    }
     if (!file) { wrap.innerHTML = ''; return; }
     // File size and scan count aren't useful here -- size is meaningless to
     // the user and the scan cost already has its own line below -- so the
