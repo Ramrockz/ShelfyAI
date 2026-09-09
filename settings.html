@@ -512,6 +512,14 @@
                      color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; flex-shrink: 0; }
   .st-group-content .st-sec-head:first-of-type { padding-top: 4px; }
 
+  /* "Remove photo" -- a third line inside the identity card's text stack
+     (next to the avatar/name/hint) instead of its own row below the card,
+     so it only shows up when there's actually a photo to remove and never
+     shifts the layout of anything else on the page. */
+  .st-who-remove { display: block; background: none; border: none; padding: 0; margin-top: 3px;
+                   color: var(--accent-deep, var(--accent)); font-size: 11.5px; font-weight: 700;
+                   cursor: pointer; font-family: inherit; }
+
   .modal-content h3 {
     margin: 0 0 16px 0;
     font-size: 20px;
@@ -899,11 +907,9 @@
     <span class="st-who-main">
       <span class="st-who-name" id="userEmail">Loading…</span>
       <span class="st-who-mail" id="stAvatarHint">Tap your initials to change your photo</span>
+      <button type="button" class="st-who-remove" id="avatarRemoveBtn" onclick="removeAvatar()" style="display:none;">Remove photo</button>
     </span>
     <span class="st-who-plan" id="tierBadge">Free</span>
-  </div>
-  <div class="st-note" id="avatarRemoveNote" style="display:none">
-    <button type="button" style="background:none;border:none;color:var(--accent-deep,var(--accent));font-size:11.5px;font-weight:700;padding:0;cursor:pointer;font-family:inherit;" onclick="removeAvatar()">Remove photo</button>
   </div>
 
   <!-- 26: settings, grouped into a short list -- each row opens the
@@ -1373,10 +1379,10 @@ async function loadSettings() {
     // Load avatar
     if (settings.avatar_url) {
       $('stAvatar').innerHTML = `<img src="${settings.avatar_url}" alt="Avatar">`;
-      $('avatarRemoveNote').style.display = '';
+      $('avatarRemoveBtn').style.display = '';
     } else {
       $('stAvatar').innerHTML = '<span id="avatarInitial">U</span>';
-      $('avatarRemoveNote').style.display = 'none';
+      $('avatarRemoveBtn').style.display = 'none';
     }
 
     // Load theme preference (visual state only -- theme.js already applied
@@ -1659,7 +1665,7 @@ async function handleAvatarUpload(event) {
   try { sessionStorage.setItem('shelfy_user_avatar', avatarData); } catch (e) {}
 
   $('stAvatar').innerHTML = `<img src="${avatarData}" alt="Avatar">`;
-  $('avatarRemoveNote').style.display = '';
+  $('avatarRemoveBtn').style.display = '';
 }
 
 async function removeAvatar() {
@@ -1682,7 +1688,7 @@ async function removeAvatar() {
   sessionStorage.setItem('shelfy_user_avatar', 'null');
 
   $('stAvatar').innerHTML = '<span id="avatarInitial">U</span>';
-  $('avatarRemoveNote').style.display = 'none';
+  $('avatarRemoveBtn').style.display = 'none';
 }
 
 // Settings groups -- each row on the main list opens the matching
