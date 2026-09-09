@@ -214,17 +214,11 @@ async function _loadStoreList(manage, targetId) {
 
 // A reload is still needed -- every page's own data is fetched scoped to
 // the active store, so there's no way to refresh it in place without
-// re-running that page's own load from scratch -- but tapping a store row
-// and having the screen just go blank gives no sense of what's happening,
-// especially now that this can be triggered from deep inside a small
-// Settings sheet. Show what's about to happen first, and confirm it
-// worked once the reload lands, via a flag the fresh page checks for.
+// re-running that page's own load from scratch. The reload itself gives no
+// feedback of its own, so a flag here gets picked up by the fresh page to
+// confirm the switch actually landed (see showSwitchedStoreToast() below).
 function switchStore(storeId, storeName) {
   if (storeId === _getStoreId()) { closeStoreModal(); return; }
-  const listEl = document.getElementById(_currentStoreList.targetId);
-  if (listEl) {
-    listEl.innerHTML = `<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Switching to ${storeName.replace(/</g, '&lt;')}…</p>`;
-  }
   localStorage.setItem('shelfy_store_id', storeId);
   localStorage.setItem('shelfy_store_name', storeName);
   sessionStorage.setItem('shelfy_switched_store_name', storeName);
@@ -233,9 +227,7 @@ function switchStore(storeId, storeName) {
   // would briefly render the PREVIOUS store's real orders/ingredients/etc.
   // before the fresh, newly store-scoped fetch overwrote it moments later.
   if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
-  // Brief pause so the "Switching to..." message above is actually seen,
-  // not just flashed for one frame before the reload wipes it.
-  setTimeout(() => window.location.reload(), 400);
+  window.location.reload();
 }
 
 // Runs once per page load (this script is on every page) -- picks up the
