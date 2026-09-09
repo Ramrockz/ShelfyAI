@@ -912,7 +912,7 @@
   <div class="st-list">
     <button type="button" class="st-row" onclick="openSettingsGroup('usage')">
       <span class="st-row-main">
-        <span class="st-row-name">AI &amp; Plan</span>
+        <span class="st-row-name">Limits and Plan</span>
         <span class="st-row-why">Scans, receipt storage, subscription</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
@@ -976,23 +976,20 @@
      existing population/toggle code needs no changes at all. -->
 <div class="modal-overlay" id="stGroupModal-usage" onclick="if(event.target===this)closeSettingsGroup('usage')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>AI &amp; Plan</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('usage')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><h3>Limits and Plan</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('usage')" aria-label="Close">&times;</button></div>
 
-    <div class="st-sec-head">
-      <span class="st-sec-title">AI scans</span>
-      <span class="st-sec-note">shared by items, orders, expenses</span>
-    </div>
+    <div class="st-sec-head"><span class="st-sec-title">AI scans</span></div>
     <div class="st-pool" id="stPool"></div>
     <div class="st-note" id="stPoolNote"></div>
 
     <div class="st-sec-head"><span class="st-sec-title">Receipt storage</span></div>
     <div class="st-storage" id="stStorage"></div>
 
-    <div class="st-sec-head"><span class="st-sec-title">Plan</span></div>
-    <div class="st-list" id="stPlanRows"></div>
-    <!-- Populated by the existing loadSubscriptionInfo()/updateSubscriptionUI() (below, unchanged) when the
-         user has an active paid subscription -- real Stripe customer-portal link, just needed a home. -->
-    <div class="st-list" id="upgradeRow" style="display:none;margin-top:10px;"></div>
+    <!-- "Plan" section (header + row) only exists when there's an active paid
+         subscription to manage -- loadSubscriptionInfo()/updateSubscriptionUI()
+         (below, unchanged) inject both together, so free-tier users don't see
+         a dangling header with nothing under it. -->
+    <div id="upgradeRow" style="display:none;"></div>
   </div>
 </div>
 
@@ -1473,7 +1470,6 @@ async function loadTierInformation(settings) {
 
   renderWho();
   renderPool();
-  renderPlanRows();
   await renderStoreRows();
   await loadStorageStats(tier);
 }
@@ -1509,21 +1505,6 @@ function renderPool() {
   $('stPoolNote').textContent = bL
     ? 'Monthly scans are used first; bought scans never expire and carry over.'
     : 'Bought scans are added on top of your monthly allowance and never expire.';
-}
-
-function renderPlanRows() {
-  const meta = PLAN_META[ST.tier] || PLAN_META.free;
-  $('stPlanRows').innerHTML = `
-    <button type="button" class="st-row" onclick="goToPlanPage()">
-      <span class="st-row-main"><span class="st-row-name">${esc(meta.label)} plan</span>
-      <span class="st-row-why">${meta.scans} scans · ${meta.storageMB} MB storage</span></span>
-      <span class="st-row-tag"${ST.tier !== 'free' ? ' data-paid="1"' : ''}>${ST.tier === 'pro' ? 'Top plan' : 'Change'}</span>
-    </button>
-    <button type="button" class="st-row" onclick="openStSheet('packs')">
-      <span class="st-row-main"><span class="st-row-name">Scan packs</span>
-      <span class="st-row-why">${bonusLeft()} bought scan${bonusLeft() === 1 ? '' : 's'} left</span></span>
-      <span class="st-row-tag">Buy more</span>
-    </button>`;
 }
 
 // Stores — real count/limit query (same as before); management itself stays
@@ -1575,10 +1556,7 @@ function updateStorageDisplay(usedBytes, limitBytes) {
   $('stStorage').innerHTML = `
     <div class="st-storage-top"><span class="st-storage-l">${mb(usedBytes)} of ${mb(limitBytes)}</span><span class="st-storage-r">${pct}% used</span></div>
     <div class="st-storage-track"><i style="width:${pct}%"${st ? ` data-state="${st}"` : ''}></i></div>
-    <div class="st-storage-why"${st ? ' data-state="warn"' : ''}>${
-      pct >= 100 ? 'Full — new receipt uploads will be refused. Delete files or upgrade.'
-      : st === 'warn' ? `${mb(Math.max(0, limitBytes - usedBytes))} left. Receipts and order screenshots you upload.`
-      : 'Receipts and order screenshots you upload.'}</div>`;
+    ${pct >= 100 ? `<div class="st-storage-why" data-state="warn">Full — new receipt uploads will be refused. Delete files or upgrade.</div>` : ''}`;
   const whyEl = $('deleteFilesWhy');
   if (whyEl) whyEl.textContent = `Receipts and screenshots — frees ${mb(usedBytes)}`;
 }
@@ -2410,10 +2388,13 @@ function updateSubscriptionUI(subscription) {
     
     upgradeRow.style.display = '';
     upgradeRow.innerHTML = `
-      <button type="button" class="st-row" onclick="openCustomerPortal()">
-        <span class="st-row-main"><span class="st-row-name">Manage subscription</span><span class="st-row-why">${billingText}</span></span>
-        <span class="st-row-val">Manage</span>
-      </button>
+      <div class="st-sec-head"><span class="st-sec-title">Plan</span></div>
+      <div class="st-list">
+        <button type="button" class="st-row" onclick="openCustomerPortal()">
+          <span class="st-row-main"><span class="st-row-name">Manage subscription</span><span class="st-row-why">${billingText}</span></span>
+          <span class="st-row-val">Manage</span>
+        </button>
+      </div>
     `;
   }
 }
