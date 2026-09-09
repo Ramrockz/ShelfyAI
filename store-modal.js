@@ -212,17 +212,53 @@ async function _loadStoreList(manage, targetId) {
   }
 }
 
+// A reload is still needed -- every page's own data is fetched scoped to
+// the active store, so there's no way to refresh it in place without
+// re-running that page's own load from scratch -- but tapping a store row
+// and having the screen just go blank gives no sense of what's happening,
+// especially now that this can be triggered from deep inside a small
+// Settings sheet. Show what's about to happen first, and confirm it
+// worked once the reload lands, via a flag the fresh page checks for.
 function switchStore(storeId, storeName) {
   if (storeId === _getStoreId()) { closeStoreModal(); return; }
+  const listEl = document.getElementById(_currentStoreList.targetId);
+  if (listEl) {
+    listEl.innerHTML = `<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Switching to ${storeName.replace(/</g, '&lt;')}…</p>`;
+  }
   localStorage.setItem('shelfy_store_id', storeId);
   localStorage.setItem('shelfy_store_name', storeName);
+  sessionStorage.setItem('shelfy_switched_store_name', storeName);
   // Every page's own "instant load from local cache" optimization keys its
   // cache flatly (not scoped per store), so without this the reload below
   // would briefly render the PREVIOUS store's real orders/ingredients/etc.
   // before the fresh, newly store-scoped fetch overwrote it moments later.
   if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
-  window.location.reload();
+  // Brief pause so the "Switching to..." message above is actually seen,
+  // not just flashed for one frame before the reload wipes it.
+  setTimeout(() => window.location.reload(), 400);
 }
+
+// Runs once per page load (this script is on every page) -- picks up the
+// flag switchStore() just left and confirms the switch actually landed,
+// since the reload itself gives no feedback of its own.
+(function showSwitchedStoreToast() {
+  var name;
+  try { name = sessionStorage.getItem('shelfy_switched_store_name'); } catch (e) { return; }
+  if (!name) return;
+  try { sessionStorage.removeItem('shelfy_switched_store_name'); } catch (e) {}
+  var show = function () {
+    var el = document.createElement('div');
+    el.textContent = 'Switched to ' + name;
+    el.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);'
+      + 'background:var(--bg-panel,#fff);color:var(--text-main,#0f172a);border:1px solid var(--border,#e2e8f0);'
+      + 'padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);'
+      + 'z-index:99999;max-width:calc(100vw - 32px);text-align:center;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 3500);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+  else show();
+})();
 
 function showNewStoreForm() {
   const btn = document.getElementById('addStoreBtn');
