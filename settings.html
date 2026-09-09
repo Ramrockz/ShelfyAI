@@ -45,6 +45,13 @@
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
 <script src="push-notifications.js"></script>
+<!-- Moved up from just before </body>: the Stores group now calls
+     _loadStoreList() directly during the page's own early init
+     (renderStoreRows(), inside loadSettings()) instead of only from a
+     button's onclick handler long after the page has settled, so this
+     needs to already be defined by the time that runs. -->
+<script src="store-modal.js"></script>
+<script src="switch-account-modal.js"></script>
 
 <style>
   .settings-container {
@@ -1006,7 +1013,7 @@
       <span class="st-sec-title">Stores</span>
       <span class="st-sec-note" id="stStoreNote"></span>
     </div>
-    <div class="st-list" id="stStoreRows"></div>
+    <div id="stStoreListInline"></div>
   </div>
 </div>
 
@@ -1513,18 +1520,11 @@ function renderPool() {
     : 'Bought scans are added on top of your monthly allowance and never expire.';
 }
 
-// Stores — real count/limit query (same as before); management itself stays
-// in the existing store-modal.js sheet rather than being rebuilt here.
+// Stores — the actual list (switch/rename/delete) renders straight into
+// this group instead of behind a "Manage stores" row that opened the same
+// store-modal.js sheet the top-nav's own "Switch account" already does.
 async function renderStoreRows() {
-  $('stStoreRows').innerHTML = `
-    <button type="button" class="st-row" onclick="openStoreModal && openStoreModal(true)">
-      <span class="st-row-main"><span class="st-row-name">Manage stores</span><span class="st-row-why">Rename, delete, switch</span></span>
-      ${CHEV}
-    </button>
-    <button type="button" class="st-row" onclick="switchAccount()">
-      <span class="st-row-main"><span class="st-row-name">Switch account</span><span class="st-row-why">Use a different ShelfyAI login</span></span>
-      ${CHEV}
-    </button>`;
+  if (typeof _loadStoreList === 'function') await _loadStoreList(true, 'stStoreListInline');
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
@@ -2671,9 +2671,6 @@ window.handleSubscribe = async function() {
   }
 }
 </script>
-
-<script src="store-modal.js"></script>
-<script src="switch-account-modal.js"></script>
 
 <!-- Onboarding Modal -->
 <div id="onboardingModal" class="onboarding-overlay" style="display: none;">

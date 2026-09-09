@@ -96,6 +96,10 @@ function _openSwitchAccountModal() {
 }
 
 let _pendingDeleteStoreId = null;
+// Remembers which list was rendered last (mode + container) so a rename/
+// delete's own refresh (which has neither) puts the list back the way it
+// was instead of resetting to switch-only mode in the default container.
+let _currentStoreList = { manage: false, targetId: 'storeList' };
 
 // ── store modal ──────────────────────────────────────────────
 
@@ -116,8 +120,13 @@ function closeStoreModal() {
   if (input) input.value = '';
 }
 
-async function _loadStoreList(manage) {
-  const listEl = document.getElementById('storeList');
+// Renders the store list into any container -- Settings' own "Stores" group
+// renders it inline (via targetId) instead of routing through this sheet at
+// all, so switch/rename/delete are visible without an extra tap.
+async function _loadStoreList(manage, targetId) {
+  targetId = targetId || 'storeList';
+  _currentStoreList = { manage: !!manage, targetId };
+  const listEl = document.getElementById(targetId);
   if (!listEl) return;
   listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Loading...</p>';
 
@@ -276,7 +285,7 @@ async function saveRenameStore(storeId) {
       const storeEl = document.getElementById('userMenuStore');
       if (storeEl) storeEl.textContent = name;
     }
-    await _loadStoreList();
+    await _loadStoreList(_currentStoreList.manage, _currentStoreList.targetId);
   } catch (err) {
     console.error('Rename error:', err);
     if (input) input.style.borderColor = '#ef4444';
@@ -330,7 +339,7 @@ async function _doDeleteStore() {
       window.currentStoreName = null;
       window.location.reload();
     } else {
-      await _loadStoreList();
+      await _loadStoreList(_currentStoreList.manage, _currentStoreList.targetId);
     }
   } catch (err) {
     console.error('Delete store error:', err);
