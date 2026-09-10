@@ -3404,7 +3404,6 @@ function renderDetectedItems() {
 
     const state = _expItemState(item);
     const why = _expItemWhy(item, state);
-    const detectedNameEsc = (item.detectedName || 'this item').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
     return `
     <div style="background: var(--bg-panel); border: 1px solid ${state === 'ok' ? 'var(--border)' : _EXP_STATE_COLOR[state]}; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
@@ -3437,7 +3436,7 @@ function renderDetectedItems() {
           ${item.ingredientId ? `<button onclick="clearIngredientMatch(${index})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)';this.style.color='var(--text-main)'" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)'">×</button>` : ''}
         </div>
         <div id="dropdown_${index}" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 150px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
-        ${state === 'none' ? `<button type="button" onclick="openQuickCreateIngredient(${index}, '${detectedNameEsc}')" style="margin-top: 8px; width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer;">+ Create "${item.detectedName ? item.detectedName.replace(/</g,'&lt;') : 'new item'}" as a new item</button>` : ''}
+        ${state === 'none' ? `<button type="button" onclick="createIngredientFromDetectedLine(${index})" style="margin-top: 8px; width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer;">+ Create "${item.detectedName ? item.detectedName.replace(/</g,'&lt;') : 'new item'}" as a new item</button>` : ''}
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -3587,13 +3586,16 @@ function renderDropdownForItem(index, ingredients) {
   if (!dropdown) return;
 
   if (ingredients.length === 0) {
+    // Prefer what they actually typed here over the originally-detected
+    // name -- searching for something else means the scanned name wasn't
+    // what they were looking for.
     const searchTerm = document.getElementById(`ingredient_search_${index}`)?.value || '';
-    const detectedName = mappedItems[index]?.detectedName || searchTerm;
+    const detectedName = searchTerm || mappedItems[index]?.detectedName || '';
     dropdown.innerHTML = `
       <div style="text-align: center; padding: 30px 20px;">
         <img src="/cat_no_results.png" alt="No results" style="width:100px;height:auto;margin-bottom:12px;opacity:0.9;" />
         <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px 0;">No items found</p>
-        <button onclick="openQuickCreateIngredient(${index}, '${detectedName.replace(/'/g, "\\'")}')"
+        <button onclick="createIngredientFromDetectedLine(${index}, '${detectedName.replace(/'/g, "\\'")}')"
           style="padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
           onmouseover="this.style.opacity='0.9'"
           onmouseout="this.style.opacity='1'">+ Create New Ingredient</button>
@@ -3651,6 +3653,32 @@ let quickCreateTargetIndex = null;
 // lines instead when quickCreateTargetIndex is null).
 function openQuickCreateIngredientForExpense(name) {
   openQuickCreateIngredient(null, name);
+}
+
+// A detected line with no real match (or a search with no hits) is a
+// candidate for a brand-new item -- but ingredients.html owns the actual
+// "New Item" experience (category picker, attributes, image, barcode, all
+// of it), not the handful of fields in #quickCreateIngredientModal below.
+// Hand off the same way orders.html's createProductFromLine() already does
+// for a new product: warn that this scan's other matches are only
+// in-memory and won't survive the navigation, then prefill the real form
+// via the same shelfy_scan_prefill hand-off ingredients.html's own receipt
+// scan already uses.
+function createIngredientFromDetectedLine(index, overrideName) {
+  const m = mappedItems[index];
+  if (!m) return;
+  const hasProgress = mappedItems.some((it, i) => i !== index && it.ingredientId);
+  if (hasProgress && !confirm("Creating a new item will leave this scan — any items you've already matched won't be saved. Continue?")) return;
+  const detectedItem = { ...(m.detectedItem || {}) };
+  if (overrideName) detectedItem.name = overrideName;
+  else if (!detectedItem.name) detectedItem.name = m.detectedName;
+  if (!detectedItem.price && m.detectedPrice) detectedItem.price = m.detectedPrice;
+  if (!detectedItem.quantity && m.detectedQty) detectedItem.quantity = m.detectedQty;
+  sessionStorage.setItem('shelfy_scan_prefill', JSON.stringify({
+    kind: 'receipt',
+    data: { item: [detectedItem], vendor: pendingExpenseData?.vendor }
+  }));
+  window.location.href = '/ingredients';
 }
 
 function openQuickCreateIngredient(index, detectedName) {
