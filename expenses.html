@@ -3069,10 +3069,19 @@ function calculateExpenseSimilarity(str1, str2) {
   const s2 = str2.toLowerCase().trim();
   if (s1 === s2) return 1.0;
   if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-  const words1 = s1.split(/\s+/), words2 = s2.split(/\s+/);
-  const commonWords = words1.filter(w => words2.includes(w));
-  if (commonWords.length > 0) return 0.5 + (commonWords.length / Math.max(words1.length, words2.length)) * 0.3;
-  return 0;
+  const words1 = s1.split(/\s+/).filter(w => w.length > 2);
+  const words2 = s2.split(/\s+/).filter(w => w.length > 2);
+  if (!words1.length || !words2.length) return 0;
+  const set1 = new Set(words1), set2 = new Set(words2);
+  const common = [...set1].filter(w => set2.has(w));
+  if (!common.length) return 0;
+  // Overlap relative to the UNION of both names' words (Jaccard), not just
+  // "any common word gets a floor of 0.5" -- this catalog is almost
+  // entirely "Organic T-Shirt" variants, so two completely different
+  // products sharing only those generic words used to score as similar as
+  // a real match just because something, anything, overlapped.
+  const union = new Set([...set1, ...set2]);
+  return common.length / union.size;
 }
 
 // Same key/value normalization orders.html's/operations.html's own recipe
@@ -3289,14 +3298,21 @@ async function showIngredientMappingModal(expenseData) {
       }));
 
       if (scored.length > 0) {
-        // Group by SKU and sum scores
+        // Group by SKU and sum scores -- only a real, non-empty SKU means
+        // "these rows are variants of the same product" and should have
+        // their scores summed together. Grouping by sku || '' treated
+        // EVERY ingredient with no SKU at all as one giant "group", so
+        // several completely unrelated products' small individual scores
+        // summed past the acceptance threshold together, even though none
+        // of them was individually anywhere close to a real match.
         const skuGroups = new Map();
         scored.forEach(s => {
-          const sku = s.ing.sku || '';
-          if (!skuGroups.has(sku)) {
-            skuGroups.set(sku, { items: [], totalScore: 0 });
+          const sku = (s.ing.sku || '').trim();
+          const groupKey = sku || `__none_${s.ing.id}`;
+          if (!skuGroups.has(groupKey)) {
+            skuGroups.set(groupKey, { items: [], totalScore: 0 });
           }
-          const group = skuGroups.get(sku);
+          const group = skuGroups.get(groupKey);
           group.items.push(s);
           group.totalScore += s.score;
         });
@@ -3318,8 +3334,14 @@ async function showIngredientMappingModal(expenseData) {
           }
         }
 
-        // Use threshold on summed score
-        if (bestGroup && bestGroup.totalScore >= 0.6) {
+        // Use threshold on summed score -- but never when ambiguous (two+
+        // items tied for the top score): picking one anyway just because
+        // it happened to be first in array order isn't a match, it's a
+        // guess, and left unmatched-looking guesses in the field with
+        // nothing telling the user it was actually a coin flip.
+        if (ambiguous) {
+          console.log('✗ No match applied - top score is tied between multiple items, leaving unmatched for review');
+        } else if (bestGroup && bestGroup.totalScore >= 0.6) {
           // Use the highest individual match from this SKU group
           bestMatch = bestGroup.items[0].ing;
           console.log(`✓ Match found via SKU grouping: "${bestMatch.name}" (SKU: ${bestGroupSKU})`);
@@ -3368,8 +3390,12 @@ async function showIngredientMappingModal(expenseData) {
 // confident, unambiguous auto-match is trusted silently, everything else
 // gets flagged for a look instead of being applied without comment.
 function _expItemState(item) {
-  if (!item.ingredientId) return 'none';
+  // Ambiguous lines never get a bestMatch/ingredientId in the first place
+  // (see showIngredientMappingModal()) -- checked first so an unconfirmed
+  // tie still reads as "check this" instead of falling through to the
+  // plain "nothing matches" bucket.
   if (item.ambiguous && !item.confirmed) return 'todo';
+  if (!item.ingredientId) return 'none';
   // An auto-matched ingredientId already cleared the 0.6 acceptance bar in
   // showIngredientMappingModal() above -- no second, separately-calibrated
   // score threshold here, since that just relabeled genuinely good matches
@@ -3663,14 +3689,12 @@ function openQuickCreateIngredientForExpense(name) {
 }
 
 // A detected line with no real match (or a search with no hits) is a
-// candidate for a brand-new item -- but ingredients.html owns the actual
-// "New Item" experience (category picker, attributes, image, barcode, all
-// of it), not the handful of fields in #quickCreateIngredientModal below.
-// Hand off the same way orders.html's createProductFromLine() already does
-// for a new product: warn that this scan's other matches are only
-// in-memory and won't survive the navigation, then prefill the real form
-// via the same shelfy_scan_prefill hand-off ingredients.html's own receipt
-// scan already uses.
+// candidate for a brand-new item -- opens the inline #quickCreateIngredientModal
+// below, same modal the search dropdown's own "no results" state already
+// uses. Deliberately NOT a hand-off to ingredients.html's own New Item page
+// (tried that; a real navigation lost this scan's other matched lines and
+// showed a jarring native confirm() dialog first) -- this stays on the
+// current page so the receipt can be finished in one sitting.
 function createIngredientFromDetectedLine(index, overrideName) {
   const m = mappedItems[index];
   if (!m) return;
