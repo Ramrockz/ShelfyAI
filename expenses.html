@@ -3402,24 +3402,30 @@ function renderDetectedItems() {
       attributesText = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${attrs}</div>`;
     }
 
-    const state = _expItemState(item);
-    const why = _expItemWhy(item, state);
+    // A manually-added blank row (the "+ Add Manual Item" button below)
+    // never went through detection or matching at all -- showing it as a
+    // failed "DETECTED ITEM"/"No item matches this" made no sense for
+    // something the user is about to fill in themselves.
+    const state = item.isManual && !item.ingredientId ? null : _expItemState(item);
+    const why = state ? _expItemWhy(item, state) : '';
+    const stateColor = state ? _EXP_STATE_COLOR[state] : 'var(--border)';
+    const createLabel = item.detectedName ? `+ Create "${item.detectedName.replace(/</g, '&lt;')}" as a new item` : '+ Create new item';
 
     return `
-    <div style="background: var(--bg-panel); border: 1px solid ${state === 'ok' ? 'var(--border)' : _EXP_STATE_COLOR[state]}; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+    <div style="background: var(--bg-panel); border: 1px solid ${state === 'ok' || !state ? 'var(--border)' : stateColor}; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div style="flex: 1;">
-          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;">Detected Item</div>
-          <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">${item.detectedName || 'Unnamed Item'}</div>
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;">${item.isManual ? 'Manual Item' : 'Detected Item'}</div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">${item.detectedName || (item.isManual ? 'New item' : 'Unnamed Item')}</div>
           ${attributesText}
         </div>
         <button onclick="removeDetectedItem(${index})" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; padding: 0 8px;">×</button>
       </div>
 
-      <div style="display:flex; align-items:center; gap:6px; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: ${_EXP_STATE_COLOR[state]};">
+      ${state ? `<div style="display:flex; align-items:center; gap:6px; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: ${stateColor};">
         <span>${state === 'ok' ? '✓' : state === 'todo' ? '⚠' : '✕'}</span>
         <span>${why}</span>
-      </div>
+      </div>` : ''}
 
       <div style="position: relative; margin-bottom: 12px;">
         <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">Match to Item</label>
@@ -3432,11 +3438,11 @@ function renderDetectedItems() {
             oninput="searchIngredientForItem(${index}, this.value)"
             onfocus="showDropdownForItem(${index})"
             onkeydown="if(event.key==='Escape') hideDropdown()"
-            style="width: 100%; padding: 10px ${item.ingredientId ? '38px' : '10px'} 10px 10px; border: 1px solid ${state === 'ok' ? 'var(--border)' : _EXP_STATE_COLOR[state]}; border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
+            style="width: 100%; padding: 10px ${item.ingredientId ? '38px' : '10px'} 10px 10px; border: 1px solid ${state === 'ok' || !state ? 'var(--border)' : stateColor}; border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box;" />
           ${item.ingredientId ? `<button onclick="clearIngredientMatch(${index})" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; padding: 0; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-inner)';this.style.color='var(--text-main)'" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)'">×</button>` : ''}
         </div>
         <div id="dropdown_${index}" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; max-height: 150px; overflow-y: auto; display: none; z-index: 100; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
-        ${state === 'none' ? `<button type="button" onclick="createIngredientFromDetectedLine(${index})" style="margin-top: 8px; width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer;">+ Create "${item.detectedName ? item.detectedName.replace(/</g,'&lt;') : 'new item'}" as a new item</button>` : ''}
+        ${!item.ingredientId ? `<button type="button" onclick="createIngredientFromDetectedLine(${index})" style="margin-top: 8px; width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer;">${createLabel}</button>` : ''}
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -3468,6 +3474,7 @@ function renderDetectedItems() {
 
 function addManualIngredientRow() {
   mappedItems.push({
+    isManual: true,
     detectedName: '',
     detectedPrice: null,
     detectedQty: 1,
@@ -3667,18 +3674,12 @@ function openQuickCreateIngredientForExpense(name) {
 function createIngredientFromDetectedLine(index, overrideName) {
   const m = mappedItems[index];
   if (!m) return;
-  const hasProgress = mappedItems.some((it, i) => i !== index && it.ingredientId);
-  if (hasProgress && !confirm("Creating a new item will leave this scan — any items you've already matched won't be saved. Continue?")) return;
-  const detectedItem = { ...(m.detectedItem || {}) };
-  if (overrideName) detectedItem.name = overrideName;
-  else if (!detectedItem.name) detectedItem.name = m.detectedName;
-  if (!detectedItem.price && m.detectedPrice) detectedItem.price = m.detectedPrice;
-  if (!detectedItem.quantity && m.detectedQty) detectedItem.quantity = m.detectedQty;
-  sessionStorage.setItem('shelfy_scan_prefill', JSON.stringify({
-    kind: 'receipt',
-    data: { item: [detectedItem], vendor: pendingExpenseData?.vendor }
-  }));
-  window.location.href = '/ingredients';
+  // Stays right here instead of handing off to ingredients.html's own New
+  // Item page -- that meant a real navigation (and, on mobile, a jarring
+  // native confirm() dialog first), which lost this scan's other matched
+  // lines and interrupted finishing the receipt. Same inline quick-create
+  // modal the search dropdown's own "no results" state already opens.
+  openQuickCreateIngredient(index, overrideName || m.detectedName);
 }
 
 function openQuickCreateIngredient(index, detectedName) {
