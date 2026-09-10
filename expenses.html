@@ -1293,37 +1293,50 @@
 </div>
 
 <!-- Quick Create Item Modal -->
+<style>
+/* Same unit-chip look as ingredients.html's own New Item form (#manualModal) */
+.qic-units { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.qic-units::-webkit-scrollbar { display: none; }
+.qic-unit { flex-shrink: 0; height: 34px; min-width: 44px; padding: 0 11px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--bg-inner); color: var(--text-muted);
+            font-size: 13px; font-weight: 700; cursor: pointer; }
+.qic-unit[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+.qic-attr-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.qic-attr-row input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-inner); color: var(--text-main); font-size: 13px; box-sizing: border-box; }
+.qic-attr-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 0 6px; flex-shrink: 0; }
+</style>
 <div class="modal-overlay" id="quickCreateIngredientModal">
   <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Create New Item</h3>
-    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Fill in the details to create this item.</p>
+    <h3 style="margin-top:0; margin-bottom: 8px;">New item</h3>
+    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Something you buy and keep in stock.</p>
 
     <form id="quickIngredientForm" onsubmit="saveQuickIngredient(event)" novalidate>
       <div class="form-group">
-        <label for="quick_ing_name">Item Name *</label>
+        <label for="quick_ing_name">Name</label>
         <input type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil">
-      </div>
-
-      <div class="form-group">
-        <label for="quick_ing_quantity">Quantity *</label>
-        <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label for="quick_ing_cost">Cost per Unit *</label>
-          <input type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00">
+          <label for="quick_ing_quantity">Stock on hand</label>
+          <input type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" value="1">
         </div>
-
         <div class="form-group">
-          <label for="quick_ing_sku">SKU</label>
-          <input type="text" id="quick_ing_sku" placeholder="Stock Keeping Unit">
+          <label for="quick_ing_cost">Cost each</label>
+          <input type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00">
         </div>
       </div>
 
       <div class="form-group">
-        <label for="quick_ing_min_stock">Minimum Stock Alert *</label>
-        <input type="number" id="quick_ing_min_stock" step="0.01" placeholder="e.g., 10" required value="5">
+        <label>Unit</label>
+        <input type="hidden" id="quick_ing_unit" value="pcs">
+        <div class="qic-units" id="quickIngUnits"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="quick_ing_min_stock" id="quick_ing_alert_label">Alert below (pcs)</label>
+        <input type="number" id="quick_ing_min_stock" step="0.01" placeholder="e.g. 10" value="5">
+        <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Enter a quantity — you'll get a low-stock flag once stock drops below it. Leave blank for no alert.</div>
       </div>
 
       <div class="form-group">
@@ -1341,6 +1354,17 @@
           <button type="button" class="quick-ing-cat-chip" data-value="Consumable" onclick="selectQuickIngCategory('Consumable')" title="Consumable" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="flask-conical" style="width: 20px; height: 20px;"></i></button>
           <button type="button" class="quick-ing-cat-chip" data-value="Other" onclick="selectQuickIngCategory('Other')" title="Other" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-panel); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"><i data-lucide="tag" style="width: 20px; height: 20px;"></i></button>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Attributes</label>
+        <div id="quickIngAttrs"></div>
+        <button type="button" style="margin-top: 4px; width: 100%; padding: 9px; background: var(--bg-inner); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;" onclick="addQuickIngAttrRow()">+ Add Attribute</button>
+      </div>
+
+      <div class="form-group">
+        <label for="quick_ing_sku">SKU</label>
+        <input type="text" id="quick_ing_sku" placeholder="Stock Keeping Unit">
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 24px;">
@@ -3714,37 +3738,110 @@ function createIngredientFromDetectedLine(index, overrideName) {
   openQuickCreateIngredient(index, overrideName || m.detectedName);
 }
 
+// Same list/behavior as ingredients.html's own New Item form (#manualModal)
+// -- common units first, an arbitrary one still shown as its own pressed
+// chip if a scan came back with something not in this list.
+const QUICK_ING_UNITS = ['pcs', 'g', 'kg', 'ml', 'L', 'oz', 'lb', 'm', 'cm'];
+function renderQuickIngUnits() {
+  const current = document.getElementById('quick_ing_unit').value || 'pcs';
+  const box = document.getElementById('quickIngUnits');
+  if (!box) return;
+  box.innerHTML = QUICK_ING_UNITS.map(u =>
+    `<button type="button" class="qic-unit" aria-pressed="${u === current}" onclick="setQuickIngUnit('${u}')">${u}</button>`
+  ).join('') + `<button type="button" class="qic-unit" aria-pressed="${!QUICK_ING_UNITS.includes(current)}" onclick="otherQuickIngUnit()">${QUICK_ING_UNITS.includes(current) ? 'Other' : current.replace(/</g, '&lt;')}</button>`;
+  const label = document.getElementById('quick_ing_alert_label');
+  if (label) label.textContent = `Alert below (${current})`;
+}
+function setQuickIngUnit(u) {
+  document.getElementById('quick_ing_unit').value = u;
+  renderQuickIngUnits();
+}
+function otherQuickIngUnit() {
+  const v = prompt('Unit');
+  if (v && v.trim()) setQuickIngUnit(v.trim().slice(0, 8));
+}
+
+// Same idea as ingredients.html's own attribute rows, just without the
+// suggestion-chip UI -- one text-pair row per attribute, prefilled from
+// whatever the scan actually read (color, size, ...) so that data isn't
+// silently dropped just because it's being created from this screen
+// instead of the Inventory page.
+let _quickIngAttrRowId = 0;
+function addQuickIngAttrRow(key, value) {
+  const id = _quickIngAttrRowId++;
+  const box = document.getElementById('quickIngAttrs');
+  const row = document.createElement('div');
+  row.className = 'qic-attr-row';
+  row.dataset.rowId = id;
+  row.innerHTML = `
+    <input type="text" placeholder="e.g. Color" value="${(key || '').replace(/"/g, '&quot;')}">
+    <input type="text" placeholder="e.g. Black" value="${(value || '').replace(/"/g, '&quot;')}">
+    <button type="button" class="qic-attr-remove" onclick="this.closest('.qic-attr-row').remove()" aria-label="Remove attribute">×</button>
+  `;
+  box.appendChild(row);
+}
+function _collectQuickIngAttrs() {
+  const attrs = {};
+  document.querySelectorAll('#quickIngAttrs .qic-attr-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const key = inputs[0].value.trim();
+    const value = inputs[1].value.trim();
+    if (key && value) attrs[key] = value;
+  });
+  return attrs;
+}
+
 function openQuickCreateIngredient(index, detectedName) {
   quickCreateTargetIndex = index;
-  
+
   // Pre-fill form with detected data
   document.getElementById('quick_ing_name').value = detectedName || '';
-  
+
   // Pre-fill from detected data
+  const detected = mappedItems[index]?.detectedItem;
   const detectedPrice = mappedItems[index]?.detectedPrice;
   const detectedQty = mappedItems[index]?.detectedQty || 1;
-  const detectedSku = mappedItems[index]?.detectedItem?.SKU || mappedItems[index]?.detectedItem?.sku || '';
+  const detectedSku = detected?.SKU || detected?.sku || '';
   document.getElementById('quick_ing_quantity').value = detectedQty;
   document.getElementById('quick_ing_cost').value = detectedPrice ? parseFloat(detectedPrice).toFixed(2) : '';
   document.getElementById('quick_ing_sku').value = detectedSku;
   document.getElementById('quick_ing_min_stock').value = '5';
   document.getElementById('quick_ing_category').value = '';
-  
+
+  // Unit -- map to this list's exact strings so the right chip highlights,
+  // same mapping ingredients.html's own applyReceiptScanToManualModal() uses.
+  const rawUnit = (detected?.unit || '').toLowerCase();
+  const unitMap = {
+    'kilograms': 'kg', 'kg': 'kg', 'grams': 'g', 'g': 'g',
+    'liters': 'L', 'l': 'L', 'milliliters': 'ml', 'ml': 'ml',
+    'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
+    'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb', 'ounces': 'oz', 'oz': 'oz',
+    'meters': 'm', 'm': 'm', 'centimeters': 'cm', 'cm': 'cm'
+  };
+  document.getElementById('quick_ing_unit').value = rawUnit ? (unitMap[rawUnit] || 'pcs') : 'pcs';
+  renderQuickIngUnits();
+
+  // Attributes -- one row per {key: value} the scan actually read.
+  document.getElementById('quickIngAttrs').innerHTML = '';
+  if (detected?.attributes && typeof detected.attributes === 'object') {
+    Object.entries(detected.attributes).forEach(([k, v]) => { if (k && v) addQuickIngAttrRow(k, v); });
+  }
+
   // Reset category chips
   document.querySelectorAll('.quick-ing-cat-chip').forEach(chip => {
     chip.style.background = 'var(--bg-panel)';
     chip.style.borderColor = 'var(--border)';
     chip.style.color = 'var(--text-main)';
   });
-  
+
   // Show modal
   document.getElementById('quickCreateIngredientModal').classList.add('active');
-  
+
   // Initialize icons
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
-  
+
   // Hide the ingredient dropdown
   hideDropdown();
 }
@@ -3782,9 +3879,11 @@ async function saveQuickIngredient(e) {
   const name = document.getElementById('quick_ing_name').value.trim();
   const quantity = parseFloat(document.getElementById('quick_ing_quantity').value) || 0;
   const cost = parseFloat(document.getElementById('quick_ing_cost').value) || 0;
+  const unit = document.getElementById('quick_ing_unit').value || 'pcs';
   const sku = document.getElementById('quick_ing_sku').value.trim();
   const minStock = parseFloat(document.getElementById('quick_ing_min_stock').value) || 0;
   const category = document.getElementById('quick_ing_category').value;
+  const customAttributes = _collectQuickIngAttrs();
 
   if (!name || !category) {
     alert('Please fill in all required fields (Name, Category)');
@@ -3809,10 +3908,11 @@ async function saveQuickIngredient(e) {
         name: name,
         quantity: quantity,
         cost_per_unit: cost,
+        unit: unit,
         sku: sku,
         min_stock: minStock,
         category: category,
-        custom_attributes: {}
+        custom_attributes: customAttributes
       }])
       .select()
       .single();
