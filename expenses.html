@@ -1436,7 +1436,7 @@
               <input class="ic-input" type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" oninput="onQuickIngredientEdit()">
             </div>
             <div class="ic-field">
-              <label class="ic-label" for="quick_ing_cost" id="quick_ing_cost_label">Cost each</label>
+              <label class="ic-label" for="quick_ing_cost" id="quick_ing_cost_label">Cost each <span style="color: var(--danger);">*</span></label>
               <span class="ic-prefix"><span>$</span><input class="ic-input" type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00" oninput="onQuickIngredientEdit()"></span>
             </div>
           </div>
@@ -4018,7 +4018,7 @@ function onQuickIngredientEdit() {
   const isPcs = unit === 'pcs';
 
   const costLabel = document.getElementById('quick_ing_cost_label');
-  if (costLabel) costLabel.textContent = isPcs ? 'Cost each' : 'Total cost';
+  if (costLabel) costLabel.innerHTML = `${isPcs ? 'Cost each' : 'Total cost'} <span style="color: var(--danger);">*</span>`;
 
   const minStockLabel = document.getElementById('quick_ing_min_stock_label');
   if (minStockLabel) minStockLabel.textContent = `Alert below (${unit})`;
@@ -4203,6 +4203,20 @@ async function saveQuickIngredient(e) {
       nameEl.classList.add('input-invalid');
       setTimeout(() => nameEl.classList.remove('input-invalid'), 1500);
       nameEl.focus();
+      return;
+    }
+
+    // Unlike ingredients.html's own form (cost is marked required in markup
+    // but never actually checked, so it silently saves as $0), this flow
+    // is creating an item specifically to record what it cost on a
+    // receipt/expense -- a blank or zero cost here is never intentional.
+    const costEl = document.getElementById('quick_ing_cost');
+    if (!(parseFloat(costEl.value) > 0)) {
+      costEl.classList.remove('input-invalid');
+      void costEl.offsetWidth;
+      costEl.classList.add('input-invalid');
+      setTimeout(() => costEl.classList.remove('input-invalid'), 1500);
+      costEl.focus();
       return;
     }
 
