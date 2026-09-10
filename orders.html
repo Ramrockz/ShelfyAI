@@ -3625,6 +3625,8 @@ async function matchItemToRecipes(itemData) {
     const { data: ingredients } = await ingQuery;
     const ingredientMap = {};
     if (ingredients) ingredients.forEach(ing => { ingredientMap[ing.id] = ing; });
+    const ingSearchName = (itemData.name || '').toLowerCase().replace(/^(x?\d+x?\s+|\d+\s*x\s*)/i, '').trim();
+    const ingSWords = ingSearchName.split(/[\s\-_,/]+/).filter(w => w.length > 1);
     const scoredRecipes = recipes.map(recipe => {
       if (!recipe.components || recipe.components.length === 0) return { recipe, score: 0, matchReason: 'No ingredients' };
       let score = 0;
@@ -3643,6 +3645,21 @@ async function matchItemToRecipes(itemData) {
           const ingredientScore = attrKeysForIng.length > 0 ? attrMatches / attrKeysForIng.length : 0;
           if (ingredientScore > score) score = ingredientScore;
         } catch (e) { console.warn('Error parsing ingredient attributes:', e); }
+      }
+      // Attribute overlap alone isn't enough to call this a match -- two
+      // unrelated products can share a component ingredient with the same
+      // size/color (e.g. both use "White M" fabric). Require the scanned
+      // line's own name to share at least one real word with this recipe's
+      // name too, same principle as expenses.html's own
+      // matchIngredientWithAttributes() -- gates candidacy only, doesn't
+      // change the score itself, so the existing thresholds below (and
+      // _rcmLineState's) still mean what they meant before.
+      if (score > 0) {
+        const rn = (recipe.name || '').toLowerCase();
+        const rWords = rn.split(/[\s\-_,/]+/).filter(w => w.length > 1);
+        const forward = ingSWords.length > 0 ? ingSWords.filter(w => rWords.includes(w)).length / ingSWords.length : 0;
+        const backward = rWords.length > 0 ? rWords.filter(w => ingSWords.includes(w)).length / rWords.length : 0;
+        if (Math.max(forward, backward) === 0) return { recipe, score: 0, matchReason: 'No name relevance' };
       }
       return { recipe, score, matchReason: score === 1 ? 'Perfect match' : score >= 0.5 ? 'Partial match' : 'Low match' };
     });
@@ -3665,9 +3682,12 @@ async function matchItemToRecipes(itemData) {
         const forward = sWords.length > 0 ? sWords.filter(w => rWords.includes(w)).length / sWords.length : 0;
         const backward = rWords.length > 0 ? rWords.filter(w => sWords.includes(w)).length / rWords.length : 0;
         const nameScore = Math.max(forward, backward);
-        // Attribute value match: how many attr values appear literally in recipe name
+        // Attribute value match: how many attr values appear as a whole word in the
+        // recipe name -- a bare substring check here matched a size like "M" or "L"
+        // against literally any recipe name containing that letter sequence anywhere
+        // (e.g. "M" inside "Model", "L" inside "Backpack") regardless of relevance.
         const attrScore = attrValues.length > 0
-          ? attrValues.filter(v => rn.includes(v)).length / attrValues.length
+          ? attrValues.filter(v => v.length > 1 && rWords.includes(v)).length / attrValues.length
           : 0;
         // When attributes are present, they dominate; otherwise pure name score
         const score = attrValues.length > 0 ? (nameScore * 0.4 + attrScore * 0.6) : nameScore;

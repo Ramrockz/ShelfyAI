@@ -3075,80 +3075,75 @@ function calculateExpenseSimilarity(str1, str2) {
   return 0;
 }
 
+// Same key/value normalization orders.html's/operations.html's own recipe
+// matching already uses, so a German receipt's "Größe"/"Schwarz" and an
+// item's own "Size"/"Black" compare as the same attribute instead of two
+// unrelated strings.
+const EXP_ATTR_KEY_SYNONYMS = {
+  size: 'size', größe: 'size', groesse: 'size', grosse: 'size', grösse: 'size',
+  talla: 'size', tamaño: 'size', tamano: 'size',
+  color: 'color', colour: 'color', farbe: 'color'
+};
+const EXP_COLOR_VALUE_SYNONYMS = {
+  white: 'white', weiß: 'white', weiss: 'white', blanco: 'white', blanc: 'white',
+  black: 'black', schwarz: 'black', negro: 'black', noir: 'black',
+  red: 'red', rot: 'red', rojo: 'red', rouge: 'red',
+  blue: 'blue', blau: 'blue', azul: 'blue', bleu: 'blue',
+  green: 'green', grün: 'green', gruen: 'green', verde: 'green', vert: 'green',
+  yellow: 'yellow', gelb: 'yellow', amarillo: 'yellow', jaune: 'yellow',
+  pink: 'pink', rosa: 'pink', rose: 'pink',
+  purple: 'purple', lila: 'purple', violett: 'purple', morado: 'purple', violet: 'purple',
+  orange: 'orange', naranja: 'orange',
+  brown: 'brown', braun: 'brown', marrón: 'brown', marron: 'brown',
+  grey: 'grey', gray: 'grey', grau: 'grey', gris: 'grey',
+  beige: 'beige',
+  navy: 'navy', marineblau: 'navy'
+};
+function _expNormAttrKey(key) { return EXP_ATTR_KEY_SYNONYMS[String(key || '').trim().toLowerCase()] || String(key || '').trim().toLowerCase(); }
+function _expNormAttrValue(normKey, value) {
+  const clean = String(value == null ? '' : value).trim().toLowerCase();
+  return normKey === 'color' ? (EXP_COLOR_VALUE_SYNONYMS[clean] || clean) : clean;
+}
+function _expNormAttrs(attrs) {
+  let obj = attrs;
+  if (typeof obj === 'string') { try { obj = JSON.parse(obj); } catch (e) { obj = {}; } }
+  const out = {};
+  Object.entries(obj || {}).forEach(([k, v]) => { const nk = _expNormAttrKey(k); out[nk] = _expNormAttrValue(nk, v); });
+  return out;
+}
+
 function matchIngredientWithAttributes(detectedItem, ingredient) {
-  let score = 0;
-  let matches = 0;
-  let totalChecks = 0;
-  
-  // 1. Name similarity (weighted 40%)
   const itemName = detectedItem.name || '';
   const nameSimilarity = calculateExpenseSimilarity(itemName, ingredient.name);
-  score += nameSimilarity * 0.4;
-  totalChecks++;
-  
-  // 2. SKU match (weighted 30%) - only if both have SKUs
+
   const detectedSKU = detectedItem.SKU || detectedItem.sku;
   const ingredientSKU = ingredient.sku;
-  
-  if (detectedSKU && ingredientSKU) {
-    totalChecks++;
-    if (detectedSKU.toLowerCase() === ingredientSKU.toLowerCase()) {
-      score += 0.3; // Perfect SKU match
-      matches++;
-    }
+  const skuMatch = !!(detectedSKU && ingredientSKU && detectedSKU.toLowerCase() === ingredientSKU.toLowerCase());
+
+  // A match needs some real basis -- either the names actually resemble
+  // each other, or an exact SKU match stands on its own. Without this, two
+  // completely unrelated products that happen to share a generic attribute
+  // value (both come in "M", say) scored as a match, and an item that
+  // doesn't exist in inventory at all could still "win" against whatever
+  // coincidentally shared a size or color with it.
+  if (nameSimilarity < 0.3 && !skuMatch) return 0;
+
+  let score = nameSimilarity * 0.4;
+  if (skuMatch) score += 0.3;
+
+  // Attribute matches, compared per normalized key (color-to-color, size-
+  // to-size) instead of as an unordered bag of values -- a bag match let a
+  // detected color value coincidentally equal an ingredient's SIZE value
+  // count as a hit, and couldn't tell "right attribute, wrong value" (the
+  // actual wrong-color case) from "no attributes in common at all".
+  const normDetected = _expNormAttrs(detectedItem.attributes);
+  const normIngredient = _expNormAttrs(ingredient.attributes || ingredient.custom_attributes);
+  const keys = Object.keys(normDetected).filter(k => normDetected[k]);
+  if (keys.length > 0) {
+    const attrMatches = keys.filter(k => normIngredient[k] && normIngredient[k] === normDetected[k]).length;
+    score += (attrMatches / keys.length) * 0.3;
   }
-  
-  // 3. Attribute matches (weighted 30%) - compare detected attributes with ingredient attributes
-  let ingredientAttrs = ingredient.attributes || ingredient.custom_attributes;
-  
-  // Parse if it's a JSON string
-  if (typeof ingredientAttrs === 'string') {
-    try {
-      ingredientAttrs = JSON.parse(ingredientAttrs);
-    } catch (e) {
-      ingredientAttrs = null;
-    }
-  }
-  
-  // Check if detected item has attributes
-  const detectedAttrs = detectedItem.attributes;
-  
-  if (ingredientAttrs && typeof ingredientAttrs === 'object' && detectedAttrs && typeof detectedAttrs === 'object') {
-    const detectedValues = new Set(
-      Object.values(detectedAttrs)
-        .map(v => String(v).toLowerCase().trim())
-    );
-    
-    const ingredientValues = Object.values(ingredientAttrs)
-      .map(v => String(v).toLowerCase().trim());
-    
-    if (ingredientValues.length > 0 && detectedValues.size > 0) {
-      totalChecks++;
-      
-      // Count how many ingredient attribute values match detected attribute values
-      let attributeMatches = 0;
-      for (const ingValue of ingredientValues) {
-        if (detectedValues.has(ingValue)) {
-          attributeMatches++;
-        }
-      }
-      
-      // Calculate attribute match score
-      const attrMatchRatio = attributeMatches / ingredientValues.length;
-      score += attrMatchRatio * 0.3;
-      
-      if (attrMatchRatio >= 0.5) matches++; // At least half the attributes match
-    }
-  }
-  
-  // Normalize score - require at least 2 out of 3 checks to pass for a good match
-  if (totalChecks >= 2 && matches >= 1 && score >= 0.5) {
-    return score;
-  } else if (totalChecks === 1 && score >= 0.7) {
-    // If only name check available, require high name similarity
-    return score;
-  }
-  
+
   return Math.min(score, 0.95); // Never return perfect 1.0 to encourage user review
 }
 
@@ -3375,11 +3370,16 @@ async function showIngredientMappingModal(expenseData) {
 function _expItemState(item) {
   if (!item.ingredientId) return 'none';
   if (item.ambiguous && !item.confirmed) return 'todo';
-  return (item.confirmed || (item.matchScore || 0) >= 0.85) ? 'ok' : 'todo';
+  // An auto-matched ingredientId already cleared the 0.6 acceptance bar in
+  // showIngredientMappingModal() above -- no second, separately-calibrated
+  // score threshold here, since that just relabeled genuinely good matches
+  // (which rarely reach very high scores without a SKU match on the
+  // receipt) as "not sure" across the board.
+  return 'ok';
 }
 function _expItemWhy(item, state) {
-  if (state === 'ok') return item.confirmed ? 'You picked this' : 'Likely match';
-  if (state === 'todo') return item.ambiguous ? 'Matches multiple items equally — check which one' : 'Not sure this is right — check it';
+  if (state === 'ok') return item.confirmed ? 'You picked this' : 'Matched';
+  if (state === 'todo') return 'Matches multiple items equally — check which one';
   return 'No item matches this';
 }
 const _EXP_STATE_COLOR = { ok: 'var(--text-muted)', todo: 'var(--warning)', none: 'var(--danger)' };
