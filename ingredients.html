@@ -4821,7 +4821,20 @@ window.onclick = (e) => {
     const x = d.cur === null ? d.base : d.cur;
     const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
     if (open && open !== d.row) close();
-    if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+    if (commit) {
+      setX(d.row, -REVEAL, true);
+      open = d.row;
+      // The row still visually covers the buttons for the ~260ms slide-into-
+      // place transition below. A tap landing during that window used to hit
+      // the still-on-top row instead of the button -- swallowed by the
+      // noClickUntil guard above -- so the first tap right after a swipe did
+      // nothing and only a second, later tap (once the transition had fully
+      // finished) actually reached the CTA. Making the row transparent to
+      // pointer events for the duration lets that first tap fall straight
+      // through to the actions underneath.
+      d.row.style.pointerEvents = 'none';
+      d.row.addEventListener('transitionend', () => { d.row.style.pointerEvents = ''; }, { once: true });
+    }
     else        { setX(d.row, 0, true); if (open === d.row) open = null; }
   };
   list.addEventListener('pointerup', end);

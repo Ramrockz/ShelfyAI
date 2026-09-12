@@ -1968,4 +1968,19 @@ tr:hover td {
   #undoToast { left: auto; right: 24px; bottom: 24px; width: 380px; }
 }
 
+/* The toast sits 12px above the bottom-nav's own reserved padding and is
+   52px tall, so while it's visible it physically covers the last ~64px of
+   scrolled content -- any swipe/tap on a row under that band was landing on
+   the toast (pointer-events: auto while .visible) instead of the row
+   underneath, making it seem like deletes silently failed until the toast
+   disappeared. Push the page's bottom padding out by the toast's own
+   footprint for as long as it's showing so nothing ever sits under it.
+   :has() gives this enough specificity to beat bottom-nav.js's own
+   `body { padding-bottom: ... !important }` without touching that rule. */
+@media (max-width: 768px) {
+  body:has(#undoToast.visible) {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 76px) !important;
+  }
+}
+
 
