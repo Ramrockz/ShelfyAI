@@ -4832,8 +4832,15 @@ window.onclick = (e) => {
       // finished) actually reached the CTA. Making the row transparent to
       // pointer events for the duration lets that first tap fall straight
       // through to the actions underneath.
+      // transitionend alone isn't enough: if the row was already sitting at
+      // -REVEAL (e.g. re-committing the same open row), the transform value
+      // never actually changes, no transition runs, and transitionend would
+      // never fire -- leaving pointer-events stuck off. The timeout is a
+      // backstop; whichever fires first wins, the other is a no-op.
+      const restore = () => { d.row.style.pointerEvents = ''; };
       d.row.style.pointerEvents = 'none';
-      d.row.addEventListener('transitionend', () => { d.row.style.pointerEvents = ''; }, { once: true });
+      d.row.addEventListener('transitionend', restore, { once: true });
+      setTimeout(restore, 300);
     }
     else        { setX(d.row, 0, true); if (open === d.row) open = null; }
   };
@@ -4893,46 +4900,49 @@ window.onclick = (e) => {
 })();
 
 // ---------- Soft delete with undo ----------
-let _pendingDelete = null;
-
-function softDeleteIng(id) {
+// Deletes for real immediately (like deleteIng()) instead of deferring the
+// actual delete to a 5s timer/pagehide -- that older approach left a delete
+// that hadn't happened yet for a refresh to lose: a hard refresh during the
+// undo window doesn't reliably let an async IndexedDB write started from
+// `pagehide` finish before the page tears down, so the item silently
+// survived unless you waited out the full undo window first. Mirrors
+// expenses.html's softDeleteExpense(), which fixed the same issue the same
+// way. Doesn't reuse deleteIng() -- that one calls render(), which would
+// rebuild the list and detach `shell` before the undo window is even up.
+async function softDeleteIng(id) {
   const shell = document.querySelector(`.ing-row[data-id="${id}"]`)?.closest('.ing-swipe')
              || document.querySelector(`.card-small[data-id="${id}"]`);
   const item  = ingredients.find(i => i.id === id);
   if (!shell || !item) return;
 
-  clearTimeout(_pendingDelete?.timer);
-  _pendingDelete?.commit();               // a second delete commits the first, don't lose it
   shell.style.display = 'none';
+  ingredients = ingredients.filter(i => i.id !== id);
+  localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
 
-  const commit = () => {
-    _pendingDelete = null;
-    // Enqueue durably (IndexedDB, no network round-trip) instead of letting
-    // deleteIng() try a live network delete first -- this can be called from
-    // `pagehide`, and a live request started there can be killed by the
-    // browser mid-flight (especially on a hard refresh) before it either
-    // succeeds or falls back to the offline queue, silently dropping the
-    // delete. Queuing first guarantees the intent survives even an instant
-    // refresh; the queue drains for real on this load (if online) or the next.
-    if (window.offlineQueueWrite) {
-      window.offlineQueueWrite('ingredients', 'delete', null, 'id', id);
-    } else {
-      deleteIng(id, { skipConfirm: true });
-    }
-    ingredients = ingredients.filter(i => i.id !== id);
-    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
-  };
-
-  _pendingDelete = { id, shell, timer: setTimeout(commit, 5000), commit };
-  showUndoToast(`Deleted ${item.name}`, () => {
-    clearTimeout(_pendingDelete.timer);
+  try {
+    const { error } = await offlineWrite('ingredients', 'delete', null, 'id', id);
+    if (error) throw error;
+  } catch (e) {
+    console.error('Error deleting ingredient:', e);
     shell.style.display = '';
-    _pendingDelete = null;
+    ingredients.push(item);
+    localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+    return;
+  }
+
+  showUndoToast(`Deleted ${item.name}`, async () => {
+    try {
+      const { error } = await supabaseClient.from('ingredients').insert([item]);
+      if (error) throw error;
+      shell.style.display = '';
+      ingredients.push(item);
+      localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
+    } catch (e) {
+      console.error('Error restoring ingredient:', e);
+      showAlert('Failed to restore item', 'Error');
+    }
   });
 }
-
-// Don't lose a pending delete if the user leaves the page
-window.addEventListener('pagehide', () => _pendingDelete?.commit());
 
 // ---------- Undo toast ----------
 let _toastTimer = null;
