@@ -4923,6 +4923,18 @@ async function softDeleteIng(id) {
   const item  = ingredients.find(i => i.id === id);
   if (!shell || !item) return;
 
+  // `item` (from the `ingredients` array) is a display-shaped projection --
+  // loadIngredients() renames/drops columns (qty <- quantity, cost <-
+  // cost_per_unit, a fabricated `delivery` field, profile_id/store_id
+  // dropped entirely) for rendering convenience. Re-inserting it verbatim on
+  // undo sends the wrong column names and is missing required fields, so
+  // grab the actual raw row now, before it's gone, to restore from instead.
+  let rawItem = null;
+  try {
+    const { data } = await supabaseClient.from('ingredients').select('*').eq('id', id).single();
+    rawItem = data || null;
+  } catch (e) {}
+
   shell.style.display = 'none';
   ingredients = ingredients.filter(i => i.id !== id);
   localStorage.setItem('shelfy_cache_ingredients', JSON.stringify(ingredients));
@@ -4940,7 +4952,8 @@ async function softDeleteIng(id) {
 
   showUndoToast(`Deleted ${item.name}`, async () => {
     try {
-      const { error } = await supabaseClient.from('ingredients').insert([item]);
+      if (!rawItem) throw new Error('Original item data unavailable');
+      const { error } = await supabaseClient.from('ingredients').insert([rawItem]);
       if (error) throw error;
       shell.style.display = '';
       ingredients.push(item);
