@@ -10,6 +10,12 @@
 // Needs RESEND_API_KEY (Vercel env var) and the
 // email-sql/add-first-item-email-tracking.sql migration run in Supabase
 // (user_settings.first_item_email_sent_at) before this does anything.
+//
+// The actual email content lives in Resend's own dashboard-published
+// template (id below), not in emails/first-item-created.html -- that file
+// is kept only as the source-of-truth copy that was used to build the
+// Resend template, since Resend has no way to sync from a checked-in HTML
+// file. If the wording ever needs to change, edit both.
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -19,16 +25,17 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <hello@shelfyai.com>';
-const TEMPLATE_URL = 'https://www.shelfyai.com/emails/first-item-created.html';
 
-function fillTemplate(html, vars) {
-  return html.replace(/{{\s*(\w+)\s*}}/g, (match, key) => (key in vars ? String(vars[key]) : match));
-}
+// Resend's own published template -- named "first-product-created" in the
+// Resend dashboard, but its actual content/purpose is this item-created
+// trigger (a pre-existing naming mismatch on Resend's side, confirmed with
+// the user -- not a bug here).
+const RESEND_TEMPLATE_ID = process.env.RESEND_FIRST_ITEM_TEMPLATE_ID;
 
 // No DOM available server-side (unlike the app's own client-side
 // escapeHtml() helpers), so this is the plain string version -- item
-// names/attribute values are user input, injected straight into the email's
-// raw HTML below.
+// names/attribute values are user input, injected into the email via
+// Resend's template variables below.
 function escapeHtmlServer(text) {
   return String(text == null ? '' : text)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -45,14 +52,6 @@ function formatAttributesSuffix(attrs) {
   const values = Object.values(attrs).map((v) => String(v == null ? '' : v).trim()).filter(Boolean);
   if (!values.length) return '';
   return ` <span style="color:#64748b; font-weight:400;">(${values.map(escapeHtmlServer).join(' · ')})</span>`;
-}
-
-// Pulls the <title> tag's text as the subject line, same convention as the
-// "Subject:" comment at the top of the template file itself -- keeps the
-// actual subject in one human-editable place instead of hardcoded here too.
-function extractSubject(html, fallback) {
-  const m = html.match(/<title>([^<]*)<\/title>/i);
-  return m ? m[1].trim() : fallback;
 }
 
 module.exports = async (req, res) => {
@@ -108,33 +107,36 @@ module.exports = async (req, res) => {
       console.error('RESEND_API_KEY not configured -- skipping first-item email');
       return res.status(200).json({ sent: false, reason: 'email_not_configured' });
     }
+    if (!RESEND_TEMPLATE_ID) {
+      console.error('RESEND_FIRST_ITEM_TEMPLATE_ID not configured -- skipping first-item email');
+      return res.status(200).json({ sent: false, reason: 'template_not_configured' });
+    }
 
-    const templateRes = await fetch(TEMPLATE_URL);
-    if (!templateRes.ok) throw new Error(`Failed to load email template: ${templateRes.status}`);
-    const rawHtml = await templateRes.text();
-
-    // The rest of the template's copy (CTA link, sign-off) is static by
-    // design, matching emails/onboarding.html's own finished example, which
-    // also skips per-user name personalization in favor of a fixed
-    // "Inventory Hero" greeting.
-    //
     // {{unsubscribe_url}} points at Settings for now -- there's no actual
     // unsubscribe/email-preference mechanism built yet, so this is a
     // placeholder destination, not a real opt-out. Needs a follow-up.
-    const html = fillTemplate(rawHtml, {
-      item_name: escapeHtmlServer(itemName),
-      item_attributes_suffix: formatAttributesSuffix(itemAttributes),
-      unsubscribe_url: 'https://www.shelfyai.com/settings'
-    });
-    const subject = extractSubject(rawHtml, 'You created your first item!');
-
+    //
+    // Resend rejects a request that mixes `template` with `html`/`text`/
+    // `react`, so the subject/body come entirely from the published
+    // template -- only the variables it references are passed here.
     const sendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ from: EMAIL_FROM, to: user.email, subject, html })
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: user.email,
+        template: {
+          id: RESEND_TEMPLATE_ID,
+          variables: {
+            item_name: escapeHtmlServer(itemName),
+            item_attributes_suffix: formatAttributesSuffix(itemAttributes),
+            unsubscribe_url: 'https://www.shelfyai.com/settings'
+          }
+        }
+      })
     });
     if (!sendRes.ok) {
       const errBody = await sendRes.text();
