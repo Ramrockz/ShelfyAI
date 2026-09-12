@@ -144,10 +144,15 @@ module.exports = async (req, res) => {
     // guard -- this is the fast path for every subsequent call so it never
     // has to hit the ingredients table again for an account that's long
     // past its first item.
+    //
+    // upsert, not update: a brand-new account may not have a user_settings
+    // row yet (it's created lazily -- see settings.html/onboarding-modal.js),
+    // and .update() on a non-existent row silently affects zero rows with no
+    // error, which left this column permanently null despite the email
+    // having actually sent.
     await supabaseAdmin
       .from('user_settings')
-      .update({ first_item_email_sent_at: new Date().toISOString() })
-      .eq('user_id', user.id);
+      .upsert({ user_id: user.id, first_item_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
     return res.status(200).json({ sent: true });
   } catch (error) {
