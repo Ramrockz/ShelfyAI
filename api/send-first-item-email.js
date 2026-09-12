@@ -26,11 +26,12 @@ const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_RO
 
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <hello@shelfyai.com>';
 
-// Resend's own published template -- named "first-product-created" in the
-// Resend dashboard, but its actual content/purpose is this item-created
-// trigger (a pre-existing naming mismatch on Resend's side, confirmed with
-// the user -- not a bug here).
-const RESEND_TEMPLATE_ID = process.env.RESEND_FIRST_ITEM_TEMPLATE_ID;
+// Resend's own published template, referenced by its alias/slug (Resend's
+// `template.id` field accepts either the UUID or the alias) -- named
+// "first-product-created" in the Resend dashboard, but its actual
+// content/purpose is this item-created trigger (a pre-existing naming
+// mismatch on Resend's side, confirmed with the user -- not a bug here).
+const RESEND_TEMPLATE_ID = 'first-product-created';
 
 // No DOM available server-side (unlike the app's own client-side
 // escapeHtml() helpers), so this is the plain string version -- item
@@ -106,10 +107,6 @@ module.exports = async (req, res) => {
     if (!process.env.RESEND_API_KEY) {
       console.error('RESEND_API_KEY not configured -- skipping first-item email');
       return res.status(200).json({ sent: false, reason: 'email_not_configured' });
-    }
-    if (!RESEND_TEMPLATE_ID) {
-      console.error('RESEND_FIRST_ITEM_TEMPLATE_ID not configured -- skipping first-item email');
-      return res.status(200).json({ sent: false, reason: 'template_not_configured' });
     }
 
     // {{unsubscribe_url}} points at Settings for now -- there's no actual
