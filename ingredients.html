@@ -113,9 +113,17 @@
   .ing-swipe { position: relative; height: 64px; overflow: hidden;
                border-top: 1px solid var(--border); background: var(--bg-inner); }
   .ing-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+  /* touch-action: manipulation -- without an explicit value here, iOS
+     Safari/PWA leaves these buttons' gesture handling ambiguous next to the
+     row's own hand-rolled pointer-event dragging (touch-action: pan-y
+     below), and the first tap after a swipe gets swallowed while iOS
+     decides what the gesture is; a real click then only fires on a second,
+     unambiguous tap. manipulation tells it up front that this is a plain
+     tap target, no panning/zooming/ambiguity to resolve. */
   .ing-act { width: 48px; border: none; cursor: pointer; display: flex; flex-direction: column;
              align-items: center; justify-content: center; gap: 3px;
-             font-family: inherit; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; }
+             font-family: inherit; font-size: 9.5px; font-weight: 800; letter-spacing: .03em;
+             touch-action: manipulation; }
   .ing-act-restock { background: #64748b; color: #fff; }
   .ing-act-dup { background: var(--accent); color: #fff; }
   .ing-act-del { background: var(--danger); color: #fff; }
