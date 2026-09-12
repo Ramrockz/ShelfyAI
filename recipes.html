@@ -4391,13 +4391,13 @@ function stripUrlParams(url) {
 // forget after any successful item creation. The server re-checks whether
 // this genuinely was the account's first item and whether the welcome
 // email was already sent, so it's safe to call unconditionally here too.
-function notifyFirstItemIfNeeded(itemName) {
+function notifyFirstItemIfNeeded(itemName, itemAttributes) {
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
     fetch('/api/send-first-item-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ itemName })
+      body: JSON.stringify({ itemName, itemAttributes: itemAttributes || null })
     }).catch(() => {});
   }).catch(() => {});
 }
@@ -4460,7 +4460,7 @@ async function saveIngredient(event) {
   try {
     const { error } = await supabaseClient.from('ingredients').insert([formData]);
     if (error) throw error;
-    notifyFirstItemIfNeeded(formData.name);
+    notifyFirstItemIfNeeded(formData.name, customAttrs);
     closeManualEntryModal();
     addingIngredientFromRecipe = false;
     await loadIngredients();

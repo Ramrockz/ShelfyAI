@@ -3483,13 +3483,13 @@ function escapeHtml(text) {
 // than trying to guess client-side) can never send it twice or on the
 // wrong item. Never awaited/blocking, and any failure here shouldn't
 // interrupt the save the user is actually waiting on.
-function notifyFirstItemIfNeeded(itemName) {
+function notifyFirstItemIfNeeded(itemName, itemAttributes) {
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
     fetch('/api/send-first-item-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ itemName })
+      body: JSON.stringify({ itemName, itemAttributes: itemAttributes || null })
     }).catch(() => {});
   }).catch(() => {});
 }
@@ -4592,7 +4592,7 @@ async function saveIngredient(event) {
 
     if (error) throw error;
 
-    notifyFirstItemIfNeeded(formData.name);
+    notifyFirstItemIfNeeded(formData.name, customAttrs);
 
     if (queued && data) {
       ingredients.unshift({

@@ -25,6 +25,28 @@ function fillTemplate(html, vars) {
   return html.replace(/{{\s*(\w+)\s*}}/g, (match, key) => (key in vars ? String(vars[key]) : match));
 }
 
+// No DOM available server-side (unlike the app's own client-side
+// escapeHtml() helpers), so this is the plain string version -- item
+// names/attribute values are user input, injected straight into the email's
+// raw HTML below.
+function escapeHtmlServer(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Same convention as the app's own attribute badges (expenses.html's
+// receipt-mapping cards, ingredient-detail.html, etc.) -- just the values,
+// joined by " · ", no key names shown. Empty/missing attributes (a manual
+// item added without any, though the New Item form normally requires at
+// least one) render as nothing rather than an empty "()" .
+function formatAttributesSuffix(attrs) {
+  if (!attrs || typeof attrs !== 'object') return '';
+  const values = Object.values(attrs).map((v) => String(v == null ? '' : v).trim()).filter(Boolean);
+  if (!values.length) return '';
+  return ` <span style="color:#64748b; font-weight:400;">(${values.map(escapeHtmlServer).join(' · ')})</span>`;
+}
+
 // Pulls the <title> tag's text as the subject line, same convention as the
 // "Subject:" comment at the top of the template file itself -- keeps the
 // actual subject in one human-editable place instead of hardcoded here too.
@@ -57,6 +79,7 @@ module.exports = async (req, res) => {
     }
 
     const itemName = typeof req.body?.itemName === 'string' ? req.body.itemName.slice(0, 200) : 'your first item';
+    const itemAttributes = req.body?.itemAttributes && typeof req.body.itemAttributes === 'object' ? req.body.itemAttributes : null;
 
     // Source of truth for "has this already been sent" -- never trust the
     // client to only call this once.
@@ -90,17 +113,17 @@ module.exports = async (req, res) => {
     if (!templateRes.ok) throw new Error(`Failed to load email template: ${templateRes.status}`);
     const rawHtml = await templateRes.text();
 
-    // emails/first-item-created.html only has two real merge tags -- the
-    // rest of its copy (CTA link, sign-off) is static by design, matching
-    // emails/onboarding.html's own finished example, which also skips
-    // per-user name personalization in favor of a fixed "Inventory Hero"
-    // greeting.
+    // The rest of the template's copy (CTA link, sign-off) is static by
+    // design, matching emails/onboarding.html's own finished example, which
+    // also skips per-user name personalization in favor of a fixed
+    // "Inventory Hero" greeting.
     //
     // {{unsubscribe_url}} points at Settings for now -- there's no actual
     // unsubscribe/email-preference mechanism built yet, so this is a
     // placeholder destination, not a real opt-out. Needs a follow-up.
     const html = fillTemplate(rawHtml, {
-      item_name: itemName,
+      item_name: escapeHtmlServer(itemName),
+      item_attributes_suffix: formatAttributesSuffix(itemAttributes),
       unsubscribe_url: 'https://www.shelfyai.com/settings'
     });
     const subject = extractSubject(rawHtml, 'You created your first item!');
