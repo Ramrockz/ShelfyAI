@@ -8,7 +8,7 @@
 // call can never send the email twice or send it on item #2.
 //
 // Needs RESEND_API_KEY (Vercel env var) and the
-// email-sql/add-first-item-email-tracking.sql migration run in Supabase
+// email-sql/add-first-time-email-tracking.sql migration run in Supabase
 // (user_settings.first_item_email_sent_at) before this does anything.
 //
 // The actual email content lives in Resend's own dashboard-published
