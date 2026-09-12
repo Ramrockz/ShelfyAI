@@ -3918,6 +3918,21 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Same as ingredients.html's own notifyFirstItemIfNeeded() -- fire-and-
+// forget after any successful item creation. The server re-checks whether
+// this genuinely was the account's first item and whether the welcome
+// email was already sent, so it's safe to call unconditionally here too.
+function notifyFirstItemIfNeeded(itemName) {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/send-first-item-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ itemName })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
 // Same as ingredients.html's own CAT_META (label+icon, used by both the
 // category sheet and the attribute suggestions below).
 const QIC_CAT_META = [
@@ -4286,6 +4301,8 @@ async function saveQuickIngredient(e) {
     const { data: newIngredient, error } = await supabaseClient
       .from('ingredients').insert([formData]).select().single();
     if (error) throw error;
+
+    notifyFirstItemIfNeeded(newIngredient.name);
 
     allIngredientsCache.push(newIngredient);
     allIngredients.push(newIngredient);

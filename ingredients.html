@@ -3476,6 +3476,24 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Fire-and-forget after any successful "create a new item" save -- the
+// server (api/send-first-item-email.js) re-checks against the database
+// whether this genuinely was the account's first item and whether the
+// welcome email was already sent, so calling this on every save (rather
+// than trying to guess client-side) can never send it twice or on the
+// wrong item. Never awaited/blocking, and any failure here shouldn't
+// interrupt the save the user is actually waiting on.
+function notifyFirstItemIfNeeded(itemName) {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/send-first-item-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ itemName })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
 function renderRecent(data) {
   const container = document.getElementById('recentView');
 
@@ -4573,6 +4591,8 @@ async function saveIngredient(event) {
     const { data, error, queued } = await offlineWrite('ingredients', 'insert', formData);
 
     if (error) throw error;
+
+    notifyFirstItemIfNeeded(formData.name);
 
     if (queued && data) {
       ingredients.unshift({
