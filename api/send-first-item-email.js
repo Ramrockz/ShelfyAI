@@ -31,11 +31,10 @@ const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_RO
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || null;
 
 // Resend's own published template, referenced by its alias/slug (Resend's
-// `template.id` field accepts either the UUID or the alias) -- named
-// "first-product-created" in the Resend dashboard, but its actual
-// content/purpose is this item-created trigger (a pre-existing naming
-// mismatch on Resend's side, confirmed with the user -- not a bug here).
-const RESEND_TEMPLATE_ID = 'first-product-created';
+// `template.id` field accepts either the UUID or the alias). "first-product-
+// created" is a separate template for the actual first-recipe/product
+// trigger (not built yet) -- don't point this at it again.
+const RESEND_TEMPLATE_ID = 'first-item-created';
 
 // No DOM available server-side (unlike the app's own client-side
 // escapeHtml() helpers), so this is the plain string version -- item
