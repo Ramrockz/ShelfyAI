@@ -1,0 +1,103 @@
+<!--
+  Subject: Your ShelfyAI access ends in 7 days — come back for {{discount_percent}}% off
+  Preheader: {{plan_name}} access ends {{access_until_date}}. Resubscribe before then and save {{discount_percent}}%.
+  Trigger: scheduled reminder sent partway through the post-cancellation access window
+           (e.g. 7 days before {{access_until_date}}), offering a resubscribe discount
+  Variables: {{first_name}}, {{plan_name}}, {{access_until_date}}, {{discount_percent}}, {{discount_code}}, {{discount_expires_date}}, {{resubscribe_url}}, {{support_email}}
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your ShelfyAI access ends in 7 days</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <span style="display:none; font-size:1px; color:#f1f5f9; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+    {{plan_name}} access ends {{access_until_date}}. Resubscribe before then and save {{discount_percent}}%.
+  </span>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <img src="https://www.shelfyai.com/favicon-512.png" width="40" height="40" alt="ShelfyAI" style="display:block; border-radius:10px;" />
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:40px 36px;">
+
+              <!-- Icon badge -->
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="width:48px; height:48px; background-color:#fffbeb; border-radius:12px; text-align:center; vertical-align:middle; font-size:22px; line-height:48px;">
+                    ⏳
+                  </td>
+                </tr>
+              </table>
+
+              <h1 style="margin:20px 0 12px; font-size:22px; line-height:1.3; color:#0f172a; font-weight:700;">
+                7 days left on {{plan_name}}
+              </h1>
+
+              <p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#475569;">
+                Hi {{first_name}}, just a heads-up: your cancelled <strong>{{plan_name}}</strong> plan keeps its scans, storage and stores until <strong>{{access_until_date}}</strong> — then your account moves to Free.
+              </p>
+
+              <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#475569;">
+                If you want to stay on {{plan_name}}, here's an incentive to make the decision easier:
+              </p>
+
+              <!-- Discount code box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px; background-color:#fffbeb; border:1px dashed #f59e0b; border-radius:12px;">
+                <tr>
+                  <td align="center" style="padding:22px 18px;">
+                    <span style="display:block; font-size:13px; color:#92400e; margin-bottom:6px;">Resubscribe before {{access_until_date}} and save</span>
+                    <span style="display:block; font-size:28px; font-weight:800; color:#92400e; letter-spacing:-0.02em; margin-bottom:10px;">{{discount_percent}}% off</span>
+                    <span style="display:inline-block; padding:8px 18px; background-color:#ffffff; border:1px solid #fde68a; border-radius:8px; font-size:15px; font-weight:700; color:#92400e; letter-spacing:0.04em;">
+                      {{discount_code}}
+                    </span>
+                    <span style="display:block; font-size:12px; color:#a16207; margin-top:10px;">Valid through {{discount_expires_date}}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px;">
+                <tr>
+                  <td align="center" style="background-color:#06b6d4; border-radius:10px;">
+                    <a href="{{resubscribe_url}}" style="display:inline-block; padding:13px 32px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none;">
+                      Resubscribe and save {{discount_percent}}%
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#94a3b8; text-align:center;">
+                Nothing to do if you're happy on Free — this offer just expires on its own after {{access_until_date}}.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 12px 0;" align="center">
+              <p style="margin:0 0 6px; font-size:12px; color:#94a3b8; line-height:1.6;">
+                You're getting this because you recently cancelled a ShelfyAI subscription.<br />
+                <a href="mailto:{{support_email}}" style="color:#94a3b8; text-decoration:underline;">Contact support</a>
+              </p>
+              <p style="margin:0; font-size:12px; color:#cbd5e1;">© 2026 ShelfyAI</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
