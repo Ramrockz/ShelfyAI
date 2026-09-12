@@ -19,7 +19,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <hello@shelfyai.com>';
-const TEMPLATE_URL = 'https://www.shelfyai.com/email-templates/first-item-added.html';
+const TEMPLATE_URL = 'https://www.shelfyai.com/emails/first-item-created.html';
 
 function fillTemplate(html, vars) {
   return html.replace(/{{\s*(\w+)\s*}}/g, (match, key) => (key in vars ? String(vars[key]) : match));
@@ -90,15 +90,20 @@ module.exports = async (req, res) => {
     if (!templateRes.ok) throw new Error(`Failed to load email template: ${templateRes.status}`);
     const rawHtml = await templateRes.text();
 
-    const firstName = (user.user_metadata?.name || user.email.split('@')[0] || 'there').trim();
+    // emails/first-item-created.html only has two real merge tags -- the
+    // rest of its copy (CTA link, sign-off) is static by design, matching
+    // emails/onboarding.html's own finished example, which also skips
+    // per-user name personalization in favor of a fixed "Inventory Hero"
+    // greeting.
+    //
+    // {{unsubscribe_url}} points at Settings for now -- there's no actual
+    // unsubscribe/email-preference mechanism built yet, so this is a
+    // placeholder destination, not a real opt-out. Needs a follow-up.
     const html = fillTemplate(rawHtml, {
-      first_name: firstName,
       item_name: itemName,
-      app_url: 'https://www.shelfyai.com/ingredients',
-      recipes_url: 'https://www.shelfyai.com/recipes',
-      support_email: 'support@shelfyai.com'
+      unsubscribe_url: 'https://www.shelfyai.com/settings'
     });
-    const subject = extractSubject(rawHtml, "You added your first item — here's what's next");
+    const subject = extractSubject(rawHtml, 'You created your first item!');
 
     const sendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
