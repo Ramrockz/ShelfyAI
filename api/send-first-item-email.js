@@ -24,7 +24,11 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <hello@shelfyai.com>';
+// Left unset by default so Resend falls back to the published template's own
+// configured sender instead of this endpoint silently overriding it. Only
+// set RESEND_FROM_EMAIL if you actually want this specific email to come
+// from a different address than the template's default.
+const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || null;
 
 // Resend's own published template, referenced by its alias/slug (Resend's
 // `template.id` field accepts either the UUID or the alias) -- named
@@ -125,7 +129,7 @@ module.exports = async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: EMAIL_FROM,
+        ...(EMAIL_FROM ? { from: EMAIL_FROM } : {}),
         to: user.email,
         template: {
           id: RESEND_TEMPLATE_ID,
