@@ -89,6 +89,7 @@ module.exports = async (req, res) => {
       .eq('user_id', user.id)
       .maybeSingle();
     if (settings?.first_item_email_sent_at) {
+      console.log(`first-item email skipped for ${user.id}: already_sent at ${settings.first_item_email_sent_at}`);
       return res.status(200).json({ sent: false, reason: 'already_sent' });
     }
 
@@ -101,6 +102,7 @@ module.exports = async (req, res) => {
       .eq('profile_id', user.id);
     if (countError) throw countError;
     if ((count || 0) !== 1) {
+      console.log(`first-item email skipped for ${user.id}: not_first_item (count=${count})`);
       return res.status(200).json({ sent: false, reason: 'not_first_item' });
     }
 
@@ -154,6 +156,7 @@ module.exports = async (req, res) => {
       .from('user_settings')
       .upsert({ user_id: user.id, first_item_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
+    console.log(`first-item email sent to ${user.email} (${user.id})`);
     return res.status(200).json({ sent: true });
   } catch (error) {
     console.error('Error sending first-item email:', error);
