@@ -1976,9 +1976,13 @@ function renderRecentLedger(filtered, displayData, hasMore, container) {
     const n = itemCount(e);
     const meta = [day, e.vendor ? _escHtml(e.vendor) : null, n ? `${n} item${n !== 1 ? 's' : ''}` : null].filter(Boolean).join(' · ');
     // Only offer to reverse inventory this expense actually added and that
-    // hasn't already been reversed -- see loadExpenseReversalState().
+    // Hide only once we've positively confirmed this expense's inventory
+    // was already reversed -- an unloaded/failed/still-in-flight state map
+    // must default to showing the button (same as before this existed),
+    // not hiding it, since a batched query that couldn't be answered isn't
+    // evidence of anything. See loadExpenseReversalState().
     const invState = _expenseInvState.get(String(e.id));
-    const canReverse = !!(invState && invState.applied && !invState.reversed);
+    const canReverse = !(invState && invState.reversed);
     return `<div class="exp-swipe">
         <div class="exp-actions">
           ${canReverse ? `<button class="exp-act exp-act-rev" onclick="reverseExpenseInventory('${e.id}')" aria-label="Reverse inventory">

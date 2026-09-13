@@ -512,6 +512,12 @@ async function initUserMenu() {
 }
 
 // ---------- Report a bug (modal injected globally, see initUserMenu()) ----------
+// Self-contained (doesn't call showNotification -- that function only
+// exists on 4 of this app's pages, so the fallback here used to be a bare
+// browser alert() on everywhere else). Success swaps this same mobile
+// sheet's content to a thank-you state instead, so it never leaves the
+// app's own UI.
+let _reportBugAutoCloseTimer = null;
 function _ensureReportBugModal() {
   if (document.getElementById('reportBugModal')) return;
   const overlay = document.createElement('div');
@@ -520,29 +526,43 @@ function _ensureReportBugModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBugModal(); });
   overlay.innerHTML = `
     <div class="modal-content" style="max-width:440px;">
-      <h3 style="margin-top:0;margin-bottom:8px;">Report a bug</h3>
-      <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;line-height:1.4;">Tell us what happened. We'll follow up at your account email if we need more details.</p>
-      <textarea id="reportBugText" rows="6" placeholder="What went wrong?"
-        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-app,var(--bg-inner));color:var(--text-main);font-family:inherit;font-size:14px;resize:vertical;"></textarea>
-      <div id="reportBugError" style="color:var(--danger,#dc2626);font-size:12.5px;margin-top:8px;display:none;"></div>
-      <div style="display:flex;gap:12px;margin-top:20px;">
-        <button type="button" class="btn" style="flex:1;">Cancel</button>
-        <button type="button" class="btn btn-primary" id="reportBugSendBtn" style="flex:1;">Send</button>
+      <div id="reportBugForm">
+        <h3 style="margin-top:0;margin-bottom:8px;">Report a bug</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;line-height:1.4;">Tell us what happened. We'll follow up at your account email if we need more details.</p>
+        <textarea id="reportBugText" rows="6" placeholder="What went wrong?"
+          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-app,var(--bg-inner));color:var(--text-main);font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+        <div id="reportBugError" style="color:var(--danger,#dc2626);font-size:12.5px;margin-top:8px;display:none;"></div>
+        <div style="display:flex;gap:12px;margin-top:20px;">
+          <button type="button" class="btn" id="reportBugCancelBtn" style="flex:1;">Cancel</button>
+          <button type="button" class="btn btn-primary" id="reportBugSendBtn" style="flex:1;">Send</button>
+        </div>
+      </div>
+      <div id="reportBugThanks" hidden style="text-align:center;padding:8px 0 4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="40" height="40" style="margin:0 auto;">
+          <circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path>
+        </svg>
+        <h3 style="margin:14px 0 4px;">Thanks for the feedback!</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin:0 0 20px;line-height:1.4;">We've received your report and will follow up if we need more details.</p>
+        <button type="button" class="btn btn-primary" id="reportBugDoneBtn" style="width:100%;">Done</button>
       </div>
     </div>`;
-  overlay.querySelector('.btn:not(.btn-primary)').addEventListener('click', closeReportBugModal);
+  overlay.querySelector('#reportBugCancelBtn').addEventListener('click', closeReportBugModal);
   overlay.querySelector('#reportBugSendBtn').addEventListener('click', submitReportBug);
+  overlay.querySelector('#reportBugDoneBtn').addEventListener('click', closeReportBugModal);
   document.body.appendChild(overlay);
 }
 function openReportBugModal() {
   toggleUserMenu();
   _ensureReportBugModal();
+  clearTimeout(_reportBugAutoCloseTimer);
   document.getElementById('reportBugText').value = '';
-  const errEl = document.getElementById('reportBugError');
-  errEl.style.display = 'none';
+  document.getElementById('reportBugError').style.display = 'none';
+  document.getElementById('reportBugForm').hidden = false;
+  document.getElementById('reportBugThanks').hidden = true;
   document.getElementById('reportBugModal').classList.add('active');
 }
 function closeReportBugModal() {
+  clearTimeout(_reportBugAutoCloseTimer);
   document.getElementById('reportBugModal')?.classList.remove('active');
 }
 async function submitReportBug() {
@@ -570,9 +590,9 @@ async function submitReportBug() {
     });
     const result = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(result.error || 'Failed to send report');
-    closeReportBugModal();
-    if (typeof showNotification === 'function') showNotification("Thanks -- your report was sent.", 'success');
-    else alert("Thanks -- your report was sent.");
+    document.getElementById('reportBugForm').hidden = true;
+    document.getElementById('reportBugThanks').hidden = false;
+    _reportBugAutoCloseTimer = setTimeout(closeReportBugModal, 3000);
   } catch (e) {
     errEl.textContent = e.message || 'Failed to send. Please try again.';
     errEl.style.display = 'block';
