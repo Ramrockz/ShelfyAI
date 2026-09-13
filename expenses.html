@@ -1323,6 +1323,8 @@
 }
 .input-invalid { border-color: var(--danger, #ef4444) !important; animation: shake-field 0.45s; }
 .ic-cat-row.input-invalid { outline: 1.5px solid var(--danger, #ef4444); outline-offset: 3px; border-radius: 6px; }
+.ic-field-error { display: none; color: var(--danger, #ef4444); font-size: 12px; margin-top: 4px; }
+.ic-field-error.visible { display: block; }
 
 .ic-cat-row { display: flex; align-items: center; justify-content: space-between; width: 100%;
               height: 34px; margin-top: 2px; padding: 0; background: none; border: none;
@@ -1428,16 +1430,19 @@
         <div class="ic-group" style="margin-top:0">
           <div class="ic-field">
             <label class="ic-label" for="quick_ing_name">Name</label>
-            <input class="ic-input" type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil" oninput="onQuickIngredientEdit()" autocomplete="off">
+            <input class="ic-input" type="text" id="quick_ing_name" required placeholder="e.g., Tomatoes, Flour, Olive Oil" oninput="onQuickIngredientEdit(); document.getElementById('quick_ing_name_error').classList.remove('visible');" autocomplete="off">
+            <span class="ic-field-error" id="quick_ing_name_error">Name is required</span>
           </div>
           <div class="ic-row2">
             <div class="ic-field">
               <label class="ic-label" for="quick_ing_quantity">Stock on hand</label>
-              <input class="ic-input" type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" oninput="onQuickIngredientEdit()">
+              <input class="ic-input" type="number" id="quick_ing_quantity" step="0.01" required placeholder="0" oninput="onQuickIngredientEdit(); document.getElementById('quick_ing_quantity_error').classList.remove('visible');">
+              <span class="ic-field-error" id="quick_ing_quantity_error">Stock on hand is required</span>
             </div>
             <div class="ic-field">
               <label class="ic-label" for="quick_ing_cost" id="quick_ing_cost_label">Cost each <span style="color: var(--danger);">*</span></label>
-              <span class="ic-prefix"><span>$</span><input class="ic-input" type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00" oninput="onQuickIngredientEdit()"></span>
+              <span class="ic-prefix"><span>$</span><input class="ic-input" type="number" id="quick_ing_cost" step="0.01" required placeholder="0.00" oninput="onQuickIngredientEdit(); document.getElementById('quick_ing_cost_error').classList.remove('visible');"></span>
+              <span class="ic-field-error" id="quick_ing_cost_error">Price is required</span>
             </div>
           </div>
           <div class="ic-field">
@@ -4217,7 +4222,19 @@ async function saveQuickIngredient(e) {
       void nameEl.offsetWidth;
       nameEl.classList.add('input-invalid');
       setTimeout(() => nameEl.classList.remove('input-invalid'), 1500);
+      document.getElementById('quick_ing_name_error').classList.add('visible');
       nameEl.focus();
+      return;
+    }
+
+    const quantityEl = document.getElementById('quick_ing_quantity');
+    if (quantityEl.value.trim() === '') {
+      quantityEl.classList.remove('input-invalid');
+      void quantityEl.offsetWidth;
+      quantityEl.classList.add('input-invalid');
+      setTimeout(() => quantityEl.classList.remove('input-invalid'), 1500);
+      document.getElementById('quick_ing_quantity_error').classList.add('visible');
+      quantityEl.focus();
       return;
     }
 
@@ -4231,6 +4248,7 @@ async function saveQuickIngredient(e) {
       void costEl.offsetWidth;
       costEl.classList.add('input-invalid');
       setTimeout(() => costEl.classList.remove('input-invalid'), 1500);
+      document.getElementById('quick_ing_cost_error').classList.add('visible');
       costEl.focus();
       return;
     }
