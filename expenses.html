@@ -4629,6 +4629,7 @@ async function confirmIngredientMapping() {
     // cost_per_unit * qty) -- divide by quantity everywhere a genuine
     // per-unit cost_per_unit is needed, and never re-multiply it by qty
     // again when summing a total.
+    const changesSummary = [];
     if (updateInventory && savedExpense && savedExpense[0]) {
       for (const item of mappedItems) {
         if (item.ingredientId && item.quantity > 0) {
@@ -4643,6 +4644,11 @@ async function confirmIngredientMapping() {
               .eq('id', item.ingredientId);
             ing.quantity = newQty;
             ing.cost_per_unit = unitCost;
+            // A purchase can only raise stock, so "low" here means still
+            // below min_stock even after adding this quantity — never "out".
+            const minStock = parseFloat(ing.min_stock) || 0;
+            const status = (minStock > 0 && newQty <= minStock) ? 'low_stock' : 'ok';
+            changesSummary.push({ id: item.ingredientId, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status });
             try {
               await supabaseClient.from('ingredient_history').insert([{
                 ingredient_id: item.ingredientId,
@@ -4661,8 +4667,19 @@ async function confirmIngredientMapping() {
     }
 
     if (window.ShelfyImportModal) window.ShelfyImportModal.confirmScanUsed();
-    closeIngredientMappingModal();
+    await closeIngredientMappingModal();
     await loadExpenses();
+
+    // The scan/mapping review runs in its own #ingredientMappingModal, not
+    // #expenseModal -- but the success screen (with inventory impact) only
+    // ever got shown from saveExpense()'s manual-entry path. Show it here
+    // too now that this expense has actually been saved, reusing the same
+    // #expenseModal/#expenseStep2 markup.
+    if (savedExpense && savedExpense[0]) {
+      document.getElementById('expenseStep1').style.display = 'none';
+      document.getElementById('expenseModal').classList.add('active');
+      showExpenseSuccessScreen(savedExpense[0], updateInventory && changesSummary.length > 0, changesSummary);
+    }
   } catch (err) {
     console.error('Error confirming ingredient mapping:', err);
     showNotification('Failed to save expense', 'error');
