@@ -1220,6 +1220,19 @@
   </div>
 </div>
 
+<!-- Add Item Success screen (inventory-impact.js) -- shown after adding a
+     line with "Update inventory" on actually changes stock, same component
+     as Reverse Inventory above and order-detail.html's own showAddItemSuccess()
+     for adding a product to an existing order, instead of just a toast. -->
+<div class="modal-overlay modal-sheet" id="addItemSuccessModal">
+  <div class="modal-content" style="display: flex; flex-direction: column; padding: 0;">
+    <div id="addItemSuccessBody" style="flex:1;min-height:0;overflow-y:auto;padding:24px 24px 8px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;"></div>
+    <div class="ii-foot" style="padding:14px 24px;">
+      <button type="button" class="ii-btn primary" style="width:100%;" onclick="closeAddItemSuccess()">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Item picker, as a sheet (18b) — pane 1 picks the item, pane 2 sets
      quantity + what it cost, whether adding a new line or re-opening one
      already on this expense. Same component as expenses.html's new-expense
@@ -1261,7 +1274,6 @@
                 <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
                 <span class="ec-qty-unit" id="ecLUnit"></span>
               </span>
-              <span class="ec-qty-status" id="ecLStatus"></span>
             </span>
             <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
           </div>
@@ -1798,6 +1810,35 @@ async function reverseExpenseInventory(expId) {
     console.error('Error reversing expense inventory:', e);
     showNotification('Failed to reverse inventory', 'error');
   }
+}
+
+// Shown instead of a plain toast when adding/editing a line with "Update
+// inventory" on actually changes stock -- same component as
+// showReverseInvSuccess() above and order-detail.html's own
+// showAddItemSuccess() for the equivalent "add product to an existing
+// order" flow.
+function showAddItemSuccess(ing, oldQty, newQty, isNewLine) {
+  const minStock = parseFloat(ing.min_stock) || 0;
+  const rows = [{
+    name: ing.name, from: oldQty, to: newQty, unit: ing.unit,
+    href: `/ingredient-detail?id=${encodeURIComponent(ing.id)}`,
+    state: newQty === 0 ? 'out' : (minStock > 0 && newQty <= minStock) ? 'low' : ''
+  }];
+  const body = document.getElementById('addItemSuccessBody');
+  ShelfyInventoryImpact.render(body, {
+    title: isNewLine ? 'Item added' : 'Item updated',
+    sub: ing.name,
+    figs: [],
+    secTitle: 'Inventory updated',
+    secNote: '1 item',
+    rows,
+    note: 'Stock was updated for this expense.',
+    undo: null
+  });
+  document.getElementById('addItemSuccessModal').classList.add('active');
+}
+function closeAddItemSuccess() {
+  document.getElementById('addItemSuccessModal').classList.remove('active');
 }
 
 function showReverseInvSuccess(rows) {
@@ -2375,20 +2416,6 @@ function ecOpenLine(ingredientId, existingIndex) {
   ecShowPane('line');
 }
 
-function ecRenderProjection() {
-  const ing = _ecIngredient;
-  const q = _ecDraft.qty;
-  const stock = parseFloat(ing.quantity) || 0;
-  const minStock = parseFloat(ing.min_stock) || 0;
-  const after = Math.round((stock + q) * 100) / 100;
-  const clears = minStock > 0 && stock < minStock && after >= minStock;
-  const st = document.getElementById('ecLStatus');
-  st.innerHTML = q
-    ? `${_escHtml(ing.unit || '')} · stock ${stock} → <b>${after}</b>${clears ? ' · clears the alert' : ''}`
-    : _escHtml(ing.unit || '');
-  clears ? st.setAttribute('data-state', 'clears') : st.removeAttribute('data-state');
-}
-
 function ecRenderCostHint() {
   const ing = _ecIngredient;
   const insights = _ecInsights || { lastPaid: new Map() };
@@ -2413,7 +2440,6 @@ function ecRenderLineFoot() {
     ? `${q} ${_escHtml(_ecIngredient.unit || '')} × $${c.toFixed(2)}<b>$${(q * c).toFixed(2)}</b>`
     : `Set a quantity<b>$0.00</b>`;
   document.getElementById('ecLineSaveBtn').disabled = !(q > 0);
-  ecRenderProjection();
   ecRenderCostHint();
 }
 function ecSyncTotal() {
@@ -2481,6 +2507,7 @@ async function ecSaveLine() {
     // item's cost is still recorded on the expense either way, just without
     // touching stock.
     const delta = qty - prevQty;
+    let stockChanged = false, oldQtyForSuccess = 0, newQtyForSuccess = 0;
     if (delta !== 0 && _ecUpdateStock) {
       const currentQty = parseFloat(ing.quantity) || 0;
       const newQty = Math.max(0, currentQty + delta);
@@ -2489,6 +2516,7 @@ async function ecSaveLine() {
       await window.supabaseClient.from('ingredients').update(update).eq('id', ing.id).eq('profile_id', user.id);
       ing.quantity = newQty;
       if (update.cost_per_unit) ing.cost_per_unit = update.cost_per_unit;
+      stockChanged = true; oldQtyForSuccess = currentQty; newQtyForSuccess = newQty;
       try {
         await window.supabaseClient.from('ingredient_history').insert([{
           ingredient_id: ing.id,
@@ -2504,8 +2532,17 @@ async function ecSaveLine() {
 
     displayIngredients();
     closeExpenseItemPicker();
-    const savedMsg = isNewLine ? 'Item added' : 'Item updated';
-    showNotification(_ecUpdateStock ? savedMsg : `${savedMsg} — stock not changed`, 'success');
+    // Same "what actually changed in inventory" success screen order-detail.html
+    // shows for adding a product to an existing order, instead of a plain toast,
+    // whenever this save actually moved stock. A toggled-off or no-op save (e.g.
+    // re-saving the same quantity) still gets the lighter toast -- nothing to
+    // summarize.
+    if (stockChanged) {
+      showAddItemSuccess(ing, oldQtyForSuccess, newQtyForSuccess, isNewLine);
+    } else {
+      const savedMsg = isNewLine ? 'Item added' : 'Item updated';
+      showNotification(_ecUpdateStock ? savedMsg : `${savedMsg} — stock not changed`, 'success');
+    }
   } catch (error) {
     console.error('Error saving expense line:', error);
     showNotification('Failed to save item: ' + error.message, 'error');
