@@ -810,6 +810,15 @@
   /* Opens on top of #ecItemSheet (z-index 10020) -- ID selector so it can't
      lose a cascade tie the way a class-selector override has before. */
   #ecCatSheet { z-index: 10030 !important; }
+  /* showConfirm()'s dialog can be triggered from inside another still-open
+     modal (e.g. closeIngredientMappingModal()'s "Discard this scan?"
+     prompt) -- every .modal-overlay otherwise shares the same z-index
+     (9999), so whichever is later in the DOM paints on top regardless of
+     which one is logically "in front". #ingredientMappingModal comes after
+     #confirmModal in the markup, so the confirm prompt was rendering
+     completely hidden behind it -- invisible and unclickable, making
+     Cancel look like it did nothing. Always wins now. */
+  #confirmModal { z-index: 10040 !important; }
   .ec-results { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
                 border-top: 1px solid var(--border-hair, var(--border)); }
   .ec-res { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 60px;
@@ -1120,6 +1129,23 @@
           </div>
         </div>
 
+        <!-- Whole-receipt "Update inventory" toggle -- was previously asked
+             per line inside the item picker's quantity/cost pane, which made
+             no sense there (why would some items on the same receipt update
+             stock and others not?) and had no equivalent at all here, unlike
+             the AI-scanned "Match Detected Items" flow's own
+             #updateInventoryToggle. One decision for the whole expense now. -->
+        <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 16px 0; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Update Inventory</div>
+            <div style="font-size: 12px; color: var(--text-muted);" id="expenseUpdateStockWhy">Stock is topped up for every item when you save</div>
+          </div>
+          <label class="toggle-switch" style="margin: 0; flex-shrink: 0;">
+            <input type="checkbox" id="expenseUpdateStockToggle" checked onchange="toggleExpenseUpdateStock()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
         <div class="ec-sec-head">
           <span class="ec-sec-title">Stock it adds</span>
         </div>
@@ -1187,13 +1213,6 @@
           <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
         </div>
         <div class="ec-foot" style="padding:0 0 calc(12px + env(safe-area-inset-bottom));">
-          <button type="button" class="rcm-tog" id="ecUpdateStockTog" aria-pressed="true" onclick="toggleEcUpdateStock()">
-            <span class="rcm-tog-main">
-              <span class="rcm-tog-name">Update inventory</span>
-              <span class="rcm-tog-why" id="ecUpdateStockWhy"></span>
-            </span>
-            <span class="rcm-tog-sw"></span>
-          </button>
           <div style="padding:10px 16px 0;">
             <div class="ec-tally" id="ecLineTally"></div>
             <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
@@ -2155,11 +2174,13 @@ async function openAddExpenseModal() {
   editingExpenseId = null;
   selectedExpenseIngredients = [];
   _ecInsights = null;
+  _expenseUpdateStock = true;
 
   document.getElementById('modalTitle').textContent = 'New expense';
   document.getElementById('expenseForm').reset();
   document.getElementById('expense_id').value = '';
   document.getElementById('expense_vendor').value = '';
+  document.getElementById('expenseUpdateStockWhy').textContent = 'Stock is topped up for every item when you save';
 
   // Set today's date
   document.getElementById('expense_date').valueAsDate = new Date();
@@ -2325,7 +2346,6 @@ function bumpExpenseLine(id, delta) {
 // ---------- Item picker (18b) — pick, then set quantity + what it cost ----------
 let _ecInsights = null;   // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }, loaded once per picker session
 let _ecEditingId = null;  // id of the selectedExpenseIngredients line being edited, or null when adding new
-let _ecUpdateStock = true;  // whether saving this line should top up the ingredient's stock
 let _ecIngredient = null; // the ingredients-table row currently open in pane 2
 let _ecDraft = null;      // { qty, cost } being edited in pane 2
 let _ecCategoryFilter = null; // category name to filter pane 1's item list by, or null for all
@@ -2612,22 +2632,20 @@ function ecOpenLine(ingredientId, existingId) {
   document.getElementById('ecLRemove').hidden = !sel;
   document.getElementById('ecLineSaveBtn').textContent = sel ? 'Save changes' : 'Add to expense';
 
-  _ecUpdateStock = sel ? (sel.updateStock !== false) : true;
-  _ecRenderUpdateStockTog();
-
   ecSyncTotal();
   ecShowPane('line');
 }
 
-function _ecRenderUpdateStockTog() {
-  document.getElementById('ecUpdateStockTog').setAttribute('aria-pressed', _ecUpdateStock ? 'true' : 'false');
-  document.getElementById('ecUpdateStockWhy').textContent = _ecUpdateStock
-    ? 'This item’s stock is topped up when you save'
-    : 'Records the cost only — stock isn’t changed';
-}
-function toggleEcUpdateStock() {
-  _ecUpdateStock = !_ecUpdateStock;
-  _ecRenderUpdateStockTog();
+// Whole-receipt toggle (see #expenseUpdateStockToggle above ecLines) --
+// used to be asked per line here, which made no sense (why would some items
+// on the same receipt update stock and others not?). One decision applies
+// to every line now; see saveExpense()'s use of _expenseUpdateStock.
+let _expenseUpdateStock = true;
+function toggleExpenseUpdateStock() {
+  _expenseUpdateStock = document.getElementById('expenseUpdateStockToggle').checked;
+  document.getElementById('expenseUpdateStockWhy').textContent = _expenseUpdateStock
+    ? 'Stock is topped up for every item when you save'
+    : 'Records the cost only — stock isn’t changed for any item';
 }
 
 function ecRenderCostHint() {
@@ -2669,9 +2687,9 @@ function ecSaveLine() {
   const ing = _ecIngredient;
   if (_ecEditingId) {
     const sel = selectedExpenseIngredients.find(s => s.id === _ecEditingId);
-    if (sel) { sel.quantity = _ecDraft.qty; sel.cost = _ecDraft.cost; sel.updateStock = _ecUpdateStock; }
+    if (sel) { sel.quantity = _ecDraft.qty; sel.cost = _ecDraft.cost; }
   } else {
-    selectedExpenseIngredients.push({ id: ing.id, name: ing.name, quantity: _ecDraft.qty, cost: _ecDraft.cost, updateStock: _ecUpdateStock });
+    selectedExpenseIngredients.push({ id: ing.id, name: ing.name, quantity: _ecDraft.qty, cost: _ecDraft.cost });
   }
   closeExpenseItemPicker();
   onExpenseEdit();
@@ -2765,6 +2783,9 @@ async function editExpense(expenseId) {
 
   editingExpenseId = expenseId;
   selectedExpenseIngredients = [];
+  _expenseUpdateStock = true;
+  document.getElementById('expenseUpdateStockToggle').checked = true;
+  document.getElementById('expenseUpdateStockWhy').textContent = 'Stock is topped up for every item when you save';
 
   document.getElementById('modalTitle').textContent = 'Edit expense';
   document.getElementById('expense_id').value = expense.id;
@@ -2839,7 +2860,7 @@ async function saveExpense(event) {
         name: sel.name,
         quantity: sel.quantity,
         cost_per_unit: parseFloat(sel.cost) || 0,
-        update_stock: sel.updateStock !== false
+        update_stock: _expenseUpdateStock
       }))
     };
 
@@ -2862,15 +2883,12 @@ async function saveExpense(event) {
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
-    // Per-line "Update inventory" toggle (see ecOpenLine/toggleEcUpdateStock)
-    // lets a line be recorded as spend only, so this can no longer just be
-    // "were there any lines at all" -- it now reflects whether any of them
-    // actually opted in to topping up stock.
-    const inventoryUpdated = selectedExpenseIngredients.some(i => i.updateStock !== false);
+    // Whole-receipt "Update inventory" toggle (see toggleExpenseUpdateStock())
+    // -- one decision for every line on this expense.
+    const inventoryUpdated = _expenseUpdateStock && selectedExpenseIngredients.length > 0;
     const changesSummary = [];
     if (inventoryUpdated && !editingExpenseId) {
       for (const item of selectedExpenseIngredients) {
-        if (item.updateStock === false) continue;
         const ing = allIngredients.find(i => i.id === item.id);
         if (ing && item.quantity > 0) {
           const oldQty = parseFloat(ing.quantity) || 0;
