@@ -7,8 +7,9 @@
 // one function is the free fix; see PROJECT-STRUCTURE.md or ask before
 // adding another new api/*.js file without checking the current count.
 //
-// Dispatches on body.action: 'first-item' | 'onboarding' | 'report-bug'.
-// Each action's logic below is otherwise unchanged from its original file.
+// Dispatches on body.action: 'first-item' | 'first-order' | 'onboarding' |
+// 'report-bug'. Each action's logic below is otherwise unchanged from its
+// original file (first-order is new, added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -145,6 +146,89 @@ async function sendFirstItemEmail(req, res, user) {
   return res.status(200).json({ sent: true });
 }
 
+// Called client-side right after a successful order save (see orders.html's/
+// operations.html's own notifyFirstOrderIfNeeded(), called from each page's
+// saveManualOrder() and confirmMappedOrder() -- both pages duplicate the
+// whole order-creation flow independently, so both need their own call).
+// Same reasoning as sendFirstItemEmail: the client-side "is this their
+// first order" guess is just an optimization, this re-checks server-side
+// against the database so a stale count or duplicate call can't double-send.
+//
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_order_email_sent_at) and email-sql/add-unsubscribed-all-emails.sql
+// (user_settings.unsubscribed_all_emails) run in Supabase before this does
+// anything.
+async function sendFirstOrderEmail(req, res, user) {
+  const { data: settings } = await supabaseAdmin
+    .from('user_settings')
+    .select('first_order_email_sent_at, unsubscribed_all_emails')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (settings?.first_order_email_sent_at) {
+    console.log(`first-order email skipped for ${user.id}: already_sent at ${settings.first_order_email_sent_at}`);
+    return res.status(200).json({ sent: false, reason: 'already_sent' });
+  }
+  if (settings?.unsubscribed_all_emails) {
+    console.log(`first-order email skipped for ${user.id}: unsubscribed_all_emails`);
+    return res.status(200).json({ sent: false, reason: 'unsubscribed' });
+  }
+
+  // Source of truth for "is this actually their first order" -- orders
+  // live in the `sales` table, scoped by profile_id (not user_id).
+  const { count, error: countError } = await supabaseAdmin
+    .from('sales')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', user.id);
+  if (countError) throw countError;
+  if ((count || 0) !== 1) {
+    console.log(`first-order email skipped for ${user.id}: not_first_order (count=${count})`);
+    return res.status(200).json({ sent: false, reason: 'not_first_order' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured -- skipping first-order email');
+    return res.status(200).json({ sent: false, reason: 'email_not_configured' });
+  }
+
+  // Resend's dashboard-published template is "first-order-logged" (matches
+  // how orders get counted -- "logged", not "created" -- not the checked-in
+  // emails/first-order-created.html filename, which predates this alias).
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
+      to: user.email,
+      template: {
+        id: 'first-order-logged',
+        variables: {
+          unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
+        }
+      }
+    })
+  });
+  if (!sendRes.ok) {
+    const errBody = await sendRes.text();
+    throw new Error(`Resend API error (${sendRes.status}): ${errBody}`);
+  }
+
+  // upsert, not update: a brand-new account may not have a user_settings
+  // row yet, and .update() on a non-existent row silently affects zero rows
+  // with no error, which would leave this column permanently null despite
+  // the email having actually sent (same fix as sendFirstItemEmail).
+  await supabaseAdmin
+    .from('user_settings')
+    .upsert({ user_id: user.id, first_order_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+  console.log(`first-order email sent to ${user.email} (${user.id})`);
+  return res.status(200).json({ sent: true });
+}
+
 // Called client-side once per account, right after ensureProfileExists(user)
 // resolves in auth.js's initUserMenu() (see the localStorage-gated call
 // there) -- that client-side gate is just an optimization to avoid hitting
@@ -275,6 +359,7 @@ async function sendBugReport(req, res, user) {
 
 const ACTIONS = {
   'first-item': sendFirstItemEmail,
+  'first-order': sendFirstOrderEmail,
   'onboarding': sendOnboardingEmail,
   'report-bug': sendBugReport
 };
