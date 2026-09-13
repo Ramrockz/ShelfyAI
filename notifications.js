@@ -128,14 +128,14 @@ function renderNotifications() {
     const itemClick = notification.ingredient_id
       ? `onclick="openIngredient('${notification.ingredient_id}')"`
       : isWelcomeGuide
-        ? `onclick="window.location.href='/docs'"`
+        ? `onclick="window.location.href='/quick-guide'"`
         : isAiLimitReached
           ? `onclick="window.location.href='/pricing#scan-pack'"`
           : '';
     const openLink = notification.ingredient_id
       ? `<span class="notif-open-link" onclick="openIngredient('${notification.ingredient_id}'); event.stopPropagation();">Open</span>`
       : isWelcomeGuide
-        ? `<span class="notif-open-link" onclick="window.location.href='/docs'; event.stopPropagation();">View Guide</span>`
+        ? `<span class="notif-open-link" onclick="window.location.href='/quick-guide'; event.stopPropagation();">View Guide</span>`
         : isAiLimitReached
           ? `<span class="notif-open-link" onclick="window.location.href='/pricing#scan-pack'; event.stopPropagation();">Buy Scans</span>`
           : '';

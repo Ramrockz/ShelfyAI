@@ -4,7 +4,23 @@
 <meta charset="UTF-8" />
 <title>ShelfyAI – Quick Guide</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Eight steps to get your ShelfyAI shelf set up right, each with a screenshot of the real screen." />
+<meta name="description" content="Eight steps to get your ShelfyAI shelf set up right, each with a screenshot of the real screen, plus video walkthroughs and FAQ." />
+<meta name="keywords" content="inventory management tutorial, how to track inventory, ShelfyAI quick guide, inventory software guide, quick start guide, inventory management FAQ" />
+<link rel="canonical" href="https://www.shelfyai.com/quick-guide" />
+
+<!-- Open Graph Tags -->
+<meta property="og:title" content="ShelfyAI – Quick Guide" />
+<meta property="og:description" content="Eight steps to get your ShelfyAI shelf set up right, plus video walkthroughs and FAQ." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.shelfyai.com/quick-guide" />
+<meta property="og:image" content="https://www.shelfyai.com/favicon-512.png" />
+<meta property="og:site_name" content="ShelfyAI" />
+
+<!-- Twitter Card Tags -->
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="ShelfyAI – Quick Guide" />
+<meta name="twitter:description" content="Quick start guide and FAQ for ShelfyAI inventory management." />
+<meta name="twitter:image" content="https://www.shelfyai.com/favicon-512.png" />
 
 <script>
   // Apply theme immediately from localStorage to prevent flash
@@ -105,6 +121,28 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .qg-foot-card a.primary:hover { background: var(--accent-ink, var(--accent)); color: #fff; }
 .qg-foot-card a.ghost { background: var(--bg-inner); color: var(--text-main); }
 
+/* video tutorials */
+.qg-videos { padding: 0 20px; display: flex; flex-direction: column; gap: 18px; }
+.qg-video-card { background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+                  border-radius: 14px; padding: 14px; }
+.qg-video-t { margin: 0 0 10px; font-size: 14.5px; font-weight: 700; color: var(--text-main); }
+.qg-video-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px;
+                   overflow: hidden; background: var(--bg-inner); }
+.qg-video-frame iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+
+/* FAQ */
+.qg-search { width: 100%; margin: 0 0 14px; position: relative; }
+.qg-search input { width: 100%; background: var(--bg-panel); border: 1px solid var(--border);
+                    border-radius: 12px; color: var(--text-main); font-size: 15px; box-sizing: border-box; }
+.faq-item { background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+            border-radius: 12px; margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; }
+.faq-question { padding: 16px 18px; cursor: pointer; display: flex; justify-content: space-between;
+                align-items: center; font-weight: 600; font-size: 14.5px; margin: 0; gap: 12px; }
+.faq-answer { padding: 0 18px 16px; color: var(--text-muted); font-size: 13.5px; line-height: 1.55; display: none; }
+.faq-item.active .faq-answer { display: block; }
+.faq-item.active .arrow { transform: rotate(180deg); }
+.arrow { transition: transform 0.2s; color: var(--text-muted); flex-shrink: 0; }
+
 @media (max-width: 480px) {
   .qg-intro h1 { font-size: 24px; }
   .qg-shot { width: 84px; height: 155px; }
@@ -136,12 +174,183 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
   <div class="qg-sec"><b>Keep the books honest</b><small>steps 7–8</small></div>
   <div id="steps-c"></div>
 
+  <div class="qg-sec"><b>Watch the videos</b><small>7 short walkthroughs</small></div>
+  <div class="qg-videos" id="qg-videos"></div>
+
+  <div class="qg-sec"><b>Frequently asked questions</b></div>
+  <div style="padding: 0 20px 8px;">
+    <div class="qg-search search-wrapper">
+      <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search for a question..." id="faqSearch" onkeyup="filterFAQ(); toggleSearchClear('faqSearch')">
+      <button type="button" class="search-clear" id="faqSearch_clear" onclick="document.getElementById('faqSearch').value = ''; filterFAQ(); this.classList.remove('visible');" title="Clear search">×</button>
+    </div>
+  </div>
+  <div style="padding: 0 20px;" id="faqList">
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        What is ShelfyAI?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        ShelfyAI is an AI-powered inventory management tool built for small businesses. It helps product-based businesses — bakeries, coffee shops, handmade goods sellers, restaurants, Etsy shops, and more — track their stock in real time, get low-stock alerts before they run out, and update their inventory from photos or supplier URLs in seconds. No spreadsheets, no manual counting, no guesswork.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Who is ShelfyAI for?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        ShelfyAI is built for small and growing product-based businesses that are tired of managing inventory manually. If you sell handmade products, run a food business, manage a small shop, or fulfil orders through platforms like Etsy — and you're tracking stock in a spreadsheet or from memory — ShelfyAI was made for you. It's designed to be simple enough to use from day one, without any training or technical setup.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        How is ShelfyAI different from using a spreadsheet?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Spreadsheets are static — they only know what you tell them, and they don't update automatically. ShelfyAI tracks your inventory in real time, alerts you automatically when stock runs low, and lets you update your inventory from a photo or URL instead of typing everything in manually. It saves time, reduces errors, and gives you accurate data you can actually trust when making purchasing decisions.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        How do I sign up or log in?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Click Log In in the top right, enter your email, and you'll receive a magic link — no password needed. You can also sign in with Google. All data is encrypted and securely stored.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        How does the AI inventory update work?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        ShelfyAI uses AI to read product information from photos, invoice screenshots, and supplier URLs. Instead of typing in product names, quantities, and prices manually, you upload an image or paste a link — the AI extracts the details and pre-fills everything for you. You review the result and confirm before anything is saved, so you're always in control.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Can ShelfyAI read my supplier invoices and receipts?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes. You can upload a photo or screenshot of a supplier invoice or delivery note and ShelfyAI will automatically extract the product names, quantities, prices, and dates. This works for both physical receipts you've photographed and digital invoice screenshots. It's one of the fastest ways to keep your inventory current without manual data entry.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        How many AI scans do I get per month?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        AI scan limits depend on your plan and are shared across items, orders, and expenses:
+        <ul style="margin: 10px 0 0 16px; line-height: 2;">
+          <li><strong>Free:</strong> 5 AI scans/month</li>
+          <li><strong>Starter (€9.99/mo):</strong> 100 AI scans/month</li>
+          <li><strong>Pro (€19.99/mo):</strong> 300 AI scans/month</li>
+        </ul>
+        Most small businesses find the Free or Starter plan more than enough for their volume. You'll see a notification in the app when you're getting close to your limit.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        How do low-stock alerts and notifications work?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Every item has a minimum stock threshold you set yourself. When stock drops to or below that level — through a sale, a fulfilled order, or a manual adjustment — ShelfyAI sends an automatic alert. You'll see it in the notification bell in the top navigation, along with any other pending tasks or alerts. From there you can view the item or add it to your shopping list for reordering, so you never discover a stockout when a customer is asking for something.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Does ShelfyAI automatically deduct stock when I make a sale?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes. When you link your products to their components (items, materials, or parts) in ShelfyAI, recording a sale or fulfilling an order automatically deducts the right quantities from your stock. No manual counting after every sale. Your inventory stays current without extra effort.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Can I track my supply costs and expenses?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes. ShelfyAI includes expense tracking so you can log supply purchases, packaging, equipment, and other costs — manually, or by uploading a receipt photo for the AI to fill in. When you log a supply purchase, you can sync the quantities directly to your inventory stock, so your expense records and your stock levels stay in sync. Starter and Pro users can export their expense data for tax purposes or to share with their accountant.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Is ShelfyAI free to use?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes — ShelfyAI has a free plan with no credit card required. The Free plan gives you unlimited products, unlimited records, and 5 AI scans per month. It's a fully functional starting point for small businesses just getting their inventory under control. Paid plans unlock higher AI scan limits, bulk upload, the full order dashboard, and advanced expense tracking.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        What do the paid plans cost?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        ShelfyAI has two paid plans. Starter is €9.99/month and includes 100 AI scans per month, bulk upload, the full order dashboard, and expense tracking. Pro is €19.99/month and includes 300 AI scans per month and larger bulk upload batches — built for higher-volume operations. Both plans are available at 20% off on annual billing (€99/year for Starter, €199/year for Pro). You can upgrade, downgrade, or cancel at any time.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Can I export my inventory and sales data?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes. Starter and Pro users can export sales reports, expense records, and inventory data as CSV or PDF files. CSV exports are easy to import into accounting software or share with your accountant at tax time. The Shopping List can be exported as a PDF at any time, on any plan.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Do I need to install an app?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        No. ShelfyAI runs in your browser on any device — phone, tablet, or desktop. You can also add it to your home screen like a native app: on iPhone, tap Share then "Add to Home Screen." On Android, tap the install prompt that appears in your browser. Your data syncs across all your devices automatically.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <h3 class="faq-question" onclick="toggleFAQ(this)">
+        Is my business data safe and private?
+        <span class="arrow">▼</span>
+      </h3>
+      <div class="faq-answer">
+        Yes. All your data is stored in a secure, encrypted database with strict access controls — only you can see your inventory, orders, and expenses. We never sell your data to third parties or use it for advertising. Your business information stays yours.
+      </div>
+    </div>
+
+  </div>
+
   <div class="qg-foot">
     <div class="qg-foot-card">
       <b>Still stuck?</b>
-      <p>The full docs cover items, products, orders and expenses in more detail, plus answers to common questions.</p>
+      <p>Reach out and we'll help you get it sorted.</p>
       <div class="qg-foot-links">
-        <a class="primary" href="/docs">Read the full docs</a>
+        <a class="primary" href="mailto:inventory@shelfyai.com">Contact support</a>
         <a class="ghost" href="/settings">Back to Settings</a>
       </div>
     </div>
@@ -209,6 +418,49 @@ STEPS.forEach(s => {
     '</span>';
   document.getElementById('steps-' + s.group).appendChild(step);
 });
+
+const VIDEOS = [
+  { t: 'How to create an item', id: 'HmiV2GJLpQE' },
+  { t: 'How to create a product', id: 'KUl2p9GM5pg' },
+  { t: 'How to create an order', id: 'o5DN22iOtWA' },
+  { t: 'How reordering works', id: 'i0LQjItSR5o' },
+  { t: 'How to create an expense', id: 'mSmFxoKh1CA' },
+  { t: 'How filters work', id: '9Q3tGfsKxNQ' },
+  { t: 'The Settings page', id: 'BZ702wCfl3U' }
+];
+
+VIDEOS.forEach(v => {
+  const card = document.createElement('div');
+  card.className = 'qg-video-card';
+  card.innerHTML =
+    '<p class="qg-video-t">' + v.t + '</p>' +
+    '<div class="qg-video-frame">' +
+      '<iframe src="https://www.youtube.com/embed/' + v.id + '" title="' + v.t + '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>' +
+    '</div>';
+  document.getElementById('qg-videos').appendChild(card);
+});
+
+function toggleFAQ(element) {
+  element.parentElement.classList.toggle('active');
+}
+
+function toggleSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(inputId + '_clear');
+  if (input && clearBtn) {
+    clearBtn.classList.toggle('visible', !!input.value.trim());
+  }
+}
+
+function filterFAQ() {
+  const input = document.getElementById('faqSearch').value.toLowerCase();
+  const items = document.getElementsByClassName('faq-item');
+  for (let i = 0; i < items.length; i++) {
+    const question = items[i].querySelector('.faq-question').innerText.toLowerCase();
+    const answer = items[i].querySelector('.faq-answer').innerText.toLowerCase();
+    items[i].style.display = (question.includes(input) || answer.includes(input)) ? 'block' : 'none';
+  }
+}
 </script>
 
 <!-- Feedback Widget -->
