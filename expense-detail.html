@@ -2123,6 +2123,7 @@ async function confirmDelete() {
 // the already-saved expense row (and to ingredient stock) immediately,
 // since there's no outer "Save" step on this page.
 let _ecInsights = null;    // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }
+let _ecInsightsVendor;     // vendor _ecInsights.vendorIds was computed for -- see _ecLoadInsights()
 let _ecEditingIndex = null; // index into expenseData.ingredients being edited, or null when adding a new line
 let _ecIngredient = null;   // the ingredients-table row currently open in pane 2
 let _ecDraft = null;        // { qty, cost } being edited in pane 2
@@ -2249,9 +2250,21 @@ function _ecMatchesAttrFilters(ing) {
   } catch (e) { return false; }
 }
 
+function _vendorNameFromUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    const label = host.split('.')[0];
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  } catch (e) {
+    return null;
+  }
+}
+
 async function _ecLoadInsights() {
-  if (_ecInsights) return _ecInsights;
+  const vendorLc = (expenseData?.vendor || '').trim().toLowerCase();
+  if (_ecInsights && _ecInsightsVendor === vendorLc) return _ecInsights;
   _ecInsights = { lastPaid: new Map(), vendorIds: new Set() };
+  _ecInsightsVendor = vendorLc;
   try {
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return _ecInsights;
@@ -2259,7 +2272,6 @@ async function _ecLoadInsights() {
     if (window.currentStoreId) q = q.eq('store_id', window.currentStoreId);
     const { data, error } = await q.order('expense_date', { ascending: false });
     if (error) throw error;
-    const vendorLc = (expenseData?.vendor || '').trim().toLowerCase();
     (data || []).forEach(exp => {
       if (exp.id === expenseId) return; // this expense's own lines aren't "history"
       const isVendor = vendorLc && (exp.vendor || '').trim().toLowerCase() === vendorLc;
@@ -2273,6 +2285,20 @@ async function _ecLoadInsights() {
         if (isVendor) _ecInsights.vendorIds.add(id);
       });
     });
+
+    // Vendor chips aren't only built from past expenses.vendor -- they're
+    // also *guessed* from an ingredient's own source_url via
+    // _vendorNameFromUrl(). Picking one of those left vendorIds empty above
+    // every time, since a URL-derived name was never actually typed as an
+    // expense's vendor before -- even though the ingredient it came from
+    // obviously IS from that vendor.
+    if (vendorLc) {
+      (ingredients || []).forEach(ing => {
+        if (ing.source_url && (_vendorNameFromUrl(ing.source_url) || '').toLowerCase() === vendorLc) {
+          _ecInsights.vendorIds.add(ing.id);
+        }
+      });
+    }
   } catch (e) {
     console.error('Error loading expense insights:', e);
   }
