@@ -2592,7 +2592,13 @@ async function ecRemoveLine() {
 // ---- Create New Item (18b) — "Create a new item" row in the picker ----
 function openQuickCreateIngredientForExpense(name) {
   document.getElementById('quick_ing_name').value = name || '';
-  document.getElementById('quick_ing_quantity').value = 1;
+  // Not 1 -- this is a brand-new item's STARTING stock, and creating it here
+  // is immediately followed by ecOpenLine() below, whose own quantity
+  // stepper is what actually adds this purchase's stock once the line is
+  // saved. Defaulting the starting stock to 1 as well double-counted: a
+  // "buy 1" line landed on 2 (1 starting + 1 added), not 1 (see the same fix
+  // in expenses.html's openQuickCreateIngredient()).
+  document.getElementById('quick_ing_quantity').value = 0;
   document.getElementById('quick_ing_cost').value = '';
   document.getElementById('quick_ing_sku').value = '';
   document.getElementById('quick_ing_min_stock').value = '5';

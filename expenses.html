@@ -4385,7 +4385,17 @@ function openQuickCreateIngredient(index, detectedName) {
   const detectedSku = detected?.SKU || detected?.sku || '';
 
   document.getElementById('quick_ing_name').value = detectedName || '';
-  document.getElementById('quick_ing_quantity').value = detectedQty;
+  // Not detectedQty -- this is a brand-new item's STARTING stock, and
+  // detectedQty is how many this receipt line is buying. That purchase
+  // quantity already gets added on top once the expense is saved (see
+  // confirmIngredientMapping()'s stock-update loop, keyed off this same
+  // mappedItems[index].quantity) -- prefilling the starting stock with it
+  // too silently double-counted the purchase (e.g. a detected "buy 1"
+  // created the item already at 1, then the save added another 1, landing
+  // on 2 instead of 1). Only meaningful when this modal opened for an
+  // actual detected line (index !== null); the plain "no match" quick-add
+  // path (index === null) keeps its own unrelated default.
+  document.getElementById('quick_ing_quantity').value = index !== null ? 0 : detectedQty;
   document.getElementById('quick_ing_cost').value = detectedPrice ? parseFloat(detectedPrice).toFixed(2) : '';
   document.getElementById('quick_ing_sku').value = detectedSku;
   document.getElementById('quick_ing_min_stock').value = '';
