@@ -5,6 +5,10 @@
 // email-sql/add-unsubscribed-all-emails.sql. Every email-sending endpoint
 // checks that flag before calling Resend (see api/send-first-item-email.js).
 //
+// Only covers ShelfyAI's own templates sent via Resend -- Stripe sends its
+// own payment receipts/invoices directly and has no idea this flag exists,
+// so those keep arriving regardless. Don't imply otherwise in any UI copy.
+//
 // No login required by design (same reasoning as any real unsubscribe
 // link), so this can't check "is this really you" the way an authenticated
 // endpoint would -- the user id in the URL is the only thing gating it.
@@ -62,7 +66,7 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(page(
       "You're unsubscribed",
-      "You won't receive any more emails from ShelfyAI, including receipts and product updates. Changed your mind? You can turn this back on any time from Settings."
+      "You won't receive any more emails from ShelfyAI, like welcome messages and tips. Payment receipts from Stripe are sent separately and aren't affected. Changed your mind? You can turn this back on any time from Settings."
     ));
   } catch (error) {
     console.error('Error processing unsubscribe:', error);

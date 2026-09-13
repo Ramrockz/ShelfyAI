@@ -513,10 +513,11 @@
      working unchanged -- only the surrounding chrome (header + scroll)
      is new. */
   .st-group-content { max-height: 80vh; overflow-y: auto; text-align: left; }
-  .st-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .st-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .st-group-head h3 { margin: 0; }
-  .st-group-close { background: var(--bg-inner); border: none; width: 30px; height: 30px; border-radius: 50%;
-                     color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; flex-shrink: 0; }
+  .st-group-back { background: none; border: none; width: 32px; height: 32px; border-radius: 50%;
+                    color: var(--text-main); display: flex; align-items: center; justify-content: center;
+                    cursor: pointer; flex-shrink: 0; padding: 0; margin-left: -6px; }
   .st-group-content .st-sec-head:first-of-type { padding-top: 4px; }
 
   /* "Remove photo" -- a third line inside the identity card's text stack
@@ -989,7 +990,7 @@
      existing population/toggle code needs no changes at all. -->
 <div class="modal-overlay" id="stGroupModal-usage" onclick="if(event.target===this)closeSettingsGroup('usage')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Limits and Plan</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('usage')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('usage')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Limits and Plan</h3></div>
 
     <div class="st-sec-head"><span class="st-sec-title">AI scans</span></div>
     <div class="st-pool" id="stPool"></div>
@@ -1008,7 +1009,7 @@
 
 <div class="modal-overlay" id="stGroupModal-stores" onclick="if(event.target===this)closeSettingsGroup('stores')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Stores</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('stores')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('stores')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Stores</h3></div>
     <div class="st-sec-head">
       <span class="st-sec-title">Stores</span>
       <span class="st-sec-note" id="stStoreNote"></span>
@@ -1019,7 +1020,7 @@
 
 <div class="modal-overlay" id="stGroupModal-appearance" onclick="if(event.target===this)closeSettingsGroup('appearance')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Appearance</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('appearance')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('appearance')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Appearance</h3></div>
     <div class="st-list">
       <div class="st-row" style="cursor:default" onclick="event.preventDefault()">
         <span class="st-row-main">
@@ -1044,7 +1045,7 @@
 
 <div class="modal-overlay" id="stGroupModal-notifications" onclick="if(event.target===this)closeSettingsGroup('notifications')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Notifications</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('notifications')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('notifications')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Notifications</h3></div>
     <div class="st-list">
       <button type="button" class="st-row" id="notificationsToggle" aria-pressed="true" onclick="toggleNotificationsEnabled()">
         <span class="st-row-main">
@@ -1121,7 +1122,7 @@
       <button type="button" class="st-row" id="unsubAllEmailsRow" aria-pressed="false" onclick="toggleUnsubscribeAllEmails()">
         <span class="st-row-main">
           <span class="st-row-name">Unsubscribe from all emails</span>
-          <span class="st-row-why">Stops every email ShelfyAI sends, including receipts and updates</span>
+          <span class="st-row-why">Stops ShelfyAI's own emails (welcome, tips, updates) — payment receipts from Stripe are separate and still arrive</span>
         </span>
         <span class="st-sw"></span>
       </button>
@@ -1131,7 +1132,7 @@
 
 <div class="modal-overlay" id="stGroupModal-data" onclick="if(event.target===this)closeSettingsGroup('data')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Data &amp; Reports</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('data')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('data')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Data &amp; Reports</h3></div>
     <div class="st-sec-head"><span class="st-sec-title">History and reports</span></div>
     <div class="st-list">
       <button type="button" class="st-row" onclick="window.location.href='/change-log'">
@@ -1184,7 +1185,7 @@
 
 <div class="modal-overlay" id="stGroupModal-help" onclick="if(event.target===this)closeSettingsGroup('help')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Help</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('help')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('help')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Help</h3></div>
     <div class="st-list">
       <button type="button" class="st-row" onclick="window.location.href='/quick-guide'">
         <span class="st-row-main">
@@ -1206,7 +1207,7 @@
 
 <div class="modal-overlay" id="stGroupModal-account" onclick="if(event.target===this)closeSettingsGroup('account')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Account</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('account')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('account')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Account</h3></div>
     <div class="st-list">
       <div class="st-row">
         <span class="st-row-main"><span class="st-row-name">Email</span></span>
@@ -1226,7 +1227,7 @@
 <!-- Danger zone: each row states exactly what it destroys -->
 <div class="modal-overlay" id="stGroupModal-danger" onclick="if(event.target===this)closeSettingsGroup('danger')">
   <div class="modal-content st-group-content">
-    <div class="st-group-head"><h3>Danger zone</h3><button type="button" class="st-group-close" onclick="closeSettingsGroup('danger')" aria-label="Close">&times;</button></div>
+    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('danger')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Danger zone</h3></div>
     <div class="st-list">
       <button type="button" class="st-row danger" onclick="openDeleteDataModal()">
         <span class="st-row-main">

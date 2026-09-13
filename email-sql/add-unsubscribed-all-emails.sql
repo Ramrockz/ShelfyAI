@@ -6,9 +6,13 @@
 -- before calling the Resend API; set by either the "Unsubscribe from all
 -- emails" toggle in Settings > Notifications, or the {{unsubscribe_url}}
 -- link in any email template (api/unsubscribe.js).
+--
+-- Only covers ShelfyAI's own Resend templates -- Stripe sends payment
+-- receipts/invoices directly and never checks this flag, so those keep
+-- arriving regardless of this setting.
 
 ALTER TABLE user_settings
 ADD COLUMN IF NOT EXISTS unsubscribed_all_emails BOOLEAN DEFAULT false;
 
 COMMENT ON COLUMN user_settings.unsubscribed_all_emails IS
-  'True means the account opted out of every ShelfyAI email (not in-app/push notifications). Checked before every Resend send.';
+  'True means the account opted out of every ShelfyAI email sent via Resend (not in-app/push notifications, and not Stripe''s own receipts/invoices, which are separate). Checked before every Resend send.';
