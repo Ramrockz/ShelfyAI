@@ -71,7 +71,18 @@
   window.handleSwitchGoogleLogin = async function() {
     try {
       await window.supabaseClient.auth.signOut();
+      // Same cleanup as handleSwitchLogin()/handleSwitchSignUp() below --
+      // this was missing here, so the OLD account's store id/user
+      // email/avatar stuck around in storage across the switch. Usually
+      // masked by ensureStoreExists() self-healing a stale store id once
+      // the new session loads, but left a real window (and, in a
+      // standalone-PWA/redirect edge case where the OAuth round trip
+      // doesn't force a full fresh navigation, a stuck-looking page) where
+      // the wrong account's data or store scope could still be showing.
+      sessionStorage.removeItem('shelfy_user_email'); sessionStorage.removeItem('shelfy_user_avatar');
+      localStorage.removeItem('shelfy_store_id'); localStorage.removeItem('shelfy_store_name');
       if (typeof clearShelfyDataCaches === 'function') clearShelfyDataCaches();
+      window.currentStoreId = null; window.currentStoreName = null;
       const { error } = await window.supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
       if (error) throw error;
     } catch (e) { alert('Google sign-in failed: ' + e.message); }
