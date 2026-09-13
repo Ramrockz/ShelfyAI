@@ -1158,7 +1158,13 @@ function renderReorderPredictions() {
       const currentQty = parseFloat(ing.quantity) || 0;
       const minStock = parseFloat(ing.min_stock) || 0;
       const belowMin = minStock > 0 && currentQty <= minStock;
-      if (totalConsumed === 0 && !belowMin) return null; // no usage signal, not already low either
+      // This forecast is explicitly usage-based -- an item that's simply
+      // sitting below min_stock with zero actual consumption (avg/mo would
+      // be 0, days-left literally infinite) isn't "running out", it's just
+      // low. That's already surfaced by ingredients.html's own low-stock
+      // pill; don't duplicate it here as a self-contradictory "this month"
+      // row with no usage signal behind it.
+      if (totalConsumed === 0) return null;
       const monthsUntilEmpty = avgMonthly > 0 ? currentQty / avgMonthly : Infinity;
       const bucket = belowMin ? 0 : Math.floor(monthsUntilEmpty);
       if (bucket > 2) return null; // beyond this forecast's 3-month window
