@@ -43,6 +43,7 @@
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
 <script src="import-modal.js"></script>
+<script src="url-import-modal.js"></script>
 <script src="inventory-impact.js"></script>
 <script src="barcode-scanner.js"></script>
 <script src="chat-bot.js"></script>
@@ -3890,8 +3891,25 @@ let quickCreateTargetIndex = null;
 // the receipt-mapping flow's create-ingredient modal, but with no mappedItems
 // index to auto-map to (saveQuickIngredient adds it straight to this expense's
 // lines instead when quickCreateTargetIndex is null).
+//
+// Unlike createIngredientFromDetectedLine() below, this isn't the result of
+// an AI scan that already extracted data -- it's a cold start (typed a
+// search with no matches, or an empty list), so it gets the same
+// File/URL/Manual choice ingredients.html's own Add Item offers instead of
+// assuming manual entry. 'ingredient-inline' is the same context minus CSV
+// Import, which has nowhere to go for a single item added to one expense.
 function openQuickCreateIngredientForExpense(name) {
-  openQuickCreateIngredient(null, name);
+  window.ShelfyCreateModal.open('ingredient-inline', {
+    onSelect: (method) => {
+      if (method === 'manual') {
+        openQuickCreateIngredient(null, name);
+      } else if (method === 'image') {
+        startQuickIngredientUpload(name);
+      } else if (method === 'url') {
+        startQuickIngredientUrlImport(name);
+      }
+    }
+  });
 }
 
 // A detected line with no real match (or a search with no hits) is a
@@ -4139,6 +4157,119 @@ function openQuickIngCatSheet() {
 }
 function closeQuickIngCatSheet() {
   document.getElementById('quickIngCatSheet').classList.remove('active');
+}
+
+// Mirrors ingredients.html's checkAIUsage()/_notifyIfIngredientLimitReached()
+// -- surfaces an in-app notification the moment a scan here is the one that
+// pushes the account over its monthly AI limit.
+async function _notifyIfQuickIngredientLimitReached() {
+  const status = await window.ShelfyCreateModal.checkUsage();
+  if (status && status.limitReached) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && typeof createAILimitNotification === 'function') {
+      await createAILimitNotification(session.user.id, status.tier);
+    }
+  }
+}
+
+// Mirrors ingredients.html's applyReceiptScanToManualModal(), targeting this
+// page's quick_ing_* fields instead. #quickCreateIngredientModal must already
+// be open (via openQuickCreateIngredient()) before calling this.
+function applyReceiptScanToQuickModal(data) {
+  const item = (data.item && data.item[0]) || {};
+
+  if (item.name || data.description) {
+    document.getElementById('quick_ing_name').value = item.name || data.description;
+  }
+  if (item.price || data.amount) {
+    const price = item.price || data.amount;
+    const priceMatch = String(price).match(/[\d.]+/);
+    if (priceMatch) document.getElementById('quick_ing_cost').value = priceMatch[0];
+  }
+  if (item.quantity) {
+    document.getElementById('quick_ing_quantity').value = item.quantity;
+  }
+  if (item.unit) {
+    const rawUnit = item.unit.toLowerCase();
+    const unitMap = {
+      'kilograms': 'kg', 'kg': 'kg', 'grams': 'g', 'g': 'g',
+      'liters': 'L', 'l': 'L', 'milliliters': 'ml', 'ml': 'ml',
+      'pieces': 'pcs', 'piece': 'pcs', 'pcs': 'pcs', 'stückzahl': 'pcs',
+      'pounds': 'lb', 'lb': 'lb', 'lbs': 'lb', 'ounces': 'oz', 'oz': 'oz',
+      'meters': 'm', 'm': 'm', 'centimeters': 'cm', 'cm': 'cm'
+    };
+    document.getElementById('quick_ing_unit').value = unitMap[rawUnit] || rawUnit;
+    renderQuickIngUnits();
+  }
+  if (item.SKU) document.getElementById('quick_ing_sku').value = item.SKU;
+  if (item.product_category) selectQuickIngCategory(item.product_category);
+  if (item.shipping_time) document.getElementById('quick_ing_estimated_delivery').value = item.shipping_time;
+  if (data.vendor) document.getElementById('quick_ing_source_url').value = data.vendor;
+  if (item.expiration_date) document.getElementById('quick_ing_expiration_date').value = item.expiration_date;
+  if (item.notes) document.getElementById('quick_ing_notes').value = item.notes;
+
+  if (item.attributes && typeof item.attributes === 'object') {
+    Object.entries(item.attributes).forEach(([key, value]) => {
+      if (key && value) addQuickIngAttrRow(key, value);
+    });
+  }
+  onQuickIngredientEdit();
+}
+
+// Mirrors ingredients.html's applyUrlScanToManualModal(), targeting this
+// page's quick_ing_* fields instead.
+function applyUrlScanToQuickModal(data) {
+  if (data.name) {
+    let fullName = data.name;
+    const attributes = [];
+    if (data.color) attributes.push(data.color);
+    if (data.size) attributes.push(data.size);
+    if (attributes.length > 0) fullName = `${data.name} &bull; ${attributes.join(' &bull; ')}`;
+    document.getElementById('quick_ing_name').value = fullName;
+  }
+
+  if (data.price && data.quantity && data.quantity > 0) {
+    document.getElementById('quick_ing_cost').value = (data.price / data.quantity).toFixed(2);
+  } else if (data.price) {
+    document.getElementById('quick_ing_cost').value = data.price;
+  }
+  if (data.quantity) document.getElementById('quick_ing_quantity').value = data.quantity;
+  if (data.sku) document.getElementById('quick_ing_sku').value = data.sku;
+  if (data.estimated_delivery) document.getElementById('quick_ing_estimated_delivery').value = data.estimated_delivery;
+  if (data.product_category) selectQuickIngCategory(data.product_category);
+  if (data.source_url) document.getElementById('quick_ing_source_url').value = data.source_url;
+
+  if (data.color) addQuickIngAttrRow('Color', data.color);
+  if (data.size) addQuickIngAttrRow('Size', data.size);
+  onQuickIngredientEdit();
+}
+
+// Mirrors ingredients.html's startIngredientUpload() -- 'file' mode goes
+// straight to the native picker/screen capture, no "Take photo/Choose file"
+// screen first (see that function's own comment for why).
+function startQuickIngredientUpload(detectedName) {
+  window.ShelfyImportModal.quickStart('ingredient', 'file', {
+    onManual: () => openQuickCreateIngredient(null, detectedName),
+    onImported: async (data) => {
+      openQuickCreateIngredient(null, detectedName);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      applyReceiptScanToQuickModal(data);
+      await _notifyIfQuickIngredientLimitReached();
+    }
+  });
+}
+
+// Mirrors ingredients.html's startIngredientUrlImport().
+function startQuickIngredientUrlImport(detectedName) {
+  window.ShelfyUrlImportModal.open({
+    onManual: () => openQuickCreateIngredient(null, detectedName),
+    onImported: async (data) => {
+      openQuickCreateIngredient(null, detectedName);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      applyUrlScanToQuickModal(data);
+      await _notifyIfQuickIngredientLimitReached();
+    }
+  });
 }
 
 function openQuickCreateIngredient(index, detectedName) {

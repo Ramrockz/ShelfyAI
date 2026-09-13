@@ -44,6 +44,18 @@
         { id: 'upload', ai: true, icon: ICON.scan, name: 'File Upload', desc: 'Scan an order screenshot with AI' },
         { id: 'manual', ai: false, icon: ICON.search, name: 'Pick products', desc: 'Search your products and set quantities' }
       ]
+    },
+    // Same as 'ingredient' minus CSV Import -- used by expenses.html's
+    // inline "create a new item for this expense" flow, which adds one item
+    // at a time and has nowhere to route a bulk CSV import into.
+    'ingredient-inline': {
+      title: 'Add item',
+      subtitle: "Choose how you'd like to add your item",
+      methods: [
+        { id: 'image', ai: true, icon: ICON.scan, name: 'File Upload', desc: 'Scan receipts or invoices' },
+        { id: 'url', ai: true, icon: ICON.link, name: 'URL Import', desc: 'Extract from product pages' },
+        { id: 'manual', ai: false, icon: ICON.manual, name: 'Manual Entry', desc: 'Fill out the form yourself' }
+      ]
     }
   };
 
