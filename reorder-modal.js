@@ -451,10 +451,32 @@ async function placeReorder() {
       placedIds.push(id);
     }
 
+    notifyFirstReorderMarkedIfNeeded();
     closeReorderScreen();
     if (_roOnPlaced) _roOnPlaced(_roIngredient, placedIds);
   } catch (e) {
     console.error('Error placing reorder:', e);
     showAlert('Failed to place reorder: ' + e.message);
   }
+}
+
+// Fire-and-forget after any successful reorder mark (this shared modal is
+// included by ingredient-detail.html/operations.html/recipe-detail.html, so
+// one call here covers all three -- ingredient-detail.html's own
+// completeReorder() and recipe-detail.html's own rdmMarkAsReordered() are
+// separate page-local duplicates of "mark as reordered" that bypass this
+// modal entirely, and need their own call). The server
+// (api/account-email.js's 'first-reorder-marked' action) is the only
+// dedupe -- there's no historical count to re-verify against (unlike
+// first-item/first-order), so the user_settings sent_at flag alone decides
+// whether this is genuinely the first time, same as the onboarding email.
+function notifyFirstReorderMarkedIfNeeded() {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/account-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'first-reorder-marked' })
+    }).catch(() => {});
+  }).catch(() => {});
 }

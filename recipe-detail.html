@@ -2992,6 +2992,7 @@ async function rdmMarkAsReordered() {
       .eq('profile_id', user.id);
     
     if (error) throw error;
+    notifyFirstReorderMarkedIfNeeded();
 
     // Persist animation state locally so truck keeps animating after modal closes
     const ingId = currentReorderIngredient.id;

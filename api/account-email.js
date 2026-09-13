@@ -8,9 +8,10 @@
 // adding another new api/*.js file without checking the current count.
 //
 // Dispatches on body.action: 'first-item' | 'first-order' |
-// 'first-ai-order-match' | 'onboarding' | 'report-bug'. Each action's logic
-// below is otherwise unchanged from its original file (first-order and
-// first-ai-order-match are new, added after the initial merge).
+// 'first-ai-order-match' | 'first-reorder-marked' | 'onboarding' |
+// 'report-bug'. Each action's logic below is otherwise unchanged from its
+// original file (first-order, first-ai-order-match, and
+// first-reorder-marked are new, added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -396,6 +397,80 @@ async function sendOnboardingEmail(req, res, user) {
   return res.status(200).json({ sent: true });
 }
 
+// Called client-side after any successful "mark as reordered" write (see
+// reorder-modal.js's shared notifyFirstReorderMarkedIfNeeded(), called from
+// its own placeReorder() -- covering ingredient-detail.html/operations.html/
+// recipe-detail.html, which all include that shared script -- plus two
+// page-local duplicates of the same action that bypass the shared modal:
+// ingredient-detail.html's own completeReorder() and recipe-detail.html's
+// own rdmMarkAsReordered()).
+//
+// Unlike first-item/first-order, there's no historical table to re-verify
+// "is this genuinely their first" against -- ingredients.reorder_pending
+// just reflects current state (it gets marked, then cleared on arrival,
+// then can be marked again later), not an append-only log. So this works
+// like sendOnboardingEmail: the user_settings sent_at flag alone is
+// authoritative, no secondary data check.
+//
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_reorder_marked_email_sent_at) and
+// email-sql/add-unsubscribed-all-emails.sql (user_settings.
+// unsubscribed_all_emails) run in Supabase before this does anything.
+async function sendFirstReorderMarkedEmail(req, res, user) {
+  const { data: settings } = await supabaseAdmin
+    .from('user_settings')
+    .select('first_reorder_marked_email_sent_at, unsubscribed_all_emails')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (settings?.first_reorder_marked_email_sent_at) {
+    console.log(`first-reorder-marked email skipped for ${user.id}: already_sent at ${settings.first_reorder_marked_email_sent_at}`);
+    return res.status(200).json({ sent: false, reason: 'already_sent' });
+  }
+  if (settings?.unsubscribed_all_emails) {
+    console.log(`first-reorder-marked email skipped for ${user.id}: unsubscribed_all_emails`);
+    return res.status(200).json({ sent: false, reason: 'unsubscribed' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured -- skipping first-reorder-marked email');
+    return res.status(200).json({ sent: false, reason: 'email_not_configured' });
+  }
+
+  // Assumes the Resend dashboard template's alias matches this checked-in
+  // file's name, emails/first-reorder-marked.html -- correct it here if the
+  // published alias differs (as it did for onboarding -> "welcome-email").
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
+      to: user.email,
+      template: {
+        id: 'first-reorder-marked',
+        variables: {
+          unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
+        }
+      }
+    })
+  });
+  if (!sendRes.ok) {
+    const errBody = await sendRes.text();
+    throw new Error(`Resend API error (${sendRes.status}): ${errBody}`);
+  }
+
+  await supabaseAdmin
+    .from('user_settings')
+    .upsert({ user_id: user.id, first_reorder_marked_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+  console.log(`first-reorder-marked email sent to ${user.email} (${user.id})`);
+  return res.status(200).json({ sent: true });
+}
+
 // Called from the "Report a bug" menu item injected globally in auth.js
 // (initUserMenu()/openReportBugModal()). Sends the report to
 // inventory@shelfyai.com with the reporting user's own email set as
@@ -452,6 +527,7 @@ const ACTIONS = {
   'first-item': sendFirstItemEmail,
   'first-order': sendFirstOrderEmail,
   'first-ai-order-match': sendFirstAiOrderMatchEmail,
+  'first-reorder-marked': sendFirstReorderMarkedEmail,
   'onboarding': sendOnboardingEmail,
   'report-bug': sendBugReport
 };
