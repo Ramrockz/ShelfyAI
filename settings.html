@@ -514,11 +514,15 @@
      is new. */
   .st-group-content { max-height: 80vh; overflow-y: auto; text-align: left; }
   .st-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  /* line-height:1 removes the heading's default leading -- without it the
-     text's own line box sits a couple px lower than its glyphs, so
-     flex's align-items:center (which centers on the line box, not the
-     visible glyphs) left the back chevron looking too high next to it. */
-  .st-group-head h3 { margin: 0; line-height: 1; }
+  /* .st-group-content .st-group-head h3 (not just .st-group-head h3) --
+     needs to actually beat .modal-content h3's `margin: 0 0 16px 0` below,
+     which has the exact same specificity and comes later, so it was
+     winning the tie and reintroducing a 16px bottom margin. That
+     asymmetric margin on a flex-centered item is what pushed the heading
+     text out of line with the chevron next to it. line-height:1 also
+     removes the heading's default leading (line box taller than its
+     glyphs), the other contributor to the mismatch. */
+  .st-group-content .st-group-head h3 { margin: 0; line-height: 1; }
   .st-group-back { background: none; border: none; width: 32px; height: 32px; border-radius: 50%;
                     color: var(--text-main); display: flex; align-items: center; justify-content: center;
                     cursor: pointer; flex-shrink: 0; padding: 0; margin-left: -6px; }
