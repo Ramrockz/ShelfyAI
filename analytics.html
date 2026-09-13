@@ -25,6 +25,7 @@
 <script>document.documentElement.style.visibility='hidden';</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="auth.js"></script>
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
@@ -197,11 +198,15 @@
                    text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
   .an-kpis span { font-size: 15px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
   .an-months { padding: 0; }
-  .an-m-row { display: flex; align-items: flex-end; gap: 8px; height: 132px; }
+  .an-m-row { display: flex; align-items: flex-end; gap: 8px; height: 158px; }
   .an-m-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
               justify-content: flex-end; gap: 6px; height: 100%; background: none; border: none; padding: 0; }
   .an-m-bars { width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px;
                flex: 1; min-height: 0; }
+  .an-m-val { display: flex; flex-direction: column; align-items: center; gap: 0; line-height: 1.2;
+              font-size: 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .an-m-val b { font-weight: 800; color: var(--accent); }
+  .an-m-val i { font-weight: 700; font-style: normal; color: var(--spend, var(--warning)); opacity: .75; }
   .an-m-bar { width: 12px; border-radius: 4px 4px 0 0; min-height: 3px; }
   .an-m-bar.rev { background: var(--accent); }
   .an-m-bar.exp { background: var(--spend, var(--warning)); opacity: .55; }
@@ -850,6 +855,11 @@ function renderMobileHero(rev, exp, net, orders) {
   if (oEl) oEl.textContent = orders;
 }
 
+// Prints the actual €value on every bar/point instead of leaving it to a
+// hover-only tooltip -- comparing bar heights by eye doesn't tell you the
+// real numbers.
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
 const chartRefs = {};
 
 function destroyChart(key) {
@@ -875,11 +885,19 @@ function renderRevExpChart(labels, revValues, expValues, monthKeys, revMap, expM
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { top: 22 } },
         onClick: (evt, els) => {
           if (!els.length || !monthKeys.length) return;
           setMonth(monthKeys[els[0].index]);
         },
-        plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 14 } } },
+        plugins: {
+          legend: { labels: { color: '#94a3b8', boxWidth: 14 } },
+          datalabels: {
+            anchor: 'end', align: 'top', offset: 2,
+            color: '#94a3b8', font: { size: 10, weight: 700 },
+            formatter: v => v ? anShort(v) : ''
+          }
+        },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
           y: { ticks: { color: '#94a3b8', callback: v => '€' + v }, grid: { color: 'rgba(148,163,184,0.1)' } }
@@ -901,8 +919,12 @@ function renderMobileMonths(monthKeys, labels, revValues, expValues) {
     return;
   }
   const max = Math.max(1, ...revValues, ...expValues);
+  // Printed value per month, not just bar height -- two bars that look
+  // close in height can still be far apart in €, and there's no hover on
+  // a touch screen to check.
   rowEl.innerHTML = monthKeys.map((k, i) => `
     <button type="button" class="an-m-col" aria-pressed="${k === selectedMonth}" onclick="setMonth('${k}')">
+      <span class="an-m-val"><b>${anShort(revValues[i])}</b><i>${anShort(expValues[i])}</i></span>
       <span class="an-m-bars">
         <span class="an-m-bar rev" style="height:${Math.round((revValues[i] / max) * 100)}%"></span>
         <span class="an-m-bar exp" style="height:${Math.round((expValues[i] / max) * 100)}%"></span>
@@ -948,7 +970,12 @@ function renderForecastChart(histLabels, histValues, fLabels, fValues) {
             pointRadius: 4,
             fill: true,
             tension: 0.3,
-            spanGaps: false
+            spanGaps: false,
+            // The connecting point (last real month) is shared with the
+            // Forecast dataset below at the exact same index/value -- let
+            // that one draw its own label instead of stacking two on top
+            // of each other.
+            datalabels: { display: ctx => ctx.dataIndex !== histLabels.length - 1 }
           },
           {
             label: 'Forecast',
@@ -968,7 +995,16 @@ function renderForecastChart(histLabels, histValues, fLabels, fValues) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 14 } } },
+        layout: { padding: { top: 22 } },
+        plugins: {
+          legend: { labels: { color: '#94a3b8', boxWidth: 14 } },
+          datalabels: {
+            align: 'top', offset: 6,
+            color: ctx => ctx.dataset.label === 'Forecast' ? '#8b5cf6' : '#06b6d4',
+            font: { size: 10, weight: 700 },
+            formatter: v => v == null ? '' : anShort(v)
+          }
+        },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
           y: { ticks: { color: '#94a3b8', callback: v => '€' + v }, grid: { color: 'rgba(148,163,184,0.1)' } }
@@ -988,13 +1024,20 @@ function renderMobileForecastSVG(hist, proj) {
   if (!hist.length) { svg.innerHTML = ''; return; }
   const all = [...hist, ...proj], n = all.length;
   if (n < 2) { svg.innerHTML = ''; return; }
-  const max = Math.max(1, ...all), W = 340, H = 118;
+  const max = Math.max(1, ...all), W = 340, H = 118, TOP_PAD = 24;
   const x = i => (i / (n - 1)) * W;
-  const y = v => H - (v / max) * (H - 14) - 4;
+  const y = v => H - (v / max) * (H - TOP_PAD - 4) - 4;
   const path = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
   const hp = hist.map((v, i) => [x(i), y(v)]);
   const pp = [[x(hist.length - 1), y(hist[hist.length - 1])],
               ...proj.map((v, i) => [x(hist.length + i), y(v)])];
+  // Printed value above every point -- a line's shape alone doesn't say
+  // what the numbers actually are, and there's no hover on a touch screen.
+  const anchorFor = i => i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
+  const label = (p, i, value, color) =>
+    `<text x="${p[0].toFixed(1)}" y="${(p[1] - 8).toFixed(1)}" font-size="9.5" font-weight="700" fill="${color}" text-anchor="${anchorFor(i)}">${anShort(value)}</text>`;
+  const histLabels = hp.map((p, i) => label(p, i, hist[i], 'var(--accent)')).join('');
+  const projLabels = proj.map((v, i) => label(pp[i + 1], hist.length + i, v, 'var(--text-ghost, #94a3b8)')).join('');
   svg.innerHTML = `
     <path d="${path(hp)} L ${x(hist.length - 1).toFixed(1)} ${H} L 0 ${H} Z" fill="rgba(6,182,212,.09)" stroke="none"/>
     <path d="${path(hp)}" fill="none" stroke="var(--accent)" stroke-width="2.5"
@@ -1002,7 +1045,9 @@ function renderMobileForecastSVG(hist, proj) {
     <path d="${path(pp)}" fill="none" stroke="var(--text-ghost, #cbd5e1)" stroke-width="2.5" stroke-dasharray="5 4"
           stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
     ${hp.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--accent)"/>`).join('')}
-    ${pp.slice(1).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--text-ghost, #cbd5e1)"/>`).join('')}`;
+    ${pp.slice(1).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--text-ghost, #cbd5e1)"/>`).join('')}
+    ${histLabels}
+    ${projLabels}`;
 }
 
 function renderTopProducts(productMap, totalRev) {
