@@ -2513,6 +2513,20 @@ async function _ecLoadInsights() {
         if (isVendor) _ecInsights.vendorIds.add(id);
       });
     });
+
+    // Vendor chips aren't only built from past expenses.vendor -- they're
+    // also *guessed* from an ingredient's own source_url via
+    // _vendorNameFromUrl() (see _ingredientVendorNames()). Picking one of
+    // those left vendorIds empty above every time, since a URL-derived name
+    // was never actually typed as an expense's vendor before -- even though
+    // the ingredient it came from obviously IS from that vendor.
+    if (vendorLc) {
+      (allIngredients || []).forEach(ing => {
+        if (ing.source_url && (_vendorNameFromUrl(ing.source_url) || '').toLowerCase() === vendorLc) {
+          _ecInsights.vendorIds.add(ing.id);
+        }
+      });
+    }
   } catch (e) {
     console.error('Error loading expense insights:', e);
   }
