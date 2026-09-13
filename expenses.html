@@ -4056,10 +4056,10 @@ function escapeHtml(text) {
 function notifyFirstItemIfNeeded(itemName, itemAttributes) {
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
-    fetch('/api/send-first-item-email', {
+    fetch('/api/account-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ itemName, itemAttributes: itemAttributes || null })
+      body: JSON.stringify({ action: 'first-item', itemName, itemAttributes: itemAttributes || null })
     }).catch(() => {});
   }).catch(() => {});
 }

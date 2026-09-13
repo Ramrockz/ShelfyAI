@@ -3,7 +3,7 @@
 // mail clients won't attach an auth token) that sets
 // user_settings.unsubscribed_all_emails -- see
 // email-sql/add-unsubscribed-all-emails.sql. Every email-sending endpoint
-// checks that flag before calling Resend (see api/send-first-item-email.js).
+// checks that flag before calling Resend (see api/account-email.js).
 //
 // Only covers ShelfyAI's own templates sent via Resend -- Stripe sends its
 // own payment receipts/invoices directly and has no idea this flag exists,

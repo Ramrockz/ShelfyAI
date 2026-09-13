@@ -227,7 +227,7 @@ function logDeviceSession(user) {
 }
 
 // Fire-and-forget, once per account per device -- the server
-// (api/send-onboarding-email.js) is the real dedupe via
+// (api/account-email.js's 'onboarding' action) is the real dedupe via
 // user_settings.onboarding_email_sent_at; this localStorage flag just
 // skips the network round-trip on every subsequent page load once we
 // already know it's resolved (sent, already-sent, or unsubscribed), same
@@ -239,9 +239,10 @@ function sendOnboardingEmailIfNeeded(user, session) {
   const token = session?.access_token;
   if (!token) return;
 
-  fetch('/api/send-onboarding-email', {
+  fetch('/api/account-email', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: 'onboarding' })
   })
     .then((res) => res.json().catch(() => ({})).then((body) => ({ ok: res.ok, body })))
     .then(({ ok, body }) => {
@@ -609,10 +610,10 @@ async function submitReportBug() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     const token = session?.access_token;
     if (!token) throw new Error('Not signed in');
-    const res = await fetch('/api/report-bug', {
+    const res = await fetch('/api/account-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ text, pageUrl: window.location.href })
+      body: JSON.stringify({ action: 'report-bug', text, pageUrl: window.location.href })
     });
     const result = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(result.error || 'Failed to send report');
