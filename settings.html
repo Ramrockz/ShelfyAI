@@ -514,7 +514,11 @@
      is new. */
   .st-group-content { max-height: 80vh; overflow-y: auto; text-align: left; }
   .st-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .st-group-head h3 { margin: 0; }
+  /* line-height:1 removes the heading's default leading -- without it the
+     text's own line box sits a couple px lower than its glyphs, so
+     flex's align-items:center (which centers on the line box, not the
+     visible glyphs) left the back chevron looking too high next to it. */
+  .st-group-head h3 { margin: 0; line-height: 1; }
   .st-group-back { background: none; border: none; width: 32px; height: 32px; border-radius: 50%;
                     color: var(--text-main); display: flex; align-items: center; justify-content: center;
                     cursor: pointer; flex-shrink: 0; padding: 0; margin-left: -6px; }
