@@ -17,14 +17,13 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Left unset by default so Resend falls back to the published template's own
-// configured sender instead of this endpoint silently overriding it. Only
-// set RESEND_FROM_EMAIL if you actually want these emails to come from a
-// different address than the templates' own default.
-const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || null;
+// Every ShelfyAI email sends from noreply@shelfyai.com. Replies still go
+// somewhere real, though: inventory@shelfyai.com, set as reply_to below on
+// every send, in case someone hits reply anyway.
+const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <noreply@shelfyai.com>';
+const REPLY_TO = 'inventory@shelfyai.com';
 
 const BUG_REPORT_TO = 'inventory@shelfyai.com';
-const BUG_REPORT_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <no-reply@shelfyai.com>';
 
 // No DOM available server-side (unlike the app's own client-side
 // escapeHtml() helpers), so this is the plain string version -- item
@@ -110,7 +109,8 @@ async function sendFirstItemEmail(req, res, user) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      ...(EMAIL_FROM ? { from: EMAIL_FROM } : {}),
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
       to: user.email,
       template: {
         id: 'first-item-created',
@@ -162,10 +162,9 @@ async function sendFirstItemEmail(req, res, user) {
 // onboarding_email_sent_at) run in Supabase before this does anything.
 //
 // The actual email content lives in Resend's own dashboard-published
-// template (id below, assumed to match "onboarding" -- correct it here if
-// the published alias differs), not in emails/onboarding.html -- that file
-// is kept only as the source-of-truth copy used to build the Resend
-// template, since Resend has no way to sync from a checked-in HTML file.
+// template ("welcome-email"), not in emails/onboarding.html -- that file is
+// kept only as the source-of-truth copy used to build the Resend template,
+// since Resend has no way to sync from a checked-in HTML file.
 async function sendOnboardingEmail(req, res, user) {
   const { data: settings } = await supabaseAdmin
     .from('user_settings')
@@ -193,10 +192,11 @@ async function sendOnboardingEmail(req, res, user) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      ...(EMAIL_FROM ? { from: EMAIL_FROM } : {}),
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
       to: user.email,
       template: {
-        id: 'onboarding',
+        id: 'welcome-email',
         variables: {
           unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
         }
@@ -250,7 +250,7 @@ async function sendBugReport(req, res, user) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: BUG_REPORT_FROM,
+      from: EMAIL_FROM,
       to: BUG_REPORT_TO,
       reply_to: user.email,
       subject: `Bug report from ${user.email}`,
