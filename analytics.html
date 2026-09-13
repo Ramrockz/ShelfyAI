@@ -219,18 +219,8 @@
   .an-fc-keys { display: flex; gap: 14px; margin-top: 12px; }
   .an-fc-key { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); }
   .an-fc-key i { width: 14px; height: 2.5px; border-radius: 2px; flex-shrink: 0; }
-  .an-rank { padding: 4px 0 6px; }
-  .an-r { display: block; width: 100%; padding: 9px 0; background: none; border: none; text-align: left;
-          border-top: 1px solid var(--border); }
-  .an-rank .an-r:first-child { border-top: none; }
-  .an-r-top { display: flex; align-items: baseline; gap: 8px; }
-  .an-r-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .an-r-val { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .an-r-pct { font-size: 11.5px; color: var(--text-faint, var(--text-muted)); font-variant-numeric: tabular-nums;
               min-width: 32px; text-align: right; }
-  .an-r-track { height: 6px; border-radius: 99px; background: var(--bg-inner); margin-top: 7px; overflow: hidden; }
-  .an-r-track > i { display: block; height: 100%; border-radius: 99px; }
   .an-fc-say { font-size: 12.5px; color: var(--text-muted); margin-top: 11px; padding-top: 11px;
                border-top: 1px solid var(--border); }
   .chart-card > .an-fc-say:only-child { margin-top: 0; padding-top: 0; border-top: none; }
@@ -238,6 +228,13 @@
   .an-lrow { display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 9px 12px 9px 4px;
              border-top: 1px solid var(--border); }
   .an-mobile .an-lrow:first-child { border-top: none; }
+  /* Groups the Reorder Forecast's mobile card list by predicted month --
+     same "section label above a run of rows" convention as ingredients.html's
+     .section-lbl, sized down to fit inside a chart-card. */
+  .an-l-sec { padding: 14px 4px 4px; font-size: 11px; font-weight: 800; text-transform: uppercase;
+              letter-spacing: .06em; color: var(--text-muted); }
+  .an-l-sec:first-child { padding-top: 4px; }
+  .an-l-sec + .an-lrow { border-top: none; }
   .an-l-no { flex-shrink: 0; width: 20px; font-size: 12.5px; font-weight: 800; color: var(--text-ghost, #cbd5e1);
              font-variant-numeric: tabular-nums; }
   .an-l-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -492,28 +489,6 @@
         </div>
       </div>
 
-      <!-- Channel + Category: doughnuts on desktop, ranked bars on mobile
-           (a legend under an 8-slice doughnut is unreadable at phone
-           width; the underlying data is identical either way). -->
-      <div class="charts-row an-desktop-only">
-        <div class="chart-card">
-          <h3>Revenue by Channel</h3>
-          <canvas id="channelChart"></canvas>
-        </div>
-        <div class="chart-card">
-          <h3>Expenses by Category</h3>
-          <canvas id="categoryChart"></canvas>
-        </div>
-      </div>
-      <div class="chart-card an-mobile">
-        <h3>Where revenue came from <small id="anChNote" style="font-weight:400;"></small></h3>
-        <div class="an-rank" id="anChRank"></div>
-      </div>
-      <div class="chart-card an-mobile">
-        <h3>Where money went <small id="anCatNote" style="font-weight:400;"></small></h3>
-        <div class="an-rank" id="anCatRank"></div>
-      </div>
-
       <!-- Forecast (desktop): Chart.js line chart -->
       <div class="chart-card an-desktop-only">
         <h3>Revenue Forecast <small>— 3 month projection</small></h3>
@@ -534,23 +509,33 @@
         <div class="an-fc-say" id="anFcSay"></div>
       </div>
 
-      <!-- Top Selling Products -->
+      <!-- Top 3 Selling Products -->
       <div class="chart-card an-desktop-only">
-        <h3>Top Selling Products</h3>
+        <h3>Top 3 Selling Products</h3>
         <div id="topProductsList"></div>
       </div>
       <div class="chart-card an-mobile">
-        <h3>Top products <small id="anTpNote" style="font-weight:400;"></small></h3>
+        <h3>Top 3 products</h3>
         <div id="anTpRows"></div>
       </div>
 
-      <!-- Reorder Predictions -->
+      <!-- Most Used Items -->
       <div class="chart-card an-desktop-only">
-        <h3>Reorder Predictions <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— based on usage over last 6 months</small></h3>
+        <h3>Most Used Items <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— by usage over the last 6 months</small></h3>
+        <div id="mostUsedList"></div>
+      </div>
+      <div class="chart-card an-mobile">
+        <h3>Most used items <small id="anMuNote" style="font-weight:400;"></small></h3>
+        <div id="anMuRows"></div>
+      </div>
+
+      <!-- Reorder Forecast -->
+      <div class="chart-card an-desktop-only">
+        <h3>Reorder Forecast <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— next 3 months, based on usage over the last 6</small></h3>
         <div id="reorderList"></div>
       </div>
       <div class="chart-card an-mobile">
-        <h3>Running out <small style="font-weight:400;">from usage over 6 months</small></h3>
+        <h3>Reorder forecast <small style="font-weight:400;">next 3 months</small></h3>
         <div id="anRoRows"></div>
       </div>
 
@@ -601,15 +586,16 @@
 
 let allSales = [], allExpenses = [], allIngredients = [], allIngHistory = [];
 let currentPeriod = '3m';
-let chartRevExp = null, chartChannel = null, chartCategory = null, chartForecast = null;
+let chartRevExp = null, chartForecast = null;
+let allMostUsed = []; // computed once per load alongside reorder/dead-stock (fixed 6-month window, not period/month scoped)
+let muExpanded = false;
 // Mobile-only interactive state -- month narrows the hero/mini-stats/ranked
 // bars/top-products the same way the period pills do, just one step finer.
 // Running-out/dead-stock are always the full 6-month usage window regardless
 // of period or month, same as today's desktop behavior.
 let selectedMonth = null;
-let tpExpanded = false, roExpanded = false, dsExpanded = false;
+let roExpanded = false, dsExpanded = false;
 
-const CHART_COLORS = ['#06b6d4','#8b5cf6','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#84cc16','#f97316','#64748b'];
 const PERIOD_DAYS  = { '30d': 30, '3m': 90, '6m': 180, '12m': 365 };
 const PERIOD_LABELS = { '30d': 'last 30 days', '3m': '3 months', '6m': '6 months', '12m': '12 months', 'all': 'all time' };
 const anEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -677,6 +663,7 @@ async function loadAnalytics() {
 
     document.getElementById('analyticsContent').style.display = '';
     renderAnalytics();
+    renderMostUsedItems();
     renderReorderPredictions();
     renderDeadStock();
   } catch (err) {
@@ -699,8 +686,8 @@ function renderPaywallFeatures() {
   const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="20 6 9 17 4 12"/></svg>';
   el.innerHTML = [
     ['Profit, not just revenue', 'What you kept after materials, fees and shipping'],
-    ['Where the money went', 'Revenue by channel, spend by category'],
-    ['Running out', 'Which items your usage says to reorder, and when'],
+    ['Most used items', 'What you go through fastest, by usage'],
+    ['Reorder forecast', 'Which items need restocking, and in which of the next 3 months'],
     ['Dead stock', 'Cash sitting on the shelf, unused for months'],
     ['3-month forecast', 'A trend line through your own history']
   ].map(([t, s]) => `<div class="an-pay-i">${tick}<span><b>${anEsc(t)}</b><span>${anEsc(s)}</span></span></div>`).join('');
@@ -781,17 +768,6 @@ function renderAnalytics() {
   const labels    = months.map(fmtMonth);
   if (selectedMonth && !months.includes(selectedMonth)) selectedMonth = null;
 
-  // Channel & category
-  const channelMap = {}, catMap = {};
-  salesIn.forEach(s => {
-    const ch = s.source || 'Other';
-    channelMap[ch] = (channelMap[ch] || 0) + (parseFloat(s.revenue) || 0);
-  });
-  expensesIn.forEach(e => {
-    const c = e.category || 'Other';
-    catMap[c] = (catMap[c] || 0) + (parseFloat(e.amount) || 0);
-  });
-
   // Top products
   const productMap = {};
   salesIn.forEach(s => {
@@ -818,10 +794,6 @@ function renderAnalytics() {
 
   renderRevExpChart(labels, revValues, expValues, months, revMap, expMap);
   renderMobileMonths(months, labels, revValues, expValues);
-  renderDoughnut('channelChart',  channelMap, 'chartChannel');
-  renderDoughnut('categoryChart', catMap,     'chartCategory');
-  renderRankBars('anChRank', 'anChNote', channelMap, 'channels', totalRev, 'var(--accent)');
-  renderRankBars('anCatRank', 'anCatNote', catMap, 'categories', totalExp, 'var(--spend, var(--warning))');
   renderForecastChart(last6.map(fmtMonth), fInput, fLabels, fValues);
   renderMobileForecastSVG(fInput, fValues);
   renderForecastCaption(fInput, fValues);
@@ -831,32 +803,6 @@ function renderAnalytics() {
 function setMonth(key) {
   selectedMonth = selectedMonth === key ? null : key;
   renderAnalytics();
-}
-
-// 28d — ranked bars instead of doughnuts on mobile: a legend under an
-// 8-slice doughnut is unreadable at phone width, and the question a maker
-// actually has ("which is biggest, by how much") is what a ranked bar
-// answers directly. Uses the exact same channelMap/catMap the doughnuts do.
-function renderRankBars(listId, noteId, map, noun, total, color) {
-  const listEl = document.getElementById(listId);
-  const noteEl = document.getElementById(noteId);
-  if (!listEl) return;
-  const rows = Object.entries(map).sort((a, b) => b[1] - a[1]);
-  if (noteEl) noteEl.textContent = rows.length ? `${rows.length} ${noun}` : '';
-  if (!rows.length) {
-    listEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No data for this period</p>';
-    return;
-  }
-  const max = rows[0][1];
-  listEl.innerHTML = rows.map(([name, v]) => `
-    <div class="an-r">
-      <span class="an-r-top">
-        <span class="an-r-name">${anEsc(name)}</span>
-        <span class="an-r-val">${anShort(v)}</span>
-        <span class="an-r-pct">${Math.round((v / (total || 1)) * 100)}%</span>
-      </span>
-      <span class="an-r-track"><i style="width:${Math.max(2, Math.round((v / max) * 100))}%;background:${color}"></i></span>
-    </div>`).join('');
 }
 
 function renderForecastCaption(hist, proj) {
@@ -965,39 +911,6 @@ function renderMonthReadout(monthKeys, revValues, expValues) {
     <span class="out"><i style="background:var(--spend, var(--warning))"></i>${anShort(expValues[idx])} out</span>`;
 }
 
-function renderDoughnut(canvasId, map, refKey) {
-  destroyChart(refKey);
-  const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
-  if (!entries.length) {
-    document.getElementById(canvasId).parentElement.querySelector('h3').insertAdjacentHTML(
-      'afterend', '<p style="color:var(--text-muted);font-size:13px;margin:0">No data for this period</p>'
-    );
-    return;
-  }
-  chartRefs[refKey] = new Chart(
-    document.getElementById(canvasId).getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: entries.map(([k]) => k),
-        datasets: [{
-          data: entries.map(([, v]) => parseFloat(v.toFixed(2))),
-          backgroundColor: CHART_COLORS.slice(0, entries.length),
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '62%',
-        plugins: {
-          legend: { position: window.innerWidth <= 768 ? 'bottom' : 'right', labels: { color: '#94a3b8', boxWidth: 12, padding: 14, font: { size: 12 } } },
-          tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.parsed.toFixed(2)}` } }
-        }
-      }
-    }
-  );
-}
-
 function renderForecastChart(histLabels, histValues, fLabels, fValues) {
   destroyChart('forecast');
   if (!histValues.length) return;
@@ -1080,7 +993,7 @@ function renderMobileForecastSVG(hist, proj) {
 function renderTopProducts(productMap, totalRev) {
   const sorted = Object.entries(productMap)
     .sort((a, b) => b[1].revenue - a[1].revenue)
-    .slice(0, 10);
+    .slice(0, 3);
   const el = document.getElementById('topProductsList');
   if (el) {
     if (!sorted.length) {
@@ -1105,15 +1018,12 @@ function renderTopProducts(productMap, totalRev) {
   }
 
   const rowsEl = document.getElementById('anTpRows');
-  const noteEl = document.getElementById('anTpNote');
   if (!rowsEl) return;
   if (!sorted.length) {
     rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No product data for this period</p>';
-    if (noteEl) noteEl.innerHTML = '';
     return;
   }
-  const shown = tpExpanded ? sorted : sorted.slice(0, 5);
-  rowsEl.innerHTML = shown.map(([name, d], i) => `
+  rowsEl.innerHTML = sorted.map(([name, d], i) => `
     <div class="an-lrow">
       <span class="an-l-no">${i + 1}</span>
       <span class="an-l-main">
@@ -1122,13 +1032,95 @@ function renderTopProducts(productMap, totalRev) {
       </span>
       <span class="an-l-val">${anShort(d.revenue)}<br><span class="an-r-pct">${Math.round((d.revenue / (totalRev || 1)) * 100)}%</span></span>
     </div>`).join('');
-  if (noteEl) {
-    noteEl.innerHTML = sorted.length > 5
-      ? `<a href="#" class="an-more" onclick="event.preventDefault();tpExpanded=!tpExpanded;renderAnalytics();">${tpExpanded ? 'Show less' : `Show all ${sorted.length}`}</a>`
-      : '';
-  }
 }
 
+// Shared by Most Used Items, Reorder Forecast, and Dead Stock -- total
+// consumption (sum of negative quantity changes) per ingredient over the
+// trailing 6-month window already fetched into allIngHistory.
+function computeConsumptionMap() {
+  const map = {};
+  allIngHistory.forEach(h => {
+    const change = parseFloat(h.new_value) - parseFloat(h.old_value);
+    if (change >= 0) return;
+    map[h.ingredient_id] = (map[h.ingredient_id] || 0) + Math.abs(change);
+  });
+  return map;
+}
+
+// Ranked by value consumed (qty used × cost/unit) rather than raw quantity --
+// that's the only way to compare "50kg of flour" against "200 units of
+// packaging" on the same scale. Fixed 6-month window, same as reorder/dead
+// stock -- not scoped by the period pills or a tapped month.
+function renderMostUsedItems() {
+  const el = document.getElementById('mostUsedList');
+  const rowsEl = document.getElementById('anMuRows');
+  const noteEl = document.getElementById('anMuNote');
+  if (!el) return;
+
+  if (!allIngredients.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;"><img src="/cat_no_results.png" alt="No results" style="width:160px;height:auto;margin-bottom:12px;opacity:0.9;" /><p style="color:var(--text-muted);font-size:15px;margin:0;">No items found</p></div>';
+    return;
+  }
+
+  const consumptionMap = computeConsumptionMap();
+  allMostUsed = allIngredients
+    .map(ing => {
+      const totalConsumed = consumptionMap[ing.id] || 0;
+      if (totalConsumed === 0) return null;
+      return {
+        ...ing,
+        totalConsumed,
+        avgMonthly: totalConsumed / 6,
+        valueConsumed: totalConsumed * (parseFloat(ing.cost_per_unit) || 0)
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.valueConsumed - a.valueConsumed);
+
+  if (!allMostUsed.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">No usage recorded in the last 6 months</p>';
+    if (rowsEl) rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">No usage recorded</p>';
+    if (noteEl) noteEl.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-scroll"><table class="top-products-table">
+      <thead><tr>
+        <th>Item</th><th>Used (6mo)</th><th>Avg/Mo</th><th>Value Consumed</th>
+      </tr></thead>
+      <tbody>
+        ${allMostUsed.slice(0, 10).map(m => `<tr>
+            <td><a href="/ingredient-detail?id=${m.id}" style="color:var(--accent);text-decoration:none">${m.name}</a></td>
+            <td>${m.totalConsumed.toFixed(1)} ${m.unit || ''}</td>
+            <td>${m.avgMonthly.toFixed(1)} ${m.unit || ''}</td>
+            <td style="font-weight:600">€${m.valueConsumed.toFixed(2)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+
+  if (!rowsEl) return;
+  const shown = muExpanded ? allMostUsed : allMostUsed.slice(0, 5);
+  rowsEl.innerHTML = shown.map(m => `
+    <div class="an-lrow">
+      <span class="an-l-main">
+        <span class="an-l-name">${anEsc(m.name)}</span>
+        <span class="an-l-why">${m.totalConsumed.toFixed(1)} ${anEsc(m.unit || '')} used · ${m.avgMonthly.toFixed(1)}/mo</span>
+      </span>
+      <span class="an-l-val">€${m.valueConsumed.toFixed(2)}</span>
+    </div>`).join('') + (allMostUsed.length > 5
+    ? `<a href="#" class="an-more" onclick="event.preventDefault();muExpanded=!muExpanded;renderMostUsedItems();">${muExpanded ? 'Show less' : `Show all ${allMostUsed.length}`}</a>`
+    : '');
+  if (noteEl) noteEl.textContent = `${allMostUsed.length} item${allMostUsed.length === 1 ? '' : 's'}`;
+}
+
+// Buckets each ingredient into which of the next 3 calendar months its
+// current stock, at its own average monthly usage, is projected to run
+// out -- replacing the old flat "reorder soon within 60 days" cutoff with
+// an actual month-by-month 3-month forecast. An item already below its
+// min-stock alert is always forced into "this month" regardless of the
+// raw runway math, since it needs attention now no matter what the trend
+// says. Anything projected past month 3 falls outside this forecast's
+// window entirely (not shown -- Dead Stock covers "no usage at all").
 function renderReorderPredictions() {
   const el = document.getElementById('reorderList');
   if (!el) return;
@@ -1138,52 +1130,57 @@ function renderReorderPredictions() {
     return;
   }
 
-  // Sum consumption (negative changes) per ingredient over the 6-month window
-  const consumptionMap = {};
-  allIngHistory.forEach(h => {
-    const change = parseFloat(h.new_value) - parseFloat(h.old_value);
-    if (change >= 0) return;
-    consumptionMap[h.ingredient_id] = (consumptionMap[h.ingredient_id] || 0) + Math.abs(change);
-  });
+  const consumptionMap = computeConsumptionMap();
+  const now = new Date();
+  const monthNames = [0, 1, 2].map(i =>
+    new Date(now.getFullYear(), now.getMonth() + i, 1).toLocaleDateString('en-US', { month: 'long' })
+  );
 
   const predictions = allIngredients
     .map(ing => {
       const totalConsumed = consumptionMap[ing.id] || 0;
-      if (totalConsumed === 0) return null;
       const avgMonthly = totalConsumed / 6;
       const currentQty = parseFloat(ing.quantity) || 0;
-      const daysLeft = avgMonthly > 0 ? (currentQty / (avgMonthly / 30)) : Infinity;
       const minStock = parseFloat(ing.min_stock) || 0;
       const belowMin = minStock > 0 && currentQty <= minStock;
-      return { ...ing, avgMonthly, daysLeft, belowMin };
+      if (totalConsumed === 0 && !belowMin) return null; // no usage signal, not already low either
+      const monthsUntilEmpty = avgMonthly > 0 ? currentQty / avgMonthly : Infinity;
+      const bucket = belowMin ? 0 : Math.floor(monthsUntilEmpty);
+      if (bucket > 2) return null; // beyond this forecast's 3-month window
+      const daysLeft = avgMonthly > 0 ? (currentQty / (avgMonthly / 30)) : Infinity;
+      return { ...ing, avgMonthly, monthsUntilEmpty, daysLeft, belowMin, bucket: Math.max(0, bucket) };
     })
-    .filter(p => p && (p.daysLeft <= 60 || p.belowMin))
-    .sort((a, b) => a.daysLeft - b.daysLeft);
+    .filter(Boolean)
+    .sort((a, b) => a.bucket - b.bucket || a.monthsUntilEmpty - b.monthsUntilEmpty);
 
   const rowsEl = document.getElementById('anRoRows');
 
   if (!predictions.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">All stock levels look healthy based on current usage</p>';
-    if (rowsEl) rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">All stock levels look healthy</p>';
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">Nothing projected to need reordering in the next 3 months</p>';
+    if (rowsEl) rowsEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">Nothing projected to need reordering</p>';
     return;
   }
 
+  const rowHtml = p => {
+    const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days';
+    const isRed = p.bucket === 0;
+    const statusColor = isRed ? 'var(--danger)' : 'var(--warning)';
+    return { daysText, isRed, statusColor };
+  };
+
   el.innerHTML = `<div class="table-scroll"><table class="top-products-table">
       <thead><tr>
-        <th>Item</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Action</th>
+        <th>Item</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Predicted Month</th>
       </tr></thead>
       <tbody>
         ${predictions.map(p => {
-          const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days';
-          const isRed = p.daysLeft <= 14 || p.belowMin;
-          const statusColor = isRed ? 'var(--danger)' : 'var(--warning)';
-          const action = p.daysLeft < 1 ? 'Reorder Now' : p.belowMin ? 'Below Min Stock' : 'Reorder Soon';
+          const { daysText, statusColor } = rowHtml(p);
           return `<tr>
             <td><a href="/ingredient-detail?id=${p.id}" style="color:var(--accent);text-decoration:none">${p.name}</a></td>
             <td>${parseFloat(p.quantity).toFixed(1)} ${p.unit || ''}</td>
             <td>${p.avgMonthly.toFixed(1)} ${p.unit || ''}</td>
             <td style="font-weight:600;color:${statusColor}">${daysText}</td>
-            <td><span style="color:${statusColor};font-weight:600;font-size:12px">${action}</span></td>
+            <td><span style="color:${statusColor};font-weight:600;font-size:12px">${monthNames[p.bucket]}${p.belowMin ? ' · Below Min Stock' : ''}</span></td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1191,17 +1188,24 @@ function renderReorderPredictions() {
 
   if (!rowsEl) return;
   const shown = roExpanded ? predictions : predictions.slice(0, 5);
-  rowsEl.innerHTML = shown.map(p => {
-    const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days left';
-    const isRed = p.daysLeft <= 14 || p.belowMin;
-    return `<div class="an-lrow">
+  // Group the mobile card list under a small heading per predicted month,
+  // same convention ingredients.html uses to group its own list by category.
+  let lastBucket = null;
+  const cards = shown.map(p => {
+    const { daysText, isRed } = rowHtml(p);
+    const heading = p.bucket !== lastBucket
+      ? `<div class="an-l-sec">${anEsc(monthNames[p.bucket])}</div>`
+      : '';
+    lastBucket = p.bucket;
+    return heading + `<div class="an-lrow">
       <span class="an-l-main">
         <span class="an-l-name">${anEsc(p.name)}</span>
         <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${daysText} · ${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
       </span>
       <a href="/ingredient-detail?id=${p.id}&openReorder=true" class="an-l-act">Reorder</a>
     </div>`;
-  }).join('') + (predictions.length > 5
+  }).join('');
+  rowsEl.innerHTML = cards + (predictions.length > 5
     ? `<a href="#" class="an-more" onclick="event.preventDefault();roExpanded=!roExpanded;renderReorderPredictions();">${roExpanded ? 'Show less' : `Show all ${predictions.length}`}</a>`
     : '');
 }
@@ -1215,12 +1219,8 @@ function renderDeadStock() {
     return;
   }
 
-  // IDs that had any consumption (negative change) in the last 6 months
-  const activeIds = new Set(
-    allIngHistory
-      .filter(h => parseFloat(h.new_value) - parseFloat(h.old_value) < 0)
-      .map(h => h.ingredient_id)
-  );
+  // IDs that had any consumption in the last 6 months
+  const activeIds = new Set(Object.keys(computeConsumptionMap()));
 
   const cutoff6m = new Date();
   cutoff6m.setMonth(cutoff6m.getMonth() - 6);
