@@ -1263,20 +1263,24 @@
         <div class="ec-group">
           <div class="ec-field">
             <label class="ec-label" for="ecLCost">Unit cost</label>
-            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"><span id="ecLPerUnit" style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-faint,var(--text-muted));"></span></span>
+            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"></span>
             <div class="ec-hint" id="ecLCostHint"></div>
-          </div>
-          <div class="ec-field">
-            <label class="ec-label" for="ecLTotal">Line total</label>
-            <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLTotal" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncFromTotal()"></span>
-            <div class="ec-hint">Type either one — the other follows.</div>
           </div>
         </div>
         <button type="button" class="ec-remove" id="ecLRemove" onclick="ecRemoveLine()" hidden>Remove from this expense</button>
       </div>
-      <div class="ec-foot" style="padding:10px 16px calc(12px + env(safe-area-inset-bottom));">
-        <div class="ec-tally" id="ecLineTally"></div>
-        <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+      <div class="ec-foot" style="padding:0 0 calc(12px + env(safe-area-inset-bottom));">
+        <button type="button" class="rcm-tog" id="ecUpdateStockTog" aria-pressed="true" onclick="toggleEcUpdateStock()">
+          <span class="rcm-tog-main">
+            <span class="rcm-tog-name">Update inventory</span>
+            <span class="rcm-tog-why" id="ecUpdateStockWhy"></span>
+          </span>
+          <span class="rcm-tog-sw"></span>
+        </button>
+        <div style="padding:10px 16px 0;">
+          <div class="ec-tally" id="ecLineTally"></div>
+          <button type="button" class="ec-save" id="ecLineSaveBtn" onclick="ecSaveLine()">Add to expense</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2335,12 +2339,13 @@ function ecOpenLine(ingredientId, existingIndex) {
 
   document.getElementById('ecLineName').textContent = ing.name;
   document.getElementById('ecLUnit').textContent = ing.unit || '';
-  document.getElementById('ecLPerUnit').textContent = 'per ' + (ing.unit || 'unit');
   document.getElementById('ecLQty').value = _ecDraft.qty;
   document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
   document.getElementById('ecLRemove').hidden = !line;
   document.getElementById('ecLineSaveBtn').textContent = line ? 'Save changes' : 'Add to expense';
 
+  _ecUpdateStock = true;
+  _ecRenderUpdateStockTog();
   ecSyncTotal();
   // Tapping an existing mobile row calls this directly, without going
   // through openExpenseItemPicker() first -- that's the only other place
@@ -2395,16 +2400,22 @@ function ecRenderLineFoot() {
 function ecSyncTotal() {
   _ecDraft.qty = Math.max(0, parseFloat(document.getElementById('ecLQty').value) || 0);
   _ecDraft.cost = parseFloat(document.getElementById('ecLCost').value) || 0;
-  document.getElementById('ecLTotal').value = (_ecDraft.qty * _ecDraft.cost).toFixed(2);
   ecRenderLineFoot();
 }
-function ecSyncFromTotal() {
-  const t = parseFloat(document.getElementById('ecLTotal').value) || 0;
-  if (_ecDraft.qty > 0) {
-    _ecDraft.cost = Math.round((t / _ecDraft.qty) * 100) / 100;
-    document.getElementById('ecLCost').value = _ecDraft.cost.toFixed(2);
-  }
-  ecRenderLineFoot();
+
+// Per-line, unlike expenses.html's own whole-receipt toggle -- there's no
+// "receipt being built" here, just one item being added right now to an
+// expense that's already saved, so there's nothing broader to tie this to.
+let _ecUpdateStock = true;
+function _ecRenderUpdateStockTog() {
+  document.getElementById('ecUpdateStockTog').setAttribute('aria-pressed', _ecUpdateStock ? 'true' : 'false');
+  document.getElementById('ecUpdateStockWhy').textContent = _ecUpdateStock
+    ? 'This item’s stock is topped up when you save'
+    : 'Records the cost only — stock isn’t changed';
+}
+function toggleEcUpdateStock() {
+  _ecUpdateStock = !_ecUpdateStock;
+  _ecRenderUpdateStockTog();
 }
 function ecStepQty(d) {
   document.getElementById('ecLQty').value = Math.max(0, Math.round((_ecDraft.qty + d) * 100) / 100);
@@ -2447,8 +2458,11 @@ async function ecSaveLine() {
 
     // Stock moves by however much MORE (or less) was just bought than before —
     // a purchase adds stock, editing a line only adjusts the difference.
+    // Skipped entirely when the "Update inventory" toggle is off -- this
+    // item's cost is still recorded on the expense either way, just without
+    // touching stock.
     const delta = qty - prevQty;
-    if (delta !== 0) {
+    if (delta !== 0 && _ecUpdateStock) {
       const currentQty = parseFloat(ing.quantity) || 0;
       const newQty = Math.max(0, currentQty + delta);
       const update = { quantity: newQty };
@@ -2471,7 +2485,8 @@ async function ecSaveLine() {
 
     displayIngredients();
     closeExpenseItemPicker();
-    showNotification(isNewLine ? 'Item added' : 'Item updated', 'success');
+    const savedMsg = isNewLine ? 'Item added' : 'Item updated';
+    showNotification(_ecUpdateStock ? savedMsg : `${savedMsg} — stock not changed`, 'success');
   } catch (error) {
     console.error('Error saving expense line:', error);
     showNotification('Failed to save item: ' + error.message, 'error');
