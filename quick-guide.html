@@ -357,14 +357,12 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 </main>
 
 <script>
-// Each step links straight to the real page for that action. The three
-// "create something new" steps (1, 2, 3) reuse the existing
-// shelfy_open_create cross-page hand-off (same mechanism ingredients.html /
-// recipes.html / orders.html / expenses.html already use for their own "+"
-// buttons) so the step drops the user directly into that form instead of
-// just an empty list. 'manual' skips the method picker where one exists
-// (ingredients/orders) -- recipes.html has no such picker, any truthy value
-// opens its builder directly.
+// No links to the app itself here anymore -- Quick Guide is reachable from
+// the public marketing nav now (index/pricing/login/blog/sandbox), not just
+// the logged-in user menu, so a step linking straight to /ingredients,
+// /orders, etc. forced a logged-out visitor into a login wall instead of
+// just reading the guide. Each step is informational only; only its own
+// screenshot and video, no navigation.
 //
 // Only topics with a matching video become a step -- "Recipe quantities",
 // "Confirm order" and "Analytics" (the old steps 3, 5, 8) had no video of
@@ -376,39 +374,35 @@ const STEPS = [
   { group: 'a', img: '01-add-materials.png', n: 'Step 1', t: 'Add your materials',
     d: 'Name, unit, what you paid and the minimum you want on the shelf. Everything else is calculated from these four.',
     note: 'Scan a supplier invoice instead and the form fills itself.',
-    href: '/ingredients', handoff: 'manual', video: 'HmiV2GJLpQE' },
+    video: 'HmiV2GJLpQE' },
   { group: 'a', img: '02-product-recipe.png', n: 'Step 2', t: 'Build your first product',
     d: 'List the materials a product consumes and how much of each — per unit, not per batch. Cost and margin appear as you type, and update instantly if a gram changes.',
-    href: '/recipes', handoff: '1', video: 'KUl2p9GM5pg' },
+    video: 'KUl2p9GM5pg' },
   { group: 'b', img: '04-process-order.png', n: 'Step 3', t: 'Process an order',
     d: 'Pick the products that went out the door and how many — you never enter materials by hand. The last screen shows what the order eats and what it leaves behind before anything is written.',
     note: 'Leave <b>Deduct from stock</b> on unless you’re logging an old order.',
-    href: '/orders', handoff: 'manual', video: 'o5DN22iOtWA' },
+    video: 'o5DN22iOtWA' },
   { group: 'b', img: '06-reorder.png', n: 'Step 4', t: 'Reorder what went short',
     d: 'Suggested quantities come from your own minimums and how fast you’ve been using each item.',
-    href: '/operations', video: 'i0LQjItSR5o' },
+    video: 'i0LQjItSR5o' },
   { group: 'b', img: '14-expense-create.png', n: 'Step 5', t: 'Photograph your receipts',
     d: 'ShelfyAI reads the lines, matches them to your items and only asks about the ones it isn’t sure of.',
     note: 'Uses one of your monthly AI scans, shared with items and orders.',
-    href: '/expenses', video: 'mSmFxoKh1CA' },
+    video: 'mSmFxoKh1CA' },
   { group: 'c', n: 'Step 6', t: 'Filter a long list',
     d: 'Narrow Items or Products down by category, then by attributes like size or color — cascading as you refine.',
-    href: '/ingredients', video: '9Q3tGfsKxNQ' },
+    video: '9Q3tGfsKxNQ' },
   { group: 'c', img: '18-settings.png', n: 'Step 7', t: 'Set up your account',
     d: 'Plan, stores, and notification preferences — low stock, expiring items, reorder arrivals — all in one place.',
-    href: '/settings', video: 'BZ702wCfl3U' }
+    video: 'BZ702wCfl3U' }
 ];
 
 STEPS.forEach(s => {
   const step = document.createElement('div');
   step.className = 'qg-step';
 
-  const top = document.createElement('a');
+  const top = document.createElement('div');
   top.className = 'qg-step-top';
-  top.href = s.href;
-  if (s.handoff) {
-    top.addEventListener('click', () => sessionStorage.setItem('shelfy_open_create', s.handoff));
-  }
   top.innerHTML =
     (s.img ? '<span class="qg-shot"><img src="/quick-guide-screenshots/' + s.img + '" alt="" loading="lazy"></span>' : '') +
     '<span class="qg-body">' +
