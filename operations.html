@@ -4955,7 +4955,7 @@ async function confirmMappedOrder() {
     };
     const { data, error } = await supabaseClient.from('sales').insert([salesRecord]).select();
     if (error) throw error;
-    notifyFirstOrderIfNeeded();
+    notifyFirstAiOrderMatchIfNeeded();
     let inventoryChanges = null;
     if (mappedUpdateStock && selectedOrderRecipes.length > 0 && data && data[0]) {
       inventoryChanges = await updateInventoryForOrder(selectedOrderRecipes, user.id, data[0].id, orderReference || `Sale #${data[0].id}`);
@@ -6577,12 +6577,14 @@ function renderSelectedRecipes() {}
 function updateRecipeQuantity() {}
 function removeRecipeFromOrder() {}
 
-// Fire-and-forget after any successful new-order save (both the manual
-// form and the AI-scan confirm flow below call this) -- the server
+// Fire-and-forget after a successful MANUAL order save only -- the server
 // (api/account-email.js's 'first-order' action) re-checks against the
-// database whether this genuinely was the account's first order and
-// whether the email was already sent, so calling this on every save can
-// never send it twice or on the wrong order. Never awaited/blocking.
+// database whether this genuinely was the account's first manually-entered
+// order and whether the email was already sent, so calling this on every
+// save can never send it twice or on the wrong order. The AI-scan confirm
+// flow below calls notifyFirstAiOrderMatchIfNeeded() instead -- separate
+// milestone, not the same "first order" gated by how it was entered. Never
+// awaited/blocking.
 function notifyFirstOrderIfNeeded() {
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
@@ -6590,6 +6592,20 @@ function notifyFirstOrderIfNeeded() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ action: 'first-order' })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
+// Fire-and-forget after a successful AI-scan order confirm only (see
+// confirmMappedOrder() below) -- mirrors notifyFirstOrderIfNeeded() above,
+// hitting api/account-email.js's 'first-ai-order-match' action instead.
+function notifyFirstAiOrderMatchIfNeeded() {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/account-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'first-ai-order-match' })
     }).catch(() => {});
   }).catch(() => {});
 }

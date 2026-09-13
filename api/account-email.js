@@ -7,9 +7,10 @@
 // one function is the free fix; see PROJECT-STRUCTURE.md or ask before
 // adding another new api/*.js file without checking the current count.
 //
-// Dispatches on body.action: 'first-item' | 'first-order' | 'onboarding' |
-// 'report-bug'. Each action's logic below is otherwise unchanged from its
-// original file (first-order is new, added after the initial merge).
+// Dispatches on body.action: 'first-item' | 'first-order' |
+// 'first-ai-order-match' | 'onboarding' | 'report-bug'. Each action's logic
+// below is otherwise unchanged from its original file (first-order and
+// first-ai-order-match are new, added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -146,10 +147,15 @@ async function sendFirstItemEmail(req, res, user) {
   return res.status(200).json({ sent: true });
 }
 
-// Called client-side right after a successful order save (see orders.html's/
-// operations.html's own notifyFirstOrderIfNeeded(), called from each page's
-// saveManualOrder() and confirmMappedOrder() -- both pages duplicate the
-// whole order-creation flow independently, so both need their own call).
+// Called client-side right after a successful MANUAL order save (see
+// orders.html's/operations.html's own notifyFirstOrderIfNeeded(), called
+// from each page's saveManualOrder() only -- both pages duplicate the whole
+// order-creation flow independently, so both need their own call). The
+// AI-scan confirm flow (confirmMappedOrder()) calls sendFirstAiOrderMatchEmail
+// below instead -- these are two separate milestones (an account could get
+// both, if a later manual order follows an earlier AI-matched one), not the
+// same "first order" event gated by how it was entered.
+//
 // Same reasoning as sendFirstItemEmail: the client-side "is this their
 // first order" guess is just an optimization, this re-checks server-side
 // against the database so a stale count or duplicate call can't double-send.
@@ -174,12 +180,17 @@ async function sendFirstOrderEmail(req, res, user) {
     return res.status(200).json({ sent: false, reason: 'unsubscribed' });
   }
 
-  // Source of truth for "is this actually their first order" -- orders
-  // live in the `sales` table, scoped by profile_id (not user_id).
+  // Source of truth for "is this actually their first MANUAL order" --
+  // orders live in the `sales` table, scoped by profile_id (not user_id).
+  // Filtered to source = 'Manual Entry' (the value both pages' own
+  // saveManualOrder() writes) since this milestone is manual-entry-only now
+  // -- an account whose first-ever order was AI-scanned wouldn't otherwise
+  // ever trigger this once they later place a manual one.
   const { count, error: countError } = await supabaseAdmin
     .from('sales')
     .select('id', { count: 'exact', head: true })
-    .eq('profile_id', user.id);
+    .eq('profile_id', user.id)
+    .eq('source', 'Manual Entry');
   if (countError) throw countError;
   if ((count || 0) !== 1) {
     console.log(`first-order email skipped for ${user.id}: not_first_order (count=${count})`);
@@ -226,6 +237,86 @@ async function sendFirstOrderEmail(req, res, user) {
     .upsert({ user_id: user.id, first_order_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
   console.log(`first-order email sent to ${user.email} (${user.id})`);
+  return res.status(200).json({ sent: true });
+}
+
+// Called client-side right after a successful AI-scan order confirm (see
+// orders.html's/operations.html's own notifyFirstAiOrderMatchIfNeeded(),
+// called from each page's confirmMappedOrder() only -- the manual entry
+// form calls sendFirstOrderEmail above instead). Separate milestone from
+// "first order logged": this celebrates the AI actually matching a scanned
+// order to existing products/stock, not just placing an order at all.
+//
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_ai_order_match_email_sent_at) and
+// email-sql/add-unsubscribed-all-emails.sql (user_settings.
+// unsubscribed_all_emails) run in Supabase before this does anything.
+async function sendFirstAiOrderMatchEmail(req, res, user) {
+  const { data: settings } = await supabaseAdmin
+    .from('user_settings')
+    .select('first_ai_order_match_email_sent_at, unsubscribed_all_emails')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (settings?.first_ai_order_match_email_sent_at) {
+    console.log(`first-ai-order-match email skipped for ${user.id}: already_sent at ${settings.first_ai_order_match_email_sent_at}`);
+    return res.status(200).json({ sent: false, reason: 'already_sent' });
+  }
+  if (settings?.unsubscribed_all_emails) {
+    console.log(`first-ai-order-match email skipped for ${user.id}: unsubscribed_all_emails`);
+    return res.status(200).json({ sent: false, reason: 'unsubscribed' });
+  }
+
+  // Source of truth for "is this actually their first AI-matched order" --
+  // both pages' own confirmMappedOrder() write source = 'Image Upload' for
+  // this flow specifically (vs 'Manual Entry' for the manual form).
+  const { count, error: countError } = await supabaseAdmin
+    .from('sales')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', user.id)
+    .eq('source', 'Image Upload');
+  if (countError) throw countError;
+  if ((count || 0) !== 1) {
+    console.log(`first-ai-order-match email skipped for ${user.id}: not_first_match (count=${count})`);
+    return res.status(200).json({ sent: false, reason: 'not_first_match' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured -- skipping first-ai-order-match email');
+    return res.status(200).json({ sent: false, reason: 'email_not_configured' });
+  }
+
+  // Assumes the Resend dashboard template's alias matches this checked-in
+  // file's name, emails/first-ai-order-match.html -- correct it here if the
+  // published alias differs (as it did for onboarding -> "welcome-email").
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
+      to: user.email,
+      template: {
+        id: 'first-ai-order-match',
+        variables: {
+          unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
+        }
+      }
+    })
+  });
+  if (!sendRes.ok) {
+    const errBody = await sendRes.text();
+    throw new Error(`Resend API error (${sendRes.status}): ${errBody}`);
+  }
+
+  await supabaseAdmin
+    .from('user_settings')
+    .upsert({ user_id: user.id, first_ai_order_match_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+  console.log(`first-ai-order-match email sent to ${user.email} (${user.id})`);
   return res.status(200).json({ sent: true });
 }
 
@@ -360,6 +451,7 @@ async function sendBugReport(req, res, user) {
 const ACTIONS = {
   'first-item': sendFirstItemEmail,
   'first-order': sendFirstOrderEmail,
+  'first-ai-order-match': sendFirstAiOrderMatchEmail,
   'onboarding': sendOnboardingEmail,
   'report-bug': sendBugReport
 };
