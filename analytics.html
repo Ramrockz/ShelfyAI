@@ -720,7 +720,16 @@ function fmtMonth(yyyyMM) {
 
 function linearForecast(values, steps = 3) {
   const n = values.length;
-  if (n < 2) return Array(steps).fill(Math.round((values[0] || 0) * 100) / 100);
+  // A slope fitted through only 1-2 points isn't a trend, it's just the raw
+  // gap between them extrapolated forever -- two months of e.g. €100 then
+  // €300 fits a "slope" of +€200/month and compounds to €500/€700/€900,
+  // even though that's one month's swing, not a real trajectory. Need at
+  // least 3 points before a slope means anything; otherwise hold flat at
+  // the average of whatever history there is.
+  if (n < 3) {
+    const avg = n ? values.reduce((a, b) => a + b, 0) / n : 0;
+    return Array(steps).fill(Math.round(avg * 100) / 100);
+  }
   const xMean = (n - 1) / 2;
   const yMean = values.reduce((a, b) => a + b, 0) / n;
   let num = 0, den = 0;
@@ -809,6 +818,12 @@ function renderForecastCaption(hist, proj) {
   const el = document.getElementById('anFcSay');
   if (!el || !hist.length || !proj.length) { if (el) el.innerHTML = ''; return; }
   const avgHist = hist.reduce((a, b) => a + b, 0) / hist.length;
+  // Matches linearForecast()'s own cutoff -- under 3 months there's no real
+  // trend to describe, just an average being held flat.
+  if (hist.length < 3) {
+    el.innerHTML = `Not enough history yet for a real trend — holding flat at your <b>${anShort(avgHist)}</b> average from the last ${hist.length} month${hist.length === 1 ? '' : 's'}. A reliable forecast needs at least 3 months of data.`;
+    return;
+  }
   const avgProj = proj.reduce((a, b) => a + b, 0) / proj.length;
   const dir = avgProj > avgHist * 1.03 ? 'up' : avgProj < avgHist * .97 ? 'down' : 'flat';
   el.innerHTML = `At the current trend, about <b>${anShort(avgProj)} a month</b> —
