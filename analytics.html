@@ -255,6 +255,10 @@
   .an-l-act { flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--border);
               background: var(--bg-panel); color: var(--accent-ink, var(--accent)); font-size: 12.5px; font-weight: 700; }
   .an-l-act:active { background: var(--bg-inner); }
+  /* Icon-only variant -- same truck icon ingredients.html's own swipe-to-
+     restock action uses, instead of a text "Reorder" link, so this matches
+     the app's established restock affordance everywhere else. */
+  .an-l-act.icon { width: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
   .an-tot { display: flex; align-items: baseline; gap: 8px; padding: 11px 4px; font-size: 12.5px; color: var(--text-muted); }
   .an-tot b { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--danger); font-variant-numeric: tabular-nums; }
   .an-more { display: block; width: 100%; padding: 12px 4px; text-align: left; background: none;
@@ -1271,7 +1275,9 @@ function renderReorderPredictions() {
         <span class="an-l-name">${anEsc(p.name)}</span>
         <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
       </span>
-      <a href="/ingredient-detail?id=${p.id}&openReorder=true" class="an-l-act">Reorder</a>
+      <a href="/ingredient-detail?id=${p.id}&openReorder=true" class="an-l-act icon" aria-label="Reorder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+      </a>
     </div>`;
   }).join('');
   rowsEl.innerHTML = cards + (predictions.length > 5
