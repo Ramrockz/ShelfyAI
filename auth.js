@@ -491,8 +491,94 @@ async function initUserMenu() {
         }
       }
     });
+
+    // Inject "Report a bug", right before Logout -- injected here (once,
+    // globally) rather than duplicated into every page's own menu markup,
+    // the same way Switch Store/Switch Accounts above already are.
+    if (!document.getElementById('reportBugMenuItem')) {
+      const logoutItem = document.querySelector('.user-menu-item.logout');
+      if (logoutItem) {
+        const bugItem = document.createElement('div');
+        bugItem.className = 'user-menu-item';
+        bugItem.id = 'reportBugMenuItem';
+        bugItem.setAttribute('onclick', 'openReportBugModal()');
+        bugItem.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 2 1.88 1.88"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.12 3.88 16 2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20v-9"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 13H2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 13h-4"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg><span>Report a bug</span>`;
+        logoutItem.parentNode.insertBefore(bugItem, logoutItem);
+      }
+    }
   } catch (error) {
     console.error('Error initializing user menu:', error);
+  }
+}
+
+// ---------- Report a bug (modal injected globally, see initUserMenu()) ----------
+function _ensureReportBugModal() {
+  if (document.getElementById('reportBugModal')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-sheet';
+  overlay.id = 'reportBugModal';
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBugModal(); });
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width:440px;">
+      <h3 style="margin-top:0;margin-bottom:8px;">Report a bug</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;line-height:1.4;">Tell us what happened. We'll follow up at your account email if we need more details.</p>
+      <textarea id="reportBugText" rows="6" placeholder="What went wrong?"
+        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-app,var(--bg-inner));color:var(--text-main);font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+      <div id="reportBugError" style="color:var(--danger,#dc2626);font-size:12.5px;margin-top:8px;display:none;"></div>
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button type="button" class="btn" style="flex:1;">Cancel</button>
+        <button type="button" class="btn btn-primary" id="reportBugSendBtn" style="flex:1;">Send</button>
+      </div>
+    </div>`;
+  overlay.querySelector('.btn:not(.btn-primary)').addEventListener('click', closeReportBugModal);
+  overlay.querySelector('#reportBugSendBtn').addEventListener('click', submitReportBug);
+  document.body.appendChild(overlay);
+}
+function openReportBugModal() {
+  toggleUserMenu();
+  _ensureReportBugModal();
+  document.getElementById('reportBugText').value = '';
+  const errEl = document.getElementById('reportBugError');
+  errEl.style.display = 'none';
+  document.getElementById('reportBugModal').classList.add('active');
+}
+function closeReportBugModal() {
+  document.getElementById('reportBugModal')?.classList.remove('active');
+}
+async function submitReportBug() {
+  const textEl = document.getElementById('reportBugText');
+  const errEl = document.getElementById('reportBugError');
+  const text = textEl.value.trim();
+  if (!text) {
+    errEl.textContent = 'Please describe the issue.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('reportBugSendBtn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  errEl.style.display = 'none';
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Not signed in');
+    const res = await fetch('/api/report-bug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ text, pageUrl: window.location.href })
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(result.error || 'Failed to send report');
+    closeReportBugModal();
+    if (typeof showNotification === 'function') showNotification("Thanks -- your report was sent.", 'success');
+    else alert("Thanks -- your report was sent.");
+  } catch (e) {
+    errEl.textContent = e.message || 'Failed to send. Please try again.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
   }
 }
 
