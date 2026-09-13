@@ -7,9 +7,11 @@
 // server-side, against the database, so a stale client count or a duplicate
 // call can never send the email twice or send it on item #2.
 //
-// Needs RESEND_API_KEY (Vercel env var) and the
-// email-sql/add-first-time-email-tracking.sql migration run in Supabase
-// (user_settings.first_item_email_sent_at) before this does anything.
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_item_email_sent_at) and email-sql/add-unsubscribed-all-emails.sql
+// (user_settings.unsubscribed_all_emails) run in Supabase before this does
+// anything.
 //
 // The actual email content lives in Resend's own dashboard-published
 // template (id below), not in emails/first-item-created.html -- that file
@@ -88,12 +90,16 @@ module.exports = async (req, res) => {
     // client to only call this once.
     const { data: settings } = await supabaseAdmin
       .from('user_settings')
-      .select('first_item_email_sent_at')
+      .select('first_item_email_sent_at, unsubscribed_all_emails')
       .eq('user_id', user.id)
       .maybeSingle();
     if (settings?.first_item_email_sent_at) {
       console.log(`first-item email skipped for ${user.id}: already_sent at ${settings.first_item_email_sent_at}`);
       return res.status(200).json({ sent: false, reason: 'already_sent' });
+    }
+    if (settings?.unsubscribed_all_emails) {
+      console.log(`first-item email skipped for ${user.id}: unsubscribed_all_emails`);
+      return res.status(200).json({ sent: false, reason: 'unsubscribed' });
     }
 
     // Source of truth for "is this actually their first item" -- a client
@@ -114,10 +120,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ sent: false, reason: 'email_not_configured' });
     }
 
-    // {{unsubscribe_url}} points at Settings for now -- there's no actual
-    // unsubscribe/email-preference mechanism built yet, so this is a
-    // placeholder destination, not a real opt-out. Needs a follow-up.
-    //
     // Resend rejects a request that mixes `template` with `html`/`text`/
     // `react`, so the subject/body come entirely from the published
     // template -- only the variables it references are passed here.
@@ -135,7 +137,7 @@ module.exports = async (req, res) => {
           variables: {
             item_name: escapeHtmlServer(itemName),
             item_attributes_suffix: formatAttributesSuffix(itemAttributes),
-            unsubscribe_url: 'https://www.shelfyai.com/settings'
+            unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
           }
         }
       })
