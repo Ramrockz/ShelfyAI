@@ -155,8 +155,11 @@
                      border-bottom: 1px solid var(--border); box-sizing: border-box; cursor: pointer; }
   .prod-cat-group:first-of-type { border-top: 1px solid var(--border); }
   .prod-cat-group-total { font-size: 19px; font-weight: 800; }
+  /* Down, not right -- same reasoning as ingredients.html's .ing-group-chev:
+     a right-pointing chevron reads as "swipe this row" everywhere else in
+     this app, but tapping a category group header expands it in place. */
   .prod-cat-group-chev { color: var(--text-muted); transition: transform .2s ease; }
-  .prod-cat-group.open .prod-cat-group-chev { transform: rotate(90deg); }
+  .prod-cat-group.open .prod-cat-group-chev { transform: rotate(180deg); }
   .prod-cat-group-body { grid-column: 1/-1; background: var(--bg-inner); }
   .prod-cat-group-body .prod-group-row:first-of-type { border-top: none; }
 
@@ -2218,7 +2221,7 @@ function render() {
                   </span>
                   <span class="prod-group-tail">
                     <span class="prod-cat-group-total">${cg.count}</span>
-                    <svg class="prod-cat-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
+                    <svg class="prod-cat-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="6 9 12 15 18 9"/></svg>
                   </span>
                 </div>
                 <div class="prod-cat-group-body"${isOpen ? '' : ' hidden'}>${cg.members.map(groupRow).join('')}</div>`;

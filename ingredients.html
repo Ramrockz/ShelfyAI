@@ -138,8 +138,13 @@
   .ing-group .ing-row-name { font-size: 15.5px; }
   .ing-group-tail { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .ing-group-total { font-size: 19px; font-weight: 800; }
+  /* Down, not right -- a right-pointing chevron reads as "swipe this row"
+     everywhere else in this app's own list rows, but tapping a category
+     group header expands it in place, it doesn't swipe. Rotates to point
+     up (open) instead of right-to-down, so the direction always matches
+     which way the group body is about to move. */
   .ing-group-chev { color: var(--text-muted); transition: transform .2s ease; }
-  .ing-group.open .ing-group-chev { transform: rotate(90deg); }
+  .ing-group.open .ing-group-chev { transform: rotate(180deg); }
   .ing-group-body { background: var(--bg-inner); }
   .ing-group-body .ing-row-main { padding-left: 8px; }
 
@@ -3734,7 +3739,7 @@ function renderRecent(data) {
           </span>
           <span class="ing-group-tail">
             <span class="ing-group-total">${g.total}</span>
-            <svg class="ing-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="17" height="17"><polyline points="9 6 15 12 9 18"/></svg>
+            <svg class="ing-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </div>
         <div class="ing-group-body"${isOpen ? '' : ' hidden'}>${g.members.map(buildIngCard).join('')}</div>
