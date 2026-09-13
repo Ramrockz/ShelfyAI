@@ -3399,8 +3399,14 @@ function updateDisabledState() {
   updateCreateButtonState();
 }
 
+// Gated on Name alone, same as ingredients.html's own "Save item"/#icSave --
+// enabled the moment there's a name to save, so pressing it while Category
+// or an ingredient is still missing hits saveRecipe()'s own validation and
+// shakes/jumps to whichever's needed next, instead of just sitting disabled
+// with no feedback about what's missing.
 function updateCreateButtonState() {
-  const disabled = Object.keys(currentRecipe).length === 0;
+  const name = document.getElementById('recipeNameInput')?.value.trim();
+  const disabled = !name;
   const btn = document.getElementById('saveRecipeBtn');
   if (btn) btn.disabled = disabled;
   const rbBtn = document.getElementById('rbCreateBtn');

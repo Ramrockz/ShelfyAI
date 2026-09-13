@@ -1156,7 +1156,7 @@
 
       <div class="ec-foot">
         <div class="ec-tally" id="ecTally"></div>
-        <button type="submit" class="ec-save" id="ecSave" disabled>Save expense</button>
+        <button type="submit" class="ec-save" id="ecSave" disabled>Create expense</button>
       </div>
     </form>
   </div>
@@ -1293,7 +1293,12 @@
 <!-- Ingredient Mapping Modal -->
 <div class="modal-overlay modal-sheet" id="ingredientMappingModal">
   <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-    <h3 style="margin-top:0; margin-bottom: 8px;">Match Detected Items</h3>
+    <div style="display:flex; align-items:center; gap:8px; margin: -4px -4px 8px;">
+      <button type="button" onclick="closeIngredientMappingModal()" aria-label="Back" style="flex-shrink:0; width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:var(--text-main); cursor:pointer; padding:0; border-radius:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h3 style="margin:0;">Match Detected Items</h3>
+    </div>
     <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Match detected items to your inventory and set quantities.</p>
 
     <!-- Update Inventory Toggle -->
@@ -1324,7 +1329,7 @@
 
     <div style="display:flex;gap:12px;">
       <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeIngredientMappingModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Save</button>
+      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Create expense</button>
     </div>
   </div>
 </div>
@@ -1531,7 +1536,7 @@
 
       <div class="ic-foot">
         <div class="ic-value" id="quickIngValue"></div>
-        <button type="submit" class="ic-save" id="quickIngSave">Save item</button>
+        <button type="submit" class="ic-save" id="quickIngSave">Create item</button>
       </div>
     </form>
   </div>
@@ -2177,6 +2182,7 @@ async function openAddExpenseModal() {
   _expenseUpdateStock = true;
 
   document.getElementById('modalTitle').textContent = 'New expense';
+  document.getElementById('ecSave').textContent = 'Create expense';
   document.getElementById('expenseForm').reset();
   document.getElementById('expense_id').value = '';
   document.getElementById('expense_vendor').value = '';
@@ -2788,6 +2794,7 @@ async function editExpense(expenseId) {
   document.getElementById('expenseUpdateStockWhy').textContent = 'Stock is topped up for every item when you save';
 
   document.getElementById('modalTitle').textContent = 'Edit expense';
+  document.getElementById('ecSave').textContent = 'Save changes';
   document.getElementById('expense_id').value = expense.id;
   document.getElementById('expense_date').value = expense.expense_date || '';
   document.getElementById('expense_vendor').value = expense.vendor || '';
@@ -4506,7 +4513,7 @@ async function saveQuickIngredient(e) {
     console.error('Error saving ingredient:', error);
     showNotification(error.message || 'Failed to save item', 'error');
   } finally {
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save item'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Create item'; }
   }
 }
 

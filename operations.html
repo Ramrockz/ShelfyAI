@@ -2144,7 +2144,7 @@
           <input type="number" id="roNewSupLead" class="ro-new-sup-input" placeholder="Lead time (days)" inputmode="numeric">
         </div>
         <input type="number" id="roNewSupMoq" class="ro-new-sup-input" placeholder="Minimum order ($, optional)" step="0.01" inputmode="decimal">
-        <button class="ro-new-sup-save" id="roNewSupSaveBtn" onclick="saveNewSupplier()">Save supplier</button>
+        <button class="ro-new-sup-save" id="roNewSupSaveBtn" onclick="saveNewSupplier()">Create supplier</button>
       </div>
       <button class="ro-sheet-new" id="roNewSupplierToggle" onclick="toggleNewSupplierForm()">New supplier</button>
     </div>
@@ -2240,7 +2240,7 @@
         <button type="button" onclick="closeExpenseModal()"
           style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-panel); color:var(--text-main); font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
         <button type="submit" id="expSubmitBtn"
-          style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:700; cursor:pointer;">Save</button>
+          style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-size:14px; font-weight:700; cursor:pointer;">Create expense</button>
       </div>
     </form>
   </div>
@@ -2631,7 +2631,7 @@ async function saveExpense(event) {
   } catch (e) {
     showAlert('Failed to save expense: ' + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Save';
+    btn.disabled = false; btn.textContent = 'Create expense';
   }
 }
 
@@ -3810,7 +3810,7 @@ function startIngredientUrlImport() {
         <span class="rcm-tally-r" id="rcmTallyR">$0.00</span>
       </div>
       <div id="rcmTallyWarn"></div>
-      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Save</button>
+      <button type="button" class="rcm-cta" id="rcmSaveBtn" onclick="confirmMappedOrder()">Create order</button>
       <button type="button" class="rcm-ghost" onclick="closeRecipeMappingModal()">Discard this scan</button>
     </div>
   </div>
