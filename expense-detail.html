@@ -1593,7 +1593,7 @@ async function loadIngredients() {
 
     let _q = window.supabaseClient
       .from('ingredients')
-      .select('id, name, unit, quantity, min_stock, is_favorite, custom_attributes, category, cost_per_unit')
+      .select('id, name, unit, quantity, min_stock, is_favorite, custom_attributes, category, cost_per_unit, source_url')
       .eq('profile_id', user.id);
     if (storeId) _q = _q.eq('store_id', storeId);
     const { data, error } = await _q;
