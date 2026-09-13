@@ -3131,10 +3131,34 @@
     }
   }
 
+  // recipes.components is a denormalized JSONB snapshot (ingredient_id, name,
+  // qty, cost at the time it was added to the product) -- not a real foreign
+  // key, so Postgres won't stop this ingredient from being deleted out from
+  // under a product that still references it, leaving a stale/orphaned
+  // component behind forever. Block the delete and point at which products
+  // need it removed from first.
+  async function getProductsUsingIngredient(id) {
+    const { data, error } = await supabaseClient
+      .from('recipes')
+      .select('id, name')
+      .filter('components', 'cs', JSON.stringify([{ ingredient_id: id }]));
+    if (error) { console.error('Error checking product usage:', error); return []; }
+    return data || [];
+  }
+
   async function deleteIngredient() {
     if (!currentIngredient) return;
-    
+
     if (!await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Cancel', 'Delete', true)) return;
+
+    const usedIn = await getProductsUsingIngredient(currentIngredient.id);
+    if (usedIn.length > 0) {
+      const names = usedIn.map(r => r.name).join(', ');
+      showAlert(usedIn.length === 1
+        ? `This item is used in "${names}". Remove it from that product first.`
+        : `This item is used in ${usedIn.length} products (${names}). Remove it from those products first.`);
+      return;
+    }
 
     try {
       const { error } = await supabaseClient

@@ -4129,12 +4129,39 @@ function editIngredient(id) {
   window.location.href = `/ingredient-detail?id=${id}&from=${currentView}`;
 }
 
+// recipes.components is a denormalized JSONB snapshot (ingredient_id, name,
+// qty, cost at the time it was added to the product) -- not a real foreign
+// key, so Postgres won't stop an ingredient from being deleted out from
+// under a product that still references it, and the product would keep
+// showing the stale/orphaned component forever. Block the delete here
+// instead and point at which products need it removed first.
+async function getProductsUsingIngredient(id) {
+  const { data, error } = await supabaseClient
+    .from('recipes')
+    .select('id, name')
+    .filter('components', 'cs', JSON.stringify([{ ingredient_id: id }]));
+  if (error) { console.error('Error checking product usage:', error); return []; }
+  return data || [];
+}
+
+function usedInProductsMessage(products) {
+  const names = products.map(r => r.name).join(', ');
+  return products.length === 1
+    ? `This item is used in "${names}". Remove it from that product first.`
+    : `This item is used in ${products.length} products (${names}). Remove it from those products first.`;
+}
+
 async function deleteIng(id, options = {}) {
   if (!options.skipConfirm) {
     const confirmed = await showConfirm('Are you sure you want to delete this item?', 'Delete Item', 'Delete', true);
     if (!confirmed) return;
   }
 
+  const usedIn = await getProductsUsingIngredient(id);
+  if (usedIn.length > 0) {
+    showAlert(usedInProductsMessage(usedIn), 'Cannot Delete');
+    return;
+  }
 
   try {
     const { error } = await offlineWrite('ingredients', 'delete', null, 'id', id);
@@ -4922,6 +4949,12 @@ async function softDeleteIng(id) {
              || document.querySelector(`.card-small[data-id="${id}"]`);
   const item  = ingredients.find(i => i.id === id);
   if (!shell || !item) return;
+
+  const usedIn = await getProductsUsingIngredient(id);
+  if (usedIn.length > 0) {
+    showAlert(usedInProductsMessage(usedIn), 'Cannot Delete');
+    return;
+  }
 
   // `item` (from the `ingredients` array) is a display-shaped projection --
   // loadIngredients() renames/drops columns (qty <- quantity, cost <-
