@@ -427,7 +427,28 @@ module.exports = async (req, res) => {
       .eq('user_id', user.id)
       .single();
 
-    const tier = settings?.tier || 'free';
+    // user_settings.tier is only a cache -- settings.html resyncs it whenever
+    // that page loads, but nothing else does, so it can be stale right after
+    // a webhook-driven upgrade the user hasn't opened settings since. Verify
+    // against the subscriptions table directly, same as settings.html's own
+    // loadTierInformation() (this endpoint is the actual source of truth for
+    // enforcement, so it can't just trust the cached value that page reads).
+    let tier = settings?.tier || 'free';
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('tier, status, current_period_end')
+      .eq('profile_id', user.id)
+      .maybeSingle();
+    if (subscription && subscription.status === 'active') {
+      const periodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+      if (!periodEnd || periodEnd > new Date()) tier = subscription.tier || tier;
+    }
+    // Resync the cache so anything else still reading user_settings.tier
+    // directly (and the next call to this same check) sees the right value.
+    if (settings?.tier !== tier) {
+      supabase.from('user_settings').update({ tier }).eq('user_id', user.id)
+        .then(({ error }) => { if (error) console.error('Error resyncing user_settings.tier:', error); });
+    }
     const bonusScans = settings?.bonus_scans || 0;
     const scanLimits = { free: 5, starter: 100, pro: 300 };
     const scanLimit = scanLimits[tier] ?? 5;
