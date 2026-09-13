@@ -1231,6 +1231,10 @@
 let orders = [];
 let currentView = 'recent';
 let _ordersAlreadyRendered = false;
+// orderId (string) -> { applied, reversed } -- whether this order's
+// inventory deduction can still be reversed from the list's swipe action.
+// See loadOrderReversalState()/reverseOrderInventory().
+let _ordInvState = new Map();
 let sortColumn = 'date';
 let sortDirection = 'desc';
 let cardsToShow = 15;
@@ -1304,6 +1308,28 @@ window.addEventListener('pageshow', (event) => {
   loadOrders().catch(() => {});
 });
 
+// Batches one query for every visible order instead of one round-trip per
+// row -- mirrors order-detail.html's own single-item
+// updateReverseInventoryVisibility(), just scoped to the whole list at once.
+async function loadOrderReversalState() {
+  try {
+    const ids = (orders || []).map(o => String(o.id));
+    if (!ids.length) { _ordInvState = new Map(); return; }
+    const { data, error } = await supabaseClient
+      .from('ingredient_history').select('reference_id, reason')
+      .in('reference_id', ids).in('reason', ['order', 'order_reversal']);
+    if (error) throw error;
+    const map = new Map();
+    (data || []).forEach(r => {
+      const cur = map.get(r.reference_id) || { applied: false, reversed: false };
+      if (r.reason === 'order') cur.applied = true;
+      if (r.reason === 'order_reversal') cur.reversed = true;
+      map.set(r.reference_id, cur);
+    });
+    _ordInvState = map;
+  } catch (e) { console.error('Error loading order reversal state:', e); }
+}
+
 async function loadOrders() {
   const _lsCached = localStorage.getItem('shelfy_cache_orders');
   if (_lsCached) {
@@ -1363,14 +1389,17 @@ async function loadOrders() {
     const _changed = _fp(data) !== _fp(orders);
     orders = data || [];
     localStorage.setItem('shelfy_cache_orders', JSON.stringify(orders));
-    if (_changed) {
-      try {
-        const _rc = document.getElementById('recentView');
-        if (_rc) _rc.classList.add('no-anim');
-        render();
-        if (_rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
-      } catch (e) {}
-    }
+    await loadOrderReversalState();
+    // Always re-render (not just when _changed) so the swipe row's "Reverse
+    // inventory" button reflects reversal state even when the order list
+    // itself hasn't changed -- but only apply the no-anim treatment when it
+    // actually did, so a plain state refresh doesn't skip the mount animation.
+    try {
+      const _rc = document.getElementById('recentView');
+      if (_changed && _rc) _rc.classList.add('no-anim');
+      render();
+      if (_changed && _rc) requestAnimationFrame(() => _rc.classList.remove('no-anim'));
+    } catch (e) {}
   } catch (error) {
     if (_lsCached || !navigator.onLine || error instanceof TypeError) return;
     console.error('Error loading orders:', error);
@@ -1530,11 +1559,15 @@ function orderRow(o) {
   const money = `$${parseFloat(o.revenue || 0).toFixed(2)}`;
   const day = o.sale_date ? new Date(o.sale_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null;
   const meta = [day, channel, `${qty} item${qty !== 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+  // Only offer to reverse inventory this order actually deducted and that
+  // hasn't already been reversed -- see loadOrderReversalState().
+  const invState = _ordInvState.get(String(o.id));
+  const canReverse = !!(invState && invState.applied && !invState.reversed);
   return `<div class="ord-swipe">
       <div class="ord-actions">
-        <button class="ord-act ord-act-rev" onclick="reverseOrderInventory('${o.id}')" aria-label="Reverse inventory">
+        ${canReverse ? `<button class="ord-act ord-act-rev" onclick="reverseOrderInventory('${o.id}')" aria-label="Reverse inventory">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 8 7 8"/></svg>
-        </button>
+        </button>` : ''}
         <button class="ord-act ord-act-del" onclick="softDeleteOrder('${o.id}')" aria-label="Delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         </button>
@@ -2162,6 +2195,8 @@ async function reverseOrderInventory(saleId) {
         state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
       });
     }
+    _ordInvState.set(String(saleId), { applied: true, reversed: true });
+    try { render(); } catch (e2) {}
     showReverseInvSuccess(impactRows, `/order-detail?id=${encodeURIComponent(saleId)}`);
   } catch (e) {
     console.error('Error reversing order inventory:', e);
@@ -2265,13 +2300,18 @@ function hideUndoToast() {
 
 // ---------- Order row swipe-to-reveal (Delete) ----------
 (function initOrderSwipe() {
-  const REVEAL    = 112;  // total action width — must equal 2 × .ord-act width
+  const REVEAL    = 112;  // fallback action width if a row's own .ord-actions can't be measured
   const THRESHOLD = 40;   // px of travel that commits the open/close
   const RUBBER    = 0.24; // 0 = hard stop at both ends, 1 = no resistance
   const EASE      = 'transform .26s cubic-bezier(.2,.9,.3,1)';
 
   const list = document.getElementById('recentView');
   if (!list) return;
+
+  // Not every row shows the "Reverse inventory" action (see
+  // loadOrderReversalState()), so the actions bar isn't always the same
+  // width -- measure each row's own instead of assuming both buttons exist.
+  const revealFor = row => row.closest('.ord-swipe')?.querySelector('.ord-actions')?.offsetWidth || REVEAL;
 
   let open = null;      // the .ord-row currently revealed
   let drag = null;
@@ -2292,8 +2332,9 @@ function hideUndoToast() {
     const row = e.target.closest('.ord-row');
     if (!row || e.target.closest('.ord-advance')) return;   // the Pack/Ship button never drags
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const reveal = revealFor(row);
     drag = { row, x: e.clientX, y: e.clientY, id: e.pointerId,
-             base: open === row ? -REVEAL : 0, axis: null, cur: null };
+             base: open === row ? -reveal : 0, axis: null, cur: null, reveal };
     try { row.setPointerCapture(e.pointerId); } catch (err) {}
   });
 
@@ -2306,8 +2347,8 @@ function hideUndoToast() {
       if (drag.axis === 'y') { drag = null; return; }       // hand it to the scroller
     }
     let x = drag.base + dx;
-    if (x > 0)       x = x * RUBBER;
-    if (x < -REVEAL) x = -REVEAL - (-REVEAL - x) * RUBBER;
+    if (x > 0)             x = x * RUBBER;
+    if (x < -drag.reveal)  x = -drag.reveal - (-drag.reveal - x) * RUBBER;
     drag.cur = x;
     setX(drag.row, x, false);
   });
@@ -2319,9 +2360,9 @@ function hideUndoToast() {
     if (!d.axis) return;                                    // a tap: let click handle it
     noClickUntil = Date.now() + 300;
     const x = d.cur === null ? d.base : d.cur;
-    const commit = d.base < 0 ? x < -(REVEAL - THRESHOLD) : x < -THRESHOLD;
+    const commit = d.base < 0 ? x < -(d.reveal - THRESHOLD) : x < -THRESHOLD;
     if (open && open !== d.row) close();
-    if (commit) { setX(d.row, -REVEAL, true); open = d.row; }
+    if (commit) { setX(d.row, -d.reveal, true); open = d.row; }
     else        { setX(d.row, 0, true); if (open === d.row) open = null; }
   };
   list.addEventListener('pointerup', end);
