@@ -226,6 +226,31 @@ function logDeviceSession(user) {
     });
 }
 
+// Fire-and-forget, once per account per device -- the server
+// (api/send-onboarding-email.js) is the real dedupe via
+// user_settings.onboarding_email_sent_at; this localStorage flag just
+// skips the network round-trip on every subsequent page load once we
+// already know it's resolved (sent, already-sent, or unsubscribed), same
+// pattern as logDeviceSession() above.
+function sendOnboardingEmailIfNeeded(user, session) {
+  if (!user || !navigator.onLine) return;
+  const cacheKey = `shelfy_onboarding_email_checked_${user.id}`;
+  if (localStorage.getItem(cacheKey)) return;
+  const token = session?.access_token;
+  if (!token) return;
+
+  fetch('/api/send-onboarding-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+  })
+    .then((res) => res.json().catch(() => ({})).then((body) => ({ ok: res.ok, body })))
+    .then(({ ok, body }) => {
+      if (!ok) { console.error('sendOnboardingEmailIfNeeded error:', body?.error); return; }
+      try { localStorage.setItem(cacheKey, '1'); } catch (e) {}
+    })
+    .catch((err) => console.error('sendOnboardingEmailIfNeeded exception:', err));
+}
+
 // Track which user we last validated stores for so we don't re-fetch on every call
 let _storeValidatedForUser = null;
 
@@ -406,6 +431,7 @@ async function initUserMenu() {
     // Cache email unconditionally — DOM may not be ready yet if auth.js ran in <head>
     localStorage.setItem('shelfy_user_email', user.email);
     logDeviceSession(user);
+    sendOnboardingEmailIfNeeded(user, session);
     if (userEmailElement) {
       userEmailElement.textContent = user.email;
     }
