@@ -5,7 +5,10 @@
   after signup (i.e. the account was created but the user never returned
   after that first session). One-time, not repeated on later inactivity --
   see emails/inactivity-reminder.html for that, separate audience/tone.
-  Variables: {{login_url}}, {{feedback_setup_url}}, {{feedback_time_url}}, {{feedback_fit_url}}, {{feedback_other_url}}, {{support_email}}, {{unsubscribe_url}}
+  Variables: {{login_url}}, {{support_email}}, {{unsubscribe_url}}
+  The four reason links are plain mailto:{{support_email}} links with a
+  pre-filled subject identifying which reason was clicked -- no feedback
+  endpoint/table, just an email straight to support.
 -->
 <!DOCTYPE html>
 <html
@@ -149,22 +152,22 @@
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid rgba(0,0,0,0.08); border-radius:12px; overflow:hidden;">
                     <tr class="reason-row">
                       <td style="padding:14px 16px; border-bottom:1px solid rgba(0,0,0,0.06);">
-                        <a href="{{feedback_setup_url}}" style="display:block; font-size:14px; font-weight:600;">Setting up felt like a lot →</a>
+                        <a href="mailto:{{support_email}}?subject=Feedback%3A%20Setting%20up%20felt%20like%20a%20lot&body=Hey%20ShelfyAI%20team%2C%0A%0ASetting%20up%20felt%20like%20a%20lot%20because...%0A" style="display:block; font-size:14px; font-weight:600;">Setting up felt like a lot →</a>
                       </td>
                     </tr>
                     <tr class="reason-row">
                       <td style="padding:14px 16px; border-bottom:1px solid rgba(0,0,0,0.06);">
-                        <a href="{{feedback_time_url}}" style="display:block; font-size:14px; font-weight:600;">Just haven't had the time yet →</a>
+                        <a href="mailto:{{support_email}}?subject=Feedback%3A%20Just%20haven%27t%20had%20the%20time%20yet&body=Hey%20ShelfyAI%20team%2C%0A%0AJust%20haven%27t%20had%20the%20time%20yet%20-%20here%27s%20what%20would%20get%20me%20back%20in%3A%0A" style="display:block; font-size:14px; font-weight:600;">Just haven't had the time yet →</a>
                       </td>
                     </tr>
                     <tr class="reason-row">
                       <td style="padding:14px 16px; border-bottom:1px solid rgba(0,0,0,0.06);">
-                        <a href="{{feedback_fit_url}}" style="display:block; font-size:14px; font-weight:600;">Not sure it's the right fit for me →</a>
+                        <a href="mailto:{{support_email}}?subject=Feedback%3A%20Not%20sure%20it%27s%20the%20right%20fit&body=Hey%20ShelfyAI%20team%2C%0A%0ANot%20sure%20it%27s%20the%20right%20fit%20because...%0A" style="display:block; font-size:14px; font-weight:600;">Not sure it's the right fit for me →</a>
                       </td>
                     </tr>
                     <tr class="reason-row">
                       <td style="padding:14px 16px;">
-                        <a href="{{feedback_other_url}}" style="display:block; font-size:14px; font-weight:600;">Something else →</a>
+                        <a href="mailto:{{support_email}}?subject=Feedback%3A%20Something%20else&body=Hey%20ShelfyAI%20team%2C%0A%0AHere%27s%20what%27s%20holding%20me%20back%3A%0A" style="display:block; font-size:14px; font-weight:600;">Something else →</a>
                       </td>
                     </tr>
                   </table>
