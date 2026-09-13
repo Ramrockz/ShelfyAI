@@ -628,21 +628,31 @@
       // storage bucket every entity's own flow already uses today. Skipped
       // (not blocked -- the scan above already succeeded) when there's no
       // room left, same as the manual "attach a receipt" flows elsewhere.
+      //
+      // Ingredient scans never actually use this -- there's no photo_url/
+      // receipt_url column on `ingredients` at all, and every 'ingredient'
+      // caller's onImported(data, receiptUrl) silently drops the second
+      // argument. Uploading it anyway permanently burned storage quota with
+      // no way to ever find or delete the file again (nothing references
+      // its path), inflating storage_used_bytes forever on every single
+      // ingredient photo scan. Skip the upload entirely for this entity.
       var receiptUrl = null;
       var storageFull = false;
-      try {
-        if (await hasStorageSpace(sb, session.user.id, file.raw.size)) {
-          var ts = Date.now();
-          var path = session.user.id + '/' + ts + '_' + file.raw.name;
-          var upRes = await sb.storage.from('expenses').upload(path, file.raw, { cacheControl: '3600', upsert: false });
-          if (!upRes.error) {
-            var pub = sb.storage.from('expenses').getPublicUrl(path);
-            receiptUrl = pub && pub.data && pub.data.publicUrl;
+      if (currentEntity !== 'ingredient') {
+        try {
+          if (await hasStorageSpace(sb, session.user.id, file.raw.size)) {
+            var ts = Date.now();
+            var path = session.user.id + '/' + ts + '_' + file.raw.name;
+            var upRes = await sb.storage.from('expenses').upload(path, file.raw, { cacheControl: '3600', upsert: false });
+            if (!upRes.error) {
+              var pub = sb.storage.from('expenses').getPublicUrl(path);
+              receiptUrl = pub && pub.data && pub.data.publicUrl;
+            }
+          } else {
+            storageFull = true;
           }
-        } else {
-          storageFull = true;
-        }
-      } catch (upEx) { console.error('[ShelfyImportModal] Receipt upload failed:', upEx); }
+        } catch (upEx) { console.error('[ShelfyImportModal] Receipt upload failed:', upEx); }
+      }
 
       stopFakeProgress();
       var data = result.data;
