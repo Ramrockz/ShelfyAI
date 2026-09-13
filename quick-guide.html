@@ -106,12 +106,19 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .qg-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--text-main);
            background: var(--bg-inner); border-radius: 10px; padding: 8px 10px; }
 .qg-note b { font-weight: 700; }
-.qg-go { margin-top: auto; padding-top: 12px; display: inline-flex; align-items: center; gap: 6px;
-         font-size: 13.5px; font-weight: 700; color: var(--accent-ink, var(--accent)); }
 
-.qg-step-video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px;
-                  overflow: hidden; background: var(--bg-inner); }
+/* Click-to-load thumbnail instead of an eagerly-loaded iframe -- a static
+   JPG from YouTube's own CDN always renders, where loading 7 iframes up
+   front left at least one showing a blank/broken player. Real iframe (with
+   autoplay) only swaps in once actually clicked. */
+.qg-step-video { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9;
+                 border-radius: 12px; overflow: hidden; background: var(--bg-inner);
+                 border: none; padding: 0; }
+.qg-step-video img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .qg-step-video iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+.qg-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+           width: 56px; height: 56px; border-radius: 50%; background: rgba(0,0,0,0.65);
+           display: flex; align-items: center; justify-content: center; }
 
 /* footer */
 .qg-foot { padding: 22px 20px 34px; }
@@ -161,13 +168,13 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
     <p>Do them in this order and everything after — costs, margins, reorders — fills itself in. Each one comes with a short video.</p>
   </div>
 
-  <div class="qg-sec"><b>Set up the shelf</b><small>steps 1–2</small></div>
+  <div class="qg-sec"><b>Set up the shelf</b></div>
   <div id="steps-a"></div>
 
-  <div class="qg-sec"><b>Sell and restock</b><small>steps 3–5</small></div>
+  <div class="qg-sec"><b>Sell and restock</b></div>
   <div id="steps-b"></div>
 
-  <div class="qg-sec"><b>Get more out of it</b><small>steps 6–7</small></div>
+  <div class="qg-sec"><b>Get more out of it</b></div>
   <div id="steps-c"></div>
 
   <div class="qg-sec"><b>Frequently asked questions</b></div>
@@ -344,7 +351,6 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
       <p>Reach out and we'll help you get it sorted.</p>
       <div class="qg-foot-links">
         <a class="primary" href="mailto:inventory@shelfyai.com">Contact support</a>
-        <a class="ghost" href="/settings">Back to Settings</a>
       </div>
     </div>
   </div>
@@ -370,27 +376,27 @@ const STEPS = [
   { group: 'a', img: '01-add-materials.png', n: 'Step 1', t: 'Add your materials',
     d: 'Name, unit, what you paid and the minimum you want on the shelf. Everything else is calculated from these four.',
     note: 'Scan a supplier invoice instead and the form fills itself.',
-    go: 'Open Items', href: '/ingredients', handoff: 'manual', video: 'HmiV2GJLpQE' },
+    href: '/ingredients', handoff: 'manual', video: 'HmiV2GJLpQE' },
   { group: 'a', img: '02-product-recipe.png', n: 'Step 2', t: 'Build your first product',
     d: 'List the materials a product consumes and how much of each — per unit, not per batch. Cost and margin appear as you type, and update instantly if a gram changes.',
-    go: 'Open Products', href: '/recipes', handoff: '1', video: 'KUl2p9GM5pg' },
+    href: '/recipes', handoff: '1', video: 'KUl2p9GM5pg' },
   { group: 'b', img: '04-process-order.png', n: 'Step 3', t: 'Process an order',
     d: 'Pick the products that went out the door and how many — you never enter materials by hand. The last screen shows what the order eats and what it leaves behind before anything is written.',
     note: 'Leave <b>Deduct from stock</b> on unless you’re logging an old order.',
-    go: 'New order', href: '/orders', handoff: 'manual', video: 'o5DN22iOtWA' },
+    href: '/orders', handoff: 'manual', video: 'o5DN22iOtWA' },
   { group: 'b', img: '06-reorder.png', n: 'Step 4', t: 'Reorder what went short',
     d: 'Suggested quantities come from your own minimums and how fast you’ve been using each item.',
-    go: 'Open the dashboard', href: '/operations', video: 'i0LQjItSR5o' },
+    href: '/operations', video: 'i0LQjItSR5o' },
   { group: 'b', img: '14-expense-create.png', n: 'Step 5', t: 'Photograph your receipts',
     d: 'ShelfyAI reads the lines, matches them to your items and only asks about the ones it isn’t sure of.',
     note: 'Uses one of your monthly AI scans, shared with items and orders.',
-    go: 'Open Expenses', href: '/expenses', video: 'mSmFxoKh1CA' },
+    href: '/expenses', video: 'mSmFxoKh1CA' },
   { group: 'c', n: 'Step 6', t: 'Filter a long list',
     d: 'Narrow Items or Products down by category, then by attributes like size or color — cascading as you refine.',
-    go: 'Open Items', href: '/ingredients', video: '9Q3tGfsKxNQ' },
+    href: '/ingredients', video: '9Q3tGfsKxNQ' },
   { group: 'c', img: '18-settings.png', n: 'Step 7', t: 'Set up your account',
     d: 'Plan, stores, and notification preferences — low stock, expiring items, reorder arrivals — all in one place.',
-    go: 'Open Settings', href: '/settings', video: 'BZ702wCfl3U' }
+    href: '/settings', video: 'BZ702wCfl3U' }
 ];
 
 STEPS.forEach(s => {
@@ -410,15 +416,19 @@ STEPS.forEach(s => {
       '<span class="qg-t">' + s.t + '</span>' +
       '<span class="qg-d">' + s.d + '</span>' +
       (s.note ? '<span class="qg-note">' + s.note + '</span>' : '') +
-      '<span class="qg-go">' + s.go +
-        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>' +
-      '</span>' +
     '</span>';
   step.appendChild(top);
 
-  const video = document.createElement('div');
+  const video = document.createElement('button');
+  video.type = 'button';
   video.className = 'qg-step-video';
-  video.innerHTML = '<iframe src="https://www.youtube.com/embed/' + s.video + '" title="' + s.t + '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+  video.setAttribute('aria-label', 'Play video: ' + s.t);
+  video.innerHTML =
+    '<img src="https://img.youtube.com/vi/' + s.video + '/hqdefault.jpg" alt="" loading="lazy">' +
+    '<span class="qg-play"><svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M8 5v14l11-7z"/></svg></span>';
+  video.addEventListener('click', () => {
+    video.outerHTML = '<div class="qg-step-video"><iframe src="https://www.youtube.com/embed/' + s.video + '?autoplay=1" title="' + s.t + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+  });
   step.appendChild(video);
 
   document.getElementById('steps-' + s.group).appendChild(step);
