@@ -644,7 +644,7 @@ async function loadAnalytics() {
     if (storeId) _qs = _qs.eq('store_id', storeId);
     let _qe = supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id);
     if (storeId) _qe = _qe.eq('store_id', storeId);
-    let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at').eq('profile_id', user.id);
+    let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at, reorder_pending').eq('profile_id', user.id);
     if (storeId) _qin = _qin.eq('store_id', storeId);
     const [salesRes, expensesRes, ingredientsRes] = await Promise.all([_qs, _qe, _qin]);
 
@@ -1210,11 +1210,13 @@ function renderReorderPredictions() {
       // pill; don't duplicate it here as a self-contradictory "this month"
       // row with no usage signal behind it.
       if (totalConsumed === 0) return null;
+      // Already on order -- nagging to "Reorder" something that's already
+      // being reordered is exactly wrong, not just noisy.
+      if (ing.reorder_pending) return null;
       const monthsUntilEmpty = avgMonthly > 0 ? currentQty / avgMonthly : Infinity;
       const bucket = belowMin ? 0 : Math.floor(monthsUntilEmpty);
       if (bucket > 2) return null; // beyond this forecast's 3-month window
-      const daysLeft = avgMonthly > 0 ? (currentQty / (avgMonthly / 30)) : Infinity;
-      return { ...ing, avgMonthly, monthsUntilEmpty, daysLeft, belowMin, bucket: Math.max(0, bucket) };
+      return { ...ing, avgMonthly, monthsUntilEmpty, belowMin, bucket: Math.max(0, bucket) };
     })
     .filter(Boolean)
     .sort((a, b) => a.bucket - b.bucket || a.monthsUntilEmpty - b.monthsUntilEmpty);
@@ -1227,25 +1229,26 @@ function renderReorderPredictions() {
     return;
   }
 
+  // "Out now"/"45 days" told you nothing on its own (days until what?
+  // measured from when?) and duplicated the month grouping right above it --
+  // just show the actual stock left; the predicted month carries the timing.
   const rowHtml = p => {
-    const daysText = p.daysLeft < 1 ? 'Out now' : p.daysLeft === Infinity ? '∞' : Math.round(p.daysLeft) + ' days';
     const isRed = p.bucket === 0;
     const statusColor = isRed ? 'var(--danger)' : 'var(--warning)';
-    return { daysText, isRed, statusColor };
+    return { isRed, statusColor };
   };
 
   el.innerHTML = `<div class="table-scroll"><table class="top-products-table">
       <thead><tr>
-        <th>Item</th><th>In Stock</th><th>Avg/Mo</th><th>Days Left</th><th>Predicted Month</th>
+        <th>Item</th><th>In Stock</th><th>Avg/Mo</th><th>Predicted Month</th>
       </tr></thead>
       <tbody>
         ${predictions.map(p => {
-          const { daysText, statusColor } = rowHtml(p);
+          const { statusColor } = rowHtml(p);
           return `<tr>
             <td><a href="/ingredient-detail?id=${p.id}" style="color:var(--accent);text-decoration:none">${p.name}</a></td>
             <td>${parseFloat(p.quantity).toFixed(1)} ${p.unit || ''}</td>
             <td>${p.avgMonthly.toFixed(1)} ${p.unit || ''}</td>
-            <td style="font-weight:600;color:${statusColor}">${daysText}</td>
             <td><span style="color:${statusColor};font-weight:600;font-size:12px">${monthNames[p.bucket]}${p.belowMin ? ' · Below Min Stock' : ''}</span></td>
           </tr>`;
         }).join('')}
@@ -1258,7 +1261,7 @@ function renderReorderPredictions() {
   // same convention ingredients.html uses to group its own list by category.
   let lastBucket = null;
   const cards = shown.map(p => {
-    const { daysText, isRed } = rowHtml(p);
+    const { isRed } = rowHtml(p);
     const heading = p.bucket !== lastBucket
       ? `<div class="an-l-sec">${anEsc(monthNames[p.bucket])}</div>`
       : '';
@@ -1266,7 +1269,7 @@ function renderReorderPredictions() {
     return heading + `<div class="an-lrow">
       <span class="an-l-main">
         <span class="an-l-name">${anEsc(p.name)}</span>
-        <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${daysText} · ${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
+        <span class="an-l-why" data-state="${isRed ? 'bad' : 'warn'}">${parseFloat(p.quantity).toFixed(1)} ${anEsc(p.unit || '')} left</span>
       </span>
       <a href="/ingredient-detail?id=${p.id}&openReorder=true" class="an-l-act">Reorder</a>
     </div>`;
