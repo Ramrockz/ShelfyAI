@@ -1134,16 +1134,18 @@
              no sense there (why would some items on the same receipt update
              stock and others not?) and had no equivalent at all here, unlike
              the AI-scanned "Match Detected Items" flow's own
-             #updateInventoryToggle. One decision for the whole expense now. -->
-        <div style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 16px 0; display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Update Inventory</div>
-            <div style="font-size: 12px; color: var(--text-muted);" id="expenseUpdateStockWhy">Stock is topped up for every item when you save</div>
-          </div>
-          <label class="toggle-switch" style="margin: 0; flex-shrink: 0;">
-            <input type="checkbox" id="expenseUpdateStockToggle" checked onchange="toggleExpenseUpdateStock()">
-            <span class="toggle-slider"></span>
-          </label>
+             #updateInventoryToggle. One decision for the whole expense now.
+             Same .rcm-tog pill styling order-detail.html's/operations.html's
+             own Update Inventory toggles already use, instead of a plain
+             checkbox switch. -->
+        <div class="ec-group" style="margin: 16px 0; border-radius: 12px; overflow: hidden;">
+          <button type="button" class="rcm-tog" id="expenseUpdateStockTog" aria-pressed="true" onclick="toggleExpenseUpdateStock()" style="border-bottom: none;">
+            <span class="rcm-tog-main">
+              <span class="rcm-tog-name">Update inventory</span>
+              <span class="rcm-tog-why" id="expenseUpdateStockWhy">Stock is topped up for every item when you save</span>
+            </span>
+            <span class="rcm-tog-sw"></span>
+          </button>
         </div>
 
         <div class="ec-sec-head">
@@ -1197,6 +1199,7 @@
               <span class="ec-qty-center">
                 <span class="ec-qty-line">
                   <input class="ec-qty-value" id="ecLQty" type="number" inputmode="decimal" step="any" value="1" oninput="ecSyncTotal()">
+                  <span class="ec-qty-unit" id="ecLUnit"></span>
                 </span>
               </span>
               <button type="button" class="ec-qty-btn plus" aria-label="More" onclick="ecStepQty(1)">+</button>
@@ -1206,7 +1209,7 @@
           <div class="ec-group">
             <div class="ec-field">
               <label class="ec-label" for="ecLCost">Unit cost</label>
-              <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"><span id="ecLPerUnit" style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--text-faint,var(--text-muted));"></span></span>
+              <span class="ec-prefix"><span>$</span><input class="ec-input" id="ecLCost" type="text" inputmode="decimal" placeholder="0.00" oninput="ecSyncTotal()"></span>
               <div class="ec-hint" id="ecLCostHint"></div>
             </div>
           </div>
@@ -2186,6 +2189,9 @@ async function openAddExpenseModal() {
   document.getElementById('expenseForm').reset();
   document.getElementById('expense_id').value = '';
   document.getElementById('expense_vendor').value = '';
+  // form.reset() above doesn't touch this -- it's a button, not a
+  // form-resettable checkbox, since the .rcm-tog restyle.
+  document.getElementById('expenseUpdateStockTog').setAttribute('aria-pressed', 'true');
   document.getElementById('expenseUpdateStockWhy').textContent = 'Stock is topped up for every item when you save';
 
   // Set today's date
@@ -2639,7 +2645,7 @@ function ecOpenLine(ingredientId, existingId) {
   _ecDraft = { qty: sel ? sel.quantity : 1, cost: defaultCost };
 
   document.getElementById('ecLineName').textContent = ing.name;
-  document.getElementById('ecLPerUnit').textContent = 'per ' + (ing.unit || 'unit');
+  document.getElementById('ecLUnit').textContent = ing.unit || '';
   document.getElementById('ecLQty').value = _ecDraft.qty;
   document.getElementById('ecLCost').value = (parseFloat(_ecDraft.cost) || 0).toFixed(2);
   document.getElementById('ecLRemove').hidden = !sel;
@@ -2649,13 +2655,14 @@ function ecOpenLine(ingredientId, existingId) {
   ecShowPane('line');
 }
 
-// Whole-receipt toggle (see #expenseUpdateStockToggle above ecLines) --
+// Whole-receipt toggle (see #expenseUpdateStockTog above ecLines) --
 // used to be asked per line here, which made no sense (why would some items
 // on the same receipt update stock and others not?). One decision applies
 // to every line now; see saveExpense()'s use of _expenseUpdateStock.
 let _expenseUpdateStock = true;
 function toggleExpenseUpdateStock() {
-  _expenseUpdateStock = document.getElementById('expenseUpdateStockToggle').checked;
+  _expenseUpdateStock = !_expenseUpdateStock;
+  document.getElementById('expenseUpdateStockTog').setAttribute('aria-pressed', _expenseUpdateStock ? 'true' : 'false');
   document.getElementById('expenseUpdateStockWhy').textContent = _expenseUpdateStock
     ? 'Stock is topped up for every item when you save'
     : 'Records the cost only — stock isn’t changed for any item';
@@ -2797,7 +2804,7 @@ async function editExpense(expenseId) {
   editingExpenseId = expenseId;
   selectedExpenseIngredients = [];
   _expenseUpdateStock = true;
-  document.getElementById('expenseUpdateStockToggle').checked = true;
+  document.getElementById('expenseUpdateStockTog').setAttribute('aria-pressed', 'true');
   document.getElementById('expenseUpdateStockWhy').textContent = 'Stock is topped up for every item when you save';
 
   document.getElementById('modalTitle').textContent = 'Edit expense';
