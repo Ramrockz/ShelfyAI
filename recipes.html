@@ -1847,34 +1847,59 @@ async function deleteRecipeNow(id) {
 }
 
 // ---------- Soft delete with undo (mobile swipe + desktop grid card) ----------
-let _pendingDeleteRecipe = null;
-
-function softDeleteRecipe(id) {
+// Deletes for real immediately instead of deferring to a 5s timer/pagehide --
+// that older approach left a delete that hadn't happened yet for a refresh
+// to lose: a hard refresh during the undo window doesn't reliably let an
+// async write started from `pagehide` finish before the page tears down, so
+// the product silently survived unless you waited out the full undo window
+// first. Mirrors ingredients.html's softDeleteIng() fix for the same bug.
+async function softDeleteRecipe(id) {
   const recipe = recipes.find(r => r.id === id || r.id == id);
   if (!recipe) return;
   const shell = document.querySelector(`.prod-group-row[data-id="${id}"]`)?.closest('.prod-swipe')
              || document.querySelector(`.card-small[data-id="${id}"]`);
   if (!shell) return;
 
-  clearTimeout(_pendingDeleteRecipe?.timer);
-  _pendingDeleteRecipe?.commit();
+  // `recipe` (from the `recipes` array) is a display-shaped projection --
+  // loadRecipes() drops profile_id/sku and reshapes other columns for
+  // rendering convenience. Re-inserting it verbatim on undo would send the
+  // wrong shape and fail, so grab the actual raw row now, before it's gone,
+  // to restore from instead.
+  let rawRecipe = null;
+  try {
+    const { data } = await supabaseClient.from('recipes').select('*').eq('id', id).single();
+    rawRecipe = data || null;
+  } catch (e) {}
+
   shell.style.display = 'none';
+  recipes = recipes.filter(r => r.id !== id);
+  localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
 
-  const commit = () => {
-    _pendingDeleteRecipe = null;
-    deleteRecipeNow(id);
-  };
-
-  _pendingDeleteRecipe = { id, shell, timer: setTimeout(commit, 5000), commit };
-  showUndoToast(`Deleted ${recipe.name}`, () => {
-    clearTimeout(_pendingDeleteRecipe.timer);
+  try {
+    const { error } = await offlineWrite('recipes', 'delete', null, 'id', id);
+    if (error) throw error;
+  } catch (e) {
+    console.error('Error deleting recipe:', e);
     shell.style.display = '';
-    _pendingDeleteRecipe = null;
+    recipes.push(recipe);
+    localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+    return;
+  }
+
+  showUndoToast(`Deleted ${recipe.name}`, async () => {
+    try {
+      if (!rawRecipe) throw new Error('Original product data unavailable');
+      const { error } = await supabaseClient.from('recipes').insert([rawRecipe]);
+      if (error) throw error;
+      shell.style.display = '';
+      recipes.push(recipe);
+      localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+    } catch (e) {
+      console.error('Error restoring recipe:', e);
+      alert('Failed to restore product');
+    }
   });
 }
-
-// Don't lose a pending delete if the user leaves the page
-window.addEventListener('pagehide', () => _pendingDeleteRecipe?.commit());
 
 // ---------- Undo toast ----------
 let _toastTimer = null;
