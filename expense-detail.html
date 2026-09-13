@@ -1050,7 +1050,14 @@
   <div class="detail-header" style="margin-bottom: 24px;">
     <div class="header-title">
       <h1 id="expenseNumber" style="margin: 0;">Expense #—</h1>
-      <div id="expenseDate" onclick="editField('expense_date','Date')" style="font-size: 14px; color: var(--text-muted); font-weight: 500; margin-top: 4px; cursor: pointer;"></div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top: 4px;">
+        <div id="expenseDate" onclick="editField('expense_date','Date')" style="font-size: 14px; color: var(--text-muted); font-weight: 500; cursor: pointer;"></div>
+        <span style="color: var(--text-ghost, var(--text-muted));">·</span>
+        <!-- Wasn't shown anywhere on this page before -- needed so "Bought
+             from {vendor}" in the add-item picker means something you can
+             actually verify/set, not just an invisible internal field. -->
+        <div id="expenseVendor" onclick="editField('vendor','Vendor')" style="font-size: 14px; color: var(--text-muted); font-weight: 500; cursor: pointer;"></div>
+      </div>
     </div>
     <div class="header-actions">
       <button class="detail-cta-btn reverse-inv-btn" id="expReverseInvBtnDesktop" style="display:none;" onclick="reverseExpenseInventory(expenseId)" title="Reverse inventory">Reverse Inventory</button>
@@ -1489,6 +1496,9 @@ function displayExpense() {
     dateEl.textContent = new Date(rawDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
+  const vendorEl = document.getElementById('expenseVendor');
+  if (vendorEl) vendorEl.textContent = expenseData.vendor && expenseData.vendor.trim() ? expenseData.vendor : 'Add vendor';
+
   // expenseData.amount is a stored column that can drift from what the
   // itemized lines actually add up to (see _ecCalcTotal below) -- when there
   // are real line items, trust their sum instead, and self-heal the stored
@@ -1827,6 +1837,10 @@ function editField(field, label) {
     input.type = 'date';
     const raw = expenseData?.expense_date || expenseData?.created_at;
     input.value = raw ? new Date(raw).toISOString().slice(0, 10) : '';
+  } else if (field === 'vendor') {
+    input.type = 'text';
+    input.removeAttribute('step');
+    input.value = expenseData?.vendor || '';
   } else {
     input.type = 'number';
     input.step = '0.01';
@@ -1861,6 +1875,11 @@ async function saveField() {
     const { error } = await query;
     if (error) throw error;
     expenseData[field] = value;
+    // _ecInsights.vendorIds was computed for whatever vendor this expense
+    // had before -- stale now that it's changed, or _ecLoadInsights()
+    // would keep "Bought from X" (and its own cached vendor string) frozen
+    // on the old value for the rest of this page load.
+    if (field === 'vendor') { _ecInsights = null; }
     showNotification('Field updated', 'success');
   } catch (error) {
     console.error('Error updating field:', error);
