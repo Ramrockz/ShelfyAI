@@ -2351,6 +2351,7 @@ function bumpExpenseLine(id, delta) {
 
 // ---------- Item picker (18b) — pick, then set quantity + what it cost ----------
 let _ecInsights = null;   // { lastPaid: Map<ingId,{price,date}>, vendorIds: Set<ingId> }, loaded once per picker session
+let _ecInsightsVendor;    // vendor _ecInsights.vendorIds was computed for -- see _ecLoadInsights()
 let _ecEditingId = null;  // id of the selectedExpenseIngredients line being edited, or null when adding new
 let _ecIngredient = null; // the ingredients-table row currently open in pane 2
 let _ecDraft = null;      // { qty, cost } being edited in pane 2
@@ -2478,8 +2479,15 @@ function _ecMatchesAttrFilters(ing) {
 }
 
 async function _ecLoadInsights() {
-  if (_ecInsights) return _ecInsights;
+  // Cached per vendor, not just per picker session -- the picker can be
+  // opened before a vendor's picked yet (or for a different vendor than
+  // last time), and reusing a cache built for the wrong vendor meant
+  // "Bought from X" would silently never show up for whichever vendor you
+  // actually picked afterward.
+  const vendorLc = (document.getElementById('expense_vendor')?.value || '').trim().toLowerCase();
+  if (_ecInsights && _ecInsightsVendor === vendorLc) return _ecInsights;
   _ecInsights = { lastPaid: new Map(), vendorIds: new Set() };
+  _ecInsightsVendor = vendorLc;
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return _ecInsights;
@@ -2487,7 +2495,6 @@ async function _ecLoadInsights() {
     if (window.currentStoreId) q = q.eq('store_id', window.currentStoreId);
     const { data, error } = await q.order('expense_date', { ascending: false });
     if (error) throw error;
-    const vendorLc = (document.getElementById('expense_vendor')?.value || '').trim().toLowerCase();
     (data || []).forEach(exp => {
       const isVendor = vendorLc && (exp.vendor || '').trim().toLowerCase() === vendorLc;
       (exp.ingredients || []).forEach(line => {
