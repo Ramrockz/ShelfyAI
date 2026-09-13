@@ -1790,15 +1790,25 @@ function renderExpenseSummary() {
   const now = new Date();
   const key = d => `${d.getFullYear()}-${d.getMonth()}`;
   const thisKey = key(now);
-  const prevKey = key(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
   const sumFor = k => expenses
     .filter(e => key(new Date(e.expense_date)) === k)
     .reduce((n, e) => n + parseFloat(e.amount || 0), 0);
 
-  const cur = sumFor(thisKey), prev = sumFor(prevKey);
+  const cur = sumFor(thisKey);
   nameEl.textContent = now.toLocaleDateString('en-US', { month: 'long' });
   totalEl.textContent = `$${cur.toFixed(2)}`;
+
+  // Compare against the most recent prior month that actually has spending,
+  // not strictly last calendar month -- a gap month with no entries (e.g.
+  // nothing logged in August) would otherwise hide the badge even though an
+  // earlier month (July) has data worth comparing against.
+  let prev = 0, prevDate = null;
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const sum = sumFor(key(d));
+    if (sum) { prev = sum; prevDate = d; break; }
+  }
 
   if (!prev) { el.hidden = true; return; }          // no baseline, no claim
   const pct = Math.round(((cur - prev) / prev) * 100);
@@ -1808,7 +1818,7 @@ function renderExpenseSummary() {
   el.className = 'exp-trend ' + (pct === 0 ? 'flat' : up ? 'up' : 'down');
   el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" width="13" height="13">
       <polyline points="${up ? '6 15 12 9 18 15' : '6 9 12 15 18 9'}"/></svg>${Math.abs(pct)}%`;
-  el.title = `${up ? 'Up' : 'Down'} from $${prev.toFixed(2)} last month`;
+  el.title = `${up ? 'Up' : 'Down'} from $${prev.toFixed(2)} in ${prevDate.toLocaleDateString('en-US', { month: 'long' })}`;
 }
 
 function render() {
