@@ -3371,6 +3371,27 @@ function updateMobileCreateBtn() {
 function openMobileNameModal() { /* no-op — name input is now in step 2 footer */ }
 function closeMobileNameModal() { /* no-op */ }
 
+// Unlike the Name/Category checks in saveRecipe()/saveMobileRecipe() just
+// above (shake + focus, or shake + open the category sheet), a missing
+// ingredient used to just silently `return` here -- Create looked broken,
+// with no clue why. This brings it in line: scroll the item picker into
+// view, shake its filter button, and open the category-filter sheet so
+// adding one is a single tap away, same as ingredients.html's own
+// openIcCatSheet()-on-invalid pattern for its category field.
+function flagMissingIngredients() {
+  const isMobile = window.innerWidth <= 768;
+  const section = document.getElementById(isMobile ? 'recipeStep2Section' : 'recipeIngredientList');
+  const filterBtn = document.getElementById(isMobile ? 'mobileRecipeCatFilterBtn' : 'recipeCatFilterBtn');
+  section?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (filterBtn) {
+    filterBtn.classList.remove('input-invalid');
+    void filterBtn.offsetWidth;
+    filterBtn.classList.add('input-invalid');
+    setTimeout(() => filterBtn.classList.remove('input-invalid'), 1500);
+  }
+  openRecipeIngCatSheet();
+}
+
 async function saveMobileRecipe() {
   let name;
   if (currentEditingRecipeId && currentEditingRecipeName) {
@@ -3392,6 +3413,7 @@ async function saveMobileRecipe() {
     return;
   }
   if (Object.keys(currentRecipe).length === 0) {
+    flagMissingIngredients();
     return;
   }
   await _doSaveRecipe(name);
@@ -3475,6 +3497,7 @@ async function finalizeRecipe() {
     const newRecipe = { id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPrice, status: 'ready', components, is_favorite: false };
     recipes.unshift(newRecipe);
     localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+    notifyFirstProductIfNeeded(name, components.length);
 
     closeNamingModal();
     closeRecipeBuilder();
@@ -3525,6 +3548,7 @@ async function _doSaveRecipe(name) {
       if (error) throw error;
       recipes.unshift({ id: data[0].id, name, count: components.length, cost: totalCost, retail_price: retailPriceS, category, sku, status: 'ready', components, is_favorite: false });
       localStorage.setItem('shelfy_cache_recipes', JSON.stringify(recipes));
+      notifyFirstProductIfNeeded(name, components.length);
     }
 
     closeRecipeBuilder();
@@ -3553,6 +3577,7 @@ async function saveRecipe() {
     return;
   }
   if (Object.keys(currentRecipe).length === 0) {
+    flagMissingIngredients();
     return;
   }
   await _doSaveRecipe(name);
@@ -4432,6 +4457,20 @@ function notifyFirstItemIfNeeded(itemName, itemAttributes) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ action: 'first-item', itemName, itemAttributes: itemAttributes || null })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
+// Fire-and-forget after a successful new-product create (never on edit --
+// see the two call sites in _doSaveRecipe()/finalizeRecipe()). Same
+// server-re-checks-everything reasoning as notifyFirstItemIfNeeded() above.
+function notifyFirstProductIfNeeded(productName, ingredientCount) {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/account-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'first-product', productName, ingredientCount: ingredientCount || 0 })
     }).catch(() => {});
   }).catch(() => {});
 }

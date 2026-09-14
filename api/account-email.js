@@ -7,12 +7,12 @@
 // one function is the free fix; see PROJECT-STRUCTURE.md or ask before
 // adding another new api/*.js file without checking the current count.
 //
-// Dispatches on body.action: 'first-item' | 'first-order' |
+// Dispatches on body.action: 'first-item' | 'first-product' | 'first-order' |
 // 'first-ai-order-match' | 'first-expense' | 'first-reorder-marked' |
 // 'onboarding' | 'report-bug'. Each action's logic below is otherwise
-// unchanged from its original file (first-order, first-ai-order-match,
-// first-expense, and first-reorder-marked are new, added after the initial
-// merge).
+// unchanged from its original file (first-product, first-order,
+// first-ai-order-match, first-expense, and first-reorder-marked are new,
+// added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -146,6 +146,94 @@ async function sendFirstItemEmail(req, res, user) {
     .upsert({ user_id: user.id, first_item_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
   console.log(`first-item email sent to ${user.email} (${user.id})`);
+  return res.status(200).json({ sent: true });
+}
+
+// Called client-side right after a successful new-product save (see
+// recipes.html's own notifyFirstProductIfNeeded(), called from both
+// _doSaveRecipe() (the normal create path) and finalizeRecipe() (the
+// drag/drop-to-build naming-modal path) -- new products only, never on edit.
+//
+// Same reasoning as sendFirstItemEmail: the client-side "is this their
+// first product" guess is just an optimization, this re-checks server-side
+// against the database so a stale count or duplicate call can't double-send.
+//
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_product_email_sent_at) and email-sql/add-unsubscribed-all-emails.sql
+// (user_settings.unsubscribed_all_emails) run in Supabase before this does
+// anything.
+async function sendFirstProductEmail(req, res, user) {
+  const productName = typeof req.body?.productName === 'string' ? req.body.productName.slice(0, 200) : 'your first product';
+  const ingredientCount = Number.isFinite(req.body?.ingredientCount) ? req.body.ingredientCount : 0;
+
+  const { data: settings } = await supabaseAdmin
+    .from('user_settings')
+    .select('first_product_email_sent_at, unsubscribed_all_emails')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (settings?.first_product_email_sent_at) {
+    console.log(`first-product email skipped for ${user.id}: already_sent at ${settings.first_product_email_sent_at}`);
+    return res.status(200).json({ sent: false, reason: 'already_sent' });
+  }
+  if (settings?.unsubscribed_all_emails) {
+    console.log(`first-product email skipped for ${user.id}: unsubscribed_all_emails`);
+    return res.status(200).json({ sent: false, reason: 'unsubscribed' });
+  }
+
+  // Source of truth for "is this actually their first product" -- scoped by
+  // profile_id (not user_id), same as every other table here.
+  const { count, error: countError } = await supabaseAdmin
+    .from('recipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', user.id);
+  if (countError) throw countError;
+  if ((count || 0) !== 1) {
+    console.log(`first-product email skipped for ${user.id}: not_first_product (count=${count})`);
+    return res.status(200).json({ sent: false, reason: 'not_first_product' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured -- skipping first-product email');
+    return res.status(200).json({ sent: false, reason: 'email_not_configured' });
+  }
+
+  // Assumes the Resend dashboard template's alias matches this checked-in
+  // file's name, emails/first-product-created.html -- correct it here if the
+  // published alias differs (as it did for onboarding -> "welcome-email",
+  // and for orders/expenses -> "-logged").
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
+      to: user.email,
+      template: {
+        id: 'first-product-created',
+        variables: {
+          product_name: escapeHtmlServer(productName),
+          product_ingredient_count_suffix: ingredientCount > 0
+            ? ` <span style="color:#64748b; font-weight:400;">(${ingredientCount} ingredient${ingredientCount === 1 ? '' : 's'})</span>`
+            : '',
+          unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
+        }
+      }
+    })
+  });
+  if (!sendRes.ok) {
+    const errBody = await sendRes.text();
+    throw new Error(`Resend API error (${sendRes.status}): ${errBody}`);
+  }
+
+  await supabaseAdmin
+    .from('user_settings')
+    .upsert({ user_id: user.id, first_product_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+  console.log(`first-product email sent to ${user.email} (${user.id})`);
   return res.status(200).json({ sent: true });
 }
 
@@ -604,6 +692,7 @@ async function sendBugReport(req, res, user) {
 
 const ACTIONS = {
   'first-item': sendFirstItemEmail,
+  'first-product': sendFirstProductEmail,
   'first-order': sendFirstOrderEmail,
   'first-ai-order-match': sendFirstAiOrderMatchEmail,
   'first-expense': sendFirstExpenseEmail,
