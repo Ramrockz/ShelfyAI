@@ -2962,6 +2962,7 @@ async function saveExpense(event) {
       if (e) Object.assign(e, expenseData);
     } else if (savedData && savedData[0]) {
       expenses.unshift({ ...expenseData, id: savedData[0].id });
+      notifyFirstExpenseIfNeeded();
     }
     localStorage.setItem('shelfy_cache_expenses', JSON.stringify(expenses));
 
@@ -4064,6 +4065,24 @@ function notifyFirstItemIfNeeded(itemName, itemAttributes) {
   }).catch(() => {});
 }
 
+// Fire-and-forget after any successful new-expense save -- called from both
+// saveExpense() (manual entry) and confirmIngredientMapping() (receipt-scan
+// confirm) equally, unlike orders' manual-vs-AI split: there's no separate
+// "AI matched this expense" milestone email, so both entry methods count
+// toward the same "first expense" celebration. The server
+// (api/account-email.js's 'first-expense' action) re-checks against the
+// database whether this genuinely was the account's first expense.
+function notifyFirstExpenseIfNeeded() {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    fetch('/api/account-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'first-expense' })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
 // Same as ingredients.html's own CAT_META (label+icon, used by both the
 // category sheet and the attribute suggestions below).
 const QIC_CAT_META = [
@@ -4673,6 +4692,7 @@ async function confirmIngredientMapping() {
     }]).select();
 
     if (error) throw error;
+    notifyFirstExpenseIfNeeded();
 
     // Update inventory if toggle is on -- done after the expense insert
     // (not before, as this used to) so the ingredient_history rows below can

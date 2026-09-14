@@ -8,10 +8,11 @@
 // adding another new api/*.js file without checking the current count.
 //
 // Dispatches on body.action: 'first-item' | 'first-order' |
-// 'first-ai-order-match' | 'first-reorder-marked' | 'onboarding' |
-// 'report-bug'. Each action's logic below is otherwise unchanged from its
-// original file (first-order, first-ai-order-match, and
-// first-reorder-marked are new, added after the initial merge).
+// 'first-ai-order-match' | 'first-expense' | 'first-reorder-marked' |
+// 'onboarding' | 'report-bug'. Each action's logic below is otherwise
+// unchanged from its original file (first-order, first-ai-order-match,
+// first-expense, and first-reorder-marked are new, added after the initial
+// merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
@@ -238,6 +239,84 @@ async function sendFirstOrderEmail(req, res, user) {
     .upsert({ user_id: user.id, first_order_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
   console.log(`first-order email sent to ${user.email} (${user.id})`);
+  return res.status(200).json({ sent: true });
+}
+
+// Called client-side right after a successful new-expense save (see
+// expenses.html's own notifyFirstExpenseIfNeeded(), called from both
+// saveExpense() (manual entry) and confirmIngredientMapping() (receipt-scan
+// confirm) equally -- unlike orders, there's no separate "AI matched this"
+// milestone for expenses, so both entry methods count toward the same
+// "first expense" celebration.
+//
+// Needs RESEND_API_KEY (Vercel env var) and both
+// email-sql/add-first-time-email-tracking.sql (user_settings.
+// first_expense_email_sent_at) and email-sql/add-unsubscribed-all-emails.sql
+// (user_settings.unsubscribed_all_emails) run in Supabase before this does
+// anything.
+async function sendFirstExpenseEmail(req, res, user) {
+  const { data: settings } = await supabaseAdmin
+    .from('user_settings')
+    .select('first_expense_email_sent_at, unsubscribed_all_emails')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (settings?.first_expense_email_sent_at) {
+    console.log(`first-expense email skipped for ${user.id}: already_sent at ${settings.first_expense_email_sent_at}`);
+    return res.status(200).json({ sent: false, reason: 'already_sent' });
+  }
+  if (settings?.unsubscribed_all_emails) {
+    console.log(`first-expense email skipped for ${user.id}: unsubscribed_all_emails`);
+    return res.status(200).json({ sent: false, reason: 'unsubscribed' });
+  }
+
+  // Source of truth for "is this actually their first expense" -- scoped by
+  // profile_id (not user_id), same as every other table here.
+  const { count, error: countError } = await supabaseAdmin
+    .from('expenses')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', user.id);
+  if (countError) throw countError;
+  if ((count || 0) !== 1) {
+    console.log(`first-expense email skipped for ${user.id}: not_first_expense (count=${count})`);
+    return res.status(200).json({ sent: false, reason: 'not_first_expense' });
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY not configured -- skipping first-expense email');
+    return res.status(200).json({ sent: false, reason: 'email_not_configured' });
+  }
+
+  // Resend's dashboard-published template is "first-expense-logged" (matches
+  // "first-order-logged"'s naming), not the checked-in filename
+  // emails/first-expense-created.html, which predates this alias.
+  const sendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      reply_to: REPLY_TO,
+      to: user.email,
+      template: {
+        id: 'first-expense-logged',
+        variables: {
+          unsubscribe_url: `https://www.shelfyai.com/api/unsubscribe?uid=${user.id}`
+        }
+      }
+    })
+  });
+  if (!sendRes.ok) {
+    const errBody = await sendRes.text();
+    throw new Error(`Resend API error (${sendRes.status}): ${errBody}`);
+  }
+
+  await supabaseAdmin
+    .from('user_settings')
+    .upsert({ user_id: user.id, first_expense_email_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+
+  console.log(`first-expense email sent to ${user.email} (${user.id})`);
   return res.status(200).json({ sent: true });
 }
 
@@ -527,6 +606,7 @@ const ACTIONS = {
   'first-item': sendFirstItemEmail,
   'first-order': sendFirstOrderEmail,
   'first-ai-order-match': sendFirstAiOrderMatchEmail,
+  'first-expense': sendFirstExpenseEmail,
   'first-reorder-marked': sendFirstReorderMarkedEmail,
   'onboarding': sendOnboardingEmail,
   'report-bug': sendBugReport
