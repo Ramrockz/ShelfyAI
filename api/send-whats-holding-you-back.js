@@ -88,9 +88,8 @@ module.exports = async (req, res) => {
       const settings = settingsByUser.get(user.id);
       if (settings?.whats_holding_you_back_sent_at || settings?.unsubscribed_all_emails) continue;
 
-      // Assumes the Resend dashboard template's alias matches this checked-in
-      // file's name, emails/whats-holding-you-back.html -- correct it here if
-      // the published alias differs (as it has for several other templates).
+      // Published Resend template alias is "follow-up" (not this checked-in
+      // file's name, emails/whats-holding-you-back.html).
       const sendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -102,7 +101,7 @@ module.exports = async (req, res) => {
           reply_to: REPLY_TO,
           to: user.email,
           template: {
-            id: 'whats-holding-you-back',
+            id: 'follow-up',
             variables: {
               login_url: 'https://www.shelfyai.com/login',
               support_email: REPLY_TO,
