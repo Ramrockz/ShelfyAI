@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const { buffer } = require('micro');
+const fetch = require('node-fetch');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabase = createClient(
@@ -8,7 +9,141 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Same sender/reply-to convention as api/account-email.js.
+const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || 'ShelfyAI <noreply@shelfyai.com>';
+const REPLY_TO = 'inventory@shelfyai.com';
+const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.shelfyai.com';
+
+// Resend's dashboard-published templates are assumed to match these
+// checked-in file names under emails/ -- correct the id here if a published
+// alias ever differs (as happened for onboarding -> "welcome-email").
+async function sendTemplateEmail(to, templateId, variables) {
+  if (!process.env.RESEND_API_KEY) {
+    console.error(`RESEND_API_KEY not configured -- skipping ${templateId} email`);
+    return;
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ from: EMAIL_FROM, reply_to: REPLY_TO, to, template: { id: templateId, variables } })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error(`Resend API error sending ${templateId} (${res.status}): ${errBody}`);
+      return;
+    }
+    console.log(`${templateId} email sent to ${to}`);
+  } catch (err) {
+    // Never throw out of here -- these calls run after billing-critical
+    // writes (subscription/scan-pack updates) have already succeeded. A
+    // thrown error would make the webhook handler return non-2xx, and
+    // Stripe would retry the whole event, re-running those writes.
+    console.error(`Error sending ${templateId} email:`, err);
+  }
+}
+
+async function getUserEmailAndName(userId) {
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+  if (error || !data?.user?.email) {
+    console.error(`Could not look up user ${userId} for email send:`, error?.message);
+    return null;
+  }
+  const meta = data.user.user_metadata || {};
+  const rawName = (meta.full_name || meta.name || '').trim();
+  const firstName = rawName ? rawName.split(/\s+/)[0] : 'there';
+  return { email: data.user.email, firstName };
+}
+
+function formatMoney(amountInCents, currency) {
+  if (!Number.isFinite(amountInCents)) return '';
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'usd').toUpperCase() }).format(amountInCents / 100);
+  } catch (_) {
+    return `$${(amountInCents / 100).toFixed(2)}`;
+  }
+}
+
+function formatDate(dateLike) {
+  const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function titleCase(word) {
+  return word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
+}
+
+// Daily cron (see vercel.json) -- reuses this same endpoint/route instead of
+// adding a 13th api/*.js file, which would exceed Vercel Hobby's 12
+// Serverless Function cap (see api/account-email.js's header comment for the
+// prior incident this caused). Stripe always POSTs; Vercel Cron GETs, so the
+// two are distinguished by method.
+async function handleWinbackCron(req, res) {
+  try {
+    const targetDay = new Date();
+    targetDay.setUTCDate(targetDay.getUTCDate() + 7);
+    const dayStart = new Date(Date.UTC(targetDay.getUTCFullYear(), targetDay.getUTCMonth(), targetDay.getUTCDate()));
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    // Scoped to Starter monthly only -- the RESTOCK code (100% off, once) is
+    // a Stripe coupon restricted to that specific price, so a Pro or annual
+    // canceller would get an email advertising a discount that doesn't
+    // actually apply to their plan at checkout.
+    const { data: candidates, error } = await supabase
+      .from('subscriptions')
+      .select('profile_id, tier, current_period_end')
+      .eq('cancel_at_period_end', true)
+      .eq('status', 'active')
+      .eq('tier', 'starter')
+      .eq('billing_interval', 'month')
+      .is('winback_email_sent_at', null)
+      .gte('current_period_end', dayStart.toISOString())
+      .lt('current_period_end', dayEnd.toISOString());
+    if (error) throw error;
+
+    let sent = 0;
+    for (const sub of candidates || []) {
+      const userInfo = await getUserEmailAndName(sub.profile_id);
+      if (!userInfo) continue;
+
+      const accessUntilDate = formatDate(sub.current_period_end);
+      await sendTemplateEmail(userInfo.email, 'subscription-cancelled-winback', {
+        first_name: userInfo.firstName,
+        plan_name: titleCase(sub.tier),
+        access_until_date: accessUntilDate,
+        discount_percent: process.env.STRIPE_WINBACK_DISCOUNT_PERCENT || '',
+        discount_code: process.env.STRIPE_WINBACK_DISCOUNT_CODE || '',
+        discount_expires_date: accessUntilDate,
+        resubscribe_url: `${APP_URL}/plan`,
+        support_email: REPLY_TO
+      });
+
+      await supabase
+        .from('subscriptions')
+        .update({ winback_email_sent_at: new Date().toISOString() })
+        .eq('profile_id', sub.profile_id);
+      sent++;
+    }
+
+    return res.status(200).json({ candidates: candidates?.length || 0, sent });
+  } catch (error) {
+    console.error('Error in winback cron:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 module.exports = async (req, res) => {
+  if (req.method === 'GET') {
+    if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return handleWinbackCron(req, res);
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -128,12 +263,20 @@ async function updateSubscription(subscription) {
     updateData.current_period_end = currentPeriodEnd;
   }
 
-  // Check if subscription exists first
+  // Check if subscription exists first -- also pulls the fields needed below
+  // to detect a tier upgrade or a fresh cancellation for milestone emails.
   const { data: existingSubscription } = await supabase
     .from('subscriptions')
-    .select('id')
+    .select('id, tier, status, cancel_at_period_end')
     .eq('profile_id', userId)
     .single();
+
+  // Cleared whenever the subscription isn't currently pending cancellation,
+  // so a later cancel-then-resubscribe-then-cancel-again cycle can trigger
+  // the winback email again instead of being skipped forever.
+  if (!subscription.cancel_at_period_end) {
+    updateData.winback_email_sent_at = null;
+  }
 
   let subError;
   if (existingSubscription) {
@@ -171,6 +314,44 @@ async function updateSubscription(subscription) {
   }
 
   console.log(`Updated subscription for user ${userId}: ${activeTier} (${subscription.status})`);
+
+  // Milestone emails -- best-effort, after every write above has already
+  // succeeded (see sendTemplateEmail's own comment on why this must never
+  // throw back into the caller).
+  try {
+    const previousTier = existingSubscription && existingSubscription.status === 'active' ? existingSubscription.tier : 'free';
+    const wasAlreadyCancelling = existingSubscription?.cancel_at_period_end === true;
+
+    if ((activeTier === 'starter' || activeTier === 'pro') && activeTier !== previousTier) {
+      const userInfo = await getUserEmailAndName(userId);
+      if (userInfo) {
+        const price = subscription.items.data[0]?.price;
+        await sendTemplateEmail(userInfo.email, `subscribed-${activeTier}`, {
+          first_name: userInfo.firstName,
+          amount_paid: formatMoney(price?.unit_amount, price?.currency),
+          billing_interval: interval,
+          next_billing_date: currentPeriodEnd ? formatDate(currentPeriodEnd) : '',
+          manage_billing_url: `${APP_URL}/plan`,
+          app_url: APP_URL,
+          support_email: REPLY_TO
+        });
+      }
+    } else if (subscription.cancel_at_period_end && !wasAlreadyCancelling) {
+      const userInfo = await getUserEmailAndName(userId);
+      if (userInfo) {
+        await sendTemplateEmail(userInfo.email, 'subscription-cancelled', {
+          first_name: userInfo.firstName,
+          plan_name: titleCase(previousTier),
+          access_until_date: currentPeriodEnd ? formatDate(currentPeriodEnd) : '',
+          downgrade_tier: 'Free',
+          manage_billing_url: `${APP_URL}/plan`,
+          support_email: REPLY_TO
+        });
+      }
+    }
+  } catch (emailErr) {
+    console.error('Error sending subscription milestone email:', emailErr);
+  }
 }
 
 async function handleSubscriptionDeleted(subscription) {
@@ -225,6 +406,36 @@ async function handleScanPackPurchase(session) {
     throw new Error(`Failed to add bonus scans: ${error.message}`);
   }
   console.log(`Scan pack purchased: added ${scanCount} bonus scans for user ${userId} (new total: ${newValue})`);
+
+  // Best-effort, after the credit above has already succeeded -- see
+  // sendTemplateEmail's comment on why this must never throw back out.
+  try {
+    const userInfo = await getUserEmailAndName(userId);
+    if (userInfo) {
+      let receiptUrl = '';
+      try {
+        if (session.payment_intent) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent, { expand: ['latest_charge'] });
+          receiptUrl = paymentIntent.latest_charge?.receipt_url || '';
+        }
+      } catch (err) {
+        console.error('Error fetching receipt URL for scan pack email:', err);
+      }
+
+      await sendTemplateEmail(userInfo.email, 'scan-pack-purchased', {
+        first_name: userInfo.firstName,
+        scan_count: String(scanCount),
+        amount_paid: formatMoney(session.amount_total, session.currency),
+        purchase_date: formatDate(new Date()),
+        total_scans_available: String(newValue),
+        receipt_url: receiptUrl || `${APP_URL}/plan`,
+        usage_url: `${APP_URL}/plan`,
+        support_email: REPLY_TO
+      });
+    }
+  } catch (emailErr) {
+    console.error('Error sending scan-pack-purchased email:', emailErr);
+  }
 }
 
 async function handleFailedPayment(invoice) {
