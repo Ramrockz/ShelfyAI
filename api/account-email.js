@@ -9,17 +9,19 @@
 //
 // Dispatches on body.action: 'first-item' | 'first-product' | 'first-order' |
 // 'first-ai-order-match' | 'first-expense' | 'first-reorder-marked' |
-// 'onboarding' | 'report-bug'. Each action's logic below is otherwise
-// unchanged from its original file (first-product, first-order,
-// first-ai-order-match, first-expense, and first-reorder-marked are new,
-// added after the initial merge).
+// 'onboarding' | 'delete-account' | 'report-bug'. Each action's logic below
+// is otherwise unchanged from its original file (first-product, first-order,
+// first-ai-order-match, first-expense, first-reorder-marked, and
+// delete-account are new, added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
+const Stripe = require('stripe');
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabaseAdmin = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Every ShelfyAI email sends from noreply@shelfyai.com. Replies still go
 // somewhere real, though: inventory@shelfyai.com, set as reply_to below on
@@ -638,6 +640,123 @@ async function sendFirstReorderMarkedEmail(req, res, user) {
   return res.status(200).json({ sent: true });
 }
 
+// Called from settings.html's deleteAccount() after the user types the
+// "DELETE MY ACCOUNT" confirmation phrase. Previously that function only
+// deleted 7 tables client-side (with the user's own anon-key session, so
+// scoped by RLS) and then told the user to "contact support to fully delete
+// your account" -- Supabase's auth.admin.deleteUser() needs the service role
+// key, which can't live in client-side code, so the Auth row was never
+// actually removed. This is the real fix: runs server-side with the service
+// role, so it can reach every table (RLS doesn't apply to supabaseAdmin) and
+// finish with the actual Auth user deletion, so no manual follow-up is ever
+// needed.
+//
+// Order matters only where it doesn't: deleteUser() is called last so that
+// if anything above throws, the Auth account (and the ability to retry) is
+// still intact rather than leaving an orphaned Auth row with no data behind
+// it. Every one of these tables is scoped by profile_id/user_id/owner_id
+// equal to this authenticated user's own id -- never trust a client-supplied
+// id for a destructive action like this.
+async function deleteAccountAction(req, res, user) {
+  const userId = user.id;
+  const userEmail = user.email;
+
+  // Cancel any active Stripe subscription immediately (not at period end --
+  // there's no account left to keep serving) so deleting the account can't
+  // leave someone being billed with nothing to show for it.
+  const { data: subscription } = await supabaseAdmin
+    .from('subscriptions')
+    .select('stripe_subscription_id')
+    .eq('profile_id', userId)
+    .maybeSingle();
+  if (subscription?.stripe_subscription_id) {
+    try {
+      await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
+    } catch (err) {
+      // Already canceled/doesn't exist is fine; anything else just gets
+      // logged -- a Stripe hiccup shouldn't block the user from deleting
+      // their account.
+      console.error(`Error cancelling Stripe subscription for ${userId}:`, err.message);
+    }
+  }
+
+  // Receipt/screenshot files live in Storage, which isn't covered by any
+  // database cascade -- has to be listed and removed explicitly.
+  try {
+    const { data: files } = await supabaseAdmin.storage.from('expenses').list(userId, { limit: 1000 });
+    if (files?.length) {
+      await supabaseAdmin.storage.from('expenses').remove(files.map((f) => `${userId}/${f.name}`));
+    }
+  } catch (err) {
+    console.error(`Error deleting storage files for ${userId}:`, err.message);
+  }
+
+  // Explicit deletes across every table, rather than relying on each
+  // table's own FK cascade (several of these -- ingredients, recipes,
+  // stores, subscriptions, suppliers, profiles -- were created directly in
+  // the Supabase dashboard with a plain UUID column and no FK to
+  // auth.users at all, so there's nothing to cascade from).
+  await Promise.all([
+    supabaseAdmin.from('ingredient_suppliers').delete().eq('profile_id', userId),
+    supabaseAdmin.from('suppliers').delete().eq('profile_id', userId),
+    supabaseAdmin.from('ingredients').delete().eq('profile_id', userId),
+    supabaseAdmin.from('recipes').delete().eq('profile_id', userId),
+    supabaseAdmin.from('expenses').delete().eq('profile_id', userId),
+    supabaseAdmin.from('sales').delete().eq('profile_id', userId),
+    supabaseAdmin.from('notifications').delete().eq('profile_id', userId),
+    supabaseAdmin.from('ingredient_history').delete().eq('profile_id', userId),
+    supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId),
+    supabaseAdmin.from('device_sessions').delete().eq('user_id', userId),
+    supabaseAdmin.from('feedback').delete().eq('user_id', userId),
+    supabaseAdmin.from('ai_usage_tracking').delete().eq('user_id', userId),
+    supabaseAdmin.from('stores').delete().eq('owner_id', userId),
+    supabaseAdmin.from('user_settings').delete().eq('user_id', userId),
+    supabaseAdmin.from('subscriptions').delete().eq('profile_id', userId),
+    supabaseAdmin.from('profiles').delete().eq('id', userId)
+  ]);
+
+  // The actual account removal -- everything above was cleanup so this
+  // wouldn't leave orphaned rows behind, but this is the step the user is
+  // actually asking for.
+  const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (deleteUserError) {
+    console.error(`Error deleting auth user ${userId}:`, deleteUserError);
+    throw new Error(`Failed to delete account: ${deleteUserError.message}`);
+  }
+
+  console.log(`Account fully deleted for ${userEmail} (${userId})`);
+
+  // Best-effort confirmation email -- the account is already gone at this
+  // point regardless of whether this send succeeds, so failures here are
+  // logged, not surfaced as a failed deletion.
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const sendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: EMAIL_FROM,
+          to: userEmail,
+          template: {
+            id: 'account-deleted',
+            variables: {
+              deletion_date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            }
+          }
+        })
+      });
+      if (!sendRes.ok) console.error(`Resend API error sending account-deleted (${sendRes.status}):`, await sendRes.text());
+    } catch (err) {
+      console.error('Error sending account-deleted email:', err);
+    }
+  }
+
+  return res.status(200).json({ deleted: true });
+}
+
 // Called from the "Report a bug" menu item injected globally in auth.js
 // (initUserMenu()/openReportBugModal()). Sends the report to
 // inventory@shelfyai.com with the reporting user's own email set as
@@ -698,6 +817,7 @@ const ACTIONS = {
   'first-expense': sendFirstExpenseEmail,
   'first-reorder-marked': sendFirstReorderMarkedEmail,
   'onboarding': sendOnboardingEmail,
+  'delete-account': deleteAccountAction,
   'report-bug': sendBugReport
 };
 
