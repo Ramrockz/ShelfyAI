@@ -660,6 +660,11 @@
 
     .form-input {
       width: 100%;
+      /* iOS Safari auto-zooms the whole page on focus for any input under
+         16px -- jarring on the Danger Zone's "type DELETE to confirm"
+         inputs specifically, since that's exactly when you don't want the
+         viewport to jump. */
+      font-size: 16px;
     }
 
     .save-button-bar {
@@ -1923,7 +1928,7 @@ function downloadCSV(csv, filename) {
 
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
+  toast.style.cssText = `position:fixed;top:20px;right:20px;max-width:min(420px, calc(100vw - 40px));box-sizing:border-box;z-index:99999;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);animation:slideInRight 0.3s ease;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':type==='warning'?'var(--warning)':'#3b82f6'};color:#fff;`;
   toast.innerHTML = `<span style="font-size:18px;">${type==='success'?'✓':type==='error'?'✕':type==='warning'?'⚠':'ℹ'}</span><span>${message}</span>`;
   document.body.appendChild(toast);
   setTimeout(() => {
@@ -2184,9 +2189,9 @@ function closeDeleteDataModal() {
 
 async function deleteAllData() {
   const confirmText = document.getElementById('deleteDataConfirm').value;
-  
+
   if (confirmText !== 'DELETE') {
-    alert('Please type DELETE to confirm');
+    showToast('Please type DELETE to confirm', 'warning');
     return;
   }
 
@@ -2194,23 +2199,29 @@ async function deleteAllData() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
-    // Delete all user data
+    // Deletes only what the modal promises (items, products, orders,
+    // expenses) -- NOT user_settings. That table holds account preferences
+    // and one-time flags (onboarding_completed, tier, notification prefs,
+    // every "already sent" email tracking column), not inventory data, so
+    // wiping it here was silently re-triggering the onboarding flow and
+    // resetting notification/email preferences on every "delete all data".
     await Promise.all([
       supabaseClient.from('ingredients').delete().eq('profile_id', user.id),
       supabaseClient.from('recipes').delete().eq('profile_id', user.id),
       supabaseClient.from('expenses').delete().eq('profile_id', user.id),
       supabaseClient.from('sales').delete().eq('profile_id', user.id),
       supabaseClient.from('notifications').delete().eq('profile_id', user.id),
-      supabaseClient.from('ingredient_history').delete().eq('profile_id', user.id),
-      supabaseClient.from('user_settings').delete().eq('user_id', user.id)
+      supabaseClient.from('ingredient_history').delete().eq('profile_id', user.id)
     ]);
 
-    alert('All data deleted successfully');
+    showToast('All data deleted successfully', 'success');
     closeDeleteDataModal();
-    window.location.href = '/operations';
+    // Let the toast actually be seen before the page navigates out from
+    // under it -- unlike alert(), a toast doesn't block until dismissed.
+    setTimeout(() => { window.location.href = '/operations'; }, 800);
   } catch (error) {
     console.error('Error deleting data:', error);
-    alert('Failed to delete data: ' + error.message);
+    showToast('Failed to delete data: ' + error.message, 'error');
   }
 }
 
@@ -2239,7 +2250,7 @@ async function confirmDeleteFiles() {
     if (listError) throw listError;
 
     if (!files || files.length === 0) {
-      showNotification('No files to delete', 'info');
+      showToast('No files to delete', 'info');
       closeDeleteFilesModal();
       return;
     }
@@ -2267,15 +2278,15 @@ async function confirmDeleteFiles() {
       .eq('profile_id', user.id)
       .not('receipt_url', 'is', null);
 
-    showNotification(`Successfully deleted ${files.length} file(s)`, 'success');
+    showToast(`Successfully deleted ${files.length} file(s)`, 'success');
     closeDeleteFilesModal();
-    
+
     // Reload storage stats
     const tier = localStorage.getItem('shelfy_user_tier') || 'free';
     await loadStorageStats(tier);
   } catch (error) {
     console.error('Error deleting files:', error);
-    showNotification('Failed to delete files', 'error');
+    showToast('Failed to delete files', 'error');
   }
 }
 
@@ -2292,7 +2303,7 @@ async function deleteAccount() {
   const confirmText = document.getElementById('deleteAccountConfirm').value;
 
   if (confirmText !== 'DELETE MY ACCOUNT') {
-    alert('Please type DELETE MY ACCOUNT to confirm');
+    showToast('Please type DELETE MY ACCOUNT to confirm', 'warning');
     return;
   }
 
@@ -2313,12 +2324,14 @@ async function deleteAccount() {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Failed to delete account');
 
-    alert('Your account has been permanently deleted.');
+    showToast('Your account has been permanently deleted.', 'success');
     await supabaseClient.auth.signOut();
-    window.location.href = '/';
+    // Let the toast actually be seen before signOut()'s redirect (or this
+    // navigation) takes the page away from under it.
+    setTimeout(() => { window.location.href = '/'; }, 800);
   } catch (error) {
     console.error('Error deleting account:', error);
-    alert('Failed to delete account: ' + error.message);
+    showToast('Failed to delete account: ' + error.message, 'error');
   }
 }
 
