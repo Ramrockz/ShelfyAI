@@ -521,7 +521,15 @@
       var res = await sb.from('user_settings').select('storage_used_bytes, storage_limit_bytes').eq('user_id', userId).single();
       var settings = res && res.data;
       if (!settings) return true;
-      var available = (settings.storage_limit_bytes || 0) - (settings.storage_used_bytes || 0);
+      // A null/0 storage_limit_bytes (e.g. a user_settings row from before
+      // the storage-limits migration backfilled it) used to fall back to 0
+      // here -- meaning 0 available space, no matter how small the file --
+      // instead of the same free-tier 10MB default settings.html's own
+      // display and expense-detail.html's checkStorageLimit() already
+      // assume. That's exactly why storage could show "0% used" in Settings
+      // (which defaults the same missing limit sensibly) while every scan
+      // still got refused as "storage full" here.
+      var available = (settings.storage_limit_bytes || 10485760) - (settings.storage_used_bytes || 0);
       return fileSize <= available;
     } catch (e) { return true; } // allow upload if the check itself fails
   }

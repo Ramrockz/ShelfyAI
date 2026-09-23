@@ -3463,25 +3463,42 @@ function _expNormAttrs(attrs) {
   return out;
 }
 
-// A scanned line like "EP01 Unisex Organic T-Shirt in Black, Größe: L" often
-// only comes back from the AI read with size as a real structured attribute
-// ("Größe: L") -- the color is just plain text inside the name ("in Black"),
-// with no "Farbe:"/"Color:" label for the extractor to key off of. With only
-// size known, EVERY color of that same T-shirt scores an identical, perfect
-// attribute match and ties. Backfill a bare color word straight out of the
-// name when the line already has at least one other real attribute (size,
-// typically) -- that "already has one" gate is what keeps this from
-// misfiring on a plain product name that happens to contain a color word for
-// unrelated reasons (e.g. "Orange Extract" isn't a color variant).
+// A scanned line like "EP01 Unisex Organic T-Shirt in White, Größe: XS"
+// regularly comes back from the AI read with NEITHER color nor size lifted
+// into the structured attributes array at all -- the whole descriptive
+// text (correctly) stays in name, but nothing ends up in attributes to
+// actually distinguish this from the same product's other size/color rows,
+// so every variant ties on an identical name and empty attributes. Two
+// passes here, from weakest to strongest signal:
+// 1. A labeled key ("Größe: XS", "Size L") is strong signal on its own --
+//    that exact label isn't going to appear by coincidence -- so it's
+//    pulled out unconditionally, the same "Key: Value"/"Key Value" shapes
+//    parseAttributes() already recognizes server-side, just still sitting
+//    inline instead of split out.
+// 2. A bare color word with no label at all (e.g. "... in Black") is
+//    weaker signal, so it's only trusted once the line is already known to
+//    be attribute-bearing (a labeled attribute was just found, or one was
+//    already present) -- that gate is what keeps a plain product name that
+//    happens to contain a color word for unrelated reasons (e.g. "Orange
+//    Extract") from being misread as a color variant.
 function _expBackfillAttrsFromName(item) {
   const attrs = Object.assign({}, item.attributes || {});
-  const norm = _expNormAttrs(attrs);
-  if (norm.color || Object.keys(norm).filter(k => norm[k]).length === 0) return attrs;
   const name = String(item.name || '');
-  const found = Object.keys(EXP_COLOR_VALUE_SYNONYMS).find(word =>
-    new RegExp('(^|[^a-zà-ÿ])' + word + '($|[^a-zà-ÿ])', 'i').test(name)
-  );
-  if (found) attrs.color = found;
+
+  Object.keys(EXP_ATTR_KEY_SYNONYMS).forEach(kw => {
+    const nk = EXP_ATTR_KEY_SYNONYMS[kw];
+    if (_expNormAttrs(attrs)[nk]) return;
+    const m = name.match(new RegExp('(^|[^a-zà-ÿ])' + kw + '\\s*[:\\-]?\\s+([A-Za-zÀ-ÿ0-9]+)', 'i'));
+    if (m) attrs[nk] = m[2];
+  });
+
+  const norm = _expNormAttrs(attrs);
+  if (!norm.color && Object.keys(norm).filter(k => norm[k]).length > 0) {
+    const found = Object.keys(EXP_COLOR_VALUE_SYNONYMS).find(word =>
+      new RegExp('(^|[^a-zà-ÿ])' + word + '($|[^a-zà-ÿ])', 'i').test(name)
+    );
+    if (found) attrs.color = found;
+  }
   return attrs;
 }
 
