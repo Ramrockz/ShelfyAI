@@ -2199,6 +2199,17 @@ async function deleteAllData() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
 
+    // Receipt photos referenced by these rows live in the "expenses" storage
+    // bucket, not in these tables -- deleting the rows without also removing
+    // the files they point to left every one of them orphaned (no longer
+    // referenced anywhere, but still counted against the user's storage
+    // quota forever). Read the URLs before the rows disappear.
+    const [{ data: expenseRows }, { data: saleRows }] = await Promise.all([
+      supabaseClient.from('expenses').select('receipt_url, receipt_urls').eq('profile_id', user.id),
+      supabaseClient.from('sales').select('receipt_url, receipt_urls').eq('profile_id', user.id)
+    ]);
+    await deleteReceiptStorageFiles([...(expenseRows || []), ...(saleRows || [])]);
+
     // Deletes only what the modal promises (items, products, orders,
     // expenses) -- NOT user_settings. That table holds account preferences
     // and one-time flags (onboarding_completed, tier, notification prefs,
@@ -2265,18 +2276,30 @@ async function confirmDeleteFiles() {
 
     if (deleteError) throw deleteError;
 
-    // Clear receipt URLs from expenses and sales tables
+    // Clear receipt URLs from expenses and sales tables -- both the legacy
+    // single-file column and the receipt_urls array (expense-detail.html's
+    // multi-file support), so a deleted file doesn't leave a dangling
+    // reference that still tries to render a now-nonexistent image.
     await supabaseClient
       .from('expenses')
-      .update({ receipt_url: null })
-      .eq('profile_id', user.id)
-      .not('receipt_url', 'is', null);
+      .update({ receipt_url: null, receipt_urls: null })
+      .eq('profile_id', user.id);
 
     await supabaseClient
       .from('sales')
-      .update({ receipt_url: null })
-      .eq('profile_id', user.id)
-      .not('receipt_url', 'is', null);
+      .update({ receipt_url: null, receipt_urls: null })
+      .eq('profile_id', user.id);
+
+    // storage_used_bytes is normally kept in sync by a DB trigger on
+    // storage.objects (see supabase-migrations/add-storage-limits.sql), but
+    // every file under this user's folder was just confirmed deleted above
+    // -- so usage is definitely 0 now regardless of whether that trigger
+    // fired correctly for each one. Setting it directly here is what
+    // actually clears the "storage full" block on new scans; relying on the
+    // trigger alone left it stuck showing full after a bulk delete whenever
+    // a historical row's drift (e.g. a receipt deleted elsewhere without
+    // this) had already thrown the counter off.
+    await supabaseClient.from('user_settings').update({ storage_used_bytes: 0 }).eq('user_id', user.id);
 
     showToast(`Successfully deleted ${files.length} file(s)`, 'success');
     closeDeleteFilesModal();
@@ -2287,6 +2310,37 @@ async function confirmDeleteFiles() {
   } catch (error) {
     console.error('Error deleting files:', error);
     showToast('Failed to delete files', 'error');
+  }
+}
+
+// Removes the receipt photo(s) attached to expense/order rows from the
+// "expenses" storage bucket -- without this the files have no reference
+// left anywhere but keep consuming the user's storage quota forever. Takes
+// either a single row or an array of rows (each with receipt_url and/or
+// receipt_urls).
+async function deleteReceiptStorageFiles(records) {
+  const rows = Array.isArray(records) ? records : [records];
+  const marker = '/object/public/expenses/';
+  const paths = [];
+  rows.forEach(record => {
+    if (!record) return;
+    let urls = [];
+    if (Array.isArray(record.receipt_urls)) urls = record.receipt_urls.slice();
+    else if (typeof record.receipt_urls === 'string') {
+      try { urls = JSON.parse(record.receipt_urls) || []; } catch (e) {}
+    }
+    if (record.receipt_url && !urls.includes(record.receipt_url)) urls.push(record.receipt_url);
+    urls.forEach(u => {
+      const idx = String(u || '').indexOf(marker);
+      if (idx !== -1) paths.push(decodeURIComponent(u.slice(idx + marker.length)));
+    });
+  });
+  if (!paths.length) return;
+
+  try {
+    await supabaseClient.storage.from('expenses').remove(paths);
+  } catch (e) {
+    console.error('Failed to remove receipt file(s) from storage:', e);
   }
 }
 

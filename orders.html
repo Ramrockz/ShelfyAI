@@ -2426,8 +2426,11 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
   if (!orderToDelete) return;
-  
+
   try {
+    const order = orders.find(o => o.id === orderToDelete);
+    await deleteReceiptStorageFiles(order);
+
     const { error } = await offlineWrite('sales', 'delete', null, 'id', orderToDelete);
     if (error) throw error;
 
@@ -2438,6 +2441,37 @@ async function confirmDelete() {
   } catch (error) {
     console.error('Error deleting order:', error);
     alert('Failed to delete order: ' + error.message);
+  }
+}
+
+// Removes the receipt photo(s) attached to a record from the "expenses"
+// storage bucket (both orders and expenses share it) before the row itself
+// is deleted -- without this the file has no reference left anywhere but
+// keeps consuming the user's storage quota forever. This is why Settings >
+// Delete Files could turn up far more files than a user remembers creating:
+// every previously deleted expense/order left its receipt(s) behind as an
+// orphan instead of freeing the space back up.
+async function deleteReceiptStorageFiles(record) {
+  if (!record) return;
+  let urls = [];
+  if (Array.isArray(record.receipt_urls)) urls = record.receipt_urls.slice();
+  else if (typeof record.receipt_urls === 'string') {
+    try { urls = JSON.parse(record.receipt_urls) || []; } catch (e) {}
+  }
+  if (record.receipt_url && !urls.includes(record.receipt_url)) urls.push(record.receipt_url);
+  if (!urls.length) return;
+
+  const marker = '/object/public/expenses/';
+  const paths = urls.map(u => {
+    const idx = String(u || '').indexOf(marker);
+    return idx === -1 ? null : decodeURIComponent(u.slice(idx + marker.length));
+  }).filter(Boolean);
+  if (!paths.length) return;
+
+  try {
+    await supabaseClient.storage.from('expenses').remove(paths);
+  } catch (e) {
+    console.error('Failed to remove receipt file(s) from storage:', e);
   }
 }
 
