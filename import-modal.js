@@ -526,9 +526,9 @@
     } catch (e) { return true; } // allow upload if the check itself fails
   }
 
-  function showStorageFullNotice() {
+  function showBottomNotice(text) {
     var el = document.createElement('div');
-    el.textContent = 'Storage is full — saved without the photo.';
+    el.textContent = text;
     el.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);'
       + 'background:var(--bg-panel,#fff);color:var(--text-main,#0f172a);border:1px solid var(--border,#e2e8f0);'
       + 'padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.15);'
@@ -536,6 +536,8 @@
     document.body.appendChild(el);
     setTimeout(function () { el.remove(); }, 4000);
   }
+  function showStorageFullNotice() { showBottomNotice('Storage is full — saved without the photo.'); }
+  function showPhotoSaveFailedNotice() { showBottomNotice("Couldn't save the photo — saved without it."); }
 
   function copyErrCode() {
     var el = document.getElementById('aimErrCard');
@@ -638,6 +640,7 @@
       // ingredient photo scan. Skip the upload entirely for this entity.
       var receiptUrl = null;
       var storageFull = false;
+      var photoSaveFailed = false;
       if (currentEntity !== 'ingredient') {
         try {
           if (await hasStorageSpace(sb, session.user.id, file.raw.size)) {
@@ -647,11 +650,23 @@
             if (!upRes.error) {
               var pub = sb.storage.from('expenses').getPublicUrl(path);
               receiptUrl = pub && pub.data && pub.data.publicUrl;
+            } else {
+              // Previously swallowed entirely -- the scan would silently
+              // succeed with no receiptUrl and no indication anywhere of
+              // why, so a bad upload (RLS, quota, network) looked exactly
+              // like "the photo just never got saved" with nothing to go
+              // on. Now logged and surfaced the same way a full-storage
+              // skip already is.
+              console.error('[ShelfyImportModal] Receipt upload failed:', upRes.error);
+              photoSaveFailed = true;
             }
           } else {
             storageFull = true;
           }
-        } catch (upEx) { console.error('[ShelfyImportModal] Receipt upload failed:', upEx); }
+        } catch (upEx) {
+          console.error('[ShelfyImportModal] Receipt upload failed:', upEx);
+          photoSaveFailed = true;
+        }
       }
 
       stopFakeProgress();
@@ -660,6 +675,7 @@
       lastScanEntity = currentEntity;
       close();
       if (storageFull) showStorageFullNotice();
+      else if (photoSaveFailed) showPhotoSaveFailedNotice();
       if (cb) cb(data, receiptUrl);
     } catch (err) {
       stopFakeProgress();
