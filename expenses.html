@@ -3445,9 +3445,6 @@ function matchIngredientWithAttributes(detectedItem, ingredient) {
   // coincidentally shared a size or color with it.
   if (nameSimilarity < 0.3 && !skuMatch) return 0;
 
-  let score = nameSimilarity * 0.4;
-  if (skuMatch) score += 0.3;
-
   // Attribute matches, compared per normalized key (color-to-color, size-
   // to-size) instead of as an unordered bag of values -- a bag match let a
   // detected color value coincidentally equal an ingredient's SIZE value
@@ -3456,11 +3453,26 @@ function matchIngredientWithAttributes(detectedItem, ingredient) {
   const normDetected = _expNormAttrs(detectedItem.attributes);
   const normIngredient = _expNormAttrs(ingredient.attributes || ingredient.custom_attributes);
   const keys = Object.keys(normDetected).filter(k => normDetected[k]);
+
+  // Attributes, when the scanned line actually has any, are the primary
+  // signal -- they're what tells same-name variants (Black/L vs Black/M vs
+  // White/L of the same T-shirt) apart, which name similarity alone can't
+  // do since it scores every variant of "Unisex Organic T-Shirt" the same.
+  // Name/SKU only nudge the score from there, as a tiebreaker among
+  // candidates that already match on attributes -- not blended in at equal
+  // weight, which let a name-similar wrong-attribute variant score close
+  // enough to a correct one to tie or even win.
   if (keys.length > 0) {
     const attrMatches = keys.filter(k => normIngredient[k] && normIngredient[k] === normDetected[k]).length;
-    score += (attrMatches / keys.length) * 0.3;
+    const attrScore = attrMatches / keys.length;
+    let score = attrScore * 0.7 + nameSimilarity * 0.2;
+    if (skuMatch) score += 0.1;
+    return Math.min(score, 0.95); // Never return perfect 1.0 to encourage user review
   }
 
+  // No attributes detected on this line -- fall back to name/SKU alone.
+  let score = nameSimilarity * 0.7;
+  if (skuMatch) score += 0.3;
   return Math.min(score, 0.95); // Never return perfect 1.0 to encourage user review
 }
 
