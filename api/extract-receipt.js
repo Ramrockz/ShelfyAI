@@ -484,16 +484,33 @@ module.exports = async (req, res) => {
     }
 
     // Define extraction prompts based on context
+    //
+    // Two things AgentQL got wrong on real invoices before these notes were
+    // added, both against a real Hastedt eCommerce invoice with a table of
+    // Pos/Artikelnr/Artikel/Menge/MwSt/Stck/Gesamt rows:
+    // 1. A shipping row ("dhl-de" / "Versand mit DHL Deutschland") has the
+    //    exact same table columns as a real product row, so with nothing
+    //    telling it otherwise, AgentQL happily returned it as another
+    //    item -- it has no way to know "Versand" isn't a purchasable
+    //    product just from column shape alone.
+    // 2. Color/size were readable in the "Artikel" text (e.g. "EP01 Unisex
+    //    Organic T-Shirt in White, Größe: XS") but the document has no
+    //    separate color/size column -- AgentQL copied that whole string
+    //    into name and never split the trailing "Größe: XS" out into
+    //    attributes on its own, even though the attributes field was asked
+    //    for right below it. Told explicitly to pull it out of the name
+    //    text specifically, not just to "extract attributes" in the
+    //    abstract, it does.
     const orderPrompt = `
 {
-  customer 
+  customer
   order_reference (ID or reference number for the purchase)
   date (purchase date or invoice date)
   revenue (total purchase amount)
   item []{
-    name 
+    name (the product's own name only -- do NOT include shipping/freight, tax, discount, or fee rows as items, even though they appear as their own row in the same line-item table)
     quantity (quantity ordered)
-    attributes(key like color, size and value)[]
+    attributes(key like color, size and value -- when the name/description text itself mentions a color or size inline instead of the document having its own color/size column, e.g. "... in White, Größe: XS" or "... in Black", still pull that out as its own attribute here, don't leave it sitting only inside name)[]
   }
 }
 `.trim();
@@ -504,11 +521,11 @@ module.exports = async (req, res) => {
   date (purchase date or invoice date)
   amount (total cost)
   item []{
-    name (ingredient or material name)
+    name (the product/material's own name only -- do NOT include shipping/freight, tax, discount, or fee rows as items, even though they appear as their own row in the same line-item table)
     price (unit cost)
-    SKU (Stock Keeping Unit or product code)
+    SKU (Stock Keeping Unit or product code -- often labeled "Artikelnr" or similar on a German invoice)
     quantity (quantity ordered)
-    attributes(key like color, size and value)[]
+    attributes(key like color, size and value -- when the name/description text itself mentions a color or size inline instead of the document having its own color/size column, e.g. "... in White, Größe: XS" or "... in Black", still pull that out as its own attribute here, don't leave it sitting only inside name)[]
   }
 }
 `.trim();
@@ -618,17 +635,28 @@ module.exports = async (req, res) => {
       console.log('=== Extracted Data ===');
       console.log(JSON.stringify(extractedData, null, 2));
 
+      // Safety net for the orderPrompt/ingredientPrompt instruction above --
+      // even told explicitly to skip them, AgentQL can still occasionally
+      // return a shipping/tax/fee row since it shares the exact same table
+      // columns as a real product row. Filtered out here too rather than
+      // trusted to the prompt alone.
+      const NON_PRODUCT_LINE_PATTERN = /^(versand|shipping|fracht|porto|verpackung|packaging|lieferung|delivery|handling|mwst|ust|tax|vat|steuer|rabatt|discount|gutschein|coupon|geb(ü|ue)hr|fee|pfand|deposit)\b/i;
+      const isProductLine = (item) => {
+        const name = String(item && item.name || '').trim();
+        return !!name && !NON_PRODUCT_LINE_PATTERN.test(name);
+      };
+
       // Parse and return the extracted data based on context
       if (context === 'order') {
         // Handle item as array (from prompt: item []{})
         let items = [];
         if (Array.isArray(extractedData.item)) {
-          items = extractedData.item.map(item => ({
+          items = extractedData.item.filter(isProductLine).map(item => ({
             name: item.name || null,
             quantity: item.quantity || 1,
             attributes: parseAttributes(item.attributes)
           }));
-        } else if (extractedData.item) {
+        } else if (extractedData.item && isProductLine(extractedData.item)) {
           // Fallback for single item
           items = [{
             name: extractedData.item.name || null,
@@ -652,20 +680,24 @@ module.exports = async (req, res) => {
         // Handle item as array (from prompt: item []{})
         let items = [];
         if (Array.isArray(extractedData.item) && extractedData.item.length > 0) {
-          items = extractedData.item.map(item => ({
+          items = extractedData.item.filter(isProductLine).map(item => ({
             name: item.name || null,
             price: item.price || null,
-            SKU: item.SKU || item.name || null,
+            // No name fallback here -- the item's own name is never a real
+            // SKU, and using it as one made every item with no real SKU
+            // read look like it had a (bogus, always-unique) one instead of
+            // honestly reporting "no SKU on this line".
+            SKU: item.SKU || null,
             quantity: item.quantity || 1,
             attributes: parseAttributes(item.attributes)
           }));
-        } else if (extractedData.item && typeof extractedData.item === 'object') {
+        } else if (extractedData.item && typeof extractedData.item === 'object' && isProductLine(extractedData.item)) {
           // Fallback for single item
           const singleItem = extractedData.item;
           items = [{
             name: singleItem.name || null,
             price: singleItem.price || null,
-            SKU: singleItem.SKU || singleItem.name || null,
+            SKU: singleItem.SKU || null,
             quantity: singleItem.quantity || 1,
             attributes: parseAttributes(singleItem.attributes)
           }];
