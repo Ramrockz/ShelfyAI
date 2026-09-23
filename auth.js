@@ -44,6 +44,24 @@ if ('serviceWorker' in navigator) {
     _bannerShown = true;
     showUpdateAvailableBanner();
   });
+
+  // Every page's own `register('/sw.js')` call on window.load is what
+  // actually triggers an update check -- but a mobile browser/PWA reopened
+  // from the home screen or app switcher typically restores the already-
+  // open page (from bfcache, or the OS just un-suspending the process)
+  // instead of firing a fresh 'load' event, so that registration call never
+  // re-runs. A phone left "open" like that for days would never recheck
+  // for an update at all, no matter how many deploys shipped in the
+  // meantime. Force a check whenever the page is actually shown again --
+  // pageshow covers the bfcache-restore case specifically (persisted:true),
+  // visibilitychange covers simply switching back to the tab/app.
+  const _recheckForUpdate = () => {
+    navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update().catch(() => {}));
+  };
+  window.addEventListener('pageshow', _recheckForUpdate);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') _recheckForUpdate();
+  });
 }
 
 function showUpdateAvailableBanner() {
