@@ -3463,6 +3463,28 @@ function _expNormAttrs(attrs) {
   return out;
 }
 
+// A scanned line like "EP01 Unisex Organic T-Shirt in Black, Größe: L" often
+// only comes back from the AI read with size as a real structured attribute
+// ("Größe: L") -- the color is just plain text inside the name ("in Black"),
+// with no "Farbe:"/"Color:" label for the extractor to key off of. With only
+// size known, EVERY color of that same T-shirt scores an identical, perfect
+// attribute match and ties. Backfill a bare color word straight out of the
+// name when the line already has at least one other real attribute (size,
+// typically) -- that "already has one" gate is what keeps this from
+// misfiring on a plain product name that happens to contain a color word for
+// unrelated reasons (e.g. "Orange Extract" isn't a color variant).
+function _expBackfillAttrsFromName(item) {
+  const attrs = Object.assign({}, item.attributes || {});
+  const norm = _expNormAttrs(attrs);
+  if (norm.color || Object.keys(norm).filter(k => norm[k]).length === 0) return attrs;
+  const name = String(item.name || '');
+  const found = Object.keys(EXP_COLOR_VALUE_SYNONYMS).find(word =>
+    new RegExp('(^|[^a-zà-ÿ])' + word + '($|[^a-zà-ÿ])', 'i').test(name)
+  );
+  if (found) attrs.color = found;
+  return attrs;
+}
+
 function matchIngredientWithAttributes(detectedItem, ingredient) {
   const itemName = detectedItem.name || '';
   const nameSimilarity = calculateExpenseSimilarity(itemName, ingredient.name);
@@ -3603,6 +3625,7 @@ async function showIngredientMappingModal(expenseData) {
 
   // Create mapped items with best matches
   detectedItems.forEach((item, idx) => {
+    item.attributes = _expBackfillAttrsFromName(item);
     const itemName = item.name || '';
     const itemPrice = item.price ? parseFloat(String(item.price).replace(/[^0-9.]/g, '')) : null;
     const itemQty = item.quantity ? parseFloat(item.quantity) : 1;
