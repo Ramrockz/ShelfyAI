@@ -497,10 +497,17 @@ module.exports = async (req, res) => {
     //    Organic T-Shirt in White, Größe: XS") but the document has no
     //    separate color/size column -- AgentQL copied that whole string
     //    into name and never split the trailing "Größe: XS" out into
-    //    attributes on its own, even though the attributes field was asked
-    //    for right below it. Told explicitly to pull it out of the name
-    //    text specifically, not just to "extract attributes" in the
-    //    abstract, it does.
+    //    attributes on its own.
+    //
+    // A first attempt at #2 told it "name: the product's own name only" to
+    // nudge it toward separating the descriptor out -- instead, on the same
+    // invoice, it started stripping "in White, Größe: XS" out of name
+    // *without* ever putting it into attributes either, so 3 different
+    // size/color variants all came back with the identical bare name "EP01
+    // Unisex Organic T-Shirt" and nothing to tell them apart at all (worse
+    // than before). name now explicitly says to keep the full text
+    // untouched; attributes is framed as copying out of it, additively, not
+    // as name's replacement.
     const orderPrompt = `
 {
   customer
@@ -508,9 +515,9 @@ module.exports = async (req, res) => {
   date (purchase date or invoice date)
   revenue (total purchase amount)
   item []{
-    name (the product's own name only -- do NOT include shipping/freight, tax, discount, or fee rows as items, even though they appear as their own row in the same line-item table)
+    name (the full item name/description exactly as printed, unshortened -- do NOT create separate item entries for shipping/freight, tax, discount, or fee rows; those aren't products, skip them entirely)
     quantity (quantity ordered)
-    attributes(key like color, size and value -- when the name/description text itself mentions a color or size inline instead of the document having its own color/size column, e.g. "... in White, Größe: XS" or "... in Black", still pull that out as its own attribute here, don't leave it sitting only inside name)[]
+    attributes(key like color, size and value -- IN ADDITION to leaving it in name, when name mentions a color or size inline instead of the document having its own color/size column (e.g. "... in White, Größe: XS" or "... in Black"), also copy that same value out into its own attribute entry here)[]
   }
 }
 `.trim();
@@ -521,11 +528,11 @@ module.exports = async (req, res) => {
   date (purchase date or invoice date)
   amount (total cost)
   item []{
-    name (the product/material's own name only -- do NOT include shipping/freight, tax, discount, or fee rows as items, even though they appear as their own row in the same line-item table)
+    name (the full item name/description exactly as printed, unshortened -- do NOT create separate item entries for shipping/freight, tax, discount, or fee rows; those aren't products, skip them entirely)
     price (unit cost)
     SKU (Stock Keeping Unit or product code -- often labeled "Artikelnr" or similar on a German invoice)
     quantity (quantity ordered)
-    attributes(key like color, size and value -- when the name/description text itself mentions a color or size inline instead of the document having its own color/size column, e.g. "... in White, Größe: XS" or "... in Black", still pull that out as its own attribute here, don't leave it sitting only inside name)[]
+    attributes(key like color, size and value -- IN ADDITION to leaving it in name, when name mentions a color or size inline instead of the document having its own color/size column (e.g. "... in White, Größe: XS" or "... in Black"), also copy that same value out into its own attribute entry here)[]
   }
 }
 `.trim();
