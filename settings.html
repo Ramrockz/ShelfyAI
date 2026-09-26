@@ -1977,14 +1977,14 @@ async function downloadIngredients(e) {
 
     const csv = convertToCSV(data, headers);
     const timestamp = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `ingredients_${timestamp}.csv`);
+    downloadCSV(csv, `items_${timestamp}.csv`);
 
     btn.disabled = false;
     btn.innerHTML = originalText;
-    showToast('Ingredients exported successfully!', 'success');
+    showToast('Items exported successfully!', 'success');
   } catch (error) {
-    console.error('Error downloading ingredients:', error);
-    showToast('Failed to download ingredients: ' + error.message, 'error');
+    console.error('Error downloading items:', error);
+    showToast('Failed to download items: ' + error.message, 'error');
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
@@ -2031,7 +2031,17 @@ async function downloadOrders(e) {
       'created_at', 'updated_at'
     ];
 
-    const csv = convertToCSV(data, headers);
+    // items is a jsonb array of {recipe_id, name, quantity, price} lines --
+    // serialize it (String() would give "[object Object]") and use the
+    // user-facing "product" name instead of the legacy recipe_id key.
+    const rows = data.map(o => ({
+      ...o,
+      items: Array.isArray(o.items)
+        ? JSON.stringify(o.items.map(({ recipe_id, ...line }) =>
+            recipe_id !== undefined ? { product_id: recipe_id, ...line } : line))
+        : o.items
+    }));
+    const csv = convertToCSV(rows, headers);
     const timestamp = new Date().toISOString().split('T')[0];
     downloadCSV(csv, `orders_${timestamp}.csv`);
 
@@ -2084,10 +2094,12 @@ async function downloadExpenses(e) {
     const headers = [
       'id', 'expense_date', 'amount', 'category', 'description',
       'supplier', 'payment_method', 'receipt_url', 'notes',
-      'ingredient_id', 'created_at', 'updated_at'
+      'item_id', 'created_at', 'updated_at'
     ];
 
-    const csv = convertToCSV(data, headers);
+    // Legacy column name ingredient_id -> user-facing item_id
+    const rows = data.map(x => ({ ...x, item_id: x.ingredient_id }));
+    const csv = convertToCSV(rows, headers);
     const timestamp = new Date().toISOString().split('T')[0];
     downloadCSV(csv, `expenses_${timestamp}.csv`);
 
