@@ -150,8 +150,20 @@ function roSuggestedQty() {
   return Math.max(topUp, min, 1);
 }
 
+// Shipping lead times are business days -- skip Saturdays and Sundays.
+function addBusinessDays(date, days) {
+  const d = new Date(date);
+  let left = parseInt(days, 10) || 0;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) left--;
+  }
+  return d;
+}
+
 function roEtaLabel(days) {
-  const d = new Date(Date.now() + (parseInt(days, 10) || 0) * 86400000);
+  const d = addBusinessDays(new Date(), days);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 

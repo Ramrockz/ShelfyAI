@@ -44,11 +44,24 @@ async function sendPushWithRetry(sub, payload, attempt = 0) {
   }
 }
 
+// Shipping lead times are business days -- skip Saturdays and Sundays.
+// Mirrors addBusinessDays() in reorder-modal.js.
+function addBusinessDays(date, days) {
+  const d = new Date(date);
+  let left = parseInt(days, 10) || 0;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) left--;
+  }
+  return d;
+}
+
 function etaIsToday(item, today) {
   const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
   if (!orderBase) return false;
-  const eta = new Date(orderBase + 'T00:00:00');
-  if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery, 10));
+  let eta = new Date(orderBase + 'T00:00:00');
+  if (item.estimated_delivery) eta = addBusinessDays(eta, item.estimated_delivery);
   return eta.toISOString().split('T')[0] === today;
 }
 

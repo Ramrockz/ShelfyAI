@@ -2563,8 +2563,7 @@
       // generic "~N days" lead-time estimate shown before ordering.
       let eta = null;
       if (currentIngredient.reorder_date && days) {
-        const d = new Date(currentIngredient.reorder_date);
-        d.setDate(d.getDate() + parseInt(days, 10));
+        const d = addBusinessDays(new Date(currentIngredient.reorder_date + 'T00:00:00'), days);
         eta = `Est. ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
       }
       const sub = [eta, costPart].filter(Boolean).join(' · ');

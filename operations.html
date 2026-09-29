@@ -2863,8 +2863,8 @@ function resolveConfirm(result) {
       const orderBase = item.reorder_date || (item.updated_at ? item.updated_at.split('T')[0] : null);
       let chip = '';
       if (orderBase) {
-        const eta = new Date(orderBase + 'T00:00:00');
-        if (item.estimated_delivery) eta.setDate(eta.getDate() + parseInt(item.estimated_delivery));
+        let eta = new Date(orderBase + 'T00:00:00');
+        if (item.estimated_delivery) eta = addBusinessDays(eta, item.estimated_delivery);
         const etaDate = eta.toISOString().split('T')[0];
         chip = etaDate < today
           ? '<span class="delivery-chip" data-state="late">Late</span>'
