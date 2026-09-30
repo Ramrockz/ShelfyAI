@@ -87,12 +87,21 @@
       return { r, node, inSeg };
     });
 
-    // Materials -> each item
+    // Total -> each item. One shape per item: the band runs all the way to
+    // the item and fades from light to its solid colour, instead of ending
+    // in a separate block (which read as a detached element).
     const parts = [];
-    bands.forEach(({ r, node, inSeg }) => {
-      parts.push(`<path class="cs-link" fill="${r.color}" d="${ribbon(srcX + NODE, inSeg.y0, inSeg.y1, dstX, node.y0, node.y1)}">
+    const defs = [];
+    const gid = (el.id || 'cs') + '-g';
+    const endX = dstX + NODE;
+    bands.forEach(({ r, node, inSeg }, n) => {
+      defs.push(`<linearGradient id="${gid}${n}" gradientUnits="userSpaceOnUse" x1="${srcX + NODE}" y1="0" x2="${endX}" y2="0">
+          <stop offset="0" stop-color="${r.color}" stop-opacity="0.35"/>
+          <stop offset="0.7" stop-color="${r.color}" stop-opacity="0.75"/>
+          <stop offset="1" stop-color="${r.color}" stop-opacity="1"/>
+        </linearGradient>`);
+      parts.push(`<path class="cs-link" fill="url(#${gid}${n})" d="${ribbon(srcX + NODE, inSeg.y0, inSeg.y1, endX, node.y0, node.y1)}">
         <title>${esc(r.name)} · ${money(r.value)} · ${pct(r.value, cost)} of the cost${r.detail ? ' · ' + esc(r.detail) : ''}</title></path>`);
-      parts.push(`<rect x="${dstX}" y="${node.y0}" width="${NODE}" height="${node.y1 - node.y0}" rx="3" fill="${r.color}"/>`);
       const cy = (node.y0 + node.y1) / 2;
       parts.push(`<text class="cs-label" x="${labelX}" y="${cy - 3}">${esc(r.name)}</text>`);
       parts.push(`<text class="cs-sub" x="${labelX}" y="${cy + 12}">${money(r.value)} · ${pct(r.value, cost)}</text>`);
@@ -107,7 +116,7 @@
       <div class="cs-title">Cost breakdown</div>
       <svg class="cs-svg" width="${W}" height="${vbH}" viewBox="0 ${vbTop} ${W} ${vbH}" role="img"
            aria-label="Cost breakdown: ${esc(rows.map(r => `${r.name} ${money(r.value)}`).join(', '))}">
-        ${head}${parts.join('')}
+        <defs>${defs.join('')}</defs>${head}${parts.join('')}
       </svg>`;
     el.querySelectorAll('.cs-label').forEach(t => {
       if (t.textContent.length > maxChars) t.textContent = t.textContent.slice(0, maxChars - 1) + '…';
