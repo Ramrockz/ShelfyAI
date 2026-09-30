@@ -349,10 +349,9 @@
     limit: r => `Limited by ${r.blocker.name} · ${asNum(r.stock)} left, ${asNum(r.need)} each`,
   };
 
-  // Pure: question + data -> { intent, say, items, products, card }
-  function asAnswer(query) {
-    const intent = asIntent(query);
-
+  // Questions that aren't about a specific item: answered from the dashboard's
+  // own restock / pending-delivery lists.
+  function asAnswerGeneral(intent) {
     if (intent === 'reorder') {
       const all = [...asStock.out, ...asStock.low];
       const open = all.filter(i => !i.reorder_pending);
@@ -368,6 +367,13 @@
         : asInbound.length === 1 ? T.delivOne(asInbound[0]) : T.delivMany(asInbound);
       return { intent, say, items: [], products: [], card: asInbound.length ? 'deliveries' : null };
     }
+    return null;
+  }
+
+  // Pure: question + data -> { intent, say, items, products, card }
+  function asAnswer(query) {
+    const intent = asIntent(query);
+    if (intent === 'reorder' || intent === 'deliveries') return asAnswerGeneral(intent);
 
     const strip = intent === 'produce' ? AS_PRODUCE_WORDS : intent === 'cost' ? AS_COST_WORDS
                 : intent === 'leadtime' ? AS_LEAD_WORDS : null;
@@ -377,8 +383,14 @@
     const shown = String(query).split(/\s+/).map(w => w.replace(/[^\p{L}\p{N}-]/gu, ''))
       .filter(w => keep.has(asNorm(w))).join(' ') || tokens.join(' ');
     if (!tokens.length) return { intent, say: '', items: [], products: [], card: null };
-    const none = say => ({ intent, say, items: [], products: [], card: null, empty: shown });
     const { items, products } = asSearch(tokens);
+    return asCompose(intent, items, products, shown);
+  }
+
+  // Matched items + product entries ({ product, uses, direct }) -> answer.
+  // Shared by the local matcher and the Claude mapping (asAnswerFromAI).
+  function asCompose(intent, items, products, shown, note) {
+    const none = say => ({ intent, say, items: [], products: [], card: null, empty: shown, note });
     const itemById = asItemById();
     const withMake = asDropShadowedParents(products).map(e => ({ ...e, make: asCanMake(e.product, itemById) }));
 
@@ -441,6 +453,79 @@
     return { intent, say, items, products: withMake, card: null };
   }
 
+  // Claude's mapping ({ intent, item_ids, product_ids, sort_field, sort_order,
+  // limit, note } from /api/account-email action "assistant") -> answer.
+  // Claude only chose WHICH records; every figure still comes from here.
+  function asAnswerFromAI(query, ai) {
+    const intent = ai.intent;
+    if (intent === 'reorder' || intent === 'deliveries') return asAnswerGeneral(intent);
+    const shown = String(query).trim();
+    if (intent === 'unknown') return asCompose('have', [], [], shown, ai.note || '');
+
+    const itemById = asItemById();
+    const productById = {};
+    (asProducts || []).forEach(p => { productById[p.id] = p; });
+    let items = (ai.item_ids || []).map(id => itemById[id]).filter(Boolean);
+    let products = (ai.product_ids || []).map(id => productById[id]).filter(Boolean)
+      .map(p => ({ product: p, uses: [], direct: true }));
+
+    // "How many can I make" naming an item: the products that use it.
+    if (intent === 'produce' && !products.length && items.length) {
+      const ids = new Set(items.map(i => i.id));
+      products = (asProducts || []).map(p => {
+        const uses = (Array.isArray(p.components) ? p.components : []).filter(c => ids.has(asCompId(c))).map(c => itemById[asCompId(c)]);
+        return uses.length ? { product: p, uses, direct: true } : null;
+      }).filter(Boolean);
+      items = [];
+    }
+
+    // Rankings ("least of", "cheapest") are applied here, on real numbers.
+    const dir = ai.sort_order === 'desc' ? -1 : 1;
+    const num = v => (v == null || isNaN(v) ? Infinity * dir : v);
+    const itemKey = {
+      quantity: i => parseFloat(i.quantity) || 0,
+      cost: i => parseFloat(i.cost_per_unit),
+      lead_time: i => { const l = asLead(i); return l ? l.days : null; },
+    }[ai.sort_field];
+    const prodKey = {
+      can_make: e => { const r = asCanMake(e.product, itemById); return r ? r.count : null; },
+      cost: e => asProductCost(e.product, itemById),
+    }[ai.sort_field];
+    if (itemKey) items.sort((a, b) => dir * (num(itemKey(a)) - num(itemKey(b))));
+    if (prodKey) products.sort((a, b) => dir * (num(prodKey(a)) - num(prodKey(b))));
+    if (ai.limit > 0) {
+      if (itemKey || !prodKey) items = items.slice(0, ai.limit);
+      if (prodKey) products = products.slice(0, ai.limit);
+    }
+
+    return asCompose(intent, items, products, shown, ai.note || '');
+  }
+
+  async function asAskAI(question) {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) return null;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch('/api/account-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({
+          action: 'assistant',
+          question,
+          store_id: window.currentStoreId || localStorage.getItem('shelfy_store_id') || null,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!r.ok) return null;
+      const ai = await r.json();
+      return ai && ai.intent ? ai : null;
+    } catch (_) {
+      return null;   // offline / timeout -> the local answer stands
+    }
+  }
+
   // ─── Rendering ────────────────────────────────────────────────────────────
 
   function asEsc(s) {
@@ -493,7 +578,7 @@
     }
     if (ans.empty != null) {
       html = `<div class="as-noresult"><img src="/cat_no_results.png" alt="" />
-        <p>Nothing found${ans.empty ? ` for “${asEsc(ans.empty)}”` : ''}</p></div>`;
+        <p>${ans.note ? asEsc(ans.note) : `Nothing found${ans.empty ? ` for “${asEsc(ans.empty)}”` : ''}`}</p></div>`;
     } else if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
     res.innerHTML = html;
   }
@@ -517,7 +602,7 @@
 
   let asSeq = 0;
 
-  async function asAsk(speak) {
+  async function asAsk(speak, useAI) {
     const input = document.getElementById('asInput');
     const query = input.value;
     document.getElementById('asClear').hidden = !query;
@@ -543,7 +628,21 @@
         asLoad();   // refresh in the background if stale
       }
     }
-    const ans = asAnswer(query);
+    let ans = asAnswer(query);
+    const wantAI = useAI === true || (useAI === 'fallback' && ans && ans.empty != null);
+    if (wantAI && navigator.onLine) {
+      if (useAI === 'fallback') asHint('Let me check…');
+      asAvatarState('thinking', true);
+      const ai = await asAskAI(query);
+      asAvatarState('thinking', false);
+      if (seq !== asSeq) return;
+      if (ai) {
+        // Items created since the last load wouldn't resolve -- reload once.
+        const known = asItemById();
+        if ((ai.item_ids || []).some(id => !known[id])) { await asLoad(true); if (seq !== asSeq) return; }
+        ans = asAnswerFromAI(query, ai);
+      }
+    }
     asRenderAnswer(ans);
     if (speak) asSpeak(ans.say);
   }
@@ -750,7 +849,7 @@
       if (asRecAborted || !transcript) { if (!asRecAborted) asVoiceHide(); return; }
       asVoiceState('thinking', 'Let me check…', transcript);
       input.value = transcript;
-      asAsk(true).finally(() => setTimeout(asVoiceHide, 350));
+      asAsk(true, true).finally(() => setTimeout(asVoiceHide, 350));
     };
     try {
       rec.start();
@@ -916,12 +1015,12 @@
       clearTimeout(asTypeTimer);
       asTyperSync();
       // Dictated text arrives in bursts; wait for it to settle, then answer aloud.
-      asTypeTimer = asDictation ? setTimeout(() => asAsk(true), 1100)
+      asTypeTimer = asDictation ? setTimeout(() => asAsk(true, true), 1100)
                                 : setTimeout(() => asAsk(false), 220);
     });
     input.addEventListener('keydown', e => {
       if (e.key === 'Escape') { input.value = ''; asAsk(false); input.blur(); }
-      if (e.key === 'Enter') { clearTimeout(asTypeTimer); asAsk(true); input.blur(); }
+      if (e.key === 'Enter') { clearTimeout(asTypeTimer); asAsk(true, 'fallback'); input.blur(); }
     });
     document.getElementById('asClear').addEventListener('click', () => {
       input.value = ''; asAsk(false); input.focus();
@@ -976,7 +1075,7 @@
   window.addEventListener('shelfy:synced', () => { asItems = null; });
 
   // Exposed for the dashboard and for testing.
-  window.ShelfyAssistant = { answer: asAnswer, canMake: asCanMake, _set(items, products, stock, inbound) {
+  window.ShelfyAssistant = { answer: asAnswer, fromAI: asAnswerFromAI, canMake: asCanMake, _set(items, products, stock, inbound) {
     asItems = items; asProducts = products; asLoadedAt = Date.now();
     if (stock) asStock = stock;
     if (inbound) asInbound = inbound;

@@ -9,13 +9,14 @@
 //
 // Dispatches on body.action: 'first-item' | 'first-product' | 'first-order' |
 // 'first-ai-order-match' | 'first-expense' | 'first-reorder-marked' |
-// 'onboarding' | 'delete-account' | 'report-bug'. Each action's logic below
+// 'onboarding' | 'delete-account' | 'report-bug' | 'assistant'. Each action's logic below
 // is otherwise unchanged from its original file (first-product, first-order,
 // first-ai-order-match, first-expense, first-reorder-marked, and
 // delete-account are new, added after the initial merge).
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 const Stripe = require('stripe');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -809,6 +810,134 @@ async function sendBugReport(req, res, user) {
   return res.status(200).json({ sent: true });
 }
 
+
+// ─── Shelfy assistant: map a spoken/typed question onto the user's catalog ──
+//
+// Claude only MAPS the question (which kind of question, which items/products,
+// optional sort). It never sees stock, prices or suppliers and never produces
+// a number -- the dashboard computes every figure from its own data, so an
+// answer can't contain an invented quantity. Short ids (i1, p1) instead of
+// UUIDs keep the catalog small; they're mapped back before responding.
+
+const ASSISTANT_SYSTEM = `You map questions about a small business's inventory onto its catalog.
+
+The catalog lists ITEMS (raw materials / stock, lines starting "I|") and PRODUCTS (things made from items, lines starting "P|"). Format:
+I|<id>|<name>|<category>|<attributes as key=value; ...>
+P|<id>|<name>|<category>|<attributes>|<parent id if this is a variant of another product>
+
+The question may be German or English, typed or spoken (so expect speech-recognition slips, missing punctuation, colours/sizes in either language, e.g. "dunkelblau" = navy, "groß" = L, "extra large" = XL).
+
+Decide the intent:
+- have: does the user have / how many of an item are left
+- produce: how many of a product can be made
+- cost: what an item or product costs
+- leadtime: how long reordering an item takes
+- reorder: what needs reordering in general (no specific item)
+- deliveries: what is on the way / when a delivery arrives
+- unknown: not about the catalog, or nothing matches
+
+Then pick the ids the question refers to. Include every matching variant (all sizes of "black hoodies" if no size is given). For produce, pick products; if the user names an item, pick the products that plausibly use it. For have/cost/leadtime, pick items (use products only when the question clearly names a product). For reorder/deliveries leave the id lists empty.
+
+If the question asks for an extreme or ranking ("cheapest", "which do I have the least of", "most"), set sort_field and sort_order and a limit; otherwise sort_field is "none" and limit is 0.
+
+Never invent ids. If nothing in the catalog fits, use intent "unknown" and put a short English note in "note" (e.g. "No item called marbles"). Otherwise "note" is "".`;
+
+const ASSISTANT_SCHEMA = {
+  type: 'object',
+  properties: {
+    intent: { type: 'string', enum: ['have', 'produce', 'cost', 'leadtime', 'reorder', 'deliveries', 'unknown'] },
+    item_ids: { type: 'array', items: { type: 'string' } },
+    product_ids: { type: 'array', items: { type: 'string' } },
+    sort_field: { type: 'string', enum: ['none', 'quantity', 'cost', 'lead_time', 'can_make'] },
+    sort_order: { type: 'string', enum: ['asc', 'desc'] },
+    limit: { type: 'integer' },
+    note: { type: 'string' },
+  },
+  required: ['intent', 'item_ids', 'product_ids', 'sort_field', 'sort_order', 'limit', 'note'],
+  additionalProperties: false,
+};
+
+const ASSISTANT_EMPTY = { intent: 'unknown', item_ids: [], product_ids: [], sort_field: 'none', sort_order: 'asc', limit: 0, note: '' };
+
+function _catalogAttrs(raw) {
+  let a = raw;
+  if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
+  if (!a || typeof a !== 'object') return '';
+  return Object.entries(a).filter(([, v]) => v != null && String(v).trim())
+    .map(([k, v]) => `${k}=${String(v).trim()}`).join('; ');
+}
+
+const _catalogClean = s => String(s == null ? '' : s).replace(/[|\n\r]+/g, ' ').trim();
+
+async function assistantAction(req, res, user) {
+  const question = String(req.body?.question || '').trim().slice(0, 500);
+  if (!question) return res.status(400).json({ error: 'Missing question' });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'Assistant not configured' });
+
+  // Read as the user (RLS), scoped exactly like the dashboard's own queries.
+  const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: req.headers.authorization } }
+  });
+  const storeId = req.body?.store_id || null;
+  let qi = supabaseUser.from('ingredients').select('id, name, category, custom_attributes').eq('profile_id', user.id);
+  let qr = supabaseUser.from('recipes').select('id, name, category, attributes, parent_id').eq('profile_id', user.id);
+  if (storeId) { qi = qi.eq('store_id', storeId); qr = qr.eq('store_id', storeId); }
+  const [ri, rr] = await Promise.all([qi.order('name'), qr.order('name')]);
+  if (ri.error) throw ri.error;
+  if (rr.error) throw rr.error;
+  const items = ri.data || [];
+  const products = rr.data || [];
+
+  const shortToReal = {};
+  const realToShort = {};
+  items.forEach((it, n) => { const k = 'i' + (n + 1); shortToReal[k] = { kind: 'item', id: it.id }; realToShort[it.id] = k; });
+  products.forEach((p, n) => { const k = 'p' + (n + 1); shortToReal[k] = { kind: 'product', id: p.id }; realToShort[p.id] = k; });
+
+  const lines = [
+    ...items.map(it => `I|${realToShort[it.id]}|${_catalogClean(it.name)}|${_catalogClean(it.category)}|${_catalogClean(_catalogAttrs(it.custom_attributes))}`),
+    ...products.map(p => `P|${realToShort[p.id]}|${_catalogClean(p.name)}|${_catalogClean(p.category)}|${_catalogClean(_catalogAttrs(p.attributes))}|${p.parent_id && realToShort[p.parent_id] ? realToShort[p.parent_id] : ''}`),
+  ];
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const response = await client.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 2048,
+    system: ASSISTANT_SYSTEM,
+    output_config: { format: { type: 'json_schema', schema: ASSISTANT_SCHEMA } },
+    messages: [{
+      role: 'user',
+      content: [
+        // The catalog is identical across a user's follow-up questions, so it
+        // sits before the question and is cached (Haiku 4.5 only caches
+        // prefixes of 4096+ tokens -- small catalogs simply don't cache).
+        { type: 'text', text: `CATALOG\n${lines.join('\n') || '(empty)'}`, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: `QUESTION\n${question}` },
+      ],
+    }],
+  });
+
+  if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
+    return res.status(200).json(ASSISTANT_EMPTY);
+  }
+  const text = response.content.find(b => b.type === 'text')?.text || '';
+  let out;
+  try { out = JSON.parse(text); } catch (e) { return res.status(200).json(ASSISTANT_EMPTY); }
+
+  const mapIds = (ids, kind) => (Array.isArray(ids) ? ids : [])
+    .map(k => shortToReal[k]).filter(x => x && x.kind === kind).map(x => x.id);
+
+  return res.status(200).json({
+    intent: out.intent || 'unknown',
+    item_ids: mapIds(out.item_ids, 'item'),
+    product_ids: mapIds(out.product_ids, 'product'),
+    sort_field: out.sort_field || 'none',
+    sort_order: out.sort_order === 'desc' ? 'desc' : 'asc',
+    limit: Number.isInteger(out.limit) && out.limit > 0 ? out.limit : 0,
+    note: out.note || '',
+  });
+}
+
 const ACTIONS = {
   'first-item': sendFirstItemEmail,
   'first-product': sendFirstProductEmail,
@@ -818,7 +947,8 @@ const ACTIONS = {
   'first-reorder-marked': sendFirstReorderMarkedEmail,
   'onboarding': sendOnboardingEmail,
   'delete-account': deleteAccountAction,
-  'report-bug': sendBugReport
+  'report-bug': sendBugReport,
+  'assistant': assistantAction
 };
 
 module.exports = async (req, res) => {
