@@ -3076,6 +3076,76 @@ function _groupInStock(items) {
 // expanded group (which rebuilds the whole list) doesn't collapse it back.
 let expandedIngGroups = new Set();
 
+// Filter chips inside an open category folder, built from the attributes of
+// that category's items -- values of one attribute are OR'd, different
+// attributes AND'd (same as the attribute subfilter). cat -> Map(key -> Set(valueKey))
+let ingCatAttrFilters = new Map();
+
+const _ING_SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+function _ingAttrValueSort(key, a, b) {
+  if (key === 'size') {
+    const ai = _ING_SIZE_ORDER.indexOf(a.toLowerCase()), bi = _ING_SIZE_ORDER.indexOf(b.toLowerCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+  }
+  const an = parseFloat(a), bn = parseFloat(b);
+  if (!isNaN(an) && !isNaN(bn)) return an - bn;
+  if (!isNaN(an)) return -1;
+  if (!isNaN(bn)) return 1;
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
+function _ingAttrs(i) {
+  if (!i.custom_attributes) return {};
+  if (typeof i.custom_attributes === 'string') { try { return JSON.parse(i.custom_attributes) || {}; } catch (e) { return {}; } }
+  return i.custom_attributes;
+}
+
+function _ingItemMatchesCatAttrs(i, filters) {
+  const attrs = _ingAttrs(i);
+  for (const [key, vals] of filters) {
+    if (!vals.size) continue;
+    const k = Object.keys(attrs).find(x => x.toLowerCase() === key);
+    if (!k || !vals.has(String(attrs[k]).trim().toLowerCase())) return false;
+  }
+  return true;
+}
+
+function _ingCatAttrChipsHtml(g) {
+  const byKey = new Map();
+  g.members.forEach(i => Object.entries(_ingAttrs(i)).forEach(([k, v]) => {
+    if (v == null || !String(v).trim()) return;
+    const key = k.toLowerCase(), disp = String(v).trim(), vk = disp.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, new Map());
+    if (!byKey.get(key).has(vk)) byKey.get(key).set(vk, disp);
+  }));
+  if (!byKey.size) return '';
+  const active = ingCatAttrFilters.get(g.cat) || new Map();
+  const chips = [];
+  Array.from(byKey.keys()).sort((a, b) => a.localeCompare(b)).forEach(key => {
+    Array.from(byKey.get(key).entries()).sort((a, b) => _ingAttrValueSort(key, a[1], b[1])).forEach(([vk, disp]) => {
+      const on = active.has(key) && active.get(key).has(vk);
+      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" data-key="${_escAttr(key)}" data-val="${_escAttr(vk)}" onclick="toggleIngCatAttr(this)">${escapeHtml(disp)}</button>`);
+    });
+  });
+  return `<div class="cat-attr-chips">${chips.join('')}</div>`;
+}
+
+function toggleIngCatAttr(btn) {
+  const cat = btn.closest('.ing-group-body')?.dataset.cat;
+  if (!cat) return;
+  const { key, val } = btn.dataset;
+  if (!ingCatAttrFilters.has(cat)) ingCatAttrFilters.set(cat, new Map());
+  const f = ingCatAttrFilters.get(cat);
+  if (!f.has(key)) f.set(key, new Set());
+  const set = f.get(key);
+  if (set.has(val)) set.delete(val); else set.add(val);
+  if (!set.size) f.delete(key);
+  if (!f.size) ingCatAttrFilters.delete(cat);
+  render();
+}
+
 function toggleIngGroup(rowEl) {
   const body = rowEl.nextElementSibling;
   if (!body?.classList.contains('ing-group-body')) return;
@@ -3742,7 +3812,13 @@ function renderRecent(data) {
             <svg class="ing-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </div>
-        <div class="ing-group-body"${isOpen ? '' : ' hidden'}>${g.members.map(buildIngCard).join('')}</div>
+        <div class="ing-group-body" data-cat="${_escAttr(g.cat)}"${isOpen ? '' : ' hidden'}>${_ingCatAttrChipsHtml(g)}${
+          (() => {
+            const f = ingCatAttrFilters.get(g.cat);
+            const items = f && f.size ? g.members.filter(i => _ingItemMatchesCatAttrs(i, f)) : g.members;
+            return items.length ? items.map(buildIngCard).join('')
+              : '<div class="cat-attr-empty">No items with these attributes</div>';
+          })()}</div>
       `;
     });
   }

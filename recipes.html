@@ -162,12 +162,7 @@
   .prod-cat-group.open .prod-cat-group-chev { transform: rotate(180deg); }
   .prod-cat-group-body { grid-column: 1/-1; background: var(--bg-inner); }
   .prod-cat-group-body .prod-group-row:first-of-type { border-top: none; }
-  /* item-attribute filter chips at the top of an open category folder */
-  .prod-cat-attr-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px;
-                         border-bottom: 1px solid var(--border); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .prod-cat-attr-chips::-webkit-scrollbar { display: none; }
-  .prod-cat-attr-chips .prod-attr-chip { flex-shrink: 0; white-space: nowrap; }
-  .prod-cat-empty { padding: 16px; font-size: 13.5px; color: var(--text-muted); text-align: center; }
+
 
   @media (max-width: 768px) {
     .recent-grid.prod-grouped { display: block; margin: 0 -16px; }
@@ -2156,10 +2151,10 @@ function _catAttrChipsHtml(cg) {
   Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(key => {
     Array.from(groups.get(key).entries()).sort((a, b) => _attrValueSort(key, a[1], b[1])).forEach(([vk, disp]) => {
       const on = active.has(key) && active.get(key).has(vk);
-      chips.push(`<button type="button" class="prod-attr-chip${on ? ' active' : ''}" data-key="${_escHtml(key)}" data-val="${_escHtml(vk)}" onclick="toggleProdCatItemAttr(this)">${_escHtml(disp)}</button>`);
+      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" data-key="${_escHtml(key)}" data-val="${_escHtml(vk)}" onclick="toggleProdCatItemAttr(this)">${_escHtml(disp)}</button>`);
     });
   });
-  return `<div class="prod-cat-attr-chips">${chips.join('')}</div>`;
+  return `<div class="cat-attr-chips">${chips.join('')}</div>`;
 }
 
 function toggleProdCatItemAttr(btn) {
@@ -2320,7 +2315,7 @@ function render() {
                     const f = prodCatItemAttrFilters.get(cg.cat);
                     const fams = f && f.size ? cg.members.filter(g => _familyMatchesCatAttrs(g, f)) : cg.members;
                     return fams.length ? fams.map(groupRow).join('')
-                      : '<div class="prod-cat-empty">No products use items with these attributes</div>';
+                      : '<div class="cat-attr-empty">No products use items with these attributes</div>';
                   })()}</div>`;
             }).join('');
             container.innerHTML = html;
