@@ -181,7 +181,14 @@ body.as-radial-open .as-greet, body.as-radial-open .as-hint-tap, body.as-radial-
 .as-card-close svg { width: 16px; height: 16px; }
 .as-card .stock-alert-section-title, .as-card .pd-h { display: none; }
 .as-card #mobileStockAlerts { margin-bottom: 0; }
-.as-card #deliveriesPanel { padding: 6px 0; }
+.as-card #deliveriesPanel { padding: 0; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+/* the red/green swipe buttons peeked out at the rounded corners at rest */
+.as-card .delivery-actions { opacity: 0; transition: opacity 0.12s ease; }
+.as-card .delivery-swipe:has(.delivery-row[style*="translateX(-"]) .delivery-actions { opacity: 1; }
+.as-noresult { text-align: center; padding: 28px 16px 22px; }
+.as-noresult img { width: 140px; height: auto; opacity: 0.9; margin-bottom: 10px; }
+.as-noresult p { margin: 0; font-size: 14.5px; color: var(--text-muted); }
+.as-tag { background: var(--bg-inner); color: var(--text-main); }
 
 @media (max-width: 768px) {
   .as-stage { padding-top: 4px; }

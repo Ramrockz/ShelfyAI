@@ -13,6 +13,7 @@
 (function () {
   let asItems = null;      // ingredients rows
   let asProducts = null;   // recipes rows
+  let asLeadById = {};     // ingredient id -> { days, supplier } from ingredient_suppliers
   let asLoadedAt = 0;
   let asLoading = null;
   const AS_TTL = 60 * 1000;
@@ -42,6 +43,15 @@
   ).split(' '));
 
   // Words that only say "how many can I make" — stripped before matching products.
+  // Words that only carry the question type — stripped before item matching.
+  const AS_COST_WORDS = new Set((
+    'cost costs costing price prices priced worth kostet kosten preis teuer me mich mir per piece unit stuck'
+  ).split(' '));
+  const AS_LEAD_WORDS = new Set((
+    'long take takes taking it to get reorder reordering order ordering restock lead time delivery deliver ' +
+    'arrive lange dauert dauern es bis nachbestellen nachbestellung bestellen bestellung lieferzeit liefern'
+  ).split(' '));
+
   const AS_PRODUCE_WORDS = new Set((
     'kann konnte koennte konnen machen herstellen produzieren bauen fertigen basteln nahen drucken ' +
     'stuck stueck stuk exemplare davon ' +
@@ -102,6 +112,8 @@
 
   function asIntent(query) {
     const q = ' ' + asNorm(query) + ' ';
+    if (/ (how long|wie lange|lead ?time|lieferzeit|dauert)/.test(q)) return 'leadtime';
+    if (/ (costs?|price|priced|kostet|kosten|preis|what does .* cost|how much (is|are|does|do) )/.test(q) && !/ (have|left|habe|hab) /.test(q)) return 'cost';
     if (/ (nachbestell|bestellen|auffull|knapp|ausverkauft|leer |reorder|restock|running low|out of stock|low on|need to order|order more)/.test(q)) return 'reorder';
     if (/ (lieferung|unterwegs|kommt|geliefert|delivery|deliveries|arriving|on the way|incoming|shipment)/.test(q)) return 'deliveries';
     if (/ (machen|herstellen|produzieren|bauen|fertigen|make|produce|build|manufacture)\b/.test(q) &&
@@ -121,7 +133,7 @@
         if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
         const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
         let qi = supabaseClient.from('ingredients')
-          .select('id, name, quantity, unit, min_stock, category, custom_attributes, reorder_pending, alert_disabled, expiration_date')
+          .select('id, name, quantity, unit, min_stock, category, custom_attributes, reorder_pending, alert_disabled, expiration_date, cost_per_unit, estimated_delivery')
           .eq('profile_id', user.id);
         let qr = supabaseClient.from('recipes')
           .select('id, name, attributes, parent_id, components, category')
@@ -132,6 +144,23 @@
         if (rr.error) throw rr.error;
         asItems = ri.data || [];
         asProducts = rr.data || [];
+        // Supplier lead times are optional extra info -- a failure here must
+        // not break the rest of the assistant.
+        asLeadById = {};
+        try {
+          const ids = asItems.map(i => i.id);
+          if (ids.length) {
+            const rs = await supabaseClient.from('ingredient_suppliers')
+              .select('ingredient_id, lead_time_days, is_primary, suppliers(name)').in('ingredient_id', ids);
+            (rs.data || []).forEach(r => {
+              if (r.lead_time_days == null) return;
+              const cur = asLeadById[r.ingredient_id];
+              if (!cur || (r.is_primary && !cur.primary)) {
+                asLeadById[r.ingredient_id] = { days: r.lead_time_days, primary: !!r.is_primary, supplier: r.suppliers && r.suppliers.name };
+              }
+            });
+          }
+        } catch (_) {}
         asLoadedAt = Date.now();
       } catch (e) {
         console.error('Shelfy assistant: load failed', e);
@@ -241,6 +270,28 @@
     return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
   }
 
+  function asMoney(n) {
+    const v = parseFloat(n) || 0;
+    return '$' + (v >= 1 || v === 0 ? v.toFixed(2) : v.toFixed(v < 0.1 ? 3 : 2));
+  }
+
+  function asLead(i) {
+    const l = asLeadById[i.id];
+    if (l) return l;
+    const d = parseInt(i.estimated_delivery, 10);
+    return d > 0 ? { days: d, supplier: null } : null;
+  }
+
+  function asProductCost(p, itemById) {
+    const comps = (Array.isArray(p.components) ? p.components : []).filter(c => asCompId(c));
+    if (!comps.length) return null;
+    return comps.reduce((s, c) => {
+      const ing = itemById[asCompId(c)];
+      const unit = ing ? parseFloat(ing.cost_per_unit) : parseFloat(c.cost);
+      return s + (parseFloat(c.quantity) || 0) * (unit || 0);
+    }, 0);
+  }
+
   // Pending delivery -> ETA date (same rule as _renderInboundStatus).
   function asEta(item) {
     const base = item.reorder_date || (item.updated_at ? String(item.updated_at).split('T')[0] : null);
@@ -288,6 +339,13 @@
       asList(items.slice(0, 3).map(i => { const e = asEtaText(i); return e ? `${i.name} ${e}` : i.name; })) +
       (items.length > 3 ? ' and more' : '') + '.',
     canMake: n => (n === 0 ? 'Can’t make' : `Can make ${n}`),
+    costOne: (i, c) => `${asLabel(i)} costs you ${asMoney(c)} per ${i.unit || 'piece'}.`,
+    costNone: i => `${asLabel(i)} has no cost set yet.`,
+    costProduct: (p, c) => `Making one ${p.name} costs you ${asMoney(c)} in materials.`,
+    costMany: n => `${n} matching items – costs are listed below.`,
+    leadOne: (i, l) => `Reordering ${asLabel(i)} takes about ${l.days} ${l.days === 1 ? 'day' : 'days'}${l.supplier ? ` from ${l.supplier}` : ''}.`,
+    leadNone: i => `I don’t know how long ${asLabel(i)} takes yet – add a supplier lead time on the item.`,
+    leadMany: n => `${n} matching items – lead times are listed below.`,
     limit: r => `Limited by ${r.blocker.name} · ${asNum(r.stock)} left, ${asNum(r.need)} each`,
   };
 
@@ -302,7 +360,7 @@
       if (!all.length) say = T.reorderNone;
       else if (!open.length) say = T.reorderPendingOnly(asInbound.length || all.length);
       else say = T.reorder(open.length, open.slice(0, 3).map(i => i.name), open.length > 3);
-      return { intent, say, items: [], products: [], card: all.length ? 'restock' : null };
+      return { intent, say, items: [], products: [], card: open.length ? 'restock' : (asInbound.length ? 'deliveries' : null) };
     }
 
     if (intent === 'deliveries') {
@@ -311,12 +369,15 @@
       return { intent, say, items: [], products: [], card: asInbound.length ? 'deliveries' : null };
     }
 
-    const tokens = asTokens(query).filter(w => intent !== 'produce' || !AS_PRODUCE_WORDS.has(w));
+    const strip = intent === 'produce' ? AS_PRODUCE_WORDS : intent === 'cost' ? AS_COST_WORDS
+                : intent === 'leadtime' ? AS_LEAD_WORDS : null;
+    const tokens = asTokens(query).filter(w => !strip || !strip.has(w));
     // The user's own spelling of the search words ("Einhörner", not "einhorner").
     const keep = new Set(tokens);
     const shown = String(query).split(/\s+/).map(w => w.replace(/[^\p{L}\p{N}-]/gu, ''))
       .filter(w => keep.has(asNorm(w))).join(' ') || tokens.join(' ');
     if (!tokens.length) return { intent, say: '', items: [], products: [], card: null };
+    const none = say => ({ intent, say, items: [], products: [], card: null, empty: shown });
     const { items, products } = asSearch(tokens);
     const itemById = asItemById();
     const withMake = asDropShadowedParents(products).map(e => ({ ...e, make: asCanMake(e.product, itemById) }));
@@ -325,7 +386,7 @@
       // Prefer products named like the question; fall back to ones using a matched item.
       const direct = withMake.filter(e => e.direct);
       const pool = direct.length ? direct : withMake;
-      if (!pool.length) return { intent, say: T.makeNone(shown), items, products: [], card: null };
+      if (!pool.length) return none(T.makeNone(shown));
       const calc = pool.filter(e => e.make);
       let say;
       if (!calc.length) say = T.makeNoRecipe(pool[0].product);
@@ -339,6 +400,30 @@
       }
       pool.sort((a, b) => ((b.make ? b.make.count : -1) - (a.make ? a.make.count : -1)));
       return { intent, say, items: [], products: pool, card: null, showLimit: true };
+    }
+
+    if (!items.length && !withMake.length) return none(T.nothing(shown));
+
+    if (intent === 'cost') {
+      let say;
+      if (items.length === 1) {
+        const c = parseFloat(items[0].cost_per_unit);
+        say = c > 0 ? T.costOne(items[0], c) : T.costNone(items[0]);
+      } else if (!items.length) {
+        const c = asProductCost(withMake[0].product, itemById);
+        say = c != null ? T.costProduct(withMake[0].product, c) : T.makeNoRecipe(withMake[0].product);
+      } else say = T.costMany(items.length);
+      return { intent, say, items, products: items.length ? [] : withMake.slice(0, 1), card: null,
+        itemTag: i => (parseFloat(i.cost_per_unit) > 0 ? `${asMoney(i.cost_per_unit)} each` : 'No cost set'),
+        productTag: p => { const c = asProductCost(p, itemById); return c != null ? asMoney(c) : null; } };
+    }
+
+    if (intent === 'leadtime') {
+      if (!items.length) return none(T.nothing(shown));
+      const l = items.length === 1 ? asLead(items[0]) : null;
+      const say = items.length > 1 ? T.leadMany(items.length) : l ? T.leadOne(items[0], l) : T.leadNone(items[0]);
+      return { intent, say, items, products: [], card: null,
+        itemTag: i => { const x = asLead(i); return x ? `${x.days} ${x.days === 1 ? 'day' : 'days'}` : 'Not set'; } };
     }
 
     // have
@@ -386,7 +471,9 @@
       html += ans.items.slice(0, AS_MAX).map(i => `
         <a class="as-row" href="/ingredient-detail?id=${encodeURIComponent(i.id)}">
           <span class="as-main"><span class="as-name">${asEsc(i.name)}</span>${asChips(i.custom_attributes)}</span>
-          <span class="as-qty as-${asStatus(i)}">${asNum(i.quantity)}${i.unit ? ' ' + asEsc(i.unit) : ''}</span>
+          ${ans.itemTag
+            ? `<span class="as-make as-tag">${asEsc(ans.itemTag(i))}</span>`
+            : `<span class="as-qty as-${asStatus(i)}">${asNum(i.quantity)}${i.unit ? ' ' + asEsc(i.unit) : ''}</span>`}
         </a>`).join('');
     }
     if (ans.products.length) {
@@ -395,14 +482,19 @@
         const sub = ans.showLimit && make
           ? `<span class="as-sub">${asEsc(T.limit(make))}</span>`
           : uses.length ? `<span class="as-sub">Uses ${uses.map(u => asEsc(u.name)).join(', ')}</span>` : '';
-        const makeTag = make ? `<span class="as-make${make.count === 0 ? ' as-make-zero' : ''}">${asEsc(T.canMake(make.count))}</span>` : '';
+        const custom = ans.productTag ? ans.productTag(p) : null;
+        const makeTag = custom ? `<span class="as-make as-tag">${asEsc(custom)}</span>`
+          : make ? `<span class="as-make${make.count === 0 ? ' as-make-zero' : ''}">${asEsc(T.canMake(make.count))}</span>` : '';
         return `<a class="as-row" href="/recipe-detail?id=${encodeURIComponent(p.id)}">
           <span class="as-main"><span class="as-name">${asEsc(p.name)}</span>${asChips(p.attributes)}${sub}</span>
           ${makeTag}
         </a>`;
       }).join('');
     }
-    if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
+    if (ans.empty != null) {
+      html = `<div class="as-noresult"><img src="/cat_no_results.png" alt="" />
+        <p>Nothing found${ans.empty ? ` for “${asEsc(ans.empty)}”` : ''}</p></div>`;
+    } else if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
     res.innerHTML = html;
   }
 
@@ -670,11 +762,24 @@
   // ─── Typing suggestions in the empty ask bar ──────────────────────────────
 
   const AS_FALLBACK_SUGGESTIONS = [
-    'Do I still have blue marbles?',
-    'When does my delivery arrive?',
-    'How many shirts in black M do I have left?',
     'What do I need to reorder?',
+    'When does my delivery arrive?',
   ];
+
+  const AS_ITEM_TEMPLATES = [
+    n => `What does a ${n} cost me?`,
+    n => `How many of ${n} have I left?`,
+    n => `How long does it take to reorder ${n}?`,
+  ];
+  const AS_PRODUCT_TEMPLATES = [
+    n => `How many ${n} can I make?`,
+  ];
+
+  function asShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
 
   // Base name without the " · Black · M" variant suffix.
   function asBaseName(name) {
@@ -683,20 +788,19 @@
 
   function asPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  // A fresh round every cycle: each template gets a different random item or
+  // product, so the examples keep changing and always name real things.
   function asSuggestions() {
+    const short = arr => { const s = arr.filter(x => x.name && x.name.length <= 34); return s.length ? s : arr.filter(x => x.name); };
+    const items = asShuffle(short(asItems || []));
+    const prods = asShuffle(short((asProducts || []).filter(p => Array.isArray(p.components) && p.components.length)));
     const out = [];
-    const items = (asItems || []).filter(i => i.name && asBaseName(i.name).length <= 24);
-    const withAttrs = items.filter(i => asAttrValues(i.custom_attributes).length);
-    if (withAttrs.length) {
-      const i = asPick(withAttrs);
-      out.push(`How many ${asBaseName(i.name)} in ${asAttrValues(i.custom_attributes).join(' ')} do I have left?`);
-    }
-    if (items.length) out.push(`Do I still have ${asBaseName(asPick(items).name)}?`);
-    const prods = (asProducts || []).filter(p => !p.parent_id && p.name && p.name.length <= 24);
-    if (prods.length) out.push(`How many ${asPick(prods).name} can I make?`);
+    AS_ITEM_TEMPLATES.forEach((t, k) => { if (items.length) out.push(t(items[k % items.length].name)); });
+    AS_PRODUCT_TEMPLATES.forEach((t, k) => { if (prods.length) out.push(t(prods[k % prods.length].name)); });
+    if (prods.length > 1) out.push(AS_PRODUCT_TEMPLATES[0](prods[1].name));
     if (asInbound.length) out.push('When does my delivery arrive?');
-    if (asStock.out.length || asStock.low.length) out.push('What do I need to reorder?');
-    return out.length >= 2 ? out : AS_FALLBACK_SUGGESTIONS;
+    if (asStock.out.some(i => !i.reorder_pending) || asStock.low.some(i => !i.reorder_pending)) out.push('What do I need to reorder?');
+    return out.length ? asShuffle(out) : AS_FALLBACK_SUGGESTIONS;
   }
 
   let asTyperTimer = null;
@@ -716,7 +820,7 @@
   function asTyperRun() {
     const textEl = document.getElementById('asTyperText');
     if (!textEl) return;
-    if (asTyperIdx >= asTyperList.length) { asTyperList = asSuggestions(); asTyperIdx = 0; }
+    if (asTyperIdx >= asTyperList.length) { asTyperList = asSuggestions(); asTyperIdx = 0; if (!asItems) asLoad(); }
     const typer = document.getElementById('asTyper');
     const full = asTyperList[asTyperIdx++];
     let n = 0;

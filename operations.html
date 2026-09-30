@@ -2493,10 +2493,12 @@ function resolveConfirm(result) {
 
     const alertsEl = document.getElementById('mobileStockAlerts');
     if (alertsEl) {
-      if (outItems.length === 0 && lowItems.length === 0) {
+      // Items already reordered live in the "On the way" list, not here.
+      const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])]
+        .filter(([i]) => !i.reorder_pending);
+      if (allItems.length === 0) {
         alertsEl.innerHTML = '';
       } else {
-        const allItems = [...outItems.map(i => [i, true]), ...lowItems.map(i => [i, false])];
         const isMobile = window.innerWidth <= 768;
         const PAGE = isMobile ? 5 : 10;
         const visible = allItems.slice(0, PAGE);
