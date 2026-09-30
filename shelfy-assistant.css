@@ -183,6 +183,11 @@ body.as-radial-open .as-greet, body.as-radial-open .as-hint-tap, body.as-radial-
 .as-card #mobileStockAlerts { margin-bottom: 0; }
 .as-card #deliveriesPanel { padding: 0; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
 /* the red/green swipe buttons peeked out at the rounded corners at rest */
+/* The row's own square border was clipped by .delivery-swipe's rounded
+   overflow:hidden, eating the corners -- draw the border on the rounded
+   container instead. */
+.as-card .delivery-swipe { border: 1px solid var(--border); background: var(--bg-panel); }
+.as-card .delivery-row { border: 0; }
 .as-card .delivery-actions { opacity: 0; transition: opacity 0.12s ease; }
 .as-card .delivery-swipe:has(.delivery-row[style*="translateX(-"]) .delivery-actions { opacity: 1; }
 .as-noresult { text-align: center; padding: 28px 16px 22px; }
