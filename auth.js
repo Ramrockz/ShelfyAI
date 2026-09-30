@@ -734,10 +734,6 @@ if (protectedPages.includes(currentPage)) {
         await domReady;
         await initUserMenu();
         document.documentElement.style.visibility = 'visible';
-        // Check if onboarding should be shown
-        if (typeof checkAndShowOnboarding === 'function') {
-          setTimeout(() => checkAndShowOnboarding(), 500);
-        }
         // Clear the hash from URL for cleaner appearance
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
       } else {
@@ -768,10 +764,6 @@ if (protectedPages.includes(currentPage)) {
         // Then show content
         document.documentElement.style.visibility = 'visible';
         
-        // Check if onboarding should be shown
-        if (typeof checkAndShowOnboarding === 'function') {
-          setTimeout(() => checkAndShowOnboarding(), 500);
-        }
       }
     }).catch((error) => {
       console.error('Auth check failed:', error);

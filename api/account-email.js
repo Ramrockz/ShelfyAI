@@ -140,7 +140,7 @@ async function sendFirstItemEmail(req, res, user) {
   // past its first item.
   //
   // upsert, not update: a brand-new account may not have a user_settings
-  // row yet (it's created lazily -- see settings.html/onboarding-modal.js),
+  // row yet (it's created lazily -- see settings.html),
   // and .update() on a non-existent row silently affects zero rows with no
   // error, which left this column permanently null despite the email
   // having actually sent.
@@ -555,7 +555,7 @@ async function sendOnboardingEmail(req, res, user) {
   }
 
   // upsert, not update: a brand-new account may not have a user_settings
-  // row yet (created lazily -- see settings.html/onboarding-modal.js), and
+  // row yet (created lazily -- see settings.html), and
   // .update() on a non-existent row silently affects zero rows with no
   // error, which would leave this column permanently null despite the
   // email having actually sent (same fix as sendFirstItemEmail).

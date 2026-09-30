@@ -547,8 +547,8 @@
     const res = document.getElementById('asResults');
     if (!box) return;
     asShowCard(ans ? ans.card : null);
-    if (!ans || (!ans.say && !ans.items.length && !ans.products.length)) { box.hidden = true; return; }
-    if (ans.card) { box.hidden = true; return; }
+    if (!ans || (!ans.say && !ans.items.length && !ans.products.length)) { box.hidden = true; asSyncCtas(); return; }
+    if (ans.card) { box.hidden = true; asSyncCtas(); return; }
     box.hidden = false;
 
     let html = '';
@@ -582,6 +582,7 @@
         <p>${ans.note ? asEsc(ans.note) : `Nothing found${ans.empty ? ` for “${asEsc(ans.empty)}”` : ''}`}</p></div>`;
     } else if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
     res.innerHTML = html;
+    asSyncCtas();
   }
 
   // ─── Recent searches (shown when the empty ask bar is focused) ────────────
@@ -611,7 +612,7 @@
     const input = document.getElementById('asInput');
     const box = document.getElementById('asAnswer');
     const list = asRecentGet();
-    if (!box || input.value || !list.length) { if (asShowingRecent) { box.hidden = true; asShowingRecent = false; } return; }
+    if (!box || input.value || !list.length) { if (asShowingRecent) { box.hidden = true; asShowingRecent = false; asSyncCtas(); } return; }
     asShowCard(null);
     asShowingRecent = true;
     box.hidden = false;
@@ -624,6 +625,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>`).join('');
+    asSyncCtas();
   }
 
   function asHint(msg) {
@@ -632,6 +634,7 @@
     asShowCard(null);
     box.hidden = false;
     document.getElementById('asResults').innerHTML = `<div class="as-empty">${asEsc(msg)}</div>`;
+    asSyncCtas();
   }
 
   function asShowCard(which) {
@@ -639,6 +642,7 @@
     const d = document.getElementById('asCardDeliveries');
     if (r) r.hidden = which !== 'restock';
     if (d) d.hidden = which !== 'deliveries';
+    asSyncCtas();
   }
 
   // ─── Asking ───────────────────────────────────────────────────────────────
@@ -989,6 +993,75 @@
     type();
   }
 
+  // ─── First steps: "Create your first ..." CTAs below the ask bar ─────────
+  // Replaces the old onboarding questionnaire: each card shows only while
+  // the user has none of that thing yet, and opens the same create flow as
+  // the radial menu.
+
+  const AS_FIRST_STEPS = [
+    { key: 'item', table: 'ingredients', action: 'item', title: 'Create your first item',
+      sub: 'Anything you keep in stock – materials, blanks, packaging',
+      icon: '<path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' },
+    { key: 'product', table: 'recipes', action: 'product', title: 'Create your first product',
+      sub: 'Bundle items into something you sell',
+      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
+    { key: 'order', table: 'sales', action: 'order', title: 'Process your first order',
+      sub: 'Takes the items it used out of your stock',
+      icon: '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>' },
+    { key: 'expense', table: 'expenses', action: 'expense', title: 'Add your first expense',
+      sub: 'Log a receipt or supplier bill',
+      icon: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>' },
+  ];
+  let asFirstCounts = null;   // { item, product, order, expense } -> count
+
+  async function asLoadFirstCounts() {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) return;
+      if (!window.currentStoreId && typeof ensureStoreExists === 'function') await ensureStoreExists(user);
+      const storeId = window.currentStoreId || localStorage.getItem('shelfy_store_id');
+      const results = await Promise.all(AS_FIRST_STEPS.map(step => {
+        let q = supabaseClient.from(step.table).select('id', { count: 'exact', head: true }).eq('profile_id', user.id);
+        if (storeId) q = q.eq('store_id', storeId);
+        return q;
+      }));
+      // A failed count is treated as "has some" so a network error never
+      // shows a new-user card to an existing user.
+      asFirstCounts = {};
+      AS_FIRST_STEPS.forEach((step, n) => {
+        const r = results[n];
+        asFirstCounts[step.key] = r && !r.error && typeof r.count === 'number' ? r.count : 1;
+      });
+      asRenderCtas();
+    } catch (e) {
+      console.error('Shelfy assistant: first-steps counts failed', e);
+    }
+  }
+
+  function asRenderCtas() {
+    const el = document.getElementById('asCtas');
+    if (!el) return;
+    const missing = asFirstCounts ? AS_FIRST_STEPS.filter(step => asFirstCounts[step.key] === 0) : [];
+    if (!missing.length) { el.innerHTML = ''; asSyncCtas(); return; }
+    const done = AS_FIRST_STEPS.length - missing.length;
+    el.innerHTML = `<div class="as-section">Get started <span>${done} of ${AS_FIRST_STEPS.length} done</span></div>` +
+      missing.map(step => `<button type="button" class="as-cta" data-action="${step.action}">
+          <span class="as-cta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${step.icon}</svg></span>
+          <span class="as-main"><span class="as-name">${asEsc(step.title)}</span><span class="as-sub">${asEsc(step.sub)}</span></span>
+          <svg class="as-cta-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>`).join('');
+    asSyncCtas();
+  }
+
+  // The CTAs step aside while an answer, a list or recent searches are shown.
+  function asSyncCtas() {
+    const el = document.getElementById('asCtas');
+    if (!el) return;
+    const busy = ['asAnswer', 'asCardRestock', 'asCardDeliveries']
+      .some(id => { const x = document.getElementById(id); return x && !x.hidden; });
+    el.hidden = busy || !el.innerHTML;
+  }
+
   // ─── Avatar: mood, nudge, radial menu ─────────────────────────────────────
 
   function asAvatarState(state, on) {
@@ -1047,13 +1120,20 @@
     asRenderMute();
     asTyperSync();
     // Load now so suggestions can use the user's own items.
-    setTimeout(() => { asLoad().then(() => { asTyperList = []; }); }, 600);
+    setTimeout(() => { asLoad().then(() => { asTyperList = []; }); asLoadFirstCounts(); }, 600);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && asFirstCounts) asLoadFirstCounts(); });
+    document.getElementById('asCtas')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const fn = window[AS_ACTIONS[btn.dataset.action]];
+      if (typeof fn === 'function') fn();
+    });
 
     input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); asTyperSync(); asRenderRecent(); });
     input.addEventListener('blur', () => {
       asDictation = false;
       setTimeout(asTyperSync, 0);
-      if (asShowingRecent) { const box = document.getElementById('asAnswer'); if (box) box.hidden = true; asShowingRecent = false; }
+      if (asShowingRecent) { const box = document.getElementById('asAnswer'); if (box) box.hidden = true; asShowingRecent = false; asSyncCtas(); }
     });
 
     const results = document.getElementById('asResults');
@@ -1143,7 +1223,7 @@
     asInbound = e.detail.pending || [];
     asRenderMood();
   });
-  window.addEventListener('shelfy:synced', () => { asItems = null; });
+  window.addEventListener('shelfy:synced', () => { asItems = null; if (asFirstCounts) asLoadFirstCounts(); });
 
   // Exposed for the dashboard and for testing.
   window.ShelfyAssistant = { answer: asAnswer, fromAI: asAnswerFromAI, canMake: asCanMake, _set(items, products, stock, inbound) {
