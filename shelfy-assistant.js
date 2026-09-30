@@ -238,7 +238,10 @@
   }
 
   function asLabel(i) {
-    const vals = asAttrValues(i.custom_attributes);
+    // Skip attribute values the name already spells out ("T-Shirt · Black · M").
+    const nameWords = asWordsOf(i.name);
+    const vals = asAttrValues(i.custom_attributes)
+      .filter(v => !asWordsOf(v).every(w => nameWords.includes(w)));
     return vals.length ? `${i.name} (${vals.join(', ')})` : i.name;
   }
 
@@ -424,6 +427,7 @@
   // ─── Asking ───────────────────────────────────────────────────────────────
 
   let asSeq = 0;
+  let asLastAnswer = null;   // tap the bubble to hear it (again)
 
   async function asAsk(speak) {
     const input = document.getElementById('asInput');
@@ -446,6 +450,7 @@
       }
     }
     const ans = asAnswer(query);
+    asLastAnswer = ans;
     asRenderAnswer(ans);
     if (speak) asSpeak(ans.say, ans.lang);
   }
@@ -503,8 +508,11 @@
   // attempt 0: preferred voice, after a pause so a just-ended speech
   // recognition session (Android) has released the audio channel.
   // attempt 1: plain utterance with just a lang, as a fallback.
-  function asSpeak(text, lang, attempt = 0) {
-    if (!text || asMuted() || !('speechSynthesis' in window)) return;
+  function asSpeak(text, lang, attempt = 0, manual = false) {
+    if (!text || (asMuted() && !manual) || !('speechSynthesis' in window)) {
+      if (manual && !('speechSynthesis' in window)) asVoiceNote('this browser can’t speak');
+      return;
+    }
     const synth = window.speechSynthesis;
     try {
       if (synth.speaking || synth.pending) synth.cancel();
@@ -516,7 +524,7 @@
       const retryOrReport = reason => {
         if (settled) return;
         settled = true;
-        if (attempt === 0) asSpeak(text, lang, 1);
+        if (attempt === 0) asSpeak(text, lang, 1, manual);
         else asVoiceNote(reason);
       };
       u.onstart = () => { settled = true; };
@@ -527,7 +535,7 @@
       setTimeout(() => {
         try { synth.resume(); synth.speak(u); } catch (err) { retryOrReport(err.message || 'error'); return; }
         setTimeout(() => { if (!settled && !synth.speaking) retryOrReport('no audio started'); }, 3000);
-      }, attempt === 0 ? 400 : 50);
+      }, attempt === 0 && !manual ? 400 : 50);
     } catch (err) {
       asVoiceNote(err.message || 'error');
     }
@@ -690,6 +698,13 @@
       if (!e.target.closest('#asAvatarWrap')) asToggleRadial(false);
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') asToggleRadial(false); });
+
+    const sayEl = document.getElementById('asSay');
+    sayEl.setAttribute('role', 'button');
+    sayEl.title = 'Tap to hear the answer';
+    sayEl.addEventListener('click', () => {
+      if (asLastAnswer && asLastAnswer.say) asSpeak(asLastAnswer.say, asLastAnswer.lang, 0, true);
+    });
 
     document.getElementById('asNudge').addEventListener('click', e => {
       const btn = e.target.closest('[data-card]');
