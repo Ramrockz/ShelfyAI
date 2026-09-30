@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v482';
+const CACHE_NAME = 'shelfy-v483';
 
 const STATIC_ASSETS = [
   '/',
@@ -62,8 +62,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       Promise.allSettled(
+        // cache: 'reload' -- without it cache.add() can be answered from the
+        // browser's HTTP cache (CSS was served with a 4h max-age), so a new
+        // version's cache got filled with the previous deploy's files.
         STATIC_ASSETS.map((url) =>
-          cache.add(url).catch((err) =>
+          cache.add(new Request(url, { cache: 'reload' })).catch((err) =>
             console.warn('[sw] Failed to pre-cache:', url, err)
           )
         )
@@ -206,7 +209,9 @@ self.addEventListener('fetch', (event) => {
   // ── CDN scripts and static assets: cache-first, revalidate in background. ──
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request).then((response) => {
+      // Same-origin revalidation goes to the server (ETag, cheap) rather
+      // than the HTTP cache, so the background update actually picks up a deploy.
+      const networkFetch = fetch(event.request, isSameOrigin ? { cache: 'no-cache' } : undefined).then((response) => {
         if (response && response.status === 200) {
           const clonedResponse = response.clone();
           caches.open(CACHE_NAME).then((cache) =>
