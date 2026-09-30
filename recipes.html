@@ -162,6 +162,12 @@
   .prod-cat-group.open .prod-cat-group-chev { transform: rotate(180deg); }
   .prod-cat-group-body { grid-column: 1/-1; background: var(--bg-inner); }
   .prod-cat-group-body .prod-group-row:first-of-type { border-top: none; }
+  /* item-attribute filter chips at the top of an open category folder */
+  .prod-cat-attr-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px;
+                         border-bottom: 1px solid var(--border); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .prod-cat-attr-chips::-webkit-scrollbar { display: none; }
+  .prod-cat-attr-chips .prod-attr-chip { flex-shrink: 0; white-space: nowrap; }
+  .prod-cat-empty { padding: 16px; font-size: 13.5px; color: var(--text-muted); text-align: center; }
 
   @media (max-width: 768px) {
     .recent-grid.prod-grouped { display: block; margin: 0 -16px; }
@@ -1207,7 +1213,7 @@
   <a href="/operations" class="logo"><img src="/shelfy-mark-ink.svg" alt="" class="logo-light" style="height:34px;width:auto;"><img src="/shelfy-mark-white.svg" alt="" class="logo-dark" style="height:34px;width:auto;"><span class="logo-word">Shelfy<span class="logo-word-accent">AI</span></span></a>
   
   <div class="nav-links" id="navLinks">
-    <a href="/operations" class="nav-link" data-page="operations">Dashboard</a>
+    <a href="/operations" class="nav-link" data-page="operations">Home</a>
     <a href="/ingredients" class="nav-link" data-page="ingredients">Inventory</a>
     <a href="/recipes" class="nav-link" data-page="recipes">Products</a>
     <a href="/orders" class="nav-link" data-page="orders">Orders</a>
@@ -2088,6 +2094,88 @@ function _groupFamiliesByCategory(groups) {
 // expanded folder (which rebuilds the whole list) doesn't collapse it back.
 let expandedProdCatGroups = new Set();
 
+// Filter chips inside an open category folder, built from the attributes of
+// the ITEMS its products use (e.g. Hoodies -> Black, Navy, M, L) -- same
+// behaviour as the item search chips: values of one attribute are OR'd,
+// different attributes AND'd. cat -> Map(attrKey -> Set(valueKey))
+let prodCatItemAttrFilters = new Map();
+
+const _PROD_SIZE_ORDER = ['xxxs','xxs','xs','xs/s','s','s/m','m','m/l','l','l/xl','xl','xl/xxl','xxl','2xl','xxxl','3xl','4xl','5xl','6xl'];
+function _attrValueSort(key, a, b) {
+  if (key === 'size') {
+    const ai = _PROD_SIZE_ORDER.indexOf(a.toLowerCase()), bi = _PROD_SIZE_ORDER.indexOf(b.toLowerCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+  }
+  const an = parseFloat(a), bn = parseFloat(b);
+  if (!isNaN(an) && !isNaN(bn)) return an - bn;
+  if (!isNaN(an)) return -1;
+  if (!isNaN(bn)) return 1;
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
+function _componentItemAttrs(recipe) {
+  return (recipe.components || []).map(c => {
+    const ing = ingredientData.find(i => i.id === (c.ingredient_id || c.id));
+    return (ing && ing.attributes) || null;
+  }).filter(Boolean);
+}
+
+function _catItemAttrGroups(cg) {
+  const byKey = new Map();
+  cg.members.forEach(g => g.members.forEach(m => _componentItemAttrs(m).forEach(attrs => {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (v == null || !String(v).trim()) return;
+      const key = k.toLowerCase(), disp = String(v).trim(), vk = disp.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, new Map());
+      if (!byKey.get(key).has(vk)) byKey.get(key).set(vk, disp);
+    });
+  })));
+  return byKey;
+}
+
+function _familyMatchesCatAttrs(g, filters) {
+  return g.members.some(m => {
+    const attrsList = _componentItemAttrs(m);
+    for (const [key, vals] of filters) {
+      if (!vals.size) continue;
+      const hit = attrsList.some(attrs => Object.entries(attrs).some(([k, v]) =>
+        k.toLowerCase() === key && vals.has(String(v).trim().toLowerCase())));
+      if (!hit) return false;
+    }
+    return true;
+  });
+}
+
+function _catAttrChipsHtml(cg) {
+  const groups = _catItemAttrGroups(cg);
+  if (!groups.size) return '';
+  const active = prodCatItemAttrFilters.get(cg.cat) || new Map();
+  const chips = [];
+  Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(key => {
+    Array.from(groups.get(key).entries()).sort((a, b) => _attrValueSort(key, a[1], b[1])).forEach(([vk, disp]) => {
+      const on = active.has(key) && active.get(key).has(vk);
+      chips.push(`<button type="button" class="prod-attr-chip${on ? ' active' : ''}" data-key="${_escHtml(key)}" data-val="${_escHtml(vk)}" onclick="toggleProdCatItemAttr(this)">${_escHtml(disp)}</button>`);
+    });
+  });
+  return `<div class="prod-cat-attr-chips">${chips.join('')}</div>`;
+}
+
+function toggleProdCatItemAttr(btn) {
+  const cat = btn.closest('.prod-cat-group-body')?.dataset.cat;
+  if (!cat) return;
+  const { key, val } = btn.dataset;
+  if (!prodCatItemAttrFilters.has(cat)) prodCatItemAttrFilters.set(cat, new Map());
+  const f = prodCatItemAttrFilters.get(cat);
+  if (!f.has(key)) f.set(key, new Set());
+  const set = f.get(key);
+  if (set.has(val)) set.delete(val); else set.add(val);
+  if (!set.size) f.delete(key);
+  if (!f.size) prodCatItemAttrFilters.delete(cat);
+  render();
+}
+
 function toggleProdCatGroup(rowEl) {
   const body = rowEl.nextElementSibling;
   if (!body?.classList.contains('prod-cat-group-body')) return;
@@ -2227,7 +2315,13 @@ function render() {
                     <svg class="prod-cat-group-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"><polyline points="6 9 12 15 18 9"/></svg>
                   </span>
                 </div>
-                <div class="prod-cat-group-body"${isOpen ? '' : ' hidden'}>${cg.members.map(groupRow).join('')}</div>`;
+                <div class="prod-cat-group-body" data-cat="${_escHtml(cg.cat)}"${isOpen ? '' : ' hidden'}>${_catAttrChipsHtml(cg)}${
+                  (() => {
+                    const f = prodCatItemAttrFilters.get(cg.cat);
+                    const fams = f && f.size ? cg.members.filter(g => _familyMatchesCatAttrs(g, f)) : cg.members;
+                    return fams.length ? fams.map(groupRow).join('')
+                      : '<div class="prod-cat-empty">No products use items with these attributes</div>';
+                  })()}</div>`;
             }).join('');
             container.innerHTML = html;
 

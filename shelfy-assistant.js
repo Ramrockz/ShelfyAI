@@ -526,7 +526,12 @@
     if (!query.trim()) { asRenderAnswer(null); return; }
 
     const intent = asIntent(query);
-    if (intent === 'have' || intent === 'produce') {
+    // No feedback until the search words have 3 letters ("Do I h" stays quiet).
+    if (intent !== 'reorder' && intent !== 'deliveries' && asTokens(query).join('').length < 3) {
+      asRenderAnswer(null);
+      return;
+    }
+    if (intent !== 'reorder' && intent !== 'deliveries') {
       if (!asItems) {
         if (!navigator.onLine) { asHint('Search needs a connection.'); return; }
         asAvatarState('thinking', true);
@@ -949,6 +954,9 @@
     document.getElementById('asNudge').addEventListener('click', e => {
       const btn = e.target.closest('[data-card]');
       if (!btn) return;
+      // Tapping the same nudge again closes its list.
+      const open = document.getElementById(btn.dataset.card === 'restock' ? 'asCardRestock' : 'asCardDeliveries');
+      if (open && !open.hidden) { input.value = ''; asAsk(false); return; }
       input.value = btn.dataset.card === 'restock' ? 'What do I need to reorder?' : 'When does my delivery arrive?';
       asAsk(false);
     });
