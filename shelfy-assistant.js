@@ -458,6 +458,9 @@
   // and that answer should still be read aloud.
   let asDictation = false;
   let asSpeechUnlocked = false;
+  // Spoken answers are switched off for now (flip to true to bring them and
+  // the speaker toggle in the ask bar back).
+  const AS_VOICE_ANSWERS = false;
 
   function asMuted() {
     try { return localStorage.getItem('shelfy_assistant_muted') === '1'; } catch (_) { return false; }
@@ -503,6 +506,7 @@
   // recognition session (Android) has released the audio channel.
   // attempt 1: plain utterance with just a lang, as a fallback.
   function asSpeak(text, attempt = 0, manual = false) {
+    if (!AS_VOICE_ANSWERS) return;
     if (!text || (asMuted() && !manual) || !('speechSynthesis' in window)) return;
     const synth = window.speechSynthesis;
     try {
@@ -535,6 +539,7 @@
   function asRenderMute() {
     const btn = document.getElementById('asMute');
     if (!btn) return;
+    btn.hidden = !AS_VOICE_ANSWERS;
     const muted = asMuted();
     btn.classList.toggle('as-muted', muted);
     btn.setAttribute('aria-label', muted ? 'Turn spoken answers on' : 'Turn spoken answers off');
