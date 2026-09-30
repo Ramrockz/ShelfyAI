@@ -55,6 +55,13 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   transition: background 0.3s, color 0.3s;
+  /* overflow-x: hidden (with html's overflow-y: auto) makes body its own
+     clipping box, only as tall as the content -- and the navbar's
+     backdrop-filter anchors the "fixed" user menu inside it, so on a short
+     page the menu got cut off. Keep the box at least one screen tall. */
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a {
