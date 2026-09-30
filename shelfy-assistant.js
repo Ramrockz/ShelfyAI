@@ -425,7 +425,7 @@
 
   let asSeq = 0;
 
-  async function asAsk(fromVoice) {
+  async function asAsk(speak) {
     const input = document.getElementById('asInput');
     const query = input.value;
     document.getElementById('asClear').hidden = !query;
@@ -447,15 +447,42 @@
     }
     const ans = asAnswer(query);
     asRenderAnswer(ans);
-    if (fromVoice) asSpeak(ans.say, ans.lang);
+    if (speak) asSpeak(ans.say, ans.lang);
   }
 
   // ─── Voice in / out ───────────────────────────────────────────────────────
 
   let asRec = null;
+  // Set when the user chose to speak but the browser has no in-app speech
+  // recognition (iOS home-screen app) -> keyboard dictation fills the field,
+  // and that answer should still be read aloud.
+  let asDictation = false;
+  let asSpeechUnlocked = false;
 
   function asMuted() {
     try { return localStorage.getItem('shelfy_assistant_muted') === '1'; } catch (_) { return false; }
+  }
+
+  // iOS only lets speechSynthesis talk after it was first used inside a user
+  // gesture; answers arrive after an await, outside the gesture. Speaking a
+  // silent utterance on the first tap/keypress unlocks it for the session.
+  function asUnlockSpeech() {
+    if (asSpeechUnlocked || !('speechSynthesis' in window)) return;
+    asSpeechUnlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  function asPickVoice(lang) {
+    try {
+      const voices = speechSynthesis.getVoices() || [];
+      const pre = lang === 'de' ? 'de' : 'en';
+      return voices.find(v => v.lang && v.lang.toLowerCase().startsWith(pre) && v.localService)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith(pre)) || null;
+    } catch (_) { return null; }
   }
 
   function asSpeak(text, lang) {
@@ -464,7 +491,11 @@
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang === 'de' ? 'de-DE' : 'en-US';
-      speechSynthesis.speak(u);
+      const v = asPickVoice(lang);
+      if (v) u.voice = v;
+      // Chrome drops an utterance queued in the same tick as cancel(), and can
+      // be left paused after a previous one -- hence the delay + resume().
+      setTimeout(() => { speechSynthesis.resume(); speechSynthesis.speak(u); }, 80);
     } catch (_) {}
   }
 
@@ -482,6 +513,7 @@
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (asRec) { try { asRec.stop(); } catch (_) {} return; }
     if (!Rec) {
+      asDictation = true;
       input.focus();
       asHint('Tap the mic on your keyboard to speak.');
       return;
@@ -500,6 +532,7 @@
     };
     rec.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        asDictation = true;
         input.focus();
         asHint('Microphone blocked – tap the mic on your keyboard instead.');
       } else if (e.error === 'no-speech') {
@@ -521,6 +554,7 @@
       asHint('Listening…');
     } catch (_) {
       asRec = null;
+      asDictation = true;
       input.focus();
       asHint('Tap the mic on your keyboard to speak.');
     }
@@ -585,13 +619,18 @@
     asRenderMute();
 
     input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); });
+    input.addEventListener('blur', () => { asDictation = false; });
+    ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, asUnlockSpeech, { once: true, capture: true }));
+    if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); } catch (_) {} }
     input.addEventListener('input', () => {
       clearTimeout(asTypeTimer);
-      asTypeTimer = setTimeout(() => asAsk(false), 220);
+      // Dictated text arrives in bursts; wait for it to settle, then answer aloud.
+      asTypeTimer = asDictation ? setTimeout(() => asAsk(true), 1100)
+                                : setTimeout(() => asAsk(false), 220);
     });
     input.addEventListener('keydown', e => {
       if (e.key === 'Escape') { input.value = ''; asAsk(false); input.blur(); }
-      if (e.key === 'Enter') { clearTimeout(asTypeTimer); asAsk(false); input.blur(); }
+      if (e.key === 'Enter') { clearTimeout(asTypeTimer); asAsk(true); input.blur(); }
     });
     document.getElementById('asClear').addEventListener('click', () => {
       input.value = ''; asAsk(false); input.focus();
@@ -601,6 +640,8 @@
       try { localStorage.setItem('shelfy_assistant_muted', asMuted() ? '0' : '1'); } catch (_) {}
       if (asMuted() && 'speechSynthesis' in window) speechSynthesis.cancel();
       asRenderMute();
+      if (!asMuted()) asSpeak((navigator.language || '').toLowerCase().startsWith('de') ? 'Ton an.' : 'Sound on.',
+                              (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en');
     });
 
     document.getElementById('asAvatar').addEventListener('click', e => { e.stopPropagation(); asToggleRadial(); });

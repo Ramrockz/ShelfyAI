@@ -1446,7 +1446,7 @@
 </div>
 
 <!-- Recipe Builder Modal -->
-<div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target===this)closeRecipeBuilder()">
+<div class="recipe-overlay" id="recipeBuilderOverlay" onclick="if(event.target===this)cancelRecipeBuilder()">
   <!-- Mobile-only wrapper: turns #rbHead + .recipe-builder into one bottom
        sheet (same half-screen convention as every other Create screen —
        .modal-sheet, just applied by hand since this component predates
@@ -1457,7 +1457,7 @@
     <!-- Mobile-only: fixed header (back arrow / title). Desktop keeps its own
          close "×" + bottom Create button (#saveRecipeBtn), untouched. -->
     <div class="rb-head" id="rbHead">
-      <button type="button" class="rb-close" onclick="closeRecipeBuilder()" aria-label="Back">
+      <button type="button" class="rb-close" onclick="cancelRecipeBuilder()" aria-label="Back">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span class="rb-title" id="rbTitle">New product</span>
@@ -1543,13 +1543,13 @@
            short of the small unlabeled back-arrow up in the Item Library
            panel, easy to miss entirely if you never scroll/look over there. -->
       <div class="mobile-recipe-actions" id="mobileActions1">
-        <button class="btn btn-cancel" onclick="closeRecipeBuilder()">Cancel</button>
+        <button class="btn btn-cancel" onclick="cancelRecipeBuilder()">Cancel</button>
         <button class="btn btn-primary" id="saveRecipeBtn" onclick="mobilePrimaryAction()" style="flex:1;">Create</button>
       </div>
     </div>
     <div class="recipe-panel">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
-        <span onclick="closeRecipeBuilder()" role="button" aria-label="Back" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:28px; height:28px; flex-shrink:0; color:var(--text-main); margin-left:-6px;">
+        <span onclick="cancelRecipeBuilder()" role="button" aria-label="Back" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:28px; height:28px; flex-shrink:0; color:var(--text-main); margin-left:-6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
         </span>
         <h3 style="margin: 0;">Item Library</h3>
@@ -1654,6 +1654,9 @@ let currentDeleteRecipeId = null;
 let currentDuplicateRecipeId = null;
 let currentEditingRecipeId = null;
 let currentEditReturnUrl = null;
+// Where to go when the builder is cancelled (not saved) -- set when another
+// page (the dashboard) handed off here just to open the builder.
+let builderCancelReturnUrl = null;
 let currentEditingRecipeName = null;
 let productCategoryFilter = null;
 let productAttrValueFilters = new Map();
@@ -2625,6 +2628,13 @@ function closeRecipeBuilder() {
   currentEditingRecipeId = null;
   currentEditReturnUrl = null;
   currentEditingRecipeName = null;
+  builderCancelReturnUrl = null;
+}
+
+function cancelRecipeBuilder() {
+  const back = builderCancelReturnUrl;
+  closeRecipeBuilder();
+  if (back) window.location.href = back;
 }
 
 function closeNamingModal() {
@@ -3986,9 +3996,11 @@ window.addEventListener('shelfy:synced', (e) => {
 
   // The "+" create button on recipe-detail.html can't open this page's
   // create flow directly (it's a different document) — it hands off here.
-  if (sessionStorage.getItem('shelfy_open_create')) {
+  const _openCreate = sessionStorage.getItem('shelfy_open_create');
+  if (_openCreate) {
     sessionStorage.removeItem('shelfy_open_create');
     openBuilder();
+    if (_openCreate === 'dashboard') builderCancelReturnUrl = '/operations';
   }
 })();
 
