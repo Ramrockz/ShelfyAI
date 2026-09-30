@@ -823,7 +823,7 @@ const ASSISTANT_SYSTEM = `You map questions about a small business's inventory o
 
 The catalog lists ITEMS (raw materials / stock, lines starting "I|") and PRODUCTS (things made from items, lines starting "P|"). Format:
 I|<id>|<name>|<category>|<attributes as key=value; ...>
-P|<id>|<name>|<category>|<attributes>|<parent id if this is a variant of another product>
+P|<id>|<name>|<category>|<attributes>|<parent id if this is a variant of another product>|uses:<ids of the items it is made of>
 
 The question may be German or English, typed or spoken (so expect speech-recognition slips, missing punctuation, colours/sizes in either language, e.g. "dunkelblau" = navy, "groß" = L, "extra large" = XL).
 
@@ -836,7 +836,11 @@ Decide the intent:
 - deliveries: what is on the way / when a delivery arrives
 - unknown: not about the catalog, or nothing matches
 
-Then pick the ids the question refers to. Include every matching variant (all sizes of "black hoodies" if no size is given). For produce, pick products; if the user names an item, pick the products that plausibly use it. For have/cost/leadtime, pick items (use products only when the question clearly names a product). For reorder/deliveries leave the id lists empty.
+Then pick the ids the question refers to. Include every matching variant (all sizes of "black hoodies" if no size is given), and only those that match.
+
+Attributes can live on the product or only on the items it uses: a product "Logo Tee" that uses the item "T-Shirt · Blue · M" is a blue, size M product even if its own attributes are empty. So when the question restricts by colour, size, material or similar, a product matches only if its own attributes OR the attributes/names of the items it uses match every restriction. Likewise a product type in the question ("T-Shirts", "Hoodies") matches the product's name or the names of the items it uses. Leave out products that don't satisfy all restrictions.
+
+For produce, pick products (following the rules above); if the user names only an item, pick the products that use it. For have/cost/leadtime, pick items (use products only when the question clearly names a product). For reorder/deliveries leave the id lists empty.
 
 If the question asks for an extreme or ranking ("cheapest", "which do I have the least of", "most"), set sort_field and sort_order and a limit; otherwise sort_field is "none" and limit is 0.
 
@@ -881,7 +885,7 @@ async function assistantAction(req, res, user) {
   });
   const storeId = req.body?.store_id || null;
   let qi = supabaseUser.from('ingredients').select('id, name, category, custom_attributes').eq('profile_id', user.id);
-  let qr = supabaseUser.from('recipes').select('id, name, category, attributes, parent_id').eq('profile_id', user.id);
+  let qr = supabaseUser.from('recipes').select('id, name, category, attributes, parent_id, components').eq('profile_id', user.id);
   if (storeId) { qi = qi.eq('store_id', storeId); qr = qr.eq('store_id', storeId); }
   const [ri, rr] = await Promise.all([qi.order('name'), qr.order('name')]);
   if (ri.error) throw ri.error;
@@ -896,10 +900,15 @@ async function assistantAction(req, res, user) {
 
   const lines = [
     ...items.map(it => `I|${realToShort[it.id]}|${_catalogClean(it.name)}|${_catalogClean(it.category)}|${_catalogClean(_catalogAttrs(it.custom_attributes))}`),
-    ...products.map(p => `P|${realToShort[p.id]}|${_catalogClean(p.name)}|${_catalogClean(p.category)}|${_catalogClean(_catalogAttrs(p.attributes))}|${p.parent_id && realToShort[p.parent_id] ? realToShort[p.parent_id] : ''}`),
+    ...products.map(p => {
+      const uses = [...new Set((Array.isArray(p.components) ? p.components : [])
+        .map(c => realToShort[c && (c.ingredient_id || c.id)]).filter(Boolean))].join(',');
+      return `P|${realToShort[p.id]}|${_catalogClean(p.name)}|${_catalogClean(p.category)}|${_catalogClean(_catalogAttrs(p.attributes))}|${p.parent_id && realToShort[p.parent_id] ? realToShort[p.parent_id] : ''}|uses:${uses}`;
+    }),
   ];
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const startedAt = Date.now();
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 2048,
@@ -926,6 +935,23 @@ async function assistantAction(req, res, user) {
 
   const mapIds = (ids, kind) => (Array.isArray(ids) ? ids : [])
     .map(k => shortToReal[k]).filter(x => x && x.kind === kind).map(x => x.id);
+
+  // Readable trace for tuning: Vercel dashboard -> Logs, search "[assistant]".
+  const nameOf = {};
+  items.forEach(it => { nameOf[realToShort[it.id]] = it.name; });
+  products.forEach(p => { nameOf[realToShort[p.id]] = p.name; });
+  console.log('[assistant] ' + JSON.stringify({
+    user: user.id.slice(0, 8),
+    q: question,
+    intent: out.intent,
+    items: (out.item_ids || []).map(k => nameOf[k] || k),
+    products: (out.product_ids || []).map(k => nameOf[k] || k),
+    sort: out.sort_field !== 'none' ? `${out.sort_field}/${out.sort_order}/${out.limit}` : undefined,
+    note: out.note || undefined,
+    catalog: `${items.length} items, ${products.length} products`,
+    ms: Date.now() - startedAt,
+    tokens: { in: response.usage.input_tokens, cached: response.usage.cache_read_input_tokens || 0, out: response.usage.output_tokens },
+  }));
 
   return res.status(200).json({
     intent: out.intent || 'unknown',
