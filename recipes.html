@@ -2147,14 +2147,18 @@ function _catAttrChipsHtml(cg) {
   const groups = _catItemAttrGroups(cg);
   if (!groups.size) return '';
   const active = prodCatItemAttrFilters.get(cg.cat) || new Map();
-  const chips = [];
+  const chips = [], badges = [];
   Array.from(groups.keys()).sort((a, b) => a.localeCompare(b)).forEach(key => {
     Array.from(groups.get(key).entries()).sort((a, b) => _attrValueSort(key, a[1], b[1])).forEach(([vk, disp]) => {
       const on = active.has(key) && active.get(key).has(vk);
-      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" data-key="${_escHtml(key)}" data-val="${_escHtml(vk)}" onclick="toggleProdCatItemAttr(this)">${_escHtml(disp)}</button>`);
+      const data = `data-key="${_escHtml(key)}" data-val="${_escHtml(vk)}"`;
+      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" ${data} onclick="toggleProdCatItemAttr(this)">${_escHtml(disp)}</button>`);
+      // Same purple pill as the product attribute filter badges
+      if (on) badges.push(`<div class="filter-badge" style="background:#8b5cf6;">${_escHtml(disp)}<span class="filter-badge-remove" ${data} onclick="toggleProdCatItemAttr(this)">&times;</span></div>`);
     });
   });
-  return `<div class="cat-attr-chips">${chips.join('')}</div>`;
+  return `<div class="cat-attr-chips">${chips.join('')}</div>` +
+    (badges.length ? `<div class="cat-attr-badges">${badges.join('')}</div>` : '');
 }
 
 function toggleProdCatItemAttr(btn) {

@@ -3122,14 +3122,18 @@ function _ingCatAttrChipsHtml(g) {
   }));
   if (!byKey.size) return '';
   const active = ingCatAttrFilters.get(g.cat) || new Map();
-  const chips = [];
+  const chips = [], badges = [];
   Array.from(byKey.keys()).sort((a, b) => a.localeCompare(b)).forEach(key => {
     Array.from(byKey.get(key).entries()).sort((a, b) => _ingAttrValueSort(key, a[1], b[1])).forEach(([vk, disp]) => {
       const on = active.has(key) && active.get(key).has(vk);
-      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" data-key="${_escAttr(key)}" data-val="${_escAttr(vk)}" onclick="toggleIngCatAttr(this)">${escapeHtml(disp)}</button>`);
+      const data = `data-key="${_escAttr(key)}" data-val="${_escAttr(vk)}"`;
+      chips.push(`<button type="button" class="cat-attr-chip${on ? ' active' : ''}" ${data} onclick="toggleIngCatAttr(this)">${escapeHtml(disp)}</button>`);
+      // Same purple pill as the attribute subfilter's #filterBadges
+      if (on) badges.push(`<div class="filter-badge" style="background: #8b5cf6;">${escapeHtml(disp)}<span class="filter-badge-remove" ${data} onclick="toggleIngCatAttr(this)">&times;</span></div>`);
     });
   });
-  return `<div class="cat-attr-chips">${chips.join('')}</div>`;
+  return `<div class="cat-attr-chips">${chips.join('')}</div>` +
+    (badges.length ? `<div class="cat-attr-badges">${badges.join('')}</div>` : '');
 }
 
 function toggleIngCatAttr(btn) {
