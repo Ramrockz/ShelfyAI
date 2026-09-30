@@ -1007,8 +1007,7 @@
     const parts = [];
     if (toOrder) parts.push(`<button type="button" class="as-nudge-btn as-nudge-${openOut ? 'out' : 'low'}" data-card="restock">${toOrder} to reorder</button>`);
     if (asInbound.length) parts.push(`<button type="button" class="as-nudge-btn" data-card="deliveries">${asInbound.length} on the way</button>`);
-    nudge.innerHTML = parts.length ? parts.join('')
-      : '<span class="as-nudge-ok">All stocked up ✓</span>';
+    nudge.innerHTML = parts.join('');
   }
 
   function asGreeting() {
