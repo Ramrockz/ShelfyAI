@@ -466,8 +466,12 @@
   // iOS only lets speechSynthesis talk after it was first used inside a user
   // gesture; answers arrive after an await, outside the gesture. Speaking a
   // silent utterance on the first tap/keypress unlocks it for the session.
+  const AS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   function asUnlockSpeech() {
-    if (asSpeechUnlocked || !('speechSynthesis' in window)) return;
+    // Only iOS needs this; on Chrome a silent utterance can wedge the queue.
+    if (!AS_IOS || asSpeechUnlocked || !('speechSynthesis' in window)) return;
     asSpeechUnlocked = true;
     try {
       const u = new SpeechSynthesisUtterance(' ');
@@ -485,18 +489,48 @@
     } catch (_) { return null; }
   }
 
-  function asSpeak(text, lang) {
+  let asUtterance = null;   // kept referenced: Chrome drops events of GC'd utterances
+
+  function asVoiceNote(msg) {
+    const say = document.getElementById('asSay');
+    if (!say || !say.textContent) return;
+    const note = document.createElement('span');
+    note.className = 'as-voice-err';
+    note.textContent = `Couldn’t play the answer aloud (${msg}).`;
+    say.appendChild(note);
+  }
+
+  // attempt 0: preferred voice, after a pause so a just-ended speech
+  // recognition session (Android) has released the audio channel.
+  // attempt 1: plain utterance with just a lang, as a fallback.
+  function asSpeak(text, lang, attempt = 0) {
     if (!text || asMuted() || !('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
     try {
-      speechSynthesis.cancel();
+      if (synth.speaking || synth.pending) synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang === 'de' ? 'de-DE' : 'en-US';
-      const v = asPickVoice(lang);
-      if (v) u.voice = v;
-      // Chrome drops an utterance queued in the same tick as cancel(), and can
-      // be left paused after a previous one -- hence the delay + resume().
-      setTimeout(() => { speechSynthesis.resume(); speechSynthesis.speak(u); }, 80);
-    } catch (_) {}
+      if (attempt === 0) { const v = asPickVoice(lang); if (v) u.voice = v; }
+      asUtterance = u;
+      let settled = false;
+      const retryOrReport = reason => {
+        if (settled) return;
+        settled = true;
+        if (attempt === 0) asSpeak(text, lang, 1);
+        else asVoiceNote(reason);
+      };
+      u.onstart = () => { settled = true; };
+      u.onerror = e => {
+        if (e.error === 'interrupted' || e.error === 'canceled') { settled = true; return; }
+        retryOrReport(e.error || 'error');
+      };
+      setTimeout(() => {
+        try { synth.resume(); synth.speak(u); } catch (err) { retryOrReport(err.message || 'error'); return; }
+        setTimeout(() => { if (!settled && !synth.speaking) retryOrReport('no audio started'); }, 3000);
+      }, attempt === 0 ? 400 : 50);
+    } catch (err) {
+      asVoiceNote(err.message || 'error');
+    }
   }
 
   function asRenderMute() {

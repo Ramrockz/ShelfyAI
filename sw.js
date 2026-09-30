@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v476';
+const CACHE_NAME = 'shelfy-v477';
 
 const STATIC_ASSETS = [
   '/',
