@@ -602,6 +602,10 @@
     .rdm-body {
       flex: 1; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      /* #bottom-nav (60px + safe area) sits above this overlay, so leave room
+         for it -- otherwise the end of the page (the cost breakdown) can't be
+         scrolled into view. */
+      padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
     }
     .rdm-footer { display: none; }
     .rdm-add-ing-btn {
