@@ -89,14 +89,18 @@ body.as-radial-open .as-greet, body.as-radial-open .as-nudge { visibility: hidde
 .as-ask {
   display: flex; align-items: center; gap: 6px;
   background: var(--bg-panel); border: 1px solid var(--border);
-  border-radius: 16px; padding: 0 6px 0 14px; height: 54px;
+  box-sizing: border-box; border-radius: 16px; padding: 0 6px 0 14px; height: 54px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .as-ask:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .as-ask > .as-icon { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
-.as-field { position: relative; flex: 1; min-width: 0; height: 100%; }
+.as-field { position: relative; flex: 1; min-width: 0; align-self: stretch; }
+/* id-level reset of styles.css' global input[type="search"] padding/border,
+   so the typed suggestion overlay lines up exactly with the real text */
 #asInput {
-  width: 100%; height: 100%; border: 0; outline: 0; background: transparent;
+  position: absolute; inset: 0; box-sizing: border-box; margin: 0; padding: 0;
+  width: 100%; height: 100%; border: 0; border-radius: 0; outline: 0; background: transparent;
+  -webkit-appearance: none; appearance: none; line-height: normal;
   font: inherit; font-size: 16px; /* 16px stops iOS zooming on focus */
   color: var(--text-main);
 }
