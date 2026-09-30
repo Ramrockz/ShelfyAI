@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v493';
+const CACHE_NAME = 'shelfy-v494';
 
 const STATIC_ASSETS = [
   '/',
@@ -38,6 +38,7 @@ const STATIC_ASSETS = [
   '/cookie-consent.js',
   '/offline-sync.js',
   '/shelfy-assistant.js',
+  '/cost-sankey.js',
   '/shelfy-assistant.css',
   '/favicon-32.png',
   '/favicon-16.png',

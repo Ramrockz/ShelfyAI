@@ -2003,3 +2003,24 @@ tr:hover td {
 .cat-attr-chip.active { background: rgba(6,182,212,0.13); border-color: var(--accent); color: var(--accent); }
 .cat-attr-badges { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; background: var(--bg-panel); }
 .cat-attr-empty { padding: 16px; font-size: 13.5px; color: var(--text-muted); text-align: center; }
+
+/* ---------- Cost breakdown sankey (cost-sankey.js, product detail) ---------- */
+.cs-panel { margin-top: 24px; overflow: hidden; }
+.cs-panel[hidden] { display: none; }
+.cs-panel-m { margin: 20px 20px 0; padding: 16px; background: var(--bg-panel);
+              border: 1px solid var(--border); border-radius: 14px; }
+.cs-panel { --cs-ink: #334155; --cs-neutral: rgba(100, 116, 139, 0.22); --cs-other: #94a3b8;
+            --cs-profit: rgba(16, 185, 129, 0.22); --cs-profit-node: #10b981; }
+[data-theme="dark"] .cs-panel { --cs-ink: #cbd5e1; --cs-neutral: rgba(148, 163, 184, 0.24); --cs-other: #64748b;
+            --cs-profit: rgba(16, 185, 129, 0.26); }
+.cs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 14px; }
+.cs-svg { display: block; overflow: visible; }
+.cs-link { opacity: 0.55; transition: opacity 0.15s ease; cursor: pointer; }
+.cs-link:hover { opacity: 0.85; }
+.cs-link.cs-dim { opacity: 0.15; }
+.cs-label { font-size: 12.5px; font-weight: 600; fill: var(--text-main); }
+.cs-sub { font-size: 11.5px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+.cs-head { font-size: 12px; font-weight: 700; fill: var(--text-main); font-variant-numeric: tabular-nums; }
+.cs-head-profit { fill: var(--success); }
+.cs-note { margin: 10px 0 0; font-size: 12.5px; color: var(--text-muted); }

@@ -44,6 +44,7 @@
 <script src="chat-bot.js"></script>
 <script src="reorder-modal.js"></script>
 <script src="barcode-scanner.js"></script>
+<script src="cost-sankey.js"></script>
 
 <style>
   /* Page-specific styles */
@@ -1153,6 +1154,9 @@
       <div style="text-align: center; padding: 40px; color: var(--text-muted);">Loading items...</div>
     </div>
   </div>
+
+  <!-- Which item is responsible for how much of the cost (cost-sankey.js) -->
+  <div class="panel cs-panel" id="costSankeyDesktop" hidden></div>
 </div>
 
 
@@ -1662,6 +1666,10 @@ function renderMobileOverlay() {
     </div>`;
   }).join('') + addIngBtn;
   }
+  // The first render can run before the browser has parsed this overlay's
+  // markup, and a hidden container measures 0 wide -- so (re)draw the cost
+  // breakdown here, where the overlay is known to exist and be shown.
+  rdmRenderCostSankey();
 }
 
 // Updates both mobile's #rdmHeadline (inside #mobileViewOverlay) and
@@ -1700,7 +1708,24 @@ function rdmRenderMargin() {
     el.textContent = hasPrice ? `${pct}%` : '—';
     el.dataset.state = state;
   });
+  rdmRenderCostSankey();
 }
+
+// Components store their line cost (quantity x unit cost) in comp.cost --
+// recipe.cost is the sum of those.
+function rdmRenderCostSankey() {
+  if (!recipe || typeof renderCostSankey !== 'function') return;
+  const items = (recipe.components || []).map(c => ({
+    name: c.ingredient_name || c.name || 'Item',
+    value: parseFloat(c.cost) || 0,
+    detail: [c.quantity, c.unit].filter(v => v != null && v !== '').join(' '),
+  }));
+  const price = parseFloat(recipe.retail_price) || 0;
+  ['costSankeyDesktop', 'costSankeyMobile'].forEach(id => renderCostSankey(document.getElementById(id), { items, price }));
+}
+// The product can finish loading before the mobile markup further down the
+// page is parsed -- draw again once it exists.
+document.addEventListener('DOMContentLoaded', () => { if (recipe) rdmRenderCostSankey(); });
 
 
 // ---- Restock row (mobile footer) — one short item reorders directly; two
@@ -3955,6 +3980,7 @@ document.addEventListener('keydown', (e) => {
       </div>
     </div>
     <div id="rdmQtyList" style="padding:0 20px;"></div>
+    <div class="cs-panel cs-panel-m" id="costSankeyMobile" hidden></div>
   </div>
   <div class="rdm-restock-row" id="rdmRestockRow" style="display:none;" onclick="rdmRestockShort()">
     <span id="rdmRestockLabel"></span>
