@@ -542,6 +542,7 @@
   // The spoken sentence isn't shown; only when there are no rows or card to
   // look at does a short line of it appear, so the screen never stays blank.
   function asRenderAnswer(ans) {
+    asShowingRecent = false;
     const box = document.getElementById('asAnswer');
     const res = document.getElementById('asResults');
     if (!box) return;
@@ -583,6 +584,48 @@
     res.innerHTML = html;
   }
 
+  // ─── Recent searches (shown when the empty ask bar is focused) ────────────
+  // Per-device convenience only, so localStorage is fine; every access is
+  // guarded because storage can be unavailable (private mode, blocked).
+
+  const AS_RECENT_KEY = 'shelfy_assistant_recent';
+  const AS_RECENT_MAX = 5;
+  let asShowingRecent = false;
+
+  function asRecentGet() {
+    try { const v = JSON.parse(localStorage.getItem(AS_RECENT_KEY)); return Array.isArray(v) ? v : []; }
+    catch (_) { return []; }
+  }
+
+  function asRecentSet(list) {
+    try { localStorage.setItem(AS_RECENT_KEY, JSON.stringify(list.slice(0, AS_RECENT_MAX))); } catch (_) {}
+  }
+
+  function asRecentAdd(q) {
+    q = String(q || '').trim();
+    if (asTokens(q).join('').length < 3) return;
+    asRecentSet([q, ...asRecentGet().filter(x => x.toLowerCase() !== q.toLowerCase())]);
+  }
+
+  function asRenderRecent() {
+    const input = document.getElementById('asInput');
+    const box = document.getElementById('asAnswer');
+    const list = asRecentGet();
+    if (!box || input.value || !list.length) { if (asShowingRecent) { box.hidden = true; asShowingRecent = false; } return; }
+    asShowCard(null);
+    asShowingRecent = true;
+    box.hidden = false;
+    const clock = '<svg class="as-recent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    document.getElementById('asResults').innerHTML =
+      '<div class="as-section">Recent</div>' +
+      list.map(q => `<div class="as-row as-recent" role="button" tabindex="0" data-q="${asEsc(q)}">${clock}
+          <span class="as-main"><span class="as-name">${asEsc(q)}</span></span>
+          <button type="button" class="as-recent-x" aria-label="Remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>`).join('');
+  }
+
   function asHint(msg) {
     const box = document.getElementById('asAnswer');
     if (!box) return;
@@ -608,7 +651,7 @@
     document.getElementById('asClear').hidden = !query;
     asTyperSync();
     const seq = ++asSeq;
-    if (!query.trim()) { asRenderAnswer(null); return; }
+    if (!query.trim()) { asRenderAnswer(null); if (document.activeElement === input) asRenderRecent(); return; }
 
     const intent = asIntent(query);
     // No feedback until the search words have 3 letters ("Do I h" stays quiet).
@@ -644,6 +687,7 @@
       }
     }
     asRenderAnswer(ans);
+    if (useAI) asRecentAdd(query);
     if (speak) asSpeak(ans.say);
   }
 
@@ -1006,8 +1050,36 @@
     // Load now so suggestions can use the user's own items.
     setTimeout(() => { asLoad().then(() => { asTyperList = []; }); }, 600);
 
-    input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); asTyperSync(); });
-    input.addEventListener('blur', () => { asDictation = false; setTimeout(asTyperSync, 0); });
+    input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); asTyperSync(); asRenderRecent(); });
+    input.addEventListener('blur', () => {
+      asDictation = false;
+      setTimeout(asTyperSync, 0);
+      if (asShowingRecent) { const box = document.getElementById('asAnswer'); if (box) box.hidden = true; asShowingRecent = false; }
+    });
+
+    const results = document.getElementById('asResults');
+    // mousedown default = blur the input, which would hide the list before the
+    // click lands; keep focus until the tap is handled.
+    results.addEventListener('mousedown', e => { if (e.target.closest('.as-recent')) e.preventDefault(); });
+    results.addEventListener('click', e => {
+      const row = e.target.closest('.as-recent');
+      if (row) {
+        const q = row.dataset.q;
+        if (e.target.closest('.as-recent-x')) {
+          asRecentSet(asRecentGet().filter(x => x !== q));
+          asRenderRecent();
+          if (!asShowingRecent) input.blur();
+          return;
+        }
+        input.value = q;
+        input.blur();
+        asAsk(false, 'fallback');
+        asRecentAdd(q);
+        return;
+      }
+      // Opening a result also counts as a search worth remembering.
+      if (e.target.closest('a.as-row')) asRecentAdd(input.value);
+    });
     document.addEventListener('visibilitychange', asTyperSync);
     ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, asUnlockSpeech, { once: true, capture: true }));
     if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); } catch (_) {} }
