@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="notifications.css" />
 <link rel="stylesheet" href="onboarding-modal.css" />
 <link rel="stylesheet" href="reorder-modal.css" />
+<link rel="stylesheet" href="dashboard-search.css" />
 <script>
   // Hide page immediately
   document.documentElement.style.visibility = 'hidden';
@@ -53,6 +54,7 @@
 <script src="category-filter.js"></script>
 <script src="onboarding-modal.js"></script>
 <script src="reorder-modal.js"></script>
+<script src="dashboard-search.js" defer></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -1959,6 +1961,21 @@
 <div class="hub-container">
   
   <!-- Alert banner will appear here when there are stock alerts -->
+
+  <!-- Search inventory + products (dashboard-search.js/css) -->
+  <div class="dash-search">
+    <div class="ds-bar">
+      <svg class="ds-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="dsInput" placeholder="Search items &amp; products… e.g. blue XL" autocomplete="off" autocorrect="off" enterkeyhint="search" aria-label="Search items and products">
+      <button type="button" class="ds-btn" id="dsClear" aria-label="Clear search" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <button type="button" class="ds-btn" id="dsMic" aria-label="Search by voice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+      </button>
+    </div>
+    <div class="ds-results" id="dsResults" hidden></div>
+  </div>
 
   <!-- Inventory Status Section -->
   <section class="inventory-status-section">

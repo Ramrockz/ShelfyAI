@@ -1,0 +1,69 @@
+/* Dashboard search bar + mic (dashboard-search.js) */
+.dash-search { position: relative; margin-bottom: 20px; }
+
+.ds-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 0 6px 0 14px; height: 50px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ds-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.ds-bar > .ds-icon { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+
+#dsInput {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 16px; /* 16px stops iOS zooming on focus */
+  color: var(--text-main);
+}
+#dsInput::placeholder { color: var(--text-muted); }
+#dsInput::-webkit-search-cancel-button { display: none; }
+
+.ds-btn {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 38px; height: 38px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.ds-btn svg { width: 18px; height: 18px; }
+.ds-btn[hidden] { display: none; }
+#dsMic { background: var(--bg-inner); color: var(--text-main); }
+#dsMic.ds-listening { background: var(--danger); color: #fff; animation: dsPulse 1.2s ease-in-out infinite; }
+@keyframes dsPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  50%      { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0); }
+}
+
+.ds-results {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 50;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  max-height: min(60vh, 460px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 6px 0;
+}
+.ds-results[hidden] { display: none; }
+
+.ds-section {
+  display: flex; justify-content: space-between; padding: 10px 14px 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ds-section span { font-weight: 500; letter-spacing: 0; }
+
+.ds-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  text-decoration: none; color: var(--text-main);
+}
+.ds-row:active, .ds-row:hover { background: var(--bg-inner); }
+.ds-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ds-name { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-sub { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ds-chip {
+  font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px;
+  background: var(--bg-inner); color: var(--text-muted); border: 1px solid var(--border-hair, var(--border));
+}
+.ds-qty { flex-shrink: 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ds-qty.ds-ok  { color: var(--text-main); }
+.ds-qty.ds-low { color: var(--warning); }
+.ds-qty.ds-out { color: var(--danger); }
+.ds-chev { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+.ds-empty { padding: 14px; font-size: 13.5px; color: var(--text-muted); }
