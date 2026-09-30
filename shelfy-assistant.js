@@ -1,10 +1,11 @@
 // Shelfy assistant — the dashboard. A reactive avatar (mood from stock), a
 // radial quick-action menu, and an ask bar (typed or spoken) that answers:
-//   "Hab ich noch blau XL da?"        -> matching items + products using them
-//   "Wie viele Hoodies kann ich machen?" -> producible count + bottleneck
-//   "Was muss ich nachbestellen?"     -> opens the restock card
-//   "Kommt noch was?"                 -> opens the pending-deliveries card
-// Everything runs locally on the user's own data; no AI call.
+//   "Do I still have blue XL?"        -> matching items + products using them
+//   "How many hoodies can I make?"    -> producible count + bottleneck
+//   "What do I need to reorder?"      -> opens the restock card
+//   "When does my delivery arrive?"   -> opens the pending-deliveries card
+// Questions may be German or English; answers are always English (the app's
+// language). Everything runs locally on the user's own data; no AI call.
 // The restock + deliveries cards are still filled by operations.html's own
 // _renderInventoryStatus / _renderInboundStatus, which announce their data via
 // the shelfy:dash-stock / shelfy:dash-inbound events for the mood + nudge.
@@ -98,16 +99,6 @@
   }
 
   // ─── Intent ───────────────────────────────────────────────────────────────
-
-  const AS_DE_MARKERS = new Set(('ich hab habe noch wie viele viel kann was muss gibt sind ist da welche ' +
-    'kommt nachbestellen bestellen lieferung lieferungen unterwegs machen herstellen leer knapp').split(' '));
-
-  function asLang(query) {
-    const words = asNorm(query).split(' ');
-    if (words.some(w => AS_DE_MARKERS.has(w))) return 'de';
-    if (/^(do|how|what|is|are|any|can)\b/.test(asNorm(query))) return 'en';
-    return (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
-  }
 
   function asIntent(query) {
     const q = ' ' + asNorm(query) + ' ';
@@ -230,7 +221,7 @@
     return 'ok';
   }
 
-  // ─── Answer text ──────────────────────────────────────────────────────────
+  // ─── Answer text (English only; questions may be German or English) ───────
 
   function asNum(q) {
     const n = parseFloat(q) || 0;
@@ -245,76 +236,79 @@
     return vals.length ? `${i.name} (${vals.join(', ')})` : i.name;
   }
 
-  function asList(names, lang) {
-    const and = lang === 'de' ? 'und' : 'and';
+  function asList(names) {
     if (names.length <= 1) return names.join('');
-    return names.slice(0, -1).join(', ') + ` ${and} ` + names[names.length - 1];
+    return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  }
+
+  // Pending delivery -> ETA date (same rule as _renderInboundStatus).
+  function asEta(item) {
+    const base = item.reorder_date || (item.updated_at ? String(item.updated_at).split('T')[0] : null);
+    if (!base) return null;
+    let eta = new Date(base + 'T00:00:00');
+    if (item.estimated_delivery) {
+      eta = typeof window.addBusinessDays === 'function'
+        ? window.addBusinessDays(eta, item.estimated_delivery)
+        : new Date(eta.getTime() + item.estimated_delivery * 86400000);
+    }
+    return eta;
+  }
+
+  function asEtaText(item) {
+    const eta = asEta(item);
+    if (!eta) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = Math.round((eta - today) / 86400000);
+    if (days < 0) return 'is overdue';
+    if (days === 0) return 'arrives today';
+    if (days === 1) return 'arrives tomorrow';
+    return 'arrives ' + eta.toLocaleDateString('en-US', { weekday: days < 7 ? 'long' : undefined, month: 'short', day: 'numeric' });
   }
 
   const T = {
-    de: {
-      nothing: q => `Dazu habe ich nichts gefunden${q ? ` („${q}“)` : ''}.`,
-      haveOne: (i) => `Ja, noch ${asNum(i.quantity)}${i.unit ? ' ' + i.unit : ''} ${asLabel(i)}.`,
-      haveLow: (i) => ` Wird knapp – Minimum ist ${asNum(i.min_stock)}.`,
-      outOne: (i) => `Nein, ${asLabel(i)} ist leer.`,
-      pending: ' Ist aber schon nachbestellt.',
-      haveMany: (n, inStock) => `${n} passende Artikel – ${inStock === n ? 'alle' : inStock} davon auf Lager.`,
-      onlyProducts: n => `Keine Artikel, aber ${n} passende${n === 1 ? 's Produkt' : ' Produkte'}.`,
-      makeOne: (p, r) => `Du kannst ${r.count}× ${p.name} machen.`,
-      makeBlock: r => ` Engpass: ${r.blocker.name} (${asNum(r.stock)} übrig, ${asNum(r.need)} pro Stück).`,
-      makeZero: (p, r) => `Gerade kannst du kein ${p.name} machen – ${r.blocker.name} ${r.expired ? 'ist abgelaufen' : 'reicht nicht'}.`,
-      makeMany: (total, n, top) => `Insgesamt ${total} möglich über ${n} Varianten. Am meisten: ${top.name} (${top.count}).`,
-      makeNoRecipe: p => `${p.name} hat noch keine Bestandteile hinterlegt – dann kann ich nicht rechnen.`,
-      makeNone: q => `Ich habe kein Produkt zu „${q}“ gefunden.`,
-      reorderNone: 'Alles gut – gerade muss nichts nachbestellt werden.',
-      reorder: (n, names, more) => `${n === 1 ? 'Eine Sache musst' : n + ' Sachen musst'} du nachbestellen: ${asList(names, 'de')}${more ? ' und weitere' : ''}.`,
-      reorderPendingOnly: n => `Alles Nötige ist schon bestellt – ${n} ${n === 1 ? 'Lieferung ist' : 'Lieferungen sind'} unterwegs.`,
-      delivNone: 'Gerade ist nichts unterwegs.',
-      deliv: (n, names) => `${n === 1 ? 'Eine Lieferung ist' : n + ' Lieferungen sind'} unterwegs: ${asList(names, 'de')}.`,
-      makes: n => `${n} möglich`,
-    },
-    en: {
-      nothing: q => `I couldn’t find anything${q ? ` for “${q}”` : ''}.`,
-      haveOne: (i) => `Yes, you have ${asNum(i.quantity)}${i.unit ? ' ' + i.unit : ''} ${asLabel(i)}.`,
-      haveLow: (i) => ` Running low – minimum is ${asNum(i.min_stock)}.`,
-      outOne: (i) => `No, ${asLabel(i)} is out of stock.`,
-      pending: ' It’s already reordered though.',
-      haveMany: (n, inStock) => `${n} matching items – ${inStock === n ? 'all' : inStock} in stock.`,
-      onlyProducts: n => `No items, but ${n} matching product${n === 1 ? '' : 's'}.`,
-      makeOne: (p, r) => `You can make ${r.count}× ${p.name}.`,
-      makeBlock: r => ` Bottleneck: ${r.blocker.name} (${asNum(r.stock)} left, ${asNum(r.need)} each).`,
-      makeZero: (p, r) => `You can’t make ${p.name} right now – ${r.blocker.name} ${r.expired ? 'has expired' : 'is short'}.`,
-      makeMany: (total, n, top) => `${total} in total across ${n} variants. Most: ${top.name} (${top.count}).`,
-      makeNoRecipe: p => `${p.name} has no components yet, so I can’t calculate it.`,
-      makeNone: q => `I couldn’t find a product for “${q}”.`,
-      reorderNone: 'All good – nothing needs reordering right now.',
-      reorder: (n, names, more) => `${n === 1 ? 'One thing needs' : n + ' things need'} reordering: ${asList(names, 'en')}${more ? ' and more' : ''}.`,
-      reorderPendingOnly: n => `Everything low is already ordered – ${n} ${n === 1 ? 'delivery is' : 'deliveries are'} on the way.`,
-      delivNone: 'Nothing is on the way right now.',
-      deliv: (n, names) => `${n === 1 ? 'One delivery is' : n + ' deliveries are'} on the way: ${asList(names, 'en')}.`,
-      makes: n => `makes ${n}`,
-    },
+    nothing: q => `I couldn’t find anything${q ? ` for “${q}”` : ''}.`,
+    haveOne: i => `Yes, you have ${asNum(i.quantity)}${i.unit ? ' ' + i.unit : ''} ${asLabel(i)}.`,
+    haveLow: i => ` Running low – minimum is ${asNum(i.min_stock)}.`,
+    outOne: i => `No, ${asLabel(i)} is out of stock.`,
+    pending: ' It’s already reordered though.',
+    haveMany: (n, inStock) => `${n} matching items – ${inStock === n ? 'all' : inStock} in stock.`,
+    onlyProducts: n => `No items, but ${n} matching product${n === 1 ? '' : 's'}.`,
+    makeOne: (p, r) => `You can make ${r.count} ${p.name}.`,
+    makeBlock: r => ` ${r.blocker.name} is the limit – ${asNum(r.stock)} left, ${asNum(r.need)} per piece.`,
+    makeZero: (p, r) => `You can’t make ${p.name} right now – ${r.blocker.name} ${r.expired ? 'has expired' : 'is short'}.`,
+    makeMany: (total, n, top) => `${total} in total across ${n} variants. Most: ${top.name}, ${top.count}.`,
+    makeNoRecipe: p => `${p.name} has no components yet, so I can’t work it out.`,
+    makeNone: q => `I couldn’t find a product for “${q}”.`,
+    reorderNone: 'All good – nothing needs reordering right now.',
+    reorder: (n, names, more) => `${n === 1 ? 'One thing needs' : n + ' things need'} reordering: ${asList(names)}${more ? ' and more' : ''}.`,
+    reorderPendingOnly: n => `Everything low is already ordered – ${n} ${n === 1 ? 'delivery is' : 'deliveries are'} on the way.`,
+    delivNone: 'Nothing is on the way right now.',
+    delivOne: i => { const e = asEtaText(i); return `Your ${i.name} delivery ${e || 'is on the way'}.`; },
+    delivMany: items => `${items.length} deliveries are on the way: ` +
+      asList(items.slice(0, 3).map(i => { const e = asEtaText(i); return e ? `${i.name} ${e}` : i.name; })) +
+      (items.length > 3 ? ' and more' : '') + '.',
+    canMake: n => (n === 0 ? 'Can’t make' : `Can make ${n}`),
+    limit: r => `Limited by ${r.blocker.name} · ${asNum(r.stock)} left, ${asNum(r.need)} each`,
   };
 
-  // Pure: question + data -> { intent, lang, say, items, products, card }
+  // Pure: question + data -> { intent, say, items, products, card }
   function asAnswer(query) {
-    const lang = asLang(query);
-    const t = T[lang];
     const intent = asIntent(query);
 
     if (intent === 'reorder') {
       const all = [...asStock.out, ...asStock.low];
       const open = all.filter(i => !i.reorder_pending);
       let say;
-      if (!all.length) say = t.reorderNone;
-      else if (!open.length) say = t.reorderPendingOnly(asInbound.length || all.length);
-      else say = t.reorder(open.length, open.slice(0, 3).map(i => i.name), open.length > 3);
-      return { intent, lang, say, items: [], products: [], card: all.length ? 'restock' : null };
+      if (!all.length) say = T.reorderNone;
+      else if (!open.length) say = T.reorderPendingOnly(asInbound.length || all.length);
+      else say = T.reorder(open.length, open.slice(0, 3).map(i => i.name), open.length > 3);
+      return { intent, say, items: [], products: [], card: all.length ? 'restock' : null };
     }
 
     if (intent === 'deliveries') {
-      const say = asInbound.length ? t.deliv(asInbound.length, asInbound.slice(0, 3).map(i => i.name)) : t.delivNone;
-      return { intent, lang, say, items: [], products: [], card: asInbound.length ? 'deliveries' : null };
+      const say = !asInbound.length ? T.delivNone
+        : asInbound.length === 1 ? T.delivOne(asInbound[0]) : T.delivMany(asInbound);
+      return { intent, say, items: [], products: [], card: asInbound.length ? 'deliveries' : null };
     }
 
     const tokens = asTokens(query).filter(w => intent !== 'produce' || !AS_PRODUCE_WORDS.has(w));
@@ -322,7 +316,7 @@
     const keep = new Set(tokens);
     const shown = String(query).split(/\s+/).map(w => w.replace(/[^\p{L}\p{N}-]/gu, ''))
       .filter(w => keep.has(asNorm(w))).join(' ') || tokens.join(' ');
-    if (!tokens.length) return { intent, lang, say: '', items: [], products: [], card: null };
+    if (!tokens.length) return { intent, say: '', items: [], products: [], card: null };
     const { items, products } = asSearch(tokens);
     const itemById = asItemById();
     const withMake = asDropShadowedParents(products).map(e => ({ ...e, make: asCanMake(e.product, itemById) }));
@@ -331,35 +325,35 @@
       // Prefer products named like the question; fall back to ones using a matched item.
       const direct = withMake.filter(e => e.direct);
       const pool = direct.length ? direct : withMake;
-      if (!pool.length) return { intent, lang, say: t.makeNone(shown), items, products: [], card: null };
+      if (!pool.length) return { intent, say: T.makeNone(shown), items, products: [], card: null };
       const calc = pool.filter(e => e.make);
       let say;
-      if (!calc.length) say = t.makeNoRecipe(pool[0].product);
+      if (!calc.length) say = T.makeNoRecipe(pool[0].product);
       else if (calc.length === 1) {
         const { product: p, make: r } = calc[0];
-        say = r.count === 0 ? t.makeZero(p, r) : t.makeOne(p, r) + t.makeBlock(r);
+        say = r.count === 0 ? T.makeZero(p, r) : T.makeOne(p, r) + T.makeBlock(r);
       } else {
         const total = calc.reduce((s, e) => s + e.make.count, 0);
         const top = calc.reduce((a, b) => (b.make.count > a.make.count ? b : a));
-        say = t.makeMany(total, calc.length, { name: top.product.name, count: top.make.count });
+        say = T.makeMany(total, calc.length, { name: top.product.name, count: top.make.count });
       }
       pool.sort((a, b) => ((b.make ? b.make.count : -1) - (a.make ? a.make.count : -1)));
-      return { intent, lang, say, items: [], products: pool, card: null };
+      return { intent, say, items: [], products: pool, card: null, showLimit: true };
     }
 
     // have
     let say;
-    if (!items.length && !withMake.length) say = t.nothing(shown);
-    else if (!items.length) say = t.onlyProducts(withMake.length);
+    if (!items.length && !withMake.length) say = T.nothing(shown);
+    else if (!items.length) say = T.onlyProducts(withMake.length);
     else if (items.length === 1) {
       const i = items[0];
       const st = asStatus(i);
-      say = st === 'out' ? t.outOne(i) + (i.reorder_pending ? t.pending : '')
-          : t.haveOne(i) + (st === 'low' ? t.haveLow(i) + (i.reorder_pending ? t.pending : '') : '');
+      say = st === 'out' ? T.outOne(i) + (i.reorder_pending ? T.pending : '')
+          : T.haveOne(i) + (st === 'low' ? T.haveLow(i) + (i.reorder_pending ? T.pending : '') : '');
     } else {
-      say = t.haveMany(items.length, items.filter(i => asStatus(i) !== 'out').length);
+      say = T.haveMany(items.length, items.filter(i => asStatus(i) !== 'out').length);
     }
-    return { intent, lang, say, items, products: withMake, card: null };
+    return { intent, say, items, products: withMake, card: null };
   }
 
   // ─── Rendering ────────────────────────────────────────────────────────────
@@ -375,16 +369,16 @@
 
   const AS_MAX = 15;
 
+  // The spoken sentence isn't shown; only when there are no rows or card to
+  // look at does a short line of it appear, so the screen never stays blank.
   function asRenderAnswer(ans) {
     const box = document.getElementById('asAnswer');
-    const sayEl = document.getElementById('asSay');
     const res = document.getElementById('asResults');
     if (!box) return;
     asShowCard(ans ? ans.card : null);
     if (!ans || (!ans.say && !ans.items.length && !ans.products.length)) { box.hidden = true; return; }
+    if (ans.card) { box.hidden = true; return; }
     box.hidden = false;
-    sayEl.textContent = ans.say;
-    const t = T[ans.lang];
 
     let html = '';
     if (ans.items.length) {
@@ -398,23 +392,26 @@
     if (ans.products.length) {
       html += `<div class="as-section">Products <span>${ans.products.length}</span></div>`;
       html += ans.products.slice(0, AS_MAX).map(({ product: p, uses, make }) => {
-        const usesLine = uses.length ? `<span class="as-sub">Uses ${uses.map(u => asEsc(u.name)).join(', ')}</span>` : '';
-        const makeTag = make ? `<span class="as-make${make.count === 0 ? ' as-make-zero' : ''}">${asEsc(t.makes(make.count))}</span>` : '';
+        const sub = ans.showLimit && make
+          ? `<span class="as-sub">${asEsc(T.limit(make))}</span>`
+          : uses.length ? `<span class="as-sub">Uses ${uses.map(u => asEsc(u.name)).join(', ')}</span>` : '';
+        const makeTag = make ? `<span class="as-make${make.count === 0 ? ' as-make-zero' : ''}">${asEsc(T.canMake(make.count))}</span>` : '';
         return `<a class="as-row" href="/recipe-detail?id=${encodeURIComponent(p.id)}">
-          <span class="as-main"><span class="as-name">${asEsc(p.name)}</span>${asChips(p.attributes)}${usesLine}</span>
+          <span class="as-main"><span class="as-name">${asEsc(p.name)}</span>${asChips(p.attributes)}${sub}</span>
           ${makeTag}
         </a>`;
       }).join('');
     }
+    if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
     res.innerHTML = html;
   }
 
   function asHint(msg) {
     const box = document.getElementById('asAnswer');
     if (!box) return;
+    asShowCard(null);
     box.hidden = false;
-    document.getElementById('asSay').textContent = msg;
-    document.getElementById('asResults').innerHTML = '';
+    document.getElementById('asResults').innerHTML = `<div class="as-empty">${asEsc(msg)}</div>`;
   }
 
   function asShowCard(which) {
@@ -427,12 +424,12 @@
   // ─── Asking ───────────────────────────────────────────────────────────────
 
   let asSeq = 0;
-  let asLastAnswer = null;   // tap the bubble to hear it (again)
 
   async function asAsk(speak) {
     const input = document.getElementById('asInput');
     const query = input.value;
     document.getElementById('asClear').hidden = !query;
+    asTyperSync();
     const seq = ++asSeq;
     if (!query.trim()) { asRenderAnswer(null); return; }
 
@@ -450,14 +447,12 @@
       }
     }
     const ans = asAnswer(query);
-    asLastAnswer = ans;
     asRenderAnswer(ans);
-    if (speak) asSpeak(ans.say, ans.lang);
+    if (speak) asSpeak(ans.say);
   }
 
-  // ─── Voice in / out ───────────────────────────────────────────────────────
+  // ─── Voice out ────────────────────────────────────────────────────────────
 
-  let asRec = null;
   // Set when the user chose to speak but the browser has no in-app speech
   // recognition (iOS home-screen app) -> keyboard dictation fills the field,
   // and that answer should still be read aloud.
@@ -485,46 +480,42 @@
     } catch (_) {}
   }
 
-  function asPickVoice(lang) {
+  function asPickVoice() {
     try {
       const voices = speechSynthesis.getVoices() || [];
-      const pre = lang === 'de' ? 'de' : 'en';
-      return voices.find(v => v.lang && v.lang.toLowerCase().startsWith(pre) && v.localService)
-          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith(pre)) || null;
+      return voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en') && v.localService)
+          || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || null;
     } catch (_) { return null; }
   }
 
   let asUtterance = null;   // kept referenced: Chrome drops events of GC'd utterances
 
   function asVoiceNote(msg) {
-    const say = document.getElementById('asSay');
-    if (!say || !say.textContent) return;
-    const note = document.createElement('span');
+    const res = document.getElementById('asResults');
+    if (!res) return;
+    const note = document.createElement('div');
     note.className = 'as-voice-err';
     note.textContent = `Couldn’t play the answer aloud (${msg}).`;
-    say.appendChild(note);
+    res.appendChild(note);
   }
 
   // attempt 0: preferred voice, after a pause so a just-ended speech
   // recognition session (Android) has released the audio channel.
   // attempt 1: plain utterance with just a lang, as a fallback.
-  function asSpeak(text, lang, attempt = 0, manual = false) {
-    if (!text || (asMuted() && !manual) || !('speechSynthesis' in window)) {
-      if (manual && !('speechSynthesis' in window)) asVoiceNote('this browser can’t speak');
-      return;
-    }
+  function asSpeak(text, attempt = 0, manual = false) {
+    if (!text || (asMuted() && !manual) || !('speechSynthesis' in window)) return;
     const synth = window.speechSynthesis;
     try {
       if (synth.speaking || synth.pending) synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang === 'de' ? 'de-DE' : 'en-US';
-      if (attempt === 0) { const v = asPickVoice(lang); if (v) u.voice = v; }
+      u.lang = 'en-US';
+      if (attempt === 0) { const v = asPickVoice(); if (v) u.voice = v; }
       asUtterance = u;
       let settled = false;
       const retryOrReport = reason => {
         if (settled) return;
         settled = true;
-        if (attempt === 0) asSpeak(text, lang, 1, manual);
+        if (attempt === 0) asSpeak(text, 1, manual);
         else asVoiceNote(reason);
       };
       u.onstart = () => { settled = true; };
@@ -550,56 +541,195 @@
     btn.title = muted ? 'Spoken answers off' : 'Spoken answers on';
   }
 
+  // ─── Voice in: full-screen listening overlay ──────────────────────────────
+
+  let asRec = null;
+  let asRecAborted = false;
+
+  function asVoiceOverlay() {
+    let el = document.getElementById('asVoice');
+    if (el) return el;
+    const face = document.querySelector('#asAvatar svg');
+    el = document.createElement('div');
+    el.id = 'asVoice';
+    el.className = 'as-voice';
+    el.hidden = true;
+    el.innerHTML = `
+      <button type="button" class="as-voice-close" aria-label="Cancel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="as-voice-body">
+        <div class="as-avatar as-voice-face" data-mood="happy">${face ? face.outerHTML : ''}</div>
+        <p class="as-voice-status" id="asVoiceStatus"></p>
+        <p class="as-voice-text" id="asVoiceText"></p>
+      </div>
+      <button type="button" class="as-voice-done" id="asVoiceDone">Done</button>`;
+    document.body.appendChild(el);
+    el.querySelector('.as-voice-close').addEventListener('click', e => { e.stopPropagation(); asVoiceCancel(); });
+    el.querySelector('#asVoiceDone').addEventListener('click', e => { e.stopPropagation(); asVoiceFinish(); });
+    // Tapping anywhere else also means "I'm done talking".
+    el.addEventListener('click', () => asVoiceFinish());
+    return el;
+  }
+
+  function asVoiceState(state, status, text) {
+    const el = asVoiceOverlay();
+    el.dataset.state = state;
+    const face = el.querySelector('.as-voice-face');
+    face.classList.toggle('as-listening', state === 'listening');
+    face.classList.toggle('as-thinking', state === 'thinking');
+    document.getElementById('asVoiceStatus').textContent = status;
+    if (text != null) document.getElementById('asVoiceText').textContent = text;
+    document.getElementById('asVoiceDone').hidden = state !== 'listening' && state !== 'starting';
+  }
+
+  function asVoiceShow() {
+    const el = asVoiceOverlay();
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add('as-voice-in'));
+    document.body.classList.add('as-voice-open');
+  }
+
+  function asVoiceHide() {
+    const el = document.getElementById('asVoice');
+    if (!el) return;
+    el.classList.remove('as-voice-in');
+    document.body.classList.remove('as-voice-open');
+    setTimeout(() => { if (!el.classList.contains('as-voice-in')) el.hidden = true; }, 220);
+  }
+
+  function asVoiceFinish() { if (asRec) { try { asRec.stop(); } catch (_) {} } else asVoiceHide(); }
+  function asVoiceCancel() {
+    asRecAborted = true;
+    if (asRec) { try { asRec.abort(); } catch (_) {} }
+    asVoiceHide();
+  }
+
+  function asKeyboardFallback(msg) {
+    const input = document.getElementById('asInput');
+    asDictation = true;
+    asVoiceHide();
+    input.focus();
+    asHint(msg);
+  }
+
   function asMic() {
     const input = document.getElementById('asInput');
     const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (asRec) { try { asRec.stop(); } catch (_) {} return; }
-    if (!Rec) {
-      asDictation = true;
-      input.focus();
-      asHint('Tap the mic on your keyboard to speak.');
-      return;
-    }
+    if (asRec) { asVoiceFinish(); return; }
+    if (!Rec) { asKeyboardFallback('Tap the mic on your keyboard to speak.'); return; }
     asLoad();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     const rec = new Rec();
-    rec.lang = navigator.language || 'de-DE';
+    rec.lang = navigator.language || 'en-US';
     rec.interimResults = true;
     rec.maxAlternatives = 1;
-    let gotResult = false;
+    let transcript = '';
+    asRecAborted = false;
+    rec.onstart = () => asVoiceState('listening', 'I’m listening – go ahead', 'e.g. “' + asSuggestions()[0] + '”');
     rec.onresult = e => {
-      gotResult = true;
-      input.value = Array.from(e.results).map(r => r[0].transcript).join(' ');
-      document.getElementById('asClear').hidden = !input.value;
+      transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
+      if (transcript) asVoiceState('listening', 'I’m listening – tap Done when finished', transcript);
     };
+    rec.onspeechend = () => { if (transcript) asVoiceState('thinking', 'Let me check…'); };
     rec.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        asDictation = true;
-        input.focus();
-        asHint('Microphone blocked – tap the mic on your keyboard instead.');
+        asRecAborted = true;
+        asKeyboardFallback('Microphone blocked – tap the mic on your keyboard instead.');
       } else if (e.error === 'no-speech') {
-        asHint('Didn’t catch that – try again.');
+        asRecAborted = true;
+        asVoiceState('idle', 'I didn’t hear anything', 'Tap the mic and try again.');
+        setTimeout(asVoiceHide, 1600);
       }
     };
     rec.onend = () => {
       asRec = null;
-      document.getElementById('asMic')?.classList.remove('as-listening');
       asAvatarState('listening', false);
-      if (gotResult) asAsk(true);
+      if (asRecAborted || !transcript) { if (!asRecAborted) asVoiceHide(); return; }
+      asVoiceState('thinking', 'Let me check…', transcript);
+      input.value = transcript;
+      asAsk(true).finally(() => setTimeout(asVoiceHide, 350));
     };
     try {
       rec.start();
       asRec = rec;
-      document.getElementById('asMic').classList.add('as-listening');
       asAvatarState('listening', true);
-      input.value = '';
-      asHint('Listening…');
+      asVoiceState('starting', 'One moment…', '');
+      asVoiceShow();
     } catch (_) {
       asRec = null;
-      asDictation = true;
-      input.focus();
-      asHint('Tap the mic on your keyboard to speak.');
+      asKeyboardFallback('Tap the mic on your keyboard to speak.');
     }
+  }
+
+  // ─── Typing suggestions in the empty ask bar ──────────────────────────────
+
+  const AS_FALLBACK_SUGGESTIONS = [
+    'Do I still have blue marbles?',
+    'When does my delivery arrive?',
+    'How many shirts in black M do I have left?',
+    'What do I need to reorder?',
+  ];
+
+  // Base name without the " · Black · M" variant suffix.
+  function asBaseName(name) {
+    return String(name || '').split(/\s[·•|]\s|\s-\s/)[0].trim();
+  }
+
+  function asPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function asSuggestions() {
+    const out = [];
+    const items = (asItems || []).filter(i => i.name && asBaseName(i.name).length <= 24);
+    const withAttrs = items.filter(i => asAttrValues(i.custom_attributes).length);
+    if (withAttrs.length) {
+      const i = asPick(withAttrs);
+      out.push(`How many ${asBaseName(i.name)} in ${asAttrValues(i.custom_attributes).join(' ')} do I have left?`);
+    }
+    if (items.length) out.push(`Do I still have ${asBaseName(asPick(items).name)}?`);
+    const prods = (asProducts || []).filter(p => !p.parent_id && p.name && p.name.length <= 24);
+    if (prods.length) out.push(`How many ${asPick(prods).name} can I make?`);
+    if (asInbound.length) out.push('When does my delivery arrive?');
+    if (asStock.out.length || asStock.low.length) out.push('What do I need to reorder?');
+    return out.length >= 2 ? out : AS_FALLBACK_SUGGESTIONS;
+  }
+
+  let asTyperTimer = null;
+  let asTyperList = [];
+  let asTyperIdx = 0;
+
+  function asTyperSync() {
+    const input = document.getElementById('asInput');
+    const typer = document.getElementById('asTyper');
+    if (!input || !typer) return;
+    const active = !input.value && document.activeElement !== input && !document.hidden;
+    typer.hidden = !active;
+    if (active && !asTyperTimer) asTyperRun();
+    if (!active && asTyperTimer) { clearTimeout(asTyperTimer); asTyperTimer = null; }
+  }
+
+  function asTyperRun() {
+    const textEl = document.getElementById('asTyperText');
+    if (!textEl) return;
+    if (asTyperIdx >= asTyperList.length) { asTyperList = asSuggestions(); asTyperIdx = 0; }
+    const typer = document.getElementById('asTyper');
+    const full = asTyperList[asTyperIdx++];
+    let n = 0;
+    const show = str => {
+      textEl.textContent = str;
+      typer.classList.toggle('as-overflow', textEl.scrollWidth > typer.clientWidth - 4);
+    };
+    const type = () => {
+      show(full.slice(0, ++n));
+      if (n < full.length) asTyperTimer = setTimeout(type, 45 + Math.random() * 55);
+      else asTyperTimer = setTimeout(erase, 1800);
+    };
+    const erase = () => {
+      show(full.slice(0, --n));
+      if (n > 0) asTyperTimer = setTimeout(erase, 18);
+      else asTyperTimer = setTimeout(asTyperRun, 350);
+    };
+    type();
   }
 
   // ─── Avatar: mood, nudge, radial menu ─────────────────────────────────────
@@ -628,7 +758,7 @@
     const el = document.getElementById('asGreet');
     if (!el) return;
     const h = new Date().getHours();
-    const hi = h < 11 ? 'Morning!' : h < 18 ? 'Hi!' : 'Evening!';
+    const hi = h < 5 ? 'Up late?' : h < 12 ? 'Good morning!' : h < 18 ? 'Good afternoon!' : 'Good evening!';
     el.textContent = `${hi} What do you need to know?`;
   }
 
@@ -659,13 +789,18 @@
     asGreeting();
     asRenderMood();
     asRenderMute();
+    asTyperSync();
+    // Load now so suggestions can use the user's own items.
+    setTimeout(() => { asLoad().then(() => { asTyperList = []; }); }, 600);
 
-    input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); });
-    input.addEventListener('blur', () => { asDictation = false; });
+    input.addEventListener('focus', () => { asLoad(); asToggleRadial(false); asTyperSync(); });
+    input.addEventListener('blur', () => { asDictation = false; setTimeout(asTyperSync, 0); });
+    document.addEventListener('visibilitychange', asTyperSync);
     ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, asUnlockSpeech, { once: true, capture: true }));
     if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); } catch (_) {} }
     input.addEventListener('input', () => {
       clearTimeout(asTypeTimer);
+      asTyperSync();
       // Dictated text arrives in bursts; wait for it to settle, then answer aloud.
       asTypeTimer = asDictation ? setTimeout(() => asAsk(true), 1100)
                                 : setTimeout(() => asAsk(false), 220);
@@ -682,8 +817,7 @@
       try { localStorage.setItem('shelfy_assistant_muted', asMuted() ? '0' : '1'); } catch (_) {}
       if (asMuted() && 'speechSynthesis' in window) speechSynthesis.cancel();
       asRenderMute();
-      if (!asMuted()) asSpeak((navigator.language || '').toLowerCase().startsWith('de') ? 'Ton an.' : 'Sound on.',
-                              (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en');
+      if (!asMuted()) asSpeak('Sound on.', 0, true);
     });
 
     document.getElementById('asAvatar').addEventListener('click', e => { e.stopPropagation(); asToggleRadial(); });
@@ -697,22 +831,16 @@
     document.addEventListener('click', e => {
       if (!e.target.closest('#asAvatarWrap')) asToggleRadial(false);
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') asToggleRadial(false); });
-
-    const sayEl = document.getElementById('asSay');
-    sayEl.setAttribute('role', 'button');
-    sayEl.title = 'Tap to hear the answer';
-    sayEl.addEventListener('click', () => {
-      if (asLastAnswer && asLastAnswer.say) asSpeak(asLastAnswer.say, asLastAnswer.lang, 0, true);
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      asToggleRadial(false);
+      if (asRec) asVoiceCancel();
     });
 
     document.getElementById('asNudge').addEventListener('click', e => {
       const btn = e.target.closest('[data-card]');
       if (!btn) return;
-      const lang = (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
-      const q = btn.dataset.card === 'restock' ? (lang === 'de' ? 'Was muss ich nachbestellen?' : 'What do I need to reorder?')
-                                               : (lang === 'de' ? 'Welche Lieferungen sind unterwegs?' : 'Which deliveries are on the way?');
-      input.value = q;
+      input.value = btn.dataset.card === 'restock' ? 'What do I need to reorder?' : 'When does my delivery arrive?';
       asAsk(false);
     });
     document.querySelectorAll('.as-card-close').forEach(b => b.addEventListener('click', () => {

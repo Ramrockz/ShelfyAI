@@ -94,8 +94,9 @@ body.as-radial-open .as-greet, body.as-radial-open .as-nudge { visibility: hidde
 }
 .as-ask:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .as-ask > .as-icon { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+.as-field { position: relative; flex: 1; min-width: 0; height: 100%; }
 #asInput {
-  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
+  width: 100%; height: 100%; border: 0; outline: 0; background: transparent;
   font: inherit; font-size: 16px; /* 16px stops iOS zooming on focus */
   color: var(--text-main);
 }
@@ -120,18 +121,24 @@ body.as-radial-open .as-greet, body.as-radial-open .as-nudge { visibility: hidde
   50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
 
+/* typing suggestions shown in the empty field; the tail stays visible
+   like a real input scrolling to its caret */
+.as-typer {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-start;
+  overflow: hidden; white-space: nowrap; pointer-events: none;
+  color: var(--text-muted); font-size: 16px;
+}
+.as-typer[hidden] { display: none; }
+.as-typer > span { flex-shrink: 0; }
+/* set by JS once the text overflows: keep the newest letters in view */
+.as-typer.as-overflow { justify-content: flex-end; }
+.as-caret { flex-shrink: 0; width: 2px; height: 18px; margin-left: 1px; background: var(--accent);
+            animation: asCaret 1s steps(1) infinite; }
+@keyframes asCaret { 50% { opacity: 0; } }
+
 /* ---------- Answer ---------- */
 .as-answer { margin-top: 16px; }
 .as-answer[hidden] { display: none; }
-.as-say {
-  position: relative; margin: 0 0 12px; padding: 13px 16px; border-radius: 16px 16px 16px 4px;
-  background: rgba(6, 182, 212, 0.1); color: var(--text-main);
-  font-size: 15.5px; font-weight: 600; line-height: 1.45;
-}
-.as-say:empty { display: none; }
-.as-say { cursor: pointer; }
-.as-say:active { background: rgba(6, 182, 212, 0.18); }
-.as-voice-err { display: block; margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
 #asResults:empty { display: none; }
 #asResults { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 6px 0; }
 .as-section {
@@ -175,3 +182,39 @@ body.as-radial-open .as-greet, body.as-radial-open .as-nudge { visibility: hidde
 @media (max-width: 768px) {
   .as-stage { padding-top: 4px; }
 }
+
+/* ---------- Listening overlay (mic) ---------- */
+.as-voice {
+  position: fixed; inset: 0; z-index: 10050;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom));
+  background: rgba(248, 250, 252, 0.72);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2);
+  opacity: 0; transition: opacity 0.2s ease;
+}
+[data-theme="dark"] .as-voice { background: rgba(2, 6, 23, 0.72); }
+.as-voice[hidden] { display: none; }
+.as-voice.as-voice-in { opacity: 1; }
+body.as-voice-open { overflow: hidden; }
+.as-voice-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                 text-align: center; max-width: 520px; }
+.as-voice-face { width: 180px; height: 180px; padding: 22px 28px; pointer-events: none; }
+.as-voice-face.as-listening::after { border-width: 4px; }
+.as-voice-face.as-thinking svg { animation: asThink 0.9s ease-in-out infinite; }
+@keyframes asThink { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.as-voice-status { margin: 22px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-main); }
+.as-voice-text { margin: 12px 0 0; min-height: 3em; font-size: 17px; line-height: 1.45; color: var(--text-muted); }
+.as-voice[data-state="listening"] .as-voice-text { color: var(--text-main); font-weight: 600; }
+.as-voice-done {
+  width: min(320px, 100%); height: 56px; border: 0; border-radius: 16px; cursor: pointer;
+  background: var(--accent); color: #fff; font: inherit; font-size: 17px; font-weight: 800;
+  box-shadow: 0 10px 28px rgba(6, 182, 212, 0.35);
+}
+.as-voice-done[hidden] { visibility: hidden; display: block; }
+.as-voice-close {
+  position: absolute; top: max(16px, env(safe-area-inset-top)); right: 16px;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--bg-panel); color: var(--text-main); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  display: flex; align-items: center; justify-content: center;
+}
+.as-voice-close svg { width: 20px; height: 20px; }
