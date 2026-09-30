@@ -1720,8 +1720,7 @@ function rdmRenderCostSankey() {
     value: parseFloat(c.cost) || 0,
     detail: [c.quantity, c.unit].filter(v => v != null && v !== '').join(' '),
   }));
-  const price = parseFloat(recipe.retail_price) || 0;
-  ['costSankeyDesktop', 'costSankeyMobile'].forEach(id => renderCostSankey(document.getElementById(id), { items, price }));
+  ['costSankeyDesktop', 'costSankeyMobile'].forEach(id => renderCostSankey(document.getElementById(id), { items }));
 }
 // The product can finish loading before the mobile markup further down the
 // page is parsed -- draw again once it exists.
