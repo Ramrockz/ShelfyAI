@@ -795,10 +795,39 @@
   let asRec = null;
   let asRecAborted = false;
 
+  // Same cat as #asAvatar, but with the ears drawn as their own shapes so
+  // they can twitch while listening and perk up when speech comes in (same
+  // ear motion as the scan screens' cat, scan-screen.js). The dashboard
+  // avatar keeps its single-outline drawing.
+  const AS_VOICE_FACE = `
+    <svg viewBox="14 10 72 83" aria-hidden="true">
+      <path class="as-body as-ear as-ear-l" d="M17 38 V13 L37 36 Z" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+      <path class="as-body as-ear as-ear-r" d="M83 38 V13 L63 36 Z" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+      <path class="as-body" d="M17 34 H83 V78 Q83 90 71 90 H29 Q17 90 17 78 Z" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+      <path class="as-brow" d="M29 43 L43 39"/>
+      <path class="as-brow" d="M57 39 L71 43"/>
+      <g class="as-eyes">
+        <ellipse class="as-eye" cx="37" cy="53" rx="8" ry="8"/>
+        <ellipse class="as-eye" cx="63" cy="53" rx="8" ry="8"/>
+      </g>
+      <path class="as-nose" d="M44.6 64.5 h10.8 a1.6 1.6 0 0 1 1.28 2.56 l-4.6 6.13 a2.6 2.6 0 0 1 -4.16 0 l-4.6 -6.13 A1.6 1.6 0 0 1 44.6 64.5 Z"/>
+    </svg>`;
+
+  let asLastPerk = 0;
+  // Ears flick up once -- called as speech comes in, at most every 900ms so
+  // a stream of interim results doesn't keep restarting the animation.
+  function asVoicePerk() {
+    const face = document.querySelector('#asVoice .as-voice-face');
+    if (!face || Date.now() - asLastPerk < 900) return;
+    asLastPerk = Date.now();
+    face.classList.remove('as-perk');
+    void face.offsetWidth;
+    face.classList.add('as-perk');
+  }
+
   function asVoiceOverlay() {
     let el = document.getElementById('asVoice');
     if (el) return el;
-    const face = document.querySelector('#asAvatar svg');
     el = document.createElement('div');
     el.id = 'asVoice';
     el.className = 'as-voice';
@@ -808,28 +837,32 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
       <div class="as-voice-body">
-        <div class="as-avatar as-voice-face" data-mood="happy">${face ? face.outerHTML : ''}</div>
+        <div class="as-avatar as-voice-face" data-mood="happy">${AS_VOICE_FACE}</div>
         <p class="as-voice-status" id="asVoiceStatus"></p>
         <p class="as-voice-text" id="asVoiceText"></p>
-      </div>
-      <button type="button" class="as-voice-done" id="asVoiceDone">Done</button>`;
+      </div>`;
     document.body.appendChild(el);
     el.querySelector('.as-voice-close').addEventListener('click', e => { e.stopPropagation(); asVoiceCancel(); });
-    el.querySelector('#asVoiceDone').addEventListener('click', e => { e.stopPropagation(); asVoiceFinish(); });
-    // Tapping anywhere else also means "I'm done talking".
+    // Tapping anywhere (except the X, which cancels) means "I'm done talking"
+    // -- there's no separate Done button.
     el.addEventListener('click', () => asVoiceFinish());
     return el;
   }
 
-  function asVoiceState(state, status, text) {
+  // isExample: `text` is the "e.g. …" prompt, not something the user said --
+  // shown in regular weight instead of the transcript's emphasis.
+  function asVoiceState(state, status, text, isExample) {
     const el = asVoiceOverlay();
     el.dataset.state = state;
     const face = el.querySelector('.as-voice-face');
     face.classList.toggle('as-listening', state === 'listening');
     face.classList.toggle('as-thinking', state === 'thinking');
     document.getElementById('asVoiceStatus').textContent = status;
-    if (text != null) document.getElementById('asVoiceText').textContent = text;
-    document.getElementById('asVoiceDone').hidden = state !== 'listening' && state !== 'starting';
+    if (text != null) {
+      const t = document.getElementById('asVoiceText');
+      t.textContent = text;
+      t.toggleAttribute('data-example', !!isExample);
+    }
   }
 
   function asVoiceShow() {
@@ -875,10 +908,13 @@
     rec.maxAlternatives = 1;
     let transcript = '';
     asRecAborted = false;
-    rec.onstart = () => asVoiceState('listening', 'I’m listening – go ahead', 'e.g. “' + asSuggestions()[0] + '”');
+    rec.onstart = () => asVoiceState('listening', 'I’m listening – go ahead', 'e.g. “' + asSuggestions()[0] + '”', true);
     rec.onresult = e => {
       transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
-      if (transcript) asVoiceState('listening', 'I’m listening – tap Done when finished', transcript);
+      if (transcript) {
+        asVoiceState('listening', 'I’m listening – tap anywhere when finished', transcript);
+        asVoicePerk();
+      }
     };
     rec.onspeechend = () => { if (transcript) asVoiceState('thinking', 'Let me check…'); };
     rec.onerror = e => {
