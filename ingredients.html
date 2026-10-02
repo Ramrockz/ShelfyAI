@@ -103,6 +103,8 @@
      can never get clipped along with it. */
   .ing-row-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   .ing-row-meta-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ing-alert-off { flex-shrink: 0; display: inline-flex; align-items: center; color: var(--text-muted); }
+  .ing-alert-off svg { display: block; }
   .ing-row-qty { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
   .ing-step { width: 38px; height: 38px; border: none; border-radius: 10px; background: var(--bg-inner);
               color: var(--text-main); font-size: 20px; font-weight: 600; cursor: pointer; }
@@ -1679,7 +1681,8 @@ async function loadIngredients() {
       reorder_point: item.reorder_point || 10,
       max_stock: item.max_stock || null,
       source_url: item.source_url || '',
-      reorder_pending: item.reorder_pending || false
+      reorder_pending: item.reorder_pending || false,
+      alert_disabled: !!item.alert_disabled
     }));
     const _freshJSON = JSON.stringify(ingredients);
     if (_freshJSON !== _lsCached) {
@@ -3707,6 +3710,12 @@ function renderRecent(data) {
     const categoryBadge = `<span class="cat-badge" data-category="${escapeHtml(i.category)}" style="cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; color: var(--accent); font-weight: 600;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${escapeHtml(i.category)}</span>`;
     attributesText = attributesText ? categoryBadge + ' &bull; ' + attributesText : categoryBadge;
     const truckHtml = i.reorder_pending ? `<span class="stock-pill delivery" onclick="event.stopPropagation(); window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" title="Delivery pending" style="cursor:pointer;">On the way</span>` : '';
+    // Reorder alert switched off on the item (ingredient-detail "Disable
+    // alert") -- shows why an empty item is missing from the Home page's
+    // "needs to be reordered" list (operations.html skips alert_disabled).
+    const alertOffHtml = i.alert_disabled
+      ? `<span class="ing-alert-off" title="Reorder alert off" aria-label="Reorder alert off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg></span>`
+      : '';
     const expiryState = getExpiryState(i.expiration_date);
     const expiryHtml = expiryState ? `<span class="stock-pill ${expiryState}" title="Expires ${escapeHtml(i.expiration_date)}">${expiryState === 'expired' ? 'Expired' : 'Expiring'}</span>` : '';
     // Desktop keeps the original spacious grid card; the swipeable row
@@ -3717,7 +3726,7 @@ function renderRecent(data) {
       return `<div class="card-small" data-id="${i.id}">
           <h4>
             <span class="name" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView" onmousedown="if(event.button===1){event.preventDefault();window.open('/ingredient-detail?id=${i.id}&from=' + currentView,'_blank')}">${safeName}</span>
-            <span style="display:inline-flex;align-items:center;gap:6px;">${truckHtml}${expiryHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">${alertOffHtml}${truckHtml}${expiryHtml}<span class="star-icon ${starClass}" data-id="${i.id}" style="cursor: pointer;">${starIcon}</span></span>
           </h4>
           ${attributesText ? `<div class="meta" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">${attributesText}</div>` : '<div style="margin-bottom: 12px;"></div>'}
           <div style="display: flex; justify-content: center; margin: 12px 0;">
@@ -3752,7 +3761,7 @@ function renderRecent(data) {
           <span class="ing-row-bar" data-state="${i.qty === 0 ? 'out' : (i.min_stock && i.qty < i.min_stock ? 'low' : 'ok')}"></span>
           <span class="ing-row-main" onclick="window.location.href='/ingredient-detail?id=${i.id}&from=' + currentView">
             <span class="ing-row-name">${safeName}</span>
-            <span class="ing-row-meta"><span class="ing-row-meta-text">${attributesText}</span>${truckHtml}${expiryHtml}</span>
+            <span class="ing-row-meta"><span class="ing-row-meta-text">${attributesText}</span>${alertOffHtml}${truckHtml}${expiryHtml}</span>
           </span>
           <span class="ing-row-qty">
             <button class="ing-step" onclick="event.stopPropagation(); updateQty('${i.id}', -1)">&minus;</button>

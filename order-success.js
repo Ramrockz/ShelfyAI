@@ -88,7 +88,7 @@
         if (c.status === 'low_stock') pill = '<span class="os-pill" data-state="low">Low stock</span>';
         else if (wasLow) pill = '<span class="os-pill" data-state="low" data-fade="1">Low stock</span>';
       } else {
-        pill = c.status === 'out_of_stock' ? '<span class="os-pill" data-state="out">Out of stock</span>'
+        pill = (c.status === 'out_of_stock' || after <= 0) ? '<span class="os-pill" data-state="out">Out of stock</span>'
           : c.status === 'low_stock' ? '<span class="os-pill" data-state="low">Low stock</span>' : '';
       }
       var name = c.id

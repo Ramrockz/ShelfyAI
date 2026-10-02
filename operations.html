@@ -6163,9 +6163,6 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
     onUndo: (inventoryUpdated && changes.length) ? (btn) => undoOrderStock(changes, btn) : null
   });
 
-  // "Needs attention" (low/out-of-stock reorders + unmatched lines) stays
-  // page-side, appended below the inventory section.
-  renderOrderNeedsAttention(body, changes, unmatchedItems || []);
 }
 
 // Reverses exactly the deduction just shown — the change list already has
@@ -6206,57 +6203,6 @@ function renderOrderSoldSection(body, items) {
       <div class="ii-sec-head"><span class="ii-sec-title">Sold</span><span class="ii-sec-note">${items.length} product${items.length === 1 ? '' : 's'}</span></div>
       <div class="ii-list">${rows}</div>
     </div>`);
-}
-
-// Reorder hands off to ingredient-detail.html's own real reorder screen
-// (?openReorder=true, already supported there) rather than building a new
-// one here. "Add item" reuses the existing seed-and-navigate pattern.
-function renderOrderNeedsAttention(body, changes, unmatchedItems) {
-  const flagged = changes.filter(c => c.status === 'out_of_stock' || c.status === 'low_stock');
-  if (!flagged.length && !unmatchedItems.length) return;
-
-  const rows = flagged.map(c => ({
-    name: c.name,
-    state: c.status === 'out_of_stock' ? 'short' : 'low',
-    why: c.status === 'out_of_stock'
-      ? `Out of stock${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`
-      : `${ShelfyInventoryImpact.fmt(c.newQty)}${c.unit ? ' ' + _rcmEsc(c.unit) : ''} left${c.minStock ? ' · alert level ' + ShelfyInventoryImpact.fmt(c.minStock) : ''}`,
-    action: 'Reorder',
-    onAction: () => { window.location.href = '/ingredient-detail?id=' + encodeURIComponent(c.id) + '&openReorder=true'; }
-  })).concat(unmatchedItems.map(u => ({
-    name: u.name,
-    state: 'low',
-    why: u.why || 'No product matched this line',
-    action: 'Add item',
-    onAction: () => {
-      sessionStorage.setItem('shelfy_seed_ingredient', JSON.stringify({ name: u.name, text: `From "${u.name}" on this order — check the details before saving.` }));
-      window.location.href = '/ingredients';
-    }
-  })));
-
-  const invSec = body.querySelector('.os-inv') || body.querySelector('.ii-sec');
-  const rowsHtml = rows.map((r, i) => `<div class="ii-un">
-      <span class="ii-un-main">
-        <span class="ii-un-name">${_rcmEsc(r.name)}</span>
-        <span class="ii-un-why" data-state="${r.state}">${_rcmEsc(r.why)}</span>
-      </span>
-      <button type="button" class="ii-un-btn" data-need-idx="${i}">${_rcmEsc(r.action)}</button>
-    </div>`).join('');
-  const html = `<div class="ii-sec">
-      <div class="ii-sec-head"><span class="ii-sec-title">Needs attention</span><span class="ii-sec-note">${rows.length} to sort out</span></div>
-      <div class="ii-list">${rowsHtml}</div>
-    </div>`;
-  if (invSec) invSec.insertAdjacentHTML('afterend', html);
-  else body.insertAdjacentHTML('beforeend', html);
-
-  body.querySelectorAll('.ii-un-btn[data-need-idx]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const r = rows[parseInt(btn.dataset.needIdx, 10)];
-      if (!r) return;
-      btn.disabled = true;
-      r.onAction();
-    });
-  });
 }
 
 function startAnotherOrder() {
@@ -6503,9 +6449,11 @@ async function updateInventoryForOrder(orderRecipes, userId, saleId = null, orde
       // min_stock, falling back to the old percentage heuristic for items
       // with no min_stock set.
       let status = 'ok';
-      if (newQuantity === 0 && oldQuantity > 0) {
+      // <= 0, not === 0: an order can take an item below zero, and that was
+      // being reported as "Low stock" instead of out.
+      if (newQuantity <= 0) {
         status = 'out_of_stock';
-        await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
+        if (oldQuantity > 0) await checkIngredientStock(ingredient.id, newQuantity, ingredient.name, userId);
       } else if (minStock > 0 && newQuantity <= minStock) {
         status = 'low_stock';
       } else if (newQuantity > 0 && oldQuantity > 0 && newQuantity <= oldQuantity * 0.25 && oldQuantity >= 4) {
