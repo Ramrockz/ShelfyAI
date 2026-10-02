@@ -82,7 +82,6 @@
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>';
   var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-  var ICON_CHECK_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="4 12.6 9.2 17.6 20 6.6"/></svg>';
   var ICON_TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   var ICON_FAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" width="9" height="9"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   var ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>';
@@ -147,13 +146,11 @@
             '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
             '<button type="button" id="uimUrlBtn">Paste</button>' +
           '</div>' +
-          '<div class="uim-field-hint" id="uimFieldHint" style="display:none;"></div>' +
         '</div>' +
         '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
           '<span id="uimErrorText"></span>' +
         '</div>' +
         '<div id="uimWorkWrap"></div>' +
-        '<div class="aim-note" id="uimNote">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
         '<div id="uimOutOfScans" style="display:none;"></div>' +
         '<div class="aim-foot">' +
           '<button type="button" class="aim-cta" id="uimCta">Scan page</button>' +
@@ -231,17 +228,6 @@
     else { btn.className = 'x'; btn.innerHTML = ICON_X; }
     var ok = usable() && phase === 'idle';
     document.getElementById('uimUrlBox').dataset.state = l && l.bad ? 'bad' : (ok ? 'ok' : '');
-    // The field alone doesn't make it obvious the paste registered or what
-    // to do next -- a valid link only otherwise shows up as a subtle border
-    // color change, easy to miss (see user report: "not clear the pasting
-    // worked and how to proceed").
-    var hint = document.getElementById('uimFieldHint');
-    if (ok) {
-      hint.style.display = 'flex';
-      hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Scan page” below to continue</span>';
-    } else {
-      hint.style.display = 'none';
-    }
   }
 
   // ---------- Reading screen ----------
@@ -492,7 +478,6 @@
         ? '<i class="uim-cta-sh"></i><span>' + label + '</span><span class="uim-dots"><i></i><i></i><i></i></span>'
         : esc(label);
     }
-    document.getElementById('uimNote').style.display = phase === 'idle' ? '' : 'none';
     var alt = document.getElementById('uimAlt');
     var altHtml = '';
     if (phase === 'failed' && failCode === 'scan.no_match') {
