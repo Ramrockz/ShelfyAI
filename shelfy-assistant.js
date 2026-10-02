@@ -903,7 +903,11 @@
     asLoad();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     const rec = new Rec();
-    rec.lang = navigator.language || 'en-US';
+    // Always English -- Shelfy's UI and the assistant's question matching are
+    // English-only. navigator.language follows the phone's system language
+    // (e.g. de-DE), which made the recognizer transcribe English questions as
+    // German and garble them.
+    rec.lang = 'en-US';
     rec.interimResults = true;
     rec.maxAlternatives = 1;
     let transcript = '';
