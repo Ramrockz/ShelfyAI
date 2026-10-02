@@ -1049,12 +1049,148 @@ input[type="number"] {
 .uim-field-hint { display: flex; align-items: center; gap: 6px; margin: 8px 2px 0;
                   font-size: 12px; font-weight: 700; color: var(--success); }
 .uim-field-hint svg { flex-shrink: 0; }
+/* Reading screen (url-import-modal.js buildWork()) -- cat, step list,
+   progress bar and item preview. Keyframes are uim-prefixed so they never
+   collide with a host page's own. */
+.uim-cat-wrap { display: flex; justify-content: center; padding-top: 18px; }
+.uim-cat { position: relative; width: 140px; height: 84px; display: flex; justify-content: center; }
+.uim-cat-shadow { position: absolute; bottom: 0; width: 56px; height: 7px; border-radius: 50%;
+                  background: var(--text-main); opacity: .16; }
+.uim-cat-in { position: absolute; bottom: 5px; }
+.uim-cat-body { transform-origin: 50% 100%; }
+.uim-cat-idle { position: relative; animation: uimCatIdle 2.4s ease-in-out infinite; }
+.uim-cat svg { display: block; overflow: visible; }
+.uim-cat .uim-eye { transform-box: fill-box; transform-origin: center; animation: uimBlink 4s infinite 1.2s; }
+.uim-ear-l, .uim-ear-r { transform-box: fill-box; }
+.uim-ear-l { transform-origin: 20% 100%; animation: uimTwitchL 3.6s infinite; }
+.uim-ear-r { transform-origin: 80% 100%; animation: uimTwitchR 3.6s infinite; }
+.uim-cat[data-mode="look"] .uim-cat-in { animation: uimCatIn 320ms cubic-bezier(.2,0,0,1) both; }
+.uim-cat[data-mode="look"] .uim-eyes { animation: uimLook 3.2s cubic-bezier(.3,0,0,1) infinite; }
+.uim-cat[data-mode="read"] .uim-eyes { animation: uimLookDown 1.4s ease-in-out infinite; }
+.uim-cat[data-mode="celebrate"] .uim-cat-body { animation: uimCatJump 1100ms cubic-bezier(.3,0,0,1) 150ms both; }
+.uim-cat[data-mode="celebrate"] .uim-cat-shadow { animation: uimShadow 1100ms cubic-bezier(.3,0,0,1) 150ms both; }
+.uim-cat[data-mode="celebrate"] .uim-ear-l { animation: uimEarL 700ms cubic-bezier(.3,0,0,1) 450ms both; }
+.uim-cat[data-mode="celebrate"] .uim-ear-r { animation: uimEarR 700ms cubic-bezier(.3,0,0,1) 500ms both; }
+.uim-cat[data-mode="sad"] .uim-cat-body { animation: uimCatSink 500ms cubic-bezier(.2,0,0,1) forwards; }
+.uim-cat[data-mode="sad"] .uim-cat-idle { animation: none; }
+.uim-cat[data-mode="sad"] .uim-ear-l { animation: uimDroopL 500ms cubic-bezier(.2,0,0,1) forwards; }
+.uim-cat[data-mode="sad"] .uim-ear-r { animation: uimDroopR 500ms cubic-bezier(.2,0,0,1) forwards; }
+.uim-eyes-happy { opacity: 0; }
+.uim-cat.happy .uim-eyes { opacity: 0; }
+.uim-cat.happy .uim-eyes-happy { opacity: 1; }
+.uim-confetti { position: absolute; left: 50%; top: 30px; margin-left: -3px; opacity: 0;
+                animation: uimBurst 1100ms cubic-bezier(.2,0,0,1) both; }
+.uim-cat-badge { position: absolute; right: -8px; bottom: -4px; width: 24px; height: 24px; border-radius: 50%;
+                 background: #12A36B; border: 3px solid var(--bg-main); box-sizing: border-box;
+                 display: flex; align-items: center; justify-content: center;
+                 animation: uimPop 320ms cubic-bezier(.2,0,0,1) 900ms both; }
+.uim-cat-badge path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: uimDraw 300ms cubic-bezier(.3,0,0,1) 1100ms forwards; }
+
 .uim-work { margin: 14px 20px 0; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
-            border-radius: 14px; padding: 14px; }
-.uim-work-l { font-size: 13.5px; font-weight: 700; }
-.uim-work-s { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-.uim-work-track { height: 4px; border-radius: 99px; background: var(--bg-inner); margin-top: 11px; overflow: hidden; }
-.uim-work-track i { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .25s linear; }
+            border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.uim-hl-in { display: flex; flex-direction: column; gap: 2px; animation: uimFadeUp 400ms cubic-bezier(.2,0,0,1); }
+.uim-hl-t { font-size: 15px; font-weight: 700; color: var(--text-main); }
+.uim-hl-t[data-failed="1"] { color: var(--danger); }
+.uim-hl-s { font-size: 13px; color: var(--text-muted); }
+.uim-bar { position: relative; height: 5px; border-radius: 5px; background: var(--bg-inner); overflow: hidden; }
+.uim-bar > i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 5px; overflow: hidden;
+               background: var(--accent); transition: width 160ms linear, background 320ms; }
+.uim-bar > i[data-failed="1"] { background: var(--danger); }
+.uim-bar > i > b { position: absolute; inset: 0; width: 40%;
+                   background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+                   animation: uimShimmer 1.4s cubic-bezier(.3,0,0,1) infinite; }
+.uim-steps { display: flex; flex-direction: column; gap: 9px; }
+.uim-step { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-faint, var(--text-muted));
+            transition: color 320ms; }
+.uim-step[data-s="done"], .uim-step[data-s="active"] { color: var(--text-main); }
+.uim-step[data-s="active"] { font-weight: 600; }
+.uim-step[data-s="failed"] { color: var(--danger); }
+.uim-step-ic { width: 18px; height: 18px; flex: none; display: flex; align-items: center; justify-content: center; }
+.uim-ic { display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.uim-ic-done { width: 16px; height: 16px; background: var(--accent); animation: uimPop 320ms cubic-bezier(.2,0,0,1); }
+.uim-ic-fail { width: 16px; height: 16px; background: var(--danger); animation: uimPop 320ms cubic-bezier(.2,0,0,1); }
+.uim-ic-spin { width: 13px; height: 13px; box-sizing: border-box; border: 2px solid var(--bg-inner); border-top-color: var(--accent);
+               animation: uimSpin 800ms linear infinite; }
+.uim-ic-todo { width: 6px; height: 6px; background: var(--border); }
+
+.uim-prev { display: flex; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-hair, var(--border)); }
+.uim-prev-img { position: relative; width: 64px; height: 64px; border-radius: 10px; background: var(--bg-inner);
+                overflow: hidden; flex: none; }
+.uim-prev-photo { position: absolute; inset: 0; background: #fff; opacity: 0; display: flex;
+                  align-items: center; justify-content: center; transition: opacity 500ms cubic-bezier(.2,0,0,1); }
+.uim-prev-photo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.uim-prev-ph { color: #94a3b8; display: flex; }
+.uim-prev-ph svg { flex-shrink: 0; }
+.uim-scanline { display: none; position: absolute; left: 0; right: 0; height: 20%;
+                background: linear-gradient(180deg, transparent, rgba(18,169,204,.35), transparent);
+                animation: uimScan 1.3s linear infinite; }
+.uim-prev[data-state="scan"] .uim-scanline { display: block; }
+.uim-prev-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.uim-prev-row { position: relative; min-height: 18px; }
+.uim-prev-row-sm { min-height: 16px; }
+.uim-skel { position: absolute; top: 2px; bottom: 2px; left: 0; right: 20%; border-radius: 4px; background: var(--bg-inner);
+            overflow: hidden; transition: opacity 320ms; }
+.uim-skel-p { right: 55%; }
+.uim-skel > b { position: absolute; inset: 0; width: 40%;
+                background: linear-gradient(90deg, transparent, var(--bg-panel), transparent);
+                animation: uimShimmer 1.6s linear infinite; }
+.uim-skel-p > b { animation-delay: .2s; }
+.uim-prev-t, .uim-prev-p { opacity: 0; transform: translateY(4px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                           transition: opacity 500ms cubic-bezier(.2,0,0,1), transform 500ms cubic-bezier(.2,0,0,1); }
+.uim-prev-t { font-size: 14px; font-weight: 600; color: var(--text-main); }
+.uim-prev-p { font-size: 13px; color: var(--text-muted); transition-delay: 120ms; }
+.uim-prev[data-state="done"] .uim-prev-photo,
+.uim-prev[data-state="done"] .uim-prev-t,
+.uim-prev[data-state="done"] .uim-prev-p { opacity: 1; transform: none; }
+.uim-prev[data-state="done"] .uim-skel { opacity: 0; }
+.uim-prev[data-state="failed"] .uim-skel { opacity: .5; }
+
+/* Scan button while reading / after: shimmer + bouncing dots while busy,
+   dark "Try again" after a failure. */
+#uimCta { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 2px;
+          transition: background 320ms cubic-bezier(.2,0,0,1); }
+#uimCta[data-mode="loading"] { background: #7DD6E8; opacity: 1; cursor: default; }
+#uimCta[data-mode="failed"] { background: var(--text-main); color: var(--bg-main); }
+.uim-cta-sh { position: absolute; inset: 0; width: 35%;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+              animation: uimShimmer 1.8s cubic-bezier(.3,0,0,1) infinite; }
+.uim-dots { display: flex; gap: 3px; margin-left: 4px; padding-top: 6px; }
+.uim-dots i { width: 4px; height: 4px; border-radius: 50%; background: #fff; animation: uimDot 1.1s infinite; }
+.uim-dots i:nth-child(2) { animation-delay: .15s; }
+.uim-dots i:nth-child(3) { animation-delay: .3s; }
+
+@keyframes uimSpin { to { transform: rotate(360deg); } }
+@keyframes uimShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@keyframes uimScan { 0% { top: -20%; } 100% { top: 100%; } }
+@keyframes uimDot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes uimFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes uimPop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes uimCatIn { 0% { transform: translateY(16px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes uimCatIdle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes uimCatJump { 0% { transform: translateY(0) scale(1,1); } 14% { transform: translateY(0) scale(1.12,.86); }
+  38% { transform: translateY(-30px) scale(.94,1.08) rotate(-4deg); } 52% { transform: translateY(-34px) scale(1,1) rotate(4deg); }
+  70% { transform: translateY(0) scale(1.1,.9); } 82% { transform: translateY(-5px) scale(.98,1.02); } 100% { transform: translateY(0) scale(1,1); } }
+@keyframes uimCatSink { to { transform: translateY(5px) scale(1.03,.95); } }
+@keyframes uimLook { 0%, 12% { transform: translateX(0); } 22%, 42% { transform: translateX(-12px); } 55%, 78% { transform: translateX(12px); } 90%, 100% { transform: translateX(0); } }
+@keyframes uimLookDown { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes uimTwitchL { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-12deg); } 94% { transform: rotate(4deg); } }
+@keyframes uimTwitchR { 0%, 70%, 82%, 100% { transform: rotate(0); } 74% { transform: rotate(12deg); } 78% { transform: rotate(-4deg); } }
+@keyframes uimEarL { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 50% { transform: rotate(6deg); } 75% { transform: rotate(-8deg); } }
+@keyframes uimEarR { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(14deg); } 50% { transform: rotate(-6deg); } 75% { transform: rotate(8deg); } }
+@keyframes uimDroopL { to { transform: rotate(-30deg); } }
+@keyframes uimDroopR { to { transform: rotate(30deg); } }
+@keyframes uimBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes uimBurst { 0% { transform: translate(0,0) rotate(0) scale(.4); opacity: 0; } 12% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(1); opacity: 0; } }
+@keyframes uimShadow { 0%, 100% { transform: scaleX(1); opacity: .18; } 14% { transform: scaleX(1.15); opacity: .22; }
+  45% { transform: scaleX(.6); opacity: .08; } 70% { transform: scaleX(1.1); opacity: .22; } }
+@keyframes uimDraw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .uim-cat *, .uim-cat, .uim-bar b, .uim-skel b, .uim-cta-sh, .uim-dots i, .uim-scanline { animation: none !important; }
+  .uim-confetti { display: none; }
+  .uim-cat-badge path { stroke-dashoffset: 0; }
+}
 
 /* ── Confirm-order (recipe mapping) — #recipeMappingModal, orders.html/
    operations.html. Fixed head + scrollable middle + fixed footer inside the

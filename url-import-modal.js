@@ -4,7 +4,7 @@
 // import-modal.js's onImported(data, receiptUrl), minus the receipt URL
 // since there's no file here). The page turns that draft into a prefilled
 // New Item form itself — this component only owns the URL field, the
-// scan-cost quote, and the actual /api/extract-url call.
+// scan-cost quote, the reading screen, and the actual /api/extract-url call.
 //
 // Deliberately does NOT try to tell the user in advance whether a given
 // host will fetch cleanly (Amazon blocks it, some pages need a login,
@@ -15,12 +15,23 @@
   var sheetEl = null, contentEl = null;
   var currentOpts = null;
   var raw = '';
-  var running = false;
   var usage = null;
-  var errorMsg = null;
-  var errorCode = null; // one of ERR_CARDS's keys, or null for the old inline banner (429 etc.)
-  var fakePct = 0, fakeTimer = null;
+  var errorMsg = null;   // inline banner text (429 limit etc.), idle phase only
   var scanPackPrice = null;
+  // 'idle' (URL field) | 'loading' | 'done' (draft ready, waiting for
+  // "Review draft item") | 'failed' (read failed, see failCode)
+  var phase = 'idle';
+  var failCode = null, failMsg = null, failStage = 0;
+  var draft = null;
+  // Reading-screen timeline. The real read is one request with no progress
+  // of its own, so the four steps advance on a timer and hold on the last
+  // one until the response arrives; an early response fast-forwards the
+  // remaining steps instead of jumping straight to "done".
+  var t0 = 0, tickTimer = null, resultAt = null, resultStage = 0, curStage = 0;
+  var happyTimers = [];
+  // Bumped by every close()/new read so a response arriving after the
+  // sheet was closed (or a newer read started) is recognized as stale.
+  var runId = 0;
   // Whether the most recent scan's result hasn't been saved or discarded
   // yet — mirrors import-modal.js's lastScanEntity, but this module only
   // ever handles ingredients, so a boolean is enough. Same reasoning:
@@ -71,28 +82,31 @@
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>';
   var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-  // Error-card icons (34b reference set)
-  var ICON_TRIANGLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><path d="M12 3.4L1.6 20.6h20.8z"/><line x1="12" y1="10" x2="12" y2="15.2"/><line x1="12" y1="17.7" x2="12" y2="17.8"/></svg>';
-  var ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="12" cy="12" r="9.2"/><polyline points="12 7 12 12 15.6 14"/></svg>';
-  var ICON_SEARCH_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="30" height="30"><circle cx="10.5" cy="10.5" r="6.6"/><line x1="15.4" y1="15.4" x2="21" y2="21"/><line x1="8" y1="10.5" x2="13" y2="10.5"/></svg>';
   var ICON_CHECK_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="4 12.6 9.2 17.6 20 6.6"/></svg>';
+  var ICON_TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var ICON_FAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" width="9" height="9"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>';
+
+  var STAGES = [
+    { label: 'Opening the page', title: 'Opening the page…', ms: 1800 },
+    { label: 'Reading the page', title: 'Reading the page…', sub: 'One scan, charged only if the page arrives.', ms: 2200 },
+    { label: 'Finding the item', title: 'Finding the item…', sub: 'Looking for title, price and photo.', ms: 2400 },
+    { label: 'Drafting your item', title: 'Drafting your item…', sub: 'Almost there.' }
+  ];
+  var FF_MS = 280; // per remaining step once the response is in
 
   // Real, distinguishable scan-step failures (api/extract-url.js's `code`) --
-  // everything else (429 limit reached, a thrown Error with no code) keeps
-  // using the small inline .aim-error banner below instead of this takeover.
-  var ERR_CARDS = {
-    'scan.timeout': { tone: 'warn', icon: ICON_CLOCK, headline: 'The read took too long' },
-    'scan.malformed': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'The scan failed',
-      message: 'It came back broken. We’ve logged it.' },
-    'scan.no_match': { tone: 'warn', icon: ICON_SEARCH_X, headline: 'No product on that page',
-      message: 'No title or price found. Check the link points at one product.' },
-    // 'unknown' is the server's own outer-catch code -- genuinely unsure
-    // whether the charge happened. 'client' covers everything that never
-    // reached that server code at all (not logged in, a 413, a raw network
-    // failure) -- those are all definitely pre-charge, same shape/headline,
-    // different confidence in the "keep" line (see renderErrCard()).
-    'unknown': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' },
-    'client': { tone: 'bad', icon: ICON_TRIANGLE, headline: 'Something went wrong' }
+  // the 429 limit keeps using the small inline .aim-error banner instead.
+  // `stage` is the step shown as failed; null = whichever step was running.
+  // timeout/malformed/no_match all return before extract-url.js increments
+  // usage, so those are definitely not charged; 'unknown' is the server's
+  // own outer catch (genuinely unsure), 'client' never reached the server.
+  var FAILS = {
+    'scan.timeout':   { stage: 1, title: 'The page took too long', sub: function (host) { return host + ' stopped answering. No scan was charged.'; } },
+    'scan.malformed': { stage: 1, title: 'The scan failed', sub: function () { return 'It came back broken. We’ve logged it. No scan was charged.'; } },
+    'scan.no_match':  { stage: 2, title: 'No product on that page', sub: function () { return 'No title or price found. Check the link points at one product. No scan was charged.'; } },
+    'unknown':        { stage: null, title: 'Something went wrong', sub: null },
+    'client':         { stage: null, title: 'Something went wrong', sub: null }
   };
 
   function monthlyLeft() { return usage ? Math.max(0, (usage.planLimit || 0) - (usage.used || 0)) : 0; }
@@ -112,6 +126,7 @@
   function usable()     { var l = link(); return !!l && !l.bad; }
   function cost()       { return usable() ? 1 : 0; }
   function affordable() { return scansLeft() === null || cost() <= scansLeft(); }
+  function host()       { var l = link(); return (l && l.host) || 'the site'; }
 
   function ensureSheet() {
     if (sheetEl) return sheetEl;
@@ -127,26 +142,24 @@
             '<span class="aim-sub" id="uimSub"></span>' +
           '</span>' +
         '</div>' +
-        '<div id="uimNormalBody">' +
-          '<div class="uim-field-wrap">' +
-            '<div class="uim-url" id="uimUrlBox">' +
-              '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
-              '<button type="button" id="uimUrlBtn">Paste</button>' +
-            '</div>' +
-            '<div class="uim-field-hint" id="uimFieldHint" style="display:none;"></div>' +
+        '<div class="uim-field-wrap">' +
+          '<div class="uim-url" id="uimUrlBox">' +
+            '<input id="uimUrlInput" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://supplier.com/product">' +
+            '<button type="button" id="uimUrlBtn">Paste</button>' +
           '</div>' +
-          '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
-            '<span id="uimErrorText"></span>' +
-          '</div>' +
-          '<div id="uimWorkWrap"></div>' +
-          '<div class="aim-note">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
-          '<div id="uimOutOfScans" style="display:none;"></div>' +
-          '<div class="aim-foot">' +
-            '<button type="button" class="aim-cta" id="uimCta">Scan page</button>' +
-            '<button type="button" class="aim-ghost" id="uimManual">Enter this item by hand instead</button>' +
-          '</div>' +
+          '<div class="uim-field-hint" id="uimFieldHint" style="display:none;"></div>' +
         '</div>' +
-        '<div id="uimErrCard" style="display:none;"></div>' +
+        '<div class="aim-error" id="uimError" style="display:none;">' + ICON_WARN +
+          '<span id="uimErrorText"></span>' +
+        '</div>' +
+        '<div id="uimWorkWrap"></div>' +
+        '<div class="aim-note" id="uimNote">A read costs one scan and returns a draft item — nothing is saved until you confirm it. A page we can’t reach isn’t charged.</div>' +
+        '<div id="uimOutOfScans" style="display:none;"></div>' +
+        '<div class="aim-foot">' +
+          '<button type="button" class="aim-cta" id="uimCta">Scan page</button>' +
+          '<div id="uimAlt"></div>' +
+          '<button type="button" class="aim-ghost" id="uimManual">Enter this item by hand instead</button>' +
+        '</div>' +
       '</div>';
     document.body.appendChild(div);
     sheetEl = div;
@@ -159,37 +172,41 @@
     });
 
     var input = document.getElementById('uimUrlInput');
-    input.addEventListener('input', function (e) { raw = e.target.value; errorMsg = null; errorCode = null; render(); });
+    input.addEventListener('input', function (e) { raw = e.target.value; toIdle(); });
     input.addEventListener('focus', function () { document.getElementById('uimUrlBox').dataset.focus = '1'; });
     input.addEventListener('blur',  function () { document.getElementById('uimUrlBox').dataset.focus = '0'; });
     document.getElementById('uimUrlBtn').addEventListener('click', urlAction);
 
     contentEl.addEventListener('click', function (e) {
-      if (e.target.id === 'uimCta') { go(); return; }
-      if (e.target.id === 'uimManual') { manual(); return; }
-      if (e.target.id === 'uimBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
-      if (e.target.id === 'uimErrRetry') { go(); return; }
-      if (e.target.id === 'uimErrScreenshot') { errToScreenshot(); return; }
-      if (e.target.id === 'uimErrAnotherLink') { setUrl(''); var i = document.getElementById('uimUrlInput'); if (i) i.focus(); return; }
-      if (e.target.id === 'uimErrManual') { manual(); return; }
-      if (e.target.id === 'uimErrBack') { dismissErrCard(); return; }
-      if (e.target.id === 'uimErrSupport') { window.location.href = 'mailto:support@shelfyai.com?subject=' + encodeURIComponent('ShelfyAI error ' + (errorCode || 'unknown')); return; }
-      if (e.target.id === 'uimErrClose') { close(); return; }
+      var id = e.target.closest && e.target.closest('button') && e.target.closest('button').id;
+      if (id === 'uimCta') { ctaClick(); return; }
+      if (id === 'uimManual') { manual(); return; }
+      if (id === 'uimBuyBtn') { window.location.href = '/pricing#scan-pack'; return; }
+      if (id === 'uimErrScreenshot') { errToScreenshot(); return; }
+      if (id === 'uimErrAnotherLink') { setUrl(''); var i = document.getElementById('uimUrlInput'); if (i) i.focus(); return; }
+      if (id === 'uimErrSupport') { window.location.href = 'mailto:support@shelfyai.com?subject=' + encodeURIComponent('ShelfyAI error ' + (failCode || 'unknown')); return; }
     });
 
     return sheetEl;
+  }
+
+  // Back to the plain URL field -- editing the link after a failed read,
+  // or "Try another link". Never interrupts a read that's still running.
+  function toIdle() {
+    if (phase === 'loading' || phase === 'done') return;
+    phase = 'idle'; failCode = null; failMsg = null; errorMsg = null;
+    render();
   }
 
   function setUrl(s) {
     raw = s || '';
     var input = document.getElementById('uimUrlInput');
     if (input) input.value = raw;
-    errorMsg = null;
-    errorCode = null;
-    render();
+    toIdle();
   }
 
   function urlAction() {
+    if (phase === 'loading' || phase === 'done') return;
     if (raw) { setUrl(''); return; }
     if (navigator.clipboard && navigator.clipboard.readText) {
       navigator.clipboard.readText().then(function (text) {
@@ -205,35 +222,224 @@
 
   function renderField() {
     var l = link();
+    var busy = phase === 'loading' || phase === 'done';
+    var input = document.getElementById('uimUrlInput');
+    input.readOnly = busy;
     var btn = document.getElementById('uimUrlBtn');
+    btn.style.visibility = busy ? 'hidden' : '';
     if (!raw) { btn.className = ''; btn.textContent = 'Paste'; }
     else { btn.className = 'x'; btn.innerHTML = ICON_X; }
-    var ok = usable() && !running;
+    var ok = usable() && phase === 'idle';
     document.getElementById('uimUrlBox').dataset.state = l && l.bad ? 'bad' : (ok ? 'ok' : '');
     // The field alone doesn't make it obvious the paste registered or what
     // to do next -- a valid link only otherwise shows up as a subtle border
     // color change, easy to miss (see user report: "not clear the pasting
     // worked and how to proceed").
     var hint = document.getElementById('uimFieldHint');
-    if (hint) {
-      if (ok) {
-        hint.style.display = 'flex';
-        hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Scan page” below to continue</span>';
-      } else {
-        hint.style.display = 'none';
+    if (ok) {
+      hint.style.display = 'flex';
+      hint.innerHTML = ICON_CHECK_SM + '<span>Link recognized — tap “Scan page” below to continue</span>';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  // ---------- Reading screen ----------
+
+  function catHtml(mode) {
+    var C = '#10B4D6';
+    var celebrate = mode === 'celebrate', sad = mode === 'sad';
+    var pieces = '';
+    if (celebrate) {
+      var colors = ['#10B4D6', '#FFD31D', '#12A36B', '#E5484D', '#111827', '#7DD6E8'];
+      for (var i = 0; i < 16; i++) {
+        var a = (i / 16) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1), d = 56 + (i * 37) % 30;
+        pieces += '<i class="uim-confetti" style="width:' + (i % 3 ? 7 : 6) + 'px;height:' + (i % 3 ? 11 : 6) + 'px;' +
+          'border-radius:' + (i % 3 ? 2 : 6) + 'px;background:' + colors[i % colors.length] + ';' +
+          '--dx:' + (Math.cos(a) * d).toFixed(1) + 'px;--dy:' + (Math.sin(a) * d * 0.8 + 16).toFixed(1) + 'px;' +
+          '--r:' + ((i * 47) % 360) + 'deg;animation-delay:' + (380 + (i % 4) * 40) + 'ms"></i>';
       }
+    }
+    var eyes = [66, 186].map(function (cx) {
+      return '<circle class="uim-eye" cx="' + cx + '" cy="' + (sad ? 156 : 148) + '" r="' + (sad ? 22 : 27) + '" fill="#fff"/>';
+    }).join('');
+    var happyEyes = celebrate ? '<g class="uim-eyes-happy">' + [66, 186].map(function (cx) {
+      return '<path d="M' + (cx - 24) + ' 158 Q' + cx + ' 120 ' + (cx + 24) + ' 158" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>';
+    }).join('') + '</g>' : '';
+    var badge = celebrate
+      ? '<div class="uim-cat-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>'
+      : '';
+    return '<div class="uim-cat" data-mode="' + mode + '" aria-hidden="true">' +
+      '<div class="uim-cat-shadow"></div>' + pieces +
+      '<div class="uim-cat-in"><div class="uim-cat-body"><div class="uim-cat-idle">' +
+        '<svg width="62" height="71" viewBox="0 0 252 288">' +
+          '<path class="uim-ear-l" d="M0 84 L0 14 Q0 0 12 3 Q14 4 16 6 L84 84 Z" fill="' + C + '"/>' +
+          '<path class="uim-ear-r" d="M252 84 L252 14 Q252 0 240 3 Q238 4 236 6 L168 84 Z" fill="' + C + '"/>' +
+          '<path d="M0 73 L252 73 L252 246 Q252 288 210 288 L42 288 Q0 288 0 246 Z" fill="' + C + '"/>' +
+          '<g class="uim-eyes">' + eyes + '</g>' + happyEyes +
+          '<path d="M96 192 L156 192 L126 222 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>' +
+        '</svg>' + badge +
+      '</div></div></div></div>';
+  }
+
+  function stepIconHtml(state) {
+    if (state === 'done') return '<i class="uim-ic uim-ic-done">' + ICON_TICK + '</i>';
+    if (state === 'active') return '<i class="uim-ic uim-ic-spin"></i>';
+    if (state === 'failed') return '<i class="uim-ic uim-ic-fail">' + ICON_FAIL + '</i>';
+    return '<i class="uim-ic uim-ic-todo"></i>';
+  }
+
+  // Built once per read; paint() then only touches what changed, so the
+  // CSS animations (cat, spinners, shimmer) aren't restarted every tick.
+  function buildWork() {
+    var el = document.getElementById('uimWorkWrap');
+    el.innerHTML =
+      '<div class="uim-cat-wrap" id="uimCatWrap"></div>' +
+      '<div class="uim-work">' +
+        '<div class="uim-hl" id="uimHl"></div>' +
+        '<div class="uim-bar"><i id="uimBar"><b></b></i></div>' +
+        '<div class="uim-steps">' + STAGES.map(function (s, i) {
+          return '<div class="uim-step" id="uimStep' + i + '" data-s="">' +
+            '<span class="uim-step-ic"></span><span class="uim-step-l">' + esc(s.label) + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="uim-prev" id="uimPrev" data-state="wait">' +
+          '<div class="uim-prev-img"><div class="uim-prev-photo" id="uimPrevPhoto"></div><i class="uim-scanline"></i></div>' +
+          '<div class="uim-prev-txt">' +
+            '<div class="uim-prev-row"><span class="uim-skel uim-skel-t"><b></b></span><div class="uim-prev-t" id="uimPrevT"></div></div>' +
+            '<div class="uim-prev-row uim-prev-row-sm"><span class="uim-skel uim-skel-p"><b></b></span><div class="uim-prev-p" id="uimPrevP"></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function setCat(mode) {
+    var wrap = document.getElementById('uimCatWrap');
+    if (!wrap || wrap.dataset.mode === mode) return;
+    wrap.dataset.mode = mode;
+    wrap.innerHTML = catHtml(mode);
+    happyTimers.forEach(clearTimeout); happyTimers = [];
+    if (mode === 'celebrate') {
+      var cat = wrap.firstChild;
+      happyTimers.push(setTimeout(function () { cat.classList.add('happy'); }, 400));
+      happyTimers.push(setTimeout(function () { cat.classList.remove('happy'); }, 2150));
+    }
+  }
+
+  function setHeadline(title, sub, failed) {
+    var hl = document.getElementById('uimHl');
+    if (!hl || hl.dataset.key === title + '|' + sub) return;
+    hl.dataset.key = title + '|' + sub;
+    hl.innerHTML = '<div class="uim-hl-in"><div class="uim-hl-t"' + (failed ? ' data-failed="1"' : '') + '>' + esc(title) + '</div>' +
+      (sub ? '<div class="uim-hl-s">' + esc(sub) + '</div>' : '') + '</div>';
+  }
+
+  function setSteps(stateFor) {
+    STAGES.forEach(function (s, i) {
+      var st = document.getElementById('uimStep' + i);
+      var state = stateFor(i);
+      if (!st || st.dataset.s === state) return;
+      st.dataset.s = state;
+      st.querySelector('.uim-step-ic').innerHTML = stepIconHtml(state);
+    });
+  }
+
+  function setBar(pct, failed) {
+    var bar = document.getElementById('uimBar');
+    if (!bar) return;
+    bar.style.width = pct + '%';
+    bar.dataset.failed = failed ? '1' : '';
+  }
+
+  function fillPreview() {
+    var prev = document.getElementById('uimPrev');
+    if (!prev || !draft) return;
+    var photo = document.getElementById('uimPrevPhoto');
+    if (draft.image_url) {
+      var img = document.createElement('img');
+      img.alt = draft.name || '';
+      img.onerror = function () { photo.innerHTML = '<span class="uim-prev-ph">' + ICON_BOX + '</span>'; };
+      img.src = draft.image_url;
+      photo.innerHTML = '';
+      photo.appendChild(img);
+    } else {
+      photo.innerHTML = '<span class="uim-prev-ph">' + ICON_BOX + '</span>';
+    }
+    document.getElementById('uimPrevT').textContent = draft.name || 'Untitled item';
+    // sku falls back to the item name server-side (extract-url.js) --
+    // don't repeat the name as if it were a product code.
+    var bits = [draft.price, draft.sku && draft.sku !== draft.name ? draft.sku : null, host()].filter(Boolean);
+    document.getElementById('uimPrevP').textContent = bits.join(' · ');
+    prev.dataset.state = 'done';
+  }
+
+  function ease(f) { return 1 - Math.pow(1 - f, 2); }
+
+  // Which step the timeline is on right now, and how far into it (0..1).
+  function timeline() {
+    var now = performance.now(), t = now - t0, acc = 0, stage = 3, frac = 0;
+    for (var i = 0; i < 3; i++) {
+      if (t < acc + STAGES[i].ms) { stage = i; frac = (t - acc) / STAGES[i].ms; break; }
+      acc += STAGES[i].ms;
+    }
+    // Last step has no fixed length -- creep toward the end instead of
+    // freezing, however long the real read takes.
+    if (stage === 3) frac = 1 - Math.exp(-(t - acc) / 3000);
+    if (resultAt !== null) {
+      var ff = resultStage + Math.floor((now - resultAt) / FF_MS);
+      if (ff > stage) { stage = ff; frac = 0; }
+    }
+    return { stage: stage, frac: frac };
+  }
+
+  function tick() {
+    if (phase !== 'loading') return;
+    var tl = timeline();
+    curStage = Math.min(tl.stage, 3);
+    if (tl.stage >= STAGES.length) { finishDone(); return; }
+    var st = STAGES[curStage];
+    setHeadline(st.title, curStage === 0 ? 'Connecting to ' + host() : st.sub, false);
+    setBar(Math.min(97, ((curStage + ease(Math.min(tl.frac, 1)) * 0.9) / STAGES.length) * 100), false);
+    setSteps(function (i) { return i < curStage ? 'done' : i === curStage ? 'active' : 'todo'; });
+    setCat(curStage === 0 ? 'look' : 'read');
+    var prev = document.getElementById('uimPrev');
+    if (prev) prev.dataset.state = curStage >= 1 ? 'scan' : 'wait';
+    renderFoot();
+  }
+
+  function stopTimeline() { clearInterval(tickTimer); tickTimer = null; }
+
+  function finishDone() {
+    stopTimeline();
+    phase = 'done';
+    // Charged server-side the moment the read succeeded -- refunded again
+    // if this draft gets discarded instead of reviewed (see close()).
+    lastScanUsed = true;
+    render();
+  }
+
+  function paintWork() {
+    if (phase === 'done') {
+      setHeadline('Item found', 'Check the draft before saving it.', false);
+      setBar(100, false);
+      setSteps(function () { return 'done'; });
+      setCat('celebrate');
+      fillPreview();
+    } else if (phase === 'failed') {
+      var f = FAILS[failCode] || FAILS.client;
+      setHeadline(f.title, f.sub ? f.sub(host()) : (failMsg || 'Please try again.'), true);
+      setBar(100, true);
+      setSteps(function (i) { return i < failStage ? 'done' : i === failStage ? 'failed' : 'todo'; });
+      setCat('sad');
+      var prev = document.getElementById('uimPrev');
+      if (prev) prev.dataset.state = 'failed';
     }
   }
 
   function renderWork() {
     var el = document.getElementById('uimWorkWrap');
-    if (!running) { el.innerHTML = ''; return; }
-    el.innerHTML =
-      '<div class="uim-work">' +
-        '<div class="uim-work-l">' + (fakePct < 45 ? 'Fetching the page…' : fakePct < 80 ? 'Finding the item…' : 'Reading price and details…') + '</div>' +
-        '<div class="uim-work-s">One scan, charged only if the page arrives.</div>' +
-        '<div class="uim-work-track"><i style="width:' + fakePct + '%"></i></div>' +
-      '</div>';
+    if (phase === 'idle') { el.innerHTML = ''; return; }
+    if (!document.getElementById('uimHl')) buildWork();
+    if (phase === 'loading') tick(); else paintWork();
   }
 
   // Only surfaces when the user is actually short on scans -- the full cost
@@ -243,7 +449,7 @@
   function renderOutOfScans() {
     var need = cost();
     var el = document.getElementById('uimOutOfScans');
-    if (!usage || !need || scansLeft() >= need) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    if (phase !== 'idle' || !usage || !need || scansLeft() >= need) { el.style.display = 'none'; el.innerHTML = ''; return; }
     el.style.display = 'block';
     el.innerHTML = '<button type="button" class="aim-q-buy" id="uimBuyBtn">' + buyLabel() + '</button>';
     if (!scanPackPrice) {
@@ -263,8 +469,7 @@
 
   function renderError() {
     var el = document.getElementById('uimError');
-    if (!el) return;
-    if (errorMsg) {
+    if (errorMsg && phase === 'idle') {
       document.getElementById('uimErrorText').textContent = errorMsg;
       el.style.display = 'flex';
     } else {
@@ -274,48 +479,30 @@
 
   function renderFoot() {
     var cta = document.getElementById('uimCta');
-    cta.disabled = running || !usable() || !affordable();
-    cta.textContent = running ? 'Reading…' : !affordable() ? 'Not enough scans' : 'Scan page';
-  }
-
-  // Full card takeover for a real, distinguishable scan-step failure (see
-  // ERR_CARDS) -- everything else (limit reached etc.) stays on the small
-  // inline banner above, which already has its own good resolution path.
-  function renderErrCard() {
-    var card = ERR_CARDS[errorCode];
-    var el = document.getElementById('uimErrCard');
-    if (!card) return;
-    var msg = card.message;
-    if (errorCode === 'scan.timeout') {
-      var l = link();
-      msg = (l && l.host ? l.host : 'That site') + ' stopped answering.';
+    var label, mode;
+    if (phase === 'loading') { mode = 'loading'; label = curStage === 0 ? 'Opening' : 'Reading'; }
+    else if (phase === 'done') { mode = 'done'; label = 'Review draft item'; }
+    else if (phase === 'failed') { mode = 'failed'; label = 'Try again'; }
+    else { mode = 'idle'; label = !affordable() ? 'Not enough scans' : 'Scan page'; }
+    cta.disabled = mode === 'loading' || (mode !== 'done' && (!usable() || !affordable()));
+    if (cta.dataset.key !== mode + '|' + label) {
+      cta.dataset.key = mode + '|' + label;
+      cta.dataset.mode = mode;
+      cta.innerHTML = mode === 'loading'
+        ? '<i class="uim-cta-sh"></i><span>' + label + '</span><span class="uim-dots"><i></i><i></i><i></i></span>'
+        : esc(label);
     }
-    if (errorCode === 'unknown' || errorCode === 'client') msg = errorMsg || msg;
-    var actsHtml;
-    if (errorCode === 'scan.no_match') {
-      actsHtml =
-        '<button type="button" class="aim-err-cta" id="uimErrScreenshot">Import a screenshot</button>' +
-        '<button type="button" class="aim-err-alt" id="uimErrAnotherLink">Try another link</button>' +
-        '<button type="button" class="aim-err-ghost" id="uimErrManual">Enter by hand</button>';
-    } else if (errorCode === 'unknown' || errorCode === 'client') {
-      actsHtml =
-        '<button type="button" class="aim-err-cta" id="uimErrRetry">Try again</button>' +
-        '<button type="button" class="aim-err-alt" id="uimErrSupport">Send to support</button>' +
-        '<button type="button" class="aim-err-ghost" id="uimErrClose">Close</button>';
-    } else {
-      actsHtml =
-        '<button type="button" class="aim-err-cta" id="uimErrRetry">Try again</button>' +
-        '<button type="button" class="aim-err-alt" id="uimErrManual">Enter by hand</button>' +
-        '<button type="button" class="aim-err-ghost" id="uimErrBack">Back</button>';
+    document.getElementById('uimNote').style.display = phase === 'idle' ? '' : 'none';
+    var alt = document.getElementById('uimAlt');
+    var altHtml = '';
+    if (phase === 'failed' && failCode === 'scan.no_match') {
+      altHtml = '<button type="button" class="aim-ghost" id="uimErrScreenshot">Import a screenshot instead</button>' +
+        '<button type="button" class="aim-ghost" id="uimErrAnotherLink">Try another link</button>';
+    } else if (phase === 'failed' && (failCode === 'unknown' || failCode === 'client')) {
+      altHtml = '<button type="button" class="aim-ghost" id="uimErrSupport">Send to support</button>';
     }
-    el.innerHTML =
-      '<div class="aim-err-mark" data-tone="' + card.tone + '">' + card.icon + '</div>' +
-      '<h3 class="aim-err-h">' + esc(card.headline) + '</h3>' +
-      '<p class="aim-err-p">' + esc(msg) + '</p>' +
-      '<div class="aim-err-acts">' + actsHtml + '</div>';
+    if (alt.dataset.key !== altHtml) { alt.dataset.key = altHtml; alt.innerHTML = altHtml; }
   }
-
-  function dismissErrCard() { errorCode = null; errorMsg = null; render(); }
 
   function errToScreenshot() {
     var opts = currentOpts;
@@ -344,28 +531,30 @@
   }
 
   function render() {
-    var isCard = !!ERR_CARDS[errorCode];
-    document.getElementById('uimNormalBody').style.display = isCard ? 'none' : '';
-    document.getElementById('uimErrCard').style.display = isCard ? 'block' : 'none';
-    renderHead();
-    if (isCard) { renderErrCard(); return; }
-    renderField(); renderWork(); renderError(); renderOutOfScans(); renderFoot();
+    renderHead(); renderField(); renderWork(); renderError(); renderOutOfScans(); renderFoot();
   }
 
-  function startFakeProgress() {
-    fakePct = 4;
-    clearInterval(fakeTimer);
-    fakeTimer = setInterval(function () {
-      fakePct = Math.min(90, fakePct + Math.random() * 9);
-      renderWork();
-    }, 350);
+  function ctaClick() {
+    if (phase === 'done') { review(); return; }
+    if (phase === 'idle' || phase === 'failed') go();
   }
-  function stopFakeProgress() { clearInterval(fakeTimer); fakeTimer = null; fakePct = 100; }
+
+  function review() {
+    var cb = currentOpts.onImported, data = draft;
+    phase = 'idle'; // handed over -- close() mustn't treat this as a discard
+    close();
+    if (cb) cb(data);
+  }
 
   async function go() {
-    if (running || !usable() || !affordable()) return;
-    running = true; errorMsg = null; errorCode = null; render();
-    startFakeProgress();
+    if (phase === 'loading' || !usable() || !affordable()) return;
+    var myRun = ++runId;
+    phase = 'loading'; failCode = null; failMsg = null; errorMsg = null; draft = null;
+    resultAt = null; curStage = 0; t0 = performance.now();
+    document.getElementById('uimWorkWrap').innerHTML = '';
+    render();
+    stopTimeline();
+    tickTimer = setInterval(tick, 60);
     try {
       var sb = window.supabaseClient;
       var sessionRes = sb ? await sb.auth.getSession() : null;
@@ -387,7 +576,7 @@
           errorData = { error: 'Failed to process (unexpected server response, status ' + response.status + ')' };
         }
         if (response.status === 429) {
-          var eLimit = new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          var eLimit = new Error(errorData.message || errorData.error || (window.SHELFY_NATIVE_APP ? 'Monthly scan limit reached. Enter it by hand instead.' : 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.'));
           eLimit.limitReached = true;
           throw eLimit;
         }
@@ -407,22 +596,34 @@
         throw eEmpty;
       }
 
-      stopFakeProgress();
       var data = result.data;
       // The extracted data has no idea what page it came from -- keep the
       // actual URL the user pasted so the resulting form can link back to
       // it (to double-check details or reorder from the same page fast).
       data.source_url = link().href;
-      var cb = currentOpts.onImported;
-      lastScanUsed = true;
-      close();
-      if (cb) cb(data);
+      if (myRun !== runId) {
+        // Sheet was closed mid-read -- nobody's going to review this draft.
+        lastScanUsed = true;
+        refundScan();
+        return;
+      }
+      draft = data;
+      resultStage = curStage;
+      resultAt = performance.now();
     } catch (err) {
-      stopFakeProgress();
-      running = false;
+      if (myRun !== runId) return;
+      stopTimeline();
       console.error('[ShelfyUrlImportModal] Read failed:', err);
-      errorMsg = err.message || 'Something went wrong';
-      errorCode = err.limitReached ? null : (ERR_CARDS[err.code] ? err.code : 'client');
+      if (err.limitReached) {
+        phase = 'idle';
+        errorMsg = err.message;
+      } else {
+        phase = 'failed';
+        failCode = FAILS[err.code] ? err.code : 'client';
+        failMsg = err.message || 'Something went wrong';
+        var fs = FAILS[failCode].stage;
+        failStage = fs === null ? curStage : fs;
+      }
       render();
     }
   }
@@ -436,8 +637,8 @@
   async function open(opts) {
     opts = opts || {};
     currentOpts = opts;
-    raw = ''; running = false; errorMsg = null; errorCode = null; usage = null;
-    clearInterval(fakeTimer); fakeTimer = null;
+    runId++; stopTimeline();
+    raw = ''; phase = 'idle'; failCode = null; failMsg = null; errorMsg = null; usage = null; draft = null;
     ensureSheet();
     var input = document.getElementById('uimUrlInput');
     if (input) input.value = '';
@@ -450,10 +651,14 @@
   }
 
   function close() {
-    clearInterval(fakeTimer); fakeTimer = null;
+    runId++; stopTimeline();
+    happyTimers.forEach(clearTimeout); happyTimers = [];
+    // A finished draft closed without "Review draft item" is a discard.
+    if (phase === 'done') refundScan();
+    phase = 'idle';
     if (!sheetEl) return;
     // No fade here -- close() also runs right before opening a *different*
-    // modal (manual()/go()'s onImported handoff), and .modal-overlay's own
+    // modal (manual()/review()'s onImported handoff), and .modal-overlay's own
     // ~200ms opacity transition otherwise left this sheet briefly visible
     // on top of whatever opens next (it's appended to <body> at runtime, so
     // it ties-or-beats any static page modal on z-index/DOM order). A hard,
@@ -462,6 +667,7 @@
     sheetEl.classList.remove('active');
     void sheetEl.offsetWidth;
     sheetEl.style.transition = '';
+    document.getElementById('uimWorkWrap').innerHTML = '';
   }
 
   window.ShelfyUrlImportModal = { open: open, close: close, confirmScanUsed: confirmScanUsed, refundScan: refundScan, markPending: markPending, hasPending: hasPending };

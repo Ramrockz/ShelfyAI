@@ -157,6 +157,7 @@ module.exports = async (req, res) => {
     quantity (per order)
     unit (pieces,Kilograms,Liters)
     type (Production, Packaging, Shipping)
+    image_url (URL of the main product photo)
   }
   attributes {
     color
@@ -268,7 +269,19 @@ module.exports = async (req, res) => {
         quantity: quantity === 0 ? 1 : quantity,
         unit: extractedData.item?.unit || null,
         color: extractedData.attributes?.color || null,
-        size: extractedData.attributes?.size || null
+        size: extractedData.attributes?.size || null,
+        // Only used for the preview thumbnail on url-import-modal.js's
+        // reading screen. Resolved against the page URL since product pages
+        // often use relative image paths; anything that isn't http(s) after
+        // that (data:, javascript:, garbage) is dropped.
+        image_url: (() => {
+          const rawImg = extractedData.item?.image_url;
+          if (!rawImg || typeof rawImg !== 'string') return null;
+          try {
+            const img = new URL(rawImg, url);
+            return /^https?:$/.test(img.protocol) ? img.href : null;
+          } catch (e) { return null; }
+        })()
       }
     });
 
