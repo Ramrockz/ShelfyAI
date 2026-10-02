@@ -651,14 +651,11 @@ async function loadAnalytics() {
       if (!periodEnd || periodEnd > new Date()) tier = subscription.tier || 'free';
     }
 
-    if (tier === 'free') {
-      renderPaywallFeatures();
-      document.getElementById('analyticsPaywall').style.display = 'block';
-      document.getElementById('analyticsContent').style.display = 'none';
-      return;
-    }
+    // Analytics is included in every plan, Free too -- the old Free-tier
+    // paywall (#analyticsPaywall) is no longer shown. The tier is only read
+    // for the plan badge.
     const planBadge = document.getElementById('anPlan');
-    if (planBadge) planBadge.textContent = tier === 'pro' ? 'Pro' : 'Starter';
+    if (planBadge) planBadge.textContent = tier === 'pro' ? 'Pro' : tier === 'starter' ? 'Starter' : 'Free';
 
     let _qs = supabaseClient.from('sales').select('sale_date, revenue, source, items, status').eq('profile_id', user.id);
     if (storeId) _qs = _qs.eq('store_id', storeId);
