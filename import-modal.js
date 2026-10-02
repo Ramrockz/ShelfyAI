@@ -975,7 +975,12 @@
     opts = opts || {};
     if (!KINDS[entityType]) { console.error('[ShelfyImportModal] Unknown entity type:', entityType); return; }
 
-    if (!isMobileUA()) {
+    // Desktop has no camera, so only a 'camera' shortcut falls back to screen
+    // capture there. 'file' (every current caller -- the "File upload"
+    // buttons) opens the plain file picker on desktop too; it used to go
+    // straight to screen capture regardless of mode, popping the browser's
+    // share-screen dialog on a click that said "File upload".
+    if (!isMobileUA() && mode === 'camera') {
       open(entityType, opts);
       captureScreen();
       return;
