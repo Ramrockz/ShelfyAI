@@ -948,7 +948,14 @@
     rec.maxAlternatives = 1;
     let transcript = '';
     asRecAborted = false;
-    rec.onstart = () => asVoiceState('listening', 'I’m listening – go ahead', 'e.g. “' + asSuggestions()[0] + '”', true);
+    rec.onstart = () => {
+      asVoiceState('listening', 'I’m listening – go ahead', asVoiceExample(), true);
+      // Stock not loaded yet -> the example was a general one; swap in one
+      // naming a real item once it arrives, as long as nothing's been said.
+      if (!asItems) asLoad().then(() => {
+        if (asRec === rec && !transcript && asItems) asVoiceState('listening', 'I’m listening – go ahead', asVoiceExample(), true);
+      });
+    };
     rec.onresult = e => {
       transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
       if (transcript) {
@@ -989,18 +996,29 @@
 
   // ─── Typing suggestions in the empty ask bar ──────────────────────────────
 
+  // General questions -- used before the user's own stock has loaded (and
+  // mixed in afterwards when they apply). Every phrasing here and below maps
+  // onto an intent asIntent() actually recognises.
   const AS_FALLBACK_SUGGESTIONS = [
     'What do I need to reorder?',
+    'What is running low?',
     'When does my delivery arrive?',
+    'What’s on the way?',
   ];
 
   const AS_ITEM_TEMPLATES = [
     n => `What does a ${n} cost me?`,
+    n => `How much does ${n} cost?`,
     n => `How many of ${n} have I left?`,
+    n => `Do I still have ${n}?`,
+    n => `Is ${n} in stock?`,
     n => `How long does it take to reorder ${n}?`,
+    n => `How long does ${n} take to arrive?`,
   ];
   const AS_PRODUCT_TEMPLATES = [
     n => `How many ${n} can I make?`,
+    n => `Can I make a ${n}?`,
+    n => `What does a ${n} cost to make?`,
   ];
 
   function asShuffle(arr) {
@@ -1026,9 +1044,19 @@
     AS_ITEM_TEMPLATES.forEach((t, k) => { if (items.length) out.push(t(items[k % items.length].name)); });
     AS_PRODUCT_TEMPLATES.forEach((t, k) => { if (prods.length) out.push(t(prods[k % prods.length].name)); });
     if (prods.length > 1) out.push(AS_PRODUCT_TEMPLATES[0](prods[1].name));
-    if (asInbound.length) out.push('When does my delivery arrive?');
-    if (asStock.out.some(i => !i.reorder_pending) || asStock.low.some(i => !i.reorder_pending)) out.push('What do I need to reorder?');
-    return out.length ? asShuffle(out) : AS_FALLBACK_SUGGESTIONS;
+    if (asInbound.length) out.push(asPick(['When does my delivery arrive?', 'What’s on the way?']));
+    if (asStock.out.some(i => !i.reorder_pending) || asStock.low.some(i => !i.reorder_pending)) out.push(asPick(['What do I need to reorder?', 'What is running low?']));
+    return asShuffle(out.length ? out : AS_FALLBACK_SUGGESTIONS);
+  }
+
+  // The listening screen's "e.g. …" line: a random suggestion, never the same
+  // one as last time (it used to always take the first, and before the stock
+  // had loaded that was always the same fallback question).
+  let asLastExample = '';
+  function asVoiceExample() {
+    const list = asSuggestions().filter(q => q !== asLastExample);
+    asLastExample = list.length ? asPick(list) : asLastExample;
+    return 'e.g. “' + asLastExample + '”';
   }
 
   let asTyperTimer = null;
