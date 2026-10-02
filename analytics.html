@@ -250,6 +250,12 @@
   .an-l-why[data-state="warn"] { color: var(--warning); font-weight: 600; }
   .an-l-why[data-state="bad"]  { color: var(--danger); font-weight: 600; }
   .an-l-val { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  a.an-lrow { color: inherit; text-decoration: none; cursor: pointer; }
+  a.an-lrow:active { background: var(--bg-inner); }
+  .an-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+  .an-chip { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--bg-inner);
+             color: var(--text-muted); border: 1px solid var(--border-hair, var(--border)); white-space: nowrap; }
+  .an-chip-qty { background: none; border: none; padding: 1px 2px 1px 0; }
   .an-l-val b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
   .an-l-val small { display: block; font-size: 11.5px; color: var(--text-faint, var(--text-muted)); margin-top: 1px; }
   .an-l-act { flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--border);
@@ -658,7 +664,7 @@ async function loadAnalytics() {
     if (storeId) _qs = _qs.eq('store_id', storeId);
     let _qe = supabaseClient.from('expenses').select('expense_date, amount, category').eq('profile_id', user.id);
     if (storeId) _qe = _qe.eq('store_id', storeId);
-    let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at, reorder_pending').eq('profile_id', user.id);
+    let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at, reorder_pending, custom_attributes').eq('profile_id', user.id);
     if (storeId) _qin = _qin.eq('store_id', storeId);
     // Products (legacy `recipes` table) -- only their components, for Unused Stock.
     let _qp = supabaseClient.from('recipes').select('id, components').eq('profile_id', user.id);
@@ -1400,6 +1406,12 @@ function renderUnusedStock() {
     .sort((a, b) => b.tiedUpValue - a.tiedUpValue || (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0));
 
   const qtyTxt = ing => `${(parseFloat(ing.quantity) || 0).toFixed(1)} ${ing.unit || ''}`.trim();
+  const attrChips = ing => {
+    let a = ing.custom_attributes;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
+    const vals = a && typeof a === 'object' ? Object.values(a).filter(v => v != null && String(v).trim()) : [];
+    return vals.map(v => `<span class="an-chip">${anEsc(v)}</span>`).join('');
+  };
 
   if (!unused.length) {
     const msg = allIngredients.length ? 'Every item is used in at least one product' : 'No items found';
@@ -1421,7 +1433,7 @@ function renderUnusedStock() {
       </tr></thead>
       <tbody>
         ${unused.map(ing => `<tr>
-          <td><a href="/ingredient-detail?id=${ing.id}" style="color:var(--accent);text-decoration:none">${anEsc(ing.name)}</a></td>
+          <td><a href="/ingredient-detail?id=${ing.id}" style="color:var(--accent);text-decoration:none">${anEsc(ing.name)}</a>${attrChips(ing) ? `<div class="an-chips">${attrChips(ing)}</div>` : ''}</td>
           <td>${anEsc(qtyTxt(ing))}</td>
           <td style="font-weight:600">€${ing.tiedUpValue.toFixed(2)}</td>
         </tr>`).join('')}
@@ -1430,14 +1442,13 @@ function renderUnusedStock() {
 
   if (!rowsEl) return;
   const shown = usExpanded ? unused : unused.slice(0, 5);
-  rowsEl.innerHTML = shown.map(ing => `<div class="an-lrow">
+  rowsEl.innerHTML = shown.map(ing => `<a class="an-lrow" href="/ingredient-detail?id=${encodeURIComponent(ing.id)}">
       <span class="an-l-main">
         <span class="an-l-name">${anEsc(ing.name)}</span>
-        <span class="an-l-why">${anEsc(qtyTxt(ing))} · not in any product</span>
+        <span class="an-chips"><span class="an-l-why an-chip-qty">${anEsc(qtyTxt(ing))}</span>${attrChips(ing)}</span>
       </span>
       <span class="an-l-val">€${ing.tiedUpValue.toFixed(2)}</span>
-      <a href="/ingredient-detail?id=${ing.id}" class="an-l-act">Open</a>
-    </div>`).join('') + `<div class="an-tot">Total in stock: <b>€${totalTiedUp.toFixed(2)}</b></div>` + (unused.length > 5
+    </a>`).join('') + `<div class="an-tot">Total in stock: <b>€${totalTiedUp.toFixed(2)}</b></div>` + (unused.length > 5
     ? `<a href="#" class="an-more" onclick="event.preventDefault();usExpanded=!usExpanded;renderUnusedStock();">${usExpanded ? 'Show less' : `Show all ${unused.length}`}</a>`
     : '');
 }
