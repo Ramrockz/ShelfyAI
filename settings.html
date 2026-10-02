@@ -970,24 +970,10 @@
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-    <button type="button" class="st-row" onclick="openSettingsGroup('help')">
-      <span class="st-row-main">
-        <span class="st-row-name">Help</span>
-        <span class="st-row-why">Quick guide</span>
-      </span>
-      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
-    <button type="button" class="st-row" onclick="openSettingsGroup('account')">
-      <span class="st-row-main">
-        <span class="st-row-name">Account</span>
-        <span class="st-row-why">Email, password, sign out</span>
-      </span>
-      <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <button type="button" class="st-row danger" onclick="openSettingsGroup('danger')">
       <span class="st-row-main">
         <span class="st-row-name">Danger zone</span>
-        <span class="st-row-why">Delete data, files, or your account</span>
+        <span class="st-row-why">Password, delete data, files, or your account</span>
       </span>
       <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
@@ -1194,45 +1180,15 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="stGroupModal-help" onclick="if(event.target===this)closeSettingsGroup('help')">
-  <div class="modal-content st-group-content">
-    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('help')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Help</h3></div>
-    <div class="st-list">
-      <button type="button" class="st-row" onclick="window.location.href='/quick-guide'">
-        <span class="st-row-main">
-          <span class="st-row-name">Quick guide</span>
-          <span class="st-row-why">How items, products, orders and expenses fit together</span>
-        </span>
-        <svg class="st-row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" width="16" height="16"><polyline points="9 6 15 12 9 18"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="stGroupModal-account" onclick="if(event.target===this)closeSettingsGroup('account')">
-  <div class="modal-content st-group-content">
-    <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('account')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Account</h3></div>
-    <div class="st-list">
-      <div class="st-row">
-        <span class="st-row-main"><span class="st-row-name">Email</span></span>
-        <span class="st-row-val" id="userEmailVal">Loading…</span>
-      </div>
-      <button type="button" class="st-row" onclick="openChangePasswordModal()">
-        <span class="st-row-main"><span class="st-row-name">Password</span></span>
-        <span class="st-row-val">Change</span>
-      </button>
-      <button type="button" class="st-row" onclick="logout()">
-        <span class="st-row-main"><span class="st-row-name">Sign out</span></span>
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- Danger zone: each row states exactly what it destroys -->
 <div class="modal-overlay" id="stGroupModal-danger" onclick="if(event.target===this)closeSettingsGroup('danger')">
   <div class="modal-content st-group-content">
     <div class="st-group-head"><button type="button" class="st-group-back" onclick="closeSettingsGroup('danger')" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></button><h3>Danger zone</h3></div>
     <div class="st-list">
+      <button type="button" class="st-row" onclick="openChangePasswordModal()">
+        <span class="st-row-main"><span class="st-row-name">Password</span></span>
+        <span class="st-row-val">Change</span>
+      </button>
       <button type="button" class="st-row danger" onclick="openDeleteDataModal()">
         <span class="st-row-main">
           <span class="st-row-name">Delete all data</span>
@@ -1397,7 +1353,7 @@ async function loadSettings() {
 
     // Display email
     $('userEmail').textContent = user.email;
-    $('userEmailVal').textContent = user.email;
+    if ($('userEmailVal')) $('userEmailVal').textContent = user.email;
 
     // Load settings from database
     const settings = await getOrCreateUserSettings(user.id);
