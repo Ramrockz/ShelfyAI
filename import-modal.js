@@ -395,7 +395,7 @@
     var short = left <= 0;
     el.innerHTML =
       '<div class="aim-q-why"' + (short ? ' data-state="warn"' : '') + '>' +
-        (short ? 'No scans left — buy a pack, or enter it by hand below.' : 'This scan reduces your AI scans by 1. You have ' + left + ' left this month.') +
+        (short ? (window.SHELFY_NATIVE_APP ? 'No scans left this month — enter it by hand below.' : 'No scans left — buy a pack, or enter it by hand below.') : 'This scan reduces your AI scans by 1. You have ' + left + ' left this month.') +
       '</div>' +
       (short ? '<button type="button" class="aim-q-buy" id="aimBuyBtn">' + buyLabel() + '</button>' : '');
     if (short && !scanPackPrice) {
@@ -611,7 +611,7 @@
             : 'Failed to process (unexpected server response, status ' + response.status + ')' };
         }
         if (response.status === 429) {
-          var eLimit = new Error(errorData.message || errorData.error || 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.');
+          var eLimit = new Error(errorData.message || errorData.error || (window.SHELFY_NATIVE_APP ? 'Monthly scan limit reached. Enter it by hand instead.' : 'Monthly scan limit reached. Buy a scan pack, or enter it by hand instead.'));
           eLimit.limitReached = true;
           throw eLimit;
         }

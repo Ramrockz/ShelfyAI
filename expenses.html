@@ -40,6 +40,7 @@
 <script src="theme.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
+<script src="swipe-actions-tap.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
 <script src="import-modal.js"></script>
@@ -1332,7 +1333,7 @@
 
     <div style="display:flex;gap:12px;">
       <button type="button" class="btn" style="flex:1;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-main);" onclick="closeIngredientMappingModal()">Cancel</button>
-      <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmIngredientMapping()">Create expense</button>
+      <button type="button" class="btn btn-primary" style="flex:1;" id="confirmMappingBtn" onclick="confirmIngredientMapping()">Create expense</button>
     </div>
   </div>
 </div>
@@ -1685,6 +1686,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (_openCreate) {
     sessionStorage.removeItem('shelfy_open_create');
     if (_openCreate === 'manual') openAddExpenseModal(); else openMethodSelectionModal();
+  }
+
+  // operations.html's dashboard expense scan (startExpenseUpload()) hands
+  // its result off here -- same flow as this page's own startReceiptScan().
+  const scanPrefillRaw = sessionStorage.getItem('shelfy_scan_prefill');
+  if (scanPrefillRaw) {
+    sessionStorage.removeItem('shelfy_scan_prefill');
+    try {
+      const { data, receiptUrl } = JSON.parse(scanPrefillRaw);
+      if (window.ShelfyImportModal) window.ShelfyImportModal.markPending('expense');
+      pendingExpenseReceiptUrl = receiptUrl || null;
+      showIngredientMappingModal(data);
+    } catch (e) {
+      console.error('Error applying dashboard scan prefill:', e);
+    }
   }
 });
 
@@ -4735,8 +4751,16 @@ async function closeIngredientMappingModal() {
   dropdownActiveFor = null;
 }
 
+// Guards against a second tap while the first save is still running -- the
+// insert + per-item inventory updates take a few seconds with no visible
+// feedback, so a "nothing happened" second tap saved the expense (and added
+// its stock) twice.
+let _confirmingMapping = false;
 async function confirmIngredientMapping() {
-  if (!pendingExpenseData) return;
+  if (!pendingExpenseData || _confirmingMapping) return;
+  _confirmingMapping = true;
+  const confirmBtn = document.getElementById('confirmMappingBtn');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Saving…'; }
 
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -4844,6 +4868,9 @@ async function confirmIngredientMapping() {
   } catch (err) {
     console.error('Error confirming ingredient mapping:', err);
     showNotification('Failed to save expense', 'error');
+  } finally {
+    _confirmingMapping = false;
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create expense'; }
   }
 }
 

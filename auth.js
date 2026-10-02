@@ -1,4 +1,35 @@
 // ShelfyAI Supabase Authentication
+
+// ---------- Native app (Google Play / App Store) mode ----------
+// The Capacitor wrapper in ../../shelfy-app loads this same live site and
+// appends "ShelfyApp/<version>" to the WebView's user agent
+// (capacitor.config.json -> appendUserAgent). Store payment policies don't
+// allow selling digital goods (subscriptions, scan packs) inside an app
+// through Stripe, so in the app every purchase entry point is hidden and
+// /pricing + /plan are unreachable -- plans are bought on the website,
+// the app just uses whatever tier the account already has.
+// "Continue with Google" is hidden too: Google refuses OAuth inside an
+// embedded WebView (403 disallowed_useragent).
+// auth.js is the one script every app page (and login.html) loads, which
+// is why this lives here instead of in each page.
+window.SHELFY_NATIVE_APP = /ShelfyApp\//.test(navigator.userAgent);
+if (window.SHELFY_NATIVE_APP) {
+  const _path = location.pathname.replace(/\.html$/, '');
+  if (_path === '/pricing' || _path === '/plan') location.replace('/settings');
+  document.documentElement.classList.add('native-app');
+  const _nativeCss = document.createElement('style');
+  _nativeCss.textContent = [
+    'a[href="/pricing"]', 'a[href^="/pricing#"]', 'a[href="/plan"]',
+    '.user-menu-item[onclick="goToPlanPage()"]',
+    '#analyticsPaywall .btn-upgrade',
+    '#stPool .st-buy-primary', '#stPool .st-buy-second', '#upgradeRow',
+    '#stSheet .st-opt[onclick="buyScanPack()"]', '#stSheet .st-opt[onclick="openCustomerPortal()"]',
+    '.scm-upsell', '#aimBuyBtn', '#uimBuyBtn', '#uimOutOfScans',
+    '.notif-open-link[onclick*="/pricing"]',
+    '.google-btn', '.google-btn + .divider'
+  ].join(',') + '{display:none !important}';
+  document.head.appendChild(_nativeCss);
+}
 // Eagerly hydrate store from localStorage so it's available synchronously
 // before any async auth/store setup has a chance to run.
 window.currentStoreId   = localStorage.getItem('shelfy_store_id')   || null;
@@ -346,6 +377,8 @@ function planOrPricingPath() {
   return window.innerWidth <= 768 ? '/plan' : '/pricing';
 }
 function goToPlanPage() {
+  // No plan/pricing pages in the native app -- see SHELFY_NATIVE_APP above.
+  if (window.SHELFY_NATIVE_APP) return;
   window.location.href = planOrPricingPath();
 }
 

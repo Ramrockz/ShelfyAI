@@ -44,6 +44,7 @@
 <script src="cookie-consent.js"></script>
 <script src="mobile-menu.js"></script>
 <script src="bottom-nav.js"></script>
+<script src="swipe-actions-tap.js"></script>
 <script src="notifications.js"></script>
 <script src="create-modal.js"></script>
 <script src="import-modal.js"></script>
@@ -1999,8 +2000,6 @@ async function openExpenseChoiceModal() {
         sessionStorage.setItem('shelfy_open_create', 'manual');
         window.location.href = '/expenses';
       } else if (method === 'upload') {
-        // Pre-existing behavior: the scan result here maps into the
-        // ingredient form fields, not a dedicated expense form — kept as-is.
         startExpenseUpload();
       }
     }
@@ -3881,14 +3880,18 @@ async function _notifyIfIngredientLimitReached() {
 }
 
 function startExpenseUpload() {
-  // Pre-existing behavior: the scan result maps into the ingredient form
-  // fields, not a dedicated expense form — kept as-is.
+  // 'expense' context (AgentQL's multi-line invoice read), not 'ingredient'
+  // -- 'ingredient' is Claude's single-product photo reader, so an expense
+  // letter with two lines of the same product came back as ONE item with
+  // the quantities summed (5 + 3 -> 8). The result is handed off to
+  // expenses.html's own line mapping modal via shelfy_scan_prefill, same
+  // as startIngredientUpload() below hands off to ingredients.html.
   // 'file' mode -- straight to the native picker/screen capture, matching
   // orders.html's startOrderUpload() and ingredients.html's
   // startIngredientUpload(); skips the redundant "Take photo / Choose file"
   // screen (the OS's own file-picker sheet already offers camera as one of
   // its options once you tap "Choose file").
-  window.ShelfyImportModal.quickStart('ingredient', 'file', {
+  window.ShelfyImportModal.quickStart('expense', 'file', {
     // Hand off to expenses.html's real #expenseModal instead of opening
     // operations.html's own older copy locally, same as the 'manual' method
     // branch in openExpenseChoiceModal() above already does.
@@ -3896,10 +3899,9 @@ function startExpenseUpload() {
       sessionStorage.setItem('shelfy_open_create', 'manual');
       window.location.href = '/expenses';
     },
-    onImported: async (data) => {
-      openManualEntryModal();
-      _applyExtractedIngredientFields(data);
-      await _notifyIfIngredientLimitReached();
+    onImported: (data, receiptUrl) => {
+      sessionStorage.setItem('shelfy_scan_prefill', JSON.stringify({ data, receiptUrl: receiptUrl || null }));
+      window.location.href = '/expenses';
     }
   });
 }
