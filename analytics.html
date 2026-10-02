@@ -558,6 +558,16 @@
         <div id="anDsRows"></div>
       </div>
 
+      <!-- Unused Stock: items no product uses as a component -->
+      <div class="chart-card an-desktop-only">
+        <h3>Unused Stock <small style="font-weight:400;font-size:13px;color:var(--text-muted);">— not used in any product</small></h3>
+        <div id="unusedStockList"></div>
+      </div>
+      <div class="chart-card an-mobile">
+        <h3>Unused stock <small style="font-weight:400;">not in any product</small></h3>
+        <div id="anUsRows"></div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -593,7 +603,7 @@
   }
 })();
 
-let allSales = [], allExpenses = [], allIngredients = [], allIngHistory = [];
+let allSales = [], allExpenses = [], allIngredients = [], allIngHistory = [], allProducts = [];
 let currentPeriod = '3m';
 let chartRevExp = null, chartForecast = null;
 let allMostUsed = []; // computed once per load alongside reorder/dead-stock (fixed 6-month window, not period/month scoped)
@@ -603,7 +613,7 @@ let muExpanded = false;
 // Running-out/dead-stock are always the full 6-month usage window regardless
 // of period or month, same as today's desktop behavior.
 let selectedMonth = null;
-let roExpanded = false, dsExpanded = false;
+let roExpanded = false, dsExpanded = false, usExpanded = false;
 
 const PERIOD_DAYS  = { '30d': 30, '3m': 90, '6m': 180, '12m': 365 };
 const PERIOD_LABELS = { '30d': 'last 30 days', '3m': '3 months', '6m': '6 months', '12m': '12 months', 'all': 'all time' };
@@ -650,11 +660,15 @@ async function loadAnalytics() {
     if (storeId) _qe = _qe.eq('store_id', storeId);
     let _qin = supabaseClient.from('ingredients').select('id, name, quantity, unit, cost_per_unit, min_stock, created_at, reorder_pending').eq('profile_id', user.id);
     if (storeId) _qin = _qin.eq('store_id', storeId);
-    const [salesRes, expensesRes, ingredientsRes] = await Promise.all([_qs, _qe, _qin]);
+    // Products (legacy `recipes` table) -- only their components, for Unused Stock.
+    let _qp = supabaseClient.from('recipes').select('id, components').eq('profile_id', user.id);
+    if (storeId) _qp = _qp.eq('store_id', storeId);
+    const [salesRes, expensesRes, ingredientsRes, productsRes] = await Promise.all([_qs, _qe, _qin, _qp]);
 
     allSales       = salesRes.data       || [];
     allExpenses    = expensesRes.data    || [];
     allIngredients = ingredientsRes.data || [];
+    allProducts    = productsRes.data    || [];
 
     // Fetch 6 months of quantity history for reorder + dead stock analysis
     if (allIngredients.length > 0) {
@@ -675,6 +689,7 @@ async function loadAnalytics() {
     renderMostUsedItems();
     renderReorderPredictions();
     renderDeadStock();
+    renderUnusedStock();
   } catch (err) {
     console.error('Analytics load error:', err);
   }
@@ -698,6 +713,7 @@ function renderPaywallFeatures() {
     ['Most used items', 'What you go through fastest, by usage'],
     ['Reorder forecast', 'Which items need restocking, and in which of the next 3 months'],
     ['Dead stock', 'Cash sitting on the shelf, unused for months'],
+    ['Unused stock', 'Items that aren’t part of any product'],
     ['3-month forecast', 'A trend line through your own history']
   ].map(([t, s]) => `<div class="an-pay-i">${tick}<span><b>${anEsc(t)}</b><span>${anEsc(s)}</span></span></div>`).join('');
 }
@@ -1358,6 +1374,71 @@ function renderDeadStock() {
     </div>`;
   }).join('') + `<div class="an-tot">Total tied up: <b>€${totalTiedUp.toFixed(2)}</b></div>` + (dead.length > 5
     ? `<a href="#" class="an-more" onclick="event.preventDefault();dsExpanded=!dsExpanded;renderDeadStock();">${dsExpanded ? 'Show less' : `Show all ${dead.length}`}</a>`
+    : '');
+}
+
+// Items that no product lists as a component -- stock that can only leave
+// through a manual adjustment, never through an order. Sorted by the money
+// tied up in them; items at zero stock still listed (they're unlinked too),
+// just last.
+function renderUnusedStock() {
+  const el = document.getElementById('unusedStockList');
+  const rowsEl = document.getElementById('anUsRows');
+  if (!el && !rowsEl) return;
+
+  const usedIds = new Set();
+  allProducts.forEach(p => {
+    (Array.isArray(p.components) ? p.components : []).forEach(c => {
+      const id = c && (c.ingredient_id || c.id);
+      if (id) usedIds.add(String(id));
+    });
+  });
+
+  const unused = allIngredients
+    .filter(ing => !usedIds.has(String(ing.id)))
+    .map(ing => ({ ...ing, tiedUpValue: Math.max(0, parseFloat(ing.quantity) || 0) * (parseFloat(ing.cost_per_unit) || 0) }))
+    .sort((a, b) => b.tiedUpValue - a.tiedUpValue || (parseFloat(b.quantity) || 0) - (parseFloat(a.quantity) || 0));
+
+  const qtyTxt = ing => `${(parseFloat(ing.quantity) || 0).toFixed(1)} ${ing.unit || ''}`.trim();
+
+  if (!unused.length) {
+    const msg = allIngredients.length ? 'Every item is used in at least one product' : 'No items found';
+    if (el) el.innerHTML = `<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px 0">${msg}</p>`;
+    if (rowsEl) rowsEl.innerHTML = `<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;margin:0;">${msg}</p>`;
+    return;
+  }
+
+  const totalTiedUp = unused.reduce((s, i) => s + i.tiedUpValue, 0);
+
+  if (el) el.innerHTML = `
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px">
+      ${unused.length} item${unused.length > 1 ? 's' : ''} not used in any product
+      &nbsp;·&nbsp; <strong style="color:var(--warning)">€${totalTiedUp.toFixed(2)}</strong> in stock
+    </p>
+    <div class="table-scroll"><table class="top-products-table">
+      <thead><tr>
+        <th>Item</th><th>In Stock</th><th>Value</th>
+      </tr></thead>
+      <tbody>
+        ${unused.map(ing => `<tr>
+          <td><a href="/ingredient-detail?id=${ing.id}" style="color:var(--accent);text-decoration:none">${anEsc(ing.name)}</a></td>
+          <td>${anEsc(qtyTxt(ing))}</td>
+          <td style="font-weight:600">€${ing.tiedUpValue.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+
+  if (!rowsEl) return;
+  const shown = usExpanded ? unused : unused.slice(0, 5);
+  rowsEl.innerHTML = shown.map(ing => `<div class="an-lrow">
+      <span class="an-l-main">
+        <span class="an-l-name">${anEsc(ing.name)}</span>
+        <span class="an-l-why">${anEsc(qtyTxt(ing))} · not in any product</span>
+      </span>
+      <span class="an-l-val">€${ing.tiedUpValue.toFixed(2)}</span>
+      <a href="/ingredient-detail?id=${ing.id}" class="an-l-act">Open</a>
+    </div>`).join('') + `<div class="an-tot">Total in stock: <b>€${totalTiedUp.toFixed(2)}</b></div>` + (unused.length > 5
+    ? `<a href="#" class="an-more" onclick="event.preventDefault();usExpanded=!usExpanded;renderUnusedStock();">${usExpanded ? 'Show less' : `Show all ${unused.length}`}</a>`
     : '');
 }
 </script>
