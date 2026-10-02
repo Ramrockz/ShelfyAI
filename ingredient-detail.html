@@ -2616,7 +2616,7 @@
       ? `<div class="ost-total"><span>Total incl. this store</span>
            <span class="ost-qty">${fmtQ(total)}${unitOf(here) ? ' ' + escapeHtml(unitOf(here)) : ''}</span></div>`
       : `<div class="ost-note">No combined total – the stores count this item in different units.</div>`;
-    return `<div class="ost"><div class="ost-h">In other stores</div>${order.map(groupHtml).join('')}${totalHtml}</div>`;
+    return `<div class="ost"><div class="ost-h">In other stores (based on SKU)</div>${order.map(groupHtml).join('')}${totalHtml}</div>`;
   }
 
   function updateStatsDisplay() {
