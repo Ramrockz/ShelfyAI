@@ -7,7 +7,11 @@
   var ICON_FAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" width="9" height="9"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
   // mode: 'look' (just started) | 'read' (working) | 'celebrate' (done) | 'sad' (failed)
-  function catHtml(mode) {
+  // opts.big: the larger success-screen cat (order-success.js) -- 80px wide,
+  // eyes a little closer together and a smaller nose, per that design.
+  function catHtml(mode, opts) {
+    var big = !!(opts && opts.big);
+    var EX = big ? [80, 160] : [66, 186];
     var C = '#10B4D6';
     var celebrate = mode === 'celebrate', sad = mode === 'sad';
     var pieces = '';
@@ -21,24 +25,25 @@
           '--r:' + ((i * 47) % 360) + 'deg;animation-delay:' + (380 + (i % 4) * 40) + 'ms"></i>';
       }
     }
-    var eyes = [66, 186].map(function (cx) {
+    var eyes = EX.map(function (cx) {
       return '<circle class="uim-eye" cx="' + cx + '" cy="' + (sad ? 156 : 148) + '" r="' + (sad ? 22 : 27) + '" fill="#fff"/>';
     }).join('');
-    var happyEyes = celebrate ? '<g class="uim-eyes-happy">' + [66, 186].map(function (cx) {
+    var happyEyes = celebrate ? '<g class="uim-eyes-happy">' + EX.map(function (cx) {
       return '<path d="M' + (cx - 24) + ' 158 Q' + cx + ' 120 ' + (cx + 24) + ' 158" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>';
     }).join('') + '</g>' : '';
     var badge = celebrate
       ? '<div class="uim-cat-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>'
       : '';
-    return '<div class="uim-cat" data-mode="' + mode + '" aria-hidden="true">' +
+    return '<div class="uim-cat' + (big ? ' uim-cat-big' : '') + '" data-mode="' + mode + '" aria-hidden="true">' +
       '<div class="uim-cat-shadow"></div>' + pieces +
       '<div class="uim-cat-in"><div class="uim-cat-body"><div class="uim-cat-idle">' +
-        '<svg width="62" height="71" viewBox="0 0 252 288">' +
+        '<svg width="' + (big ? 80 : 62) + '" height="' + (big ? 92 : 71) + '" viewBox="0 0 252 288">' +
           '<path class="uim-ear-l" d="M0 84 L0 14 Q0 0 12 3 Q14 4 16 6 L84 84 Z" fill="' + C + '"/>' +
           '<path class="uim-ear-r" d="M252 84 L252 14 Q252 0 240 3 Q238 4 236 6 L168 84 Z" fill="' + C + '"/>' +
           '<path d="M0 73 L252 73 L252 246 Q252 288 210 288 L42 288 Q0 288 0 246 Z" fill="' + C + '"/>' +
           '<g class="uim-eyes">' + eyes + '</g>' + happyEyes +
-          '<path d="M96 192 L156 192 L126 222 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>' +
+          (big ? '<path d="M104 190 L148 190 L126 220 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>'
+               : '<path d="M96 192 L156 192 L126 222 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>') +
         '</svg>' + badge +
       '</div></div></div></div>';
   }
@@ -47,10 +52,10 @@
   // animations aren't restarted on every progress tick. On 'celebrate' the
   // eyes turn into happy arcs for the length of the jump.
   var happyTimers = [];
-  function setCat(wrap, mode) {
+  function setCat(wrap, mode, opts) {
     if (!wrap || wrap.dataset.mode === mode) return;
     wrap.dataset.mode = mode;
-    wrap.innerHTML = catHtml(mode);
+    wrap.innerHTML = catHtml(mode, opts);
     happyTimers.forEach(clearTimeout); happyTimers = [];
     if (mode === 'celebrate') {
       var cat = wrap.firstChild;

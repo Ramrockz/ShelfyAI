@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v508';
+const CACHE_NAME = 'shelfy-v509';
 
 const STATIC_ASSETS = [
   '/',
@@ -33,6 +33,7 @@ const STATIC_ASSETS = [
   '/import-modal.js',
   '/url-import-modal.js',
   '/inventory-impact.js',
+  '/order-success.js',
   '/chat-bot.js',
   '/store-modal.js',
   '/switch-account-modal.js',

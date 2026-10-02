@@ -46,6 +46,7 @@
 <script src="scan-screen.js"></script>
 <script src="import-modal.js"></script>
 <script src="inventory-impact.js"></script>
+<script src="order-success.js"></script>
 <script src="chat-bot.js"></script>
 <script src="barcode-scanner.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -2626,10 +2627,10 @@ document.addEventListener('keydown', (e) => {
   <!-- Step 3: Success Screen -->
   <div class="modal-content" id="manualStep3" style="display:none;flex-direction:column;">
     <div id="successBody" style="flex:1;min-height:0;overflow-y:auto;padding:24px 24px 8px;scrollbar-width:thin;scrollbar-color:var(--accent) transparent;"></div>
-    <div class="ii-foot" style="padding:14px 24px;">
-      <button type="button" class="ii-btn ghost" onclick="startAnotherOrder()">New order</button>
-      <button type="button" class="ii-btn ghost" onclick="closeManualOrderModal()">Done</button>
-      <button type="button" class="ii-btn primary btn-primary">View order</button>
+    <div class="os-foot" style="padding:14px 24px;">
+      <button type="button" class="os-btn-out" onclick="startAnotherOrder()">New order</button>
+      <button type="button" class="os-btn-ghost" onclick="closeManualOrderModal()">Done</button>
+      <button type="button" class="os-btn-primary btn-primary">View order</button>
     </div>
   </div>
 
@@ -3252,51 +3253,22 @@ function showOrderSuccessScreen(order, inventoryUpdated, inventoryChanges, unmat
   const changes = (inventoryUpdated && inventoryChanges) ? inventoryChanges : [];
   const priority = { out_of_stock: 0, low_stock: 1, ok: 2 };
   const sorted = [...changes].sort((a, b) => (priority[a.status] ?? 2) - (priority[b.status] ?? 2));
-  const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.oldQty - c.newQty), 0);
   const soldItems = Array.isArray(order.items) ? order.items : [];
-  const soldUnits = soldItems.reduce((s, it) => s + (parseFloat(it.quantity) || 0), 0);
-
-  const rows = sorted.map(c => ({
-    name: c.name,
-    from: c.oldQty,
-    to: c.newQty,
-    unit: c.unit,
-    href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
-    state: c.status === 'out_of_stock' ? 'out' : c.status === 'low_stock' ? 'low' : '',
-    why: (c.status === 'low_stock' && c.minStock) ? `Alert level ${ShelfyInventoryImpact.fmt(c.minStock)}` : null
-  }));
 
   const body = document.getElementById('successBody');
-  ShelfyInventoryImpact.render(body, {
-    title: 'Order from ' + (order.customer || 'Customer') + ' created',
-    sub: [order.source, order.order_reference].filter(Boolean).join(' · ') || null,
-    figs: [
-      [`$${(parseFloat(order.revenue) || 0).toFixed(2)}`, 'order total'],
-      [`${soldUnits} unit${soldUnits === 1 ? '' : 's'}`, 'sold'],
-      ...(changes.length ? [[`−${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'items used']] : [])
-    ],
-    secTitle: 'Inventory updated',
-    secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
-    rows,
-    emptyText: inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.',
-    // "Not in inventory" is folded into the unified "Needs attention"
-    // section rendered below instead of the shared renderer's own version.
-    unmatched: [],
-    note: inventoryUpdated
-      ? 'Stock was deducted when this order was created. Editing the order later does not re-run it.'
-      : null,
-    undo: (inventoryUpdated && changes.length) ? {
-      label: 'Put this stock back',
-      onClick: (btn) => undoOrderStock(changes, btn)
-    } : null
+  // Rendered by the shared order-success.js (same screen on orders.html and
+  // operations.html). Customer/total come from the saved order row.
+  ShelfyOrderSuccess.render(body, {
+    customer: order.customer,
+    total: order.revenue,
+    sold: soldItems,
+    changes: sorted,
+    inventoryUpdated: !!inventoryUpdated,
+    onUndo: (inventoryUpdated && changes.length) ? (btn) => undoOrderStock(changes, btn) : null
   });
 
-  // Order-side-only additions the shared success-screen renderer (also used
-  // by expenses.html) doesn't know about: what actually sold (products carry
-  // no stock of their own, so no from→to for these), and a unified
-  // "Needs attention" list combining low/out-of-stock reorder rows with
-  // unmatched-line rows.
-  renderOrderSoldSection(body, soldItems);
+  // "Needs attention" (low/out-of-stock reorders + unmatched lines) stays
+  // page-side, appended below the inventory section.
   renderOrderNeedsAttention(body, changes, unmatchedItems || []);
 }
 
@@ -3348,7 +3320,7 @@ function renderOrderNeedsAttention(body, changes, unmatchedItems) {
     }
   })));
 
-  const invSec = body.querySelector('.ii-sec');
+  const invSec = body.querySelector('.os-inv') || body.querySelector('.ii-sec');
   const rowsHtml = rows.map((r, i) => `<div class="ii-un">
       <span class="ii-un-main">
         <span class="ii-un-name">${_rcmEsc(r.name)}</span>
