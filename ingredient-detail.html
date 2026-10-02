@@ -2778,10 +2778,44 @@
   // Known colour names get a small swatch dot in their chip — anything else
   // (sizes, materials, etc.) is just text. Not the inventory-row swatch
   // feature that was reverted; this is the item-detail Attributes row only.
-  const _ATTR_SWATCH = { Black: '#0f172a', White: '#ffffff', Teal: '#0e7490', Navy: '#1e3a8a', Grey: '#94a3b8', Gray: '#94a3b8' };
+  // Colour swatch for an attribute value. Lookup order: our own tuned shades
+  // (incl. German and textile names), then any CSS named colour the browser
+  // knows (Burgundy -> no, but Maroon/Olive/Beige/... yes), and for
+  // multi-word values the last word ("Dark Heather Grey" -> grey).
+  // Case-insensitive. Values that aren't colours ("XL", "Cotton") get none.
+  const _ATTR_SWATCH = {
+    black: '#0f172a', schwarz: '#0f172a', white: '#ffffff', weiss: '#ffffff', 'weiß': '#ffffff',
+    grey: '#94a3b8', gray: '#94a3b8', grau: '#94a3b8', 'heather grey': '#a3a9b3', heather: '#a3a9b3',
+    charcoal: '#36454f', anthracite: '#383e42', anthrazit: '#383e42', silver: '#c0c4cc', silber: '#c0c4cc',
+    navy: '#1e3a8a', marine: '#1e3a8a', blue: '#2563eb', blau: '#2563eb', 'royal blue': '#1d4ed8', royal: '#1d4ed8',
+    'light blue': '#7dd3fc', hellblau: '#7dd3fc', 'sky blue': '#38bdf8', teal: '#0e7490', petrol: '#155e75',
+    turquoise: '#14b8a6', 'türkis': '#14b8a6', tuerkis: '#14b8a6', mint: '#86efac',
+    green: '#16a34a', 'grün': '#16a34a', gruen: '#16a34a', 'bottle green': '#14532d', 'forest green': '#166534',
+    olive: '#6b7c23', oliv: '#6b7c23', khaki: '#b5a878', sage: '#9caf88',
+    red: '#dc2626', rot: '#dc2626', burgundy: '#7f1d2d', bordeaux: '#7f1d2d', 'weinrot': '#7f1d2d', maroon: '#7f1d2d',
+    pink: '#ec4899', rosa: '#f9a8d4', rose: '#f9a8d4', magenta: '#c026d3', fuchsia: '#c026d3',
+    purple: '#7c3aed', lila: '#a78bfa', violett: '#7c3aed', lavender: '#c4b5fd', flieder: '#c4b5fd',
+    orange: '#f97316', yellow: '#facc15', gelb: '#facc15', mustard: '#ca8a04', senf: '#ca8a04', gold: '#d4a017',
+    brown: '#7c4a2d', braun: '#7c4a2d', chocolate: '#5c3317', camel: '#c19a6b', beige: '#e8dcc4', sand: '#d9c7a3',
+    cream: '#f5efe0', creme: '#f5efe0', 'off white': '#f5f1e8', ecru: '#efe6d2', natural: '#efe6d2', natur: '#efe6d2',
+    ivory: '#fffbeb', 'elfenbein': '#fffbeb'
+  };
+  function _swatchColor(v) {
+    const key = String(v || '').trim().toLowerCase();
+    if (!key) return null;
+    if (_ATTR_SWATCH[key]) return _ATTR_SWATCH[key];
+    if (/^[a-z]+$/.test(key) && window.CSS && CSS.supports && CSS.supports('color', key)) return key;
+    const words = key.split(/[\s\/-]+/).filter(Boolean);
+    if (words.length > 1) {
+      const last2 = words.slice(-2).join(' ');
+      if (_ATTR_SWATCH[last2]) return _ATTR_SWATCH[last2];
+      return _swatchColor(words[words.length - 1]);
+    }
+    return null;
+  }
   function _attrSwatch(v) {
-    const hex = _ATTR_SWATCH[v];
-    return hex ? `<span class="drow-swatch" style="background:${hex}"></span>` : '';
+    const c = _swatchColor(v);
+    return c ? `<span class="drow-swatch" style="background:${c}"></span>` : '';
   }
 
   function attrRow() {
