@@ -1144,10 +1144,10 @@ input[type="number"] {
 
 /* Scan button while reading / after: shimmer + bouncing dots while busy,
    dark "Try again" after a failure. */
-#uimCta { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 2px;
+#uimCta, #aimCta { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 2px;
           transition: background 320ms cubic-bezier(.2,0,0,1); }
-#uimCta[data-mode="loading"] { background: #7DD6E8; opacity: 1; cursor: default; }
-#uimCta[data-mode="failed"] { background: var(--text-main); color: var(--bg-main); }
+#uimCta[data-mode="loading"], #aimCta[data-mode="loading"] { background: #7DD6E8; opacity: 1; cursor: default; }
+#uimCta[data-mode="failed"], #aimCta[data-mode="failed"] { background: var(--text-main); color: var(--bg-main); }
 .uim-cta-sh { position: absolute; inset: 0; width: 35%;
               background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
               animation: uimShimmer 1.8s cubic-bezier(.3,0,0,1) infinite; }
@@ -1155,6 +1155,44 @@ input[type="number"] {
 .uim-dots i { width: 4px; height: 4px; border-radius: 50%; background: #fff; animation: uimDot 1.1s infinite; }
 .uim-dots i:nth-child(2) { animation-delay: .15s; }
 .uim-dots i:nth-child(3) { animation-delay: .3s; }
+
+/* Import from file -- file card and found-items preview (import-modal.js
+   renderFile()/buildWork()). The cat, steps, bar and skeletons reuse the
+   .uim-* reading-screen rules above. */
+.aim-fc { margin: 14px 20px 0; background: var(--bg-panel); border: 1px solid var(--border-hair, var(--border));
+          border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.aim-fc-tile { position: relative; width: 34px; height: 42px; flex: none; display: flex; align-items: center;
+               justify-content: center; color: var(--text-muted); }
+.aim-fc-tile svg { display: block; flex-shrink: 0; }
+.aim-fc-pdf b { position: absolute; left: 0; right: 0; bottom: 7px; text-align: center;
+                font-size: 9px; font-weight: 800; letter-spacing: .04em; color: #C2363B; }
+.aim-fc-photo { width: 42px; height: 42px; border-radius: 8px; overflow: hidden; background: var(--bg-inner); }
+.aim-fc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.aim-fc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.aim-fc-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; font-weight: 600; color: var(--text-main); }
+.aim-fc-meta { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.aim-fc-up { display: block; height: 3px; border-radius: 3px; background: var(--bg-inner); overflow: hidden;
+             opacity: 0; transition: opacity 320ms; }
+.aim-fc-up > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--accent); transition: width 160ms linear; }
+.aim-fc-note { margin: 6px 22px 0; font-size: 11.5px; color: var(--text-muted); }
+
+.aim-rows { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-hair, var(--border)); }
+.aim-row { display: flex; align-items: center; gap: 12px; }
+.aim-row-q { position: relative; width: 38px; height: 38px; border-radius: 9px; background: var(--bg-inner); overflow: hidden;
+             flex: none; display: flex; align-items: center; justify-content: center;
+             font-size: 12px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.aim-row-q .uim-scanline { height: 30%; }
+.aim-rows[data-state="scan"] .uim-scanline { display: block; }
+.aim-rows[data-state="failed"] .uim-skel { opacity: .5; }
+.aim-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.aim-row-line { position: relative; display: block; min-height: 16px; }
+.aim-row-line-sm { min-height: 14px; }
+.aim-row-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aim-row-meta { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aim-row-price { font-size: 14px; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.aim-row-in { animation: uimFadeUp 500ms cubic-bezier(.2,0,0,1) both; }
+.aim-row-more { font-size: 12px; color: var(--text-muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .aim-row-in, .aim-rows .uim-scanline { animation: none !important; } }
 
 @keyframes uimSpin { to { transform: rotate(360deg); } }
 @keyframes uimShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }

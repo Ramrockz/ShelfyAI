@@ -28,7 +28,6 @@
   // one until the response arrives; an early response fast-forwards the
   // remaining steps instead of jumping straight to "done".
   var t0 = 0, tickTimer = null, resultAt = null, resultStage = 0, curStage = 0;
-  var happyTimers = [];
   // Bumped by every close()/new read so a response arriving after the
   // sheet was closed (or a newer read started) is recognized as stale.
   var runId = 0;
@@ -82,8 +81,6 @@
   var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>';
   var ICON_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-  var ICON_TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  var ICON_FAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" width="9" height="9"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   var ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="26" height="26"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>';
 
   var STAGES = [
@@ -232,49 +229,6 @@
 
   // ---------- Reading screen ----------
 
-  function catHtml(mode) {
-    var C = '#10B4D6';
-    var celebrate = mode === 'celebrate', sad = mode === 'sad';
-    var pieces = '';
-    if (celebrate) {
-      var colors = ['#10B4D6', '#FFD31D', '#12A36B', '#E5484D', '#111827', '#7DD6E8'];
-      for (var i = 0; i < 16; i++) {
-        var a = (i / 16) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1), d = 56 + (i * 37) % 30;
-        pieces += '<i class="uim-confetti" style="width:' + (i % 3 ? 7 : 6) + 'px;height:' + (i % 3 ? 11 : 6) + 'px;' +
-          'border-radius:' + (i % 3 ? 2 : 6) + 'px;background:' + colors[i % colors.length] + ';' +
-          '--dx:' + (Math.cos(a) * d).toFixed(1) + 'px;--dy:' + (Math.sin(a) * d * 0.8 + 16).toFixed(1) + 'px;' +
-          '--r:' + ((i * 47) % 360) + 'deg;animation-delay:' + (380 + (i % 4) * 40) + 'ms"></i>';
-      }
-    }
-    var eyes = [66, 186].map(function (cx) {
-      return '<circle class="uim-eye" cx="' + cx + '" cy="' + (sad ? 156 : 148) + '" r="' + (sad ? 22 : 27) + '" fill="#fff"/>';
-    }).join('');
-    var happyEyes = celebrate ? '<g class="uim-eyes-happy">' + [66, 186].map(function (cx) {
-      return '<path d="M' + (cx - 24) + ' 158 Q' + cx + ' 120 ' + (cx + 24) + ' 158" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>';
-    }).join('') + '</g>' : '';
-    var badge = celebrate
-      ? '<div class="uim-cat-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>'
-      : '';
-    return '<div class="uim-cat" data-mode="' + mode + '" aria-hidden="true">' +
-      '<div class="uim-cat-shadow"></div>' + pieces +
-      '<div class="uim-cat-in"><div class="uim-cat-body"><div class="uim-cat-idle">' +
-        '<svg width="62" height="71" viewBox="0 0 252 288">' +
-          '<path class="uim-ear-l" d="M0 84 L0 14 Q0 0 12 3 Q14 4 16 6 L84 84 Z" fill="' + C + '"/>' +
-          '<path class="uim-ear-r" d="M252 84 L252 14 Q252 0 240 3 Q238 4 236 6 L168 84 Z" fill="' + C + '"/>' +
-          '<path d="M0 73 L252 73 L252 246 Q252 288 210 288 L42 288 Q0 288 0 246 Z" fill="' + C + '"/>' +
-          '<g class="uim-eyes">' + eyes + '</g>' + happyEyes +
-          '<path d="M96 192 L156 192 L126 222 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>' +
-        '</svg>' + badge +
-      '</div></div></div></div>';
-  }
-
-  function stepIconHtml(state) {
-    if (state === 'done') return '<i class="uim-ic uim-ic-done">' + ICON_TICK + '</i>';
-    if (state === 'active') return '<i class="uim-ic uim-ic-spin"></i>';
-    if (state === 'failed') return '<i class="uim-ic uim-ic-fail">' + ICON_FAIL + '</i>';
-    return '<i class="uim-ic uim-ic-todo"></i>';
-  }
-
   // Built once per read; paint() then only touches what changed, so the
   // CSS animations (cat, spinners, shimmer) aren't restarted every tick.
   function buildWork() {
@@ -298,19 +252,6 @@
       '</div>';
   }
 
-  function setCat(mode) {
-    var wrap = document.getElementById('uimCatWrap');
-    if (!wrap || wrap.dataset.mode === mode) return;
-    wrap.dataset.mode = mode;
-    wrap.innerHTML = catHtml(mode);
-    happyTimers.forEach(clearTimeout); happyTimers = [];
-    if (mode === 'celebrate') {
-      var cat = wrap.firstChild;
-      happyTimers.push(setTimeout(function () { cat.classList.add('happy'); }, 400));
-      happyTimers.push(setTimeout(function () { cat.classList.remove('happy'); }, 2150));
-    }
-  }
-
   function setHeadline(title, sub, failed) {
     var hl = document.getElementById('uimHl');
     if (!hl || hl.dataset.key === title + '|' + sub) return;
@@ -325,7 +266,7 @@
       var state = stateFor(i);
       if (!st || st.dataset.s === state) return;
       st.dataset.s = state;
-      st.querySelector('.uim-step-ic').innerHTML = stepIconHtml(state);
+      st.querySelector('.uim-step-ic').innerHTML = window.ShelfyScanScreen.stepIconHtml(state);
     });
   }
 
@@ -386,7 +327,7 @@
     setHeadline(st.title, curStage === 0 ? 'Connecting to ' + host() : st.sub, false);
     setBar(Math.min(97, ((curStage + ease(Math.min(tl.frac, 1)) * 0.9) / STAGES.length) * 100), false);
     setSteps(function (i) { return i < curStage ? 'done' : i === curStage ? 'active' : 'todo'; });
-    setCat(curStage === 0 ? 'look' : 'read');
+    window.ShelfyScanScreen.setCat(document.getElementById('uimCatWrap'), curStage === 0 ? 'look' : 'read');
     var prev = document.getElementById('uimPrev');
     if (prev) prev.dataset.state = curStage >= 1 ? 'scan' : 'wait';
     renderFoot();
@@ -408,14 +349,14 @@
       setHeadline('Item found', 'Check the draft before saving it.', false);
       setBar(100, false);
       setSteps(function () { return 'done'; });
-      setCat('celebrate');
+      window.ShelfyScanScreen.setCat(document.getElementById('uimCatWrap'), 'celebrate');
       fillPreview();
     } else if (phase === 'failed') {
       var f = FAILS[failCode] || FAILS.client;
       setHeadline(f.title, f.sub ? f.sub(host()) : (failMsg || 'Please try again.'), true);
       setBar(100, true);
       setSteps(function (i) { return i < failStage ? 'done' : i === failStage ? 'failed' : 'todo'; });
-      setCat('sad');
+      window.ShelfyScanScreen.setCat(document.getElementById('uimCatWrap'), 'sad');
       var prev = document.getElementById('uimPrev');
       if (prev) prev.dataset.state = 'failed';
     }
@@ -637,7 +578,7 @@
 
   function close() {
     runId++; stopTimeline();
-    happyTimers.forEach(clearTimeout); happyTimers = [];
+    window.ShelfyScanScreen.stopCat();
     // A finished draft closed without "Review draft item" is a discard.
     if (phase === 'done') refundScan();
     phase = 'idle';
