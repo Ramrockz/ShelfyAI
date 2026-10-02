@@ -1,9 +1,11 @@
-// "Order created" success screen -- shared by orders.html and operations.html
-// (both duplicate the whole order-creation flow, manual and scanned, and both
-// end in showOrderSuccessScreen()). Renders the scrollable body only: cat,
-// headline, total / products sold / items used, the SOLD list and the
-// INVENTORY UPDATED list with each item's stock counting down. Footer buttons
-// and the "Needs attention" list stay page-side.
+// "Order created" / "Expense recorded" success screen. Orders: shared by
+// orders.html and operations.html (both duplicate the whole order-creation
+// flow and end in showOrderSuccessScreen()); expenses: expenses.html's
+// showExpenseSuccessScreen(). Renders the scrollable body only: cat,
+// headline, total / lines / items touched, the SOLD (or BOUGHT) list and the
+// INVENTORY UPDATED list with each item's stock counting down (order) or up
+// (expense). Footer buttons and the order "Needs attention" list stay
+// page-side.
 //
 // Needs scan-screen.js (the cat). Styles: the .os-* rules in styles.css.
 (function () {
@@ -28,34 +30,71 @@
   function clearTimers() { timers.forEach(clearTimeout); timers = []; if (raf) cancelAnimationFrame(raf); raf = null; }
   function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
 
+  var COPY = {
+    order: {
+      title: function (who) { return 'Order from ' + (who || 'Customer') + ' created'; },
+      total: 'order total', line: 'product', lineVerb: 'sold', inv: 'item', invVerb: 'used', sign: '−',
+      sec: 'Sold', undo: 'Put this stock back',
+      empty: ['No inventory items were linked to this order.', 'Inventory was not updated for this order.']
+    },
+    expense: {
+      title: function (who) { return who ? 'Expense from ' + who + ' recorded' : 'Expense recorded'; },
+      total: 'expense total', line: 'product', lineVerb: 'bought', inv: 'item', invVerb: 'restocked', sign: '+',
+      sec: 'Bought', undo: 'Undo stock increase',
+      empty: ['No inventory items were linked to this expense.', 'Inventory was not updated for this expense.']
+    }
+  };
+  var plural = function (n, w) { return w + (n === 1 ? '' : 's'); };
+
   // data: {
-  //   customer, total, sold: [{name, quantity, price}],
-  //   changes: [{id, name, oldQty, newQty, unit, status}],  // status: ok | low_stock | out_of_stock
+  //   kind: 'order' (default) | 'expense',
+  //   customer (order) / vendor (expense), total,
+  //   sold: [{name, quantity, unit?, price? (each) | lineTotal?}],
+  //   changes: [{id, name, oldQty, newQty, unit, status, minStock?}],  // status: ok | low_stock | out_of_stock
   //   inventoryUpdated: bool,
   //   onUndo: function (btn) | null
   // }
   function render(container, data) {
     clearTimers();
+    var kind = data.kind === 'expense' ? 'expense' : 'order';
+    var up = kind === 'expense';
+    var T = COPY[kind];
     var sold = data.sold || [];
     var changes = data.changes || [];
     var rowsSold = sold.map(function (it, i) {
       var q = num(it.quantity) || 1;
+      var unit = it.unit && !/^(pcs?|pieces?|stk)$/i.test(it.unit) ? ' ' + it.unit : '×';
+      var line = it.lineTotal != null ? num(it.lineTotal) : q * num(it.price);
       return '<div class="os-sold-row os-in" data-i="' + i + '">' +
-          '<span class="os-sold-qty">' + esc(fmtN(q)) + '×</span>' +
+          '<span class="os-sold-qty">' + esc(fmtN(q) + unit) + '</span>' +
           '<span class="os-sold-name">' + esc(it.name || 'Product') + '</span>' +
-          '<span class="os-sold-price">' + esc(money(q * num(it.price))) + '</span>' +
+          '<span class="os-sold-price">' + esc(money(line)) + '</span>' +
         '</div>';
     }).join('');
 
     var rowsInv = changes.map(function (c, i) {
       var before = num(c.oldQty), after = num(c.newQty);
-      var pct = before > 0 ? Math.max(0, Math.min(100, (after / before) * 100)) : 0;
-      var pill = c.status === 'out_of_stock' ? '<span class="os-pill" data-state="out">Out of stock</span>'
-        : c.status === 'low_stock' ? '<span class="os-pill" data-state="low">Low stock</span>' : '';
+      // Bar = the larger of the two quantities. Order: shrinks from full to
+      // after/before. Expense: starts at before/after and grows to full.
+      var pct = up
+        ? (after > 0 ? Math.max(0, Math.min(100, (before / after) * 100)) : 0)
+        : (before > 0 ? Math.max(0, Math.min(100, (after / before) * 100)) : 0);
+      var pill = '';
+      if (up) {
+        // Restocking: a "Low stock" tag this purchase cleared fades out; one
+        // that's still low afterwards stays.
+        var minS = num(c.minStock);
+        var wasLow = minS > 0 && before <= minS;
+        if (c.status === 'low_stock') pill = '<span class="os-pill" data-state="low">Low stock</span>';
+        else if (wasLow) pill = '<span class="os-pill" data-state="low" data-fade="1">Low stock</span>';
+      } else {
+        pill = c.status === 'out_of_stock' ? '<span class="os-pill" data-state="out">Out of stock</span>'
+          : c.status === 'low_stock' ? '<span class="os-pill" data-state="low">Low stock</span>' : '';
+      }
       var name = c.id
         ? '<a class="os-inv-name" href="/ingredient-detail?id=' + encodeURIComponent(c.id) + '">' + esc(c.name) + '</a>'
         : '<span class="os-inv-name">' + esc(c.name) + '</span>';
-      return '<div class="os-inv-row os-in" data-i="' + i + '" style="--after:' + pct.toFixed(1) + '%">' +
+      return '<div class="os-inv-row os-in' + (up ? ' os-up' : '') + '" data-i="' + i + '" style="--after:' + pct.toFixed(1) + '%">' +
           '<div class="os-inv-top">' +
             '<div class="os-inv-l">' + name + pill + '</div>' +
             '<div class="os-inv-r">' +
@@ -64,7 +103,7 @@
               '<span class="os-odo-wrap">' +
                 '<span class="os-odo"><span class="os-odo-col"><b>' + esc(fmtN(before)) + '</b><b class="os-after">' + esc(fmtN(after)) + '</b></span></span>' +
                 '<span class="os-unit">' + esc(c.unit || '') + '</span>' +
-                '<span class="os-delta">−' + esc(fmtN(before - after)) + '</span>' +
+                '<span class="os-delta">' + T.sign + esc(fmtN(Math.abs(after - before))) + '</span>' +
               '</span>' +
             '</div>' +
           '</div>' +
@@ -73,27 +112,27 @@
     }).join('');
 
     var invBody = changes.length ? rowsInv
-      : '<div class="os-empty">' + esc(data.inventoryUpdated ? 'No inventory items were linked to this order.' : 'Inventory was not updated for this order.') + '</div>';
+      : '<div class="os-empty">' + esc(data.inventoryUpdated ? T.empty[0] : T.empty[1]) + '</div>';
 
     container.innerHTML =
       '<div class="os">' +
         '<div class="os-head">' +
           '<div class="os-cat" id="osCat" title="Again!"></div>' +
-          '<div class="os-title os-in">Order from ' + esc(data.customer || 'Customer') + ' created</div>' +
+          '<div class="os-title os-in">' + esc(T.title(up ? data.vendor : data.customer)) + '</div>' +
         '</div>' +
         '<div class="os-stats">' +
-          '<div class="os-stat os-in"><b id="osTotal">' + esc(money(0)) + '</b><span>order total</span></div>' +
-          '<div class="os-stat os-in"><b>' + sold.length + '</b><span>product' + (sold.length === 1 ? '' : 's') + ' sold</span></div>' +
-          '<div class="os-stat os-in"><b>' + (changes.length ? '−' + changes.length : '0') + '</b><span>item' + (changes.length === 1 ? '' : 's') + ' used</span></div>' +
+          '<div class="os-stat os-in"><b id="osTotal">' + esc(money(0)) + '</b><span>' + T.total + '</span></div>' +
+          '<div class="os-stat os-in"><b>' + sold.length + '</b><span>' + plural(sold.length, T.line) + ' ' + T.lineVerb + '</span></div>' +
+          '<div class="os-stat os-in"><b>' + (changes.length ? T.sign + changes.length : '0') + '</b><span>' + plural(changes.length, T.inv) + ' ' + T.invVerb + '</span></div>' +
         '</div>' +
         (sold.length ? '<div class="os-sec os-sec-sold">' +
-          '<div class="os-sec-head os-in"><span>Sold</span><span>' + sold.length + ' product' + (sold.length === 1 ? '' : 's') + '</span></div>' +
+          '<div class="os-sec-head os-in"><span>' + T.sec + '</span><span>' + sold.length + ' ' + plural(sold.length, T.line) + '</span></div>' +
           '<div class="os-card os-in">' + rowsSold + '</div>' +
         '</div>' : '') +
         '<div class="os-sec os-inv">' +
           '<div class="os-sec-head os-in"><span>Inventory updated</span><span>' + changes.length + ' item' + (changes.length === 1 ? '' : 's') + '</span></div>' +
           '<div class="os-card os-in">' + invBody + '</div>' +
-          (data.onUndo && changes.length ? '<button type="button" class="os-undo os-in" id="osUndo">Put this stock back</button>' : '') +
+          (data.onUndo && changes.length ? '<button type="button" class="os-undo os-in" id="osUndo">' + T.undo + '</button>' : '') +
         '</div>' +
       '</div>';
 

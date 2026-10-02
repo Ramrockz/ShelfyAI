@@ -2267,6 +2267,18 @@ tr:hover td {
 .os-undo { align-self: center; font-size: 13px; font-weight: 600; color: var(--accent-deep, var(--accent)); background: none; border: none;
            padding: 6px 0; cursor: pointer; font-family: inherit; }
 .os-undo:disabled { color: var(--text-muted); cursor: default; }
+/* Expense variant (.os-up): the bar starts at before/after and a green
+   sliver grows to full; delta floats up green; a "Low stock" tag this
+   restock cleared (data-fade) fades out instead of in. */
+.os-up .os-delta { color: #12A36B; }
+.os-up .os-bar-base { width: var(--after); }
+.os-up.settled .os-bar-base { width: 100%; }
+.os-up .os-bar-cut { left: var(--after); width: 0; background: #12A36B;
+                     transition: width 900ms cubic-bezier(.3,0,0,1), opacity 600ms cubic-bezier(.2,0,0,1); }
+.os-inv-row.os-up.d .os-bar-cut { width: calc(100% - var(--after)); opacity: 1; }
+.os-inv-row.os-up.settled .os-bar-cut { opacity: 0; transition-delay: 0ms, 200ms; }
+.os-up .os-pill { opacity: 1; }
+.os-inv-row.os-up.d .os-pill[data-fade] { opacity: 0; transition-delay: 300ms; }
 @keyframes osFloat { 0% { opacity: 0; transform: translateY(4px); } 25% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-18px); } }
 
 .os-foot { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; }

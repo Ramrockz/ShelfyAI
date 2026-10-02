@@ -47,6 +47,7 @@
 <script src="import-modal.js"></script>
 <script src="url-import-modal.js"></script>
 <script src="inventory-impact.js"></script>
+<script src="order-success.js"></script>
 <script src="barcode-scanner.js"></script>
 <script src="chat-bot.js"></script>
 <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
@@ -1238,9 +1239,10 @@
   <!-- Success screen: what this expense did to inventory (inventory-impact.js) -->
   <div class="modal-content" id="expenseStep2" style="display:none; flex-direction:column; max-width:520px;">
     <div id="expenseSuccessBody" style="flex:1; min-height:0; overflow-y:auto; padding:24px 24px 8px; scrollbar-width:thin; scrollbar-color:var(--accent) transparent;"></div>
-    <div class="ii-foot" style="padding:14px 24px;">
-      <button type="button" class="ii-btn ghost" onclick="closeExpenseModal()">Done</button>
-      <button type="button" class="ii-btn primary" id="expenseViewBtn">View expense</button>
+    <div class="os-foot" style="padding:14px 24px;">
+      <button type="button" class="os-btn-out" onclick="closeExpenseModal(); openMethodSelectionModal();">New expense</button>
+      <button type="button" class="os-btn-ghost" onclick="closeExpenseModal()">Done</button>
+      <button type="button" class="os-btn-primary" id="expenseViewBtn">View expense</button>
     </div>
   </div>
 </div>
@@ -3017,7 +3019,7 @@ async function saveExpense(event) {
           // A purchase can only raise stock, so "low" here means still
           // below min_stock even after adding this quantity — never "out".
           const status = (minStock > 0 && newQty <= minStock) ? 'low_stock' : 'ok';
-          changesSummary.push({ id: ing.id, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status });
+          changesSummary.push({ id: ing.id, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status, minStock });
         }
       }
     }
@@ -3043,35 +3045,42 @@ function showExpenseSuccessScreen(expense, inventoryUpdated, changes) {
   const viewBtn = document.getElementById('expenseViewBtn');
   if (viewBtn) viewBtn.onclick = () => { window.location.href = '/expense-detail?id=' + expense.id; };
 
-  changes = changes || [];
-  const totalUnits = changes.reduce((sum, c) => sum + Math.max(0, c.newQty - c.oldQty), 0);
-  const rows = changes.map(c => ({
-    name: c.name,
-    from: c.oldQty,
-    to: c.newQty,
-    unit: c.unit,
-    why: `+${c.qty % 1 === 0 ? c.qty : c.qty.toFixed(2)}${c.unit ? ' ' + c.unit : ''} added`,
-    href: c.id ? `/ingredient-detail?id=${encodeURIComponent(c.id)}` : null,
-    state: c.status === 'low_stock' ? 'low' : ''
-  }));
-
-  ShelfyInventoryImpact.render(document.getElementById('expenseSuccessBody'), {
-    title: 'Expense recorded',
-    sub: [expense.vendor, expense.expense_date].filter(Boolean).join(' · ') || null,
-    figs: [
-      [`$${(parseFloat(expense.amount) || 0).toFixed(2)}`, 'receipt total'],
-      [String((expense.ingredients || []).length), 'items'],
-      ...(changes.length ? [[`+${totalUnits % 1 === 0 ? totalUnits : totalUnits.toFixed(2)}`, 'units of stock']] : [])
-    ],
-    secTitle: 'Stock it added',
-    secNote: `${changes.length} item${changes.length !== 1 ? 's' : ''}`,
-    rows,
-    emptyText: inventoryUpdated ? 'No inventory items were linked to this expense.' : 'Inventory was not updated for this expense.',
-    note: inventoryUpdated
-      ? 'Stock went up when this expense was saved.'
-      : null,
-    undo: null
+  changes = inventoryUpdated ? (changes || []) : [];
+  const lines = (expense.ingredients || []).map(l => {
+    const q = parseFloat(l.quantity_added) || 0;
+    return { name: l.ingredient_name, quantity: q, unit: l.unit, lineTotal: q * (parseFloat(l.cost_per_unit) || 0) };
   });
+
+  // Shared with the order success screen (order-success.js, expense mode).
+  ShelfyOrderSuccess.render(document.getElementById('expenseSuccessBody'), {
+    kind: 'expense',
+    vendor: expense.vendor,
+    total: expense.amount,
+    sold: lines,
+    changes,
+    inventoryUpdated: !!inventoryUpdated,
+    onUndo: changes.length ? (btn) => undoExpenseStock(expense.id, btn) : null
+  });
+}
+
+// "Undo stock increase" on the success screen -- same reversal as the list's
+// "Reverse inventory" swipe action (history-based, marks the expense as
+// reversed so it can't run twice), minus its confirm dialog and its own
+// success modal: the user is already looking at exactly what it undoes.
+async function undoExpenseStock(expenseId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Undoing…'; }
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error('Not logged in');
+    const result = await _reverseExpenseInventoryCore(expenseId, user);
+    if (result.alreadyReversed) { if (btn) btn.textContent = 'Already undone'; return; }
+    if (btn) btn.textContent = 'Stock increase undone';
+    showNotification('Stock increase undone', 'success');
+  } catch (e) {
+    console.error('Error undoing expense stock:', e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Undo stock increase'; }
+    showNotification('Failed to undo stock increase', 'error');
+  }
 }
 
 function deleteExpense(expenseId) {
@@ -3267,46 +3276,57 @@ function closeReverseInvConfirm(result) {
 // delta applied to wherever quantity is *now*. Reads/writes ingredient_history
 // the same way saveExpense()/confirmIngredientMapping() already do, so it
 // stays a durable, auditable trail rather than a silent one-off adjustment.
+// Reverses the stock an expense added, from its own ingredient_history rows.
+// Shared by the list's "Reverse inventory" (reverseExpenseInventory(), with a
+// confirm step) and the success screen's "Undo stock increase"
+// (undoExpenseStock()). `confirm(rows)` may return false to cancel.
+async function _reverseExpenseInventoryCore(expenseId, user, confirm) {
+  const { data: already } = await supabaseClient
+    .from('ingredient_history').select('id').eq('reference_id', String(expenseId)).eq('reason', 'expense_reversal').limit(1);
+  if (already && already.length) return { alreadyReversed: true };
+
+  const { data: rows, error } = await supabaseClient
+    .from('ingredient_history').select('ingredient_id, old_value, new_value')
+    .eq('reference_id', String(expenseId)).eq('reason', 'expense');
+  if (error) throw error;
+  if (!rows || !rows.length) return { nothing: true };
+  if (confirm && !await confirm(rows)) return { cancelled: true };
+
+  const impactRows = [];
+  for (const row of rows) {
+    const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // positive -- an addition
+    const { data: ing } = await supabaseClient.from('ingredients').select('name, unit, quantity, min_stock').eq('id', row.ingredient_id).single();
+    if (!ing) continue;
+    const current = parseFloat(ing.quantity) || 0;
+    const restored = Math.max(0, current - delta);
+    await supabaseClient.from('ingredients').update({ quantity: restored }).eq('id', row.ingredient_id);
+    await supabaseClient.from('ingredient_history').insert([{
+      ingredient_id: row.ingredient_id, profile_id: user.id, field_name: 'quantity',
+      old_value: String(current), new_value: String(restored),
+      reason: 'expense_reversal', reference_id: String(expenseId), reference_text: 'Reversed expense inventory'
+    }]);
+    const minStock = parseFloat(ing.min_stock) || 0;
+    impactRows.push({
+      name: ing.name, from: current, to: restored, unit: ing.unit,
+      href: `/ingredient-detail?id=${encodeURIComponent(row.ingredient_id)}`,
+      state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
+    });
+  }
+  _expenseInvState.set(String(expenseId), { applied: true, reversed: true });
+  try { render(); } catch (e2) {}
+  return { impactRows };
+}
+
 async function reverseExpenseInventory(expenseId) {
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return;
-
-    const { data: already } = await supabaseClient
-      .from('ingredient_history').select('id').eq('reference_id', String(expenseId)).eq('reason', 'expense_reversal').limit(1);
-    if (already && already.length) { showNotification("This expense's inventory was already reversed", 'error'); return; }
-
-    const { data: rows, error } = await supabaseClient
-      .from('ingredient_history').select('ingredient_id, old_value, new_value')
-      .eq('reference_id', String(expenseId)).eq('reason', 'expense');
-    if (error) throw error;
-    if (!rows || !rows.length) { showNotification('No inventory changes to reverse for this expense', 'error'); return; }
-
-    if (!await openReverseInvConfirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`)) return;
-
-    const impactRows = [];
-    for (const row of rows) {
-      const delta = parseFloat(row.new_value) - parseFloat(row.old_value); // positive -- an addition
-      const { data: ing } = await supabaseClient.from('ingredients').select('name, unit, quantity, min_stock').eq('id', row.ingredient_id).single();
-      if (!ing) continue;
-      const current = parseFloat(ing.quantity) || 0;
-      const restored = Math.max(0, current - delta);
-      await supabaseClient.from('ingredients').update({ quantity: restored }).eq('id', row.ingredient_id);
-      await supabaseClient.from('ingredient_history').insert([{
-        ingredient_id: row.ingredient_id, profile_id: user.id, field_name: 'quantity',
-        old_value: String(current), new_value: String(restored),
-        reason: 'expense_reversal', reference_id: String(expenseId), reference_text: 'Reversed expense inventory'
-      }]);
-      const minStock = parseFloat(ing.min_stock) || 0;
-      impactRows.push({
-        name: ing.name, from: current, to: restored, unit: ing.unit,
-        href: `/ingredient-detail?id=${encodeURIComponent(row.ingredient_id)}`,
-        state: restored === 0 ? 'out' : (minStock > 0 && restored <= minStock) ? 'low' : ''
-      });
-    }
-    _expenseInvState.set(String(expenseId), { applied: true, reversed: true });
-    try { render(); } catch (e2) {}
-    showReverseInvSuccess(impactRows, `/expense-detail?id=${encodeURIComponent(expenseId)}`);
+    const result = await _reverseExpenseInventoryCore(expenseId, user, (rows) =>
+      openReverseInvConfirm(`Remove the stock this expense added for ${rows.length} item${rows.length === 1 ? '' : 's'}?`));
+    if (result.alreadyReversed) { showNotification("This expense's inventory was already reversed", 'error'); return; }
+    if (result.nothing) { showNotification('No inventory changes to reverse for this expense', 'error'); return; }
+    if (result.cancelled) return;
+    showReverseInvSuccess(result.impactRows, `/expense-detail?id=${encodeURIComponent(expenseId)}`);
   } catch (e) {
     console.error('Error reversing expense inventory:', e);
     showNotification('Failed to reverse inventory', 'error');
@@ -4834,7 +4854,7 @@ async function confirmIngredientMapping() {
             // below min_stock even after adding this quantity — never "out".
             const minStock = parseFloat(ing.min_stock) || 0;
             const status = (minStock > 0 && newQty <= minStock) ? 'low_stock' : 'ok';
-            changesSummary.push({ id: item.ingredientId, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status });
+            changesSummary.push({ id: item.ingredientId, name: ing.name, unit: ing.unit, qty: item.quantity, oldQty, newQty, status, minStock });
             try {
               await supabaseClient.from('ingredient_history').insert([{
                 ingredient_id: item.ingredientId,
