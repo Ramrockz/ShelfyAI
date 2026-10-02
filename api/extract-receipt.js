@@ -181,14 +181,13 @@ async function extractWithClaude(filepath, mimeType) {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    // Sonnet, not Opus -- this is a bounded single-photo read-and-fill-a-
-    // schema task (plus a modest "typical price/size for this kind of
-    // product" guess), not the kind of deep multi-step reasoning Opus is
-    // worth paying for. Meaningfully cheaper per scan with no quality loss
-    // for this task (verified side-by-side against Opus on real photos).
-    model: 'claude-sonnet-5',
+    // Haiku -- this is a bounded single-photo read-and-fill-a-schema task
+    // (plus a modest "typical price/size for this kind of product" guess),
+    // not deep multi-step reasoning; cheapest per scan, same model as the
+    // rest of the app (account-email.js). No `effort` setting: Haiku 4.5
+    // doesn't take one.
+    model: 'claude-haiku-4-5',
     max_tokens: 4096,
-    output_config: { effort: 'medium' },
     messages: [{
       role: 'user',
       content: [
