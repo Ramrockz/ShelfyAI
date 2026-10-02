@@ -102,12 +102,32 @@
   var ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>';
   var ICON_PDF = '<svg width="34" height="42" viewBox="0 0 34 42"><path d="M4 0H23L34 11V38Q34 42 30 42H4Q0 42 0 38V4Q0 0 4 0Z" fill="#FDECEC"/><path d="M23 0V7Q23 11 27 11H34Z" fill="#F6C3C4"/></svg>';
 
-  var STAGES = [
-    { label: 'Uploading the file', title: 'Uploading the file…', ms: 1800 },
-    { label: 'Reading the file', title: 'Reading the file…', sub: 'One scan, charged only if the file can be read.', ms: 2200 },
-    { label: 'Finding the items', title: 'Finding the items…', sub: 'Looking for names, quantities and prices.', ms: 2800 },
-    { label: 'Drafting your items', title: 'Drafting your items…', sub: 'Almost there.' }
-  ];
+  // Step timings only -- the wording differs per upload type, see STEPS.
+  var STAGES = [{ ms: 1800 }, { ms: 2200 }, { ms: 2800 }, {}];
+  // Step label + headline sub per entity. Item creation reads one product
+  // (singular), orders end in matching products, expenses in an expense --
+  // a generic "Drafting your items" fit none of the last two.
+  var STEPS = {
+    ingredient: [
+      { label: 'Uploading the file' },
+      { label: 'Reading the file', sub: 'One scan, charged only if the file can be read.' },
+      { label: 'Finding the item', sub: 'Looking for name, size and price.' },
+      { label: 'Drafting your item', sub: 'Almost there.' }
+    ],
+    order: [
+      { label: 'Uploading the file' },
+      { label: 'Reading the order', sub: 'One scan, charged only if the file can be read.' },
+      { label: 'Finding the products', sub: 'Looking for products and quantities.' },
+      { label: 'Preparing your order', sub: 'Almost there.' }
+    ],
+    expense: [
+      { label: 'Uploading the file' },
+      { label: 'Reading the receipt', sub: 'One scan, charged only if the file can be read.' },
+      { label: 'Finding the line items', sub: 'Looking for items, quantities and prices.' },
+      { label: 'Preparing your expense', sub: 'Almost there.' }
+    ]
+  };
+  function stepText(i) { return (STEPS[currentEntity] || STEPS.ingredient)[i]; }
   var FF_MS = 280; // per remaining step once the response is in
   var PREVIEW_ROWS = 3, PREVIEW_MAX = 4;
 
@@ -420,7 +440,7 @@
         '<div class="uim-bar"><i id="aimBar"><b></b></i></div>' +
         '<div class="uim-steps">' + STAGES.map(function (s, i) {
           return '<div class="uim-step" id="aimStep' + i + '" data-s="">' +
-            '<span class="uim-step-ic"></span><span class="uim-step-l">' + esc(s.label) + '</span></div>';
+            '<span class="uim-step-ic"></span><span class="uim-step-l">' + esc(stepText(i).label) + '</span></div>';
         }).join('') + '</div>' +
         '<div class="aim-rows" id="aimRows" data-state="wait">' + rows + '</div>' +
       '</div>';
@@ -513,8 +533,8 @@
     var tl = timeline();
     curStage = Math.min(tl.stage, 3);
     if (tl.stage >= STAGES.length) { finishDone(); return; }
-    var st = STAGES[curStage];
-    setHeadline(st.title, curStage === 0 ? (file ? file.name : '') : st.sub, false);
+    var st = stepText(curStage);
+    setHeadline(st.label + '…', curStage === 0 ? (file ? file.name : '') : st.sub, false);
     setBar(Math.min(97, ((curStage + ease(Math.min(tl.frac, 1)) * 0.9) / STAGES.length) * 100), false);
     setSteps(function (i) { return i < curStage ? 'done' : i === curStage ? 'active' : 'todo'; });
     setCat(curStage === 0 ? 'look' : 'read');
