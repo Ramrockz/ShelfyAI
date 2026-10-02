@@ -44,6 +44,7 @@
 <script src="chat-bot.js"></script>
 <script src="reorder-modal.js"></script>
 <script src="inventory-impact.js"></script>
+<script src="item-insights.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 <style>
@@ -1833,6 +1834,7 @@
     // Load related data
     loadRecipes(ing.id);
     loadOtherStores(ing);
+    if (window.ShelfyItemInsights) { ShelfyItemInsights.invalidate(); ShelfyItemInsights.attach(() => currentIngredient); }
     
     // Always show reorder button
     const reorderBtn = document.getElementById('reorderBtn');
