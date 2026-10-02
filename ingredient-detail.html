@@ -450,15 +450,18 @@
      #detailRows, right under SKU · Notes (otherStoresHtml()). */
   .ost { border-top: 1px solid var(--border); padding: 12px 14px 6px 16px; cursor: default; }
   .ost-h { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
-  .ost-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border-hair, var(--border)); }
-  .ost-h + .ost-row { border-top: none; }
-  .ost-store { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;
-               color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ost-here { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bg-inner); color: var(--text-muted); }
+  .ost-group { padding: 10px 0 4px; }
+  .ost-group + .ost-group { border-top: 1px solid var(--border-hair, var(--border)); }
+  .ost-store { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
+  .ost-here { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: rgba(6,182,212,0.12); color: var(--accent); }
+  .ost-item { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .ost-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ost-item-name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ost-chips { display: flex; flex-wrap: wrap; gap: 4px; }
   .ost-qty { flex-shrink: 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-main); }
   .ost-qty[data-state="out"] { color: var(--danger); }
-  .ost-total { margin-top: 4px; padding-top: 12px; border-top: 2px solid var(--border); }
-  .ost-total .ost-store { font-weight: 800; }
+  .ost-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding: 12px 0 6px;
+               border-top: 2px solid var(--border); font-size: 14px; font-weight: 800; color: var(--text-main); }
   .ost-total .ost-qty { font-size: 16px; font-weight: 800; }
   .ost-note { padding: 8px 0 6px; font-size: 12px; color: var(--text-muted); }
 
@@ -2547,7 +2550,7 @@
       if (!user) return;
       const esc = sku.replace(/[\\%_]/g, c => '\\' + c);
       const [{ data: rows }, { data: stores }] = await Promise.all([
-        supabaseClient.from('ingredients').select('id, store_id, quantity, unit')
+        supabaseClient.from('ingredients').select('id, store_id, name, custom_attributes, quantity, unit')
           .eq('profile_id', user.id).ilike('sku', esc).neq('id', ing.id),
         supabaseClient.from('stores').select('id, name').eq('owner_id', user.id)
       ]);
@@ -2566,30 +2569,54 @@
 
   function renderOtherStores() { renderDetailRows(); }
 
-  // '' unless this item's SKU exists in at least one other store.
+  // '' unless this item's SKU exists in at least one other store. Grouped by
+  // store (this store first, then the others by name); under each store
+  // header, the matching item's own name + attributes + stock, so it's clear
+  // which item in which store each number belongs to.
   function otherStoresHtml() {
     if (!currentIngredient || !otherStoreRows.length) return '';
     const fmtQ = v => { const n = parseFloat(v) || 0; return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/0+$/, ''); };
     const unitOf = r => String(r.unit || '').trim();
-    const here = { store_id: currentIngredient.store_id, quantity: currentIngredient.quantity, unit: currentIngredient.unit, here: true };
+    const attrsOf = r => {
+      let a = r.custom_attributes;
+      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
+      if (!a || typeof a !== 'object') return [];
+      return Object.values(a).filter(v => v != null && String(v).trim()).map(String);
+    };
+    const here = { ...currentIngredient, custom_attributes: customAttributes || currentIngredient.custom_attributes, here: true };
     const all = [here, ...otherStoreRows];
-    const row = r => {
+
+    const groups = {};
+    all.forEach(r => { (groups[r.store_id] = groups[r.store_id] || []).push(r); });
+    const storeName = id => storeNames[id] || (id === here.store_id ? (window.currentStoreName || 'This store') : 'Other store');
+    const order = Object.keys(groups).sort((x, y) =>
+      x === here.store_id ? -1 : y === here.store_id ? 1 : storeName(x).localeCompare(storeName(y)));
+
+    const itemRow = r => {
       const q = parseFloat(r.quantity) || 0;
-      const name = storeNames[r.store_id] || (r.here ? (window.currentStoreName || 'This store') : 'Other store');
-      return `<div class="ost-row">
-          <span class="ost-store">${escapeHtml(name)}${r.here ? '<span class="ost-here">This store</span>' : ''}</span>
+      const chips = attrsOf(r).map(v => `<span class="drow-chip">${_attrSwatch(v)}${escapeHtml(v)}</span>`).join('');
+      return `<div class="ost-item">
+          <span class="ost-item-main">
+            <span class="ost-item-name">${escapeHtml(r.name || 'Item')}</span>
+            ${chips ? `<span class="ost-chips">${chips}</span>` : ''}
+          </span>
           <span class="ost-qty"${q <= 0 ? ' data-state="out"' : ''}>${fmtQ(q)}${unitOf(r) ? ' ' + escapeHtml(unitOf(r)) : ''}</span>
         </div>`;
     };
-    // Only add quantities up when every store counts this item in the same
-    // unit -- 5 kg + 3 pcs isn't a meaningful total.
+    const groupHtml = id => `<div class="ost-group">
+        <div class="ost-store">${escapeHtml(storeName(id))}${id === here.store_id ? '<span class="ost-here">This store</span>' : ''}</div>
+        ${groups[id].map(itemRow).join('')}
+      </div>`;
+
+    // Only add quantities up when every item counts in the same unit --
+    // 5 kg + 3 pcs isn't a meaningful total.
     const units = [...new Set(all.map(r => unitOf(r).toLowerCase()))];
     const total = all.reduce((t, r) => t + (parseFloat(r.quantity) || 0), 0);
     const totalHtml = units.length === 1
-      ? `<div class="ost-row ost-total"><span class="ost-store">Total in ${all.length} stores</span>
+      ? `<div class="ost-total"><span>Total in ${order.length} stores</span>
            <span class="ost-qty">${fmtQ(total)}${unitOf(here) ? ' ' + escapeHtml(unitOf(here)) : ''}</span></div>`
       : `<div class="ost-note">No combined total – the stores count this item in different units.</div>`;
-    return `<div class="ost"><div class="ost-h">In other stores</div>${all.map(row).join('')}${totalHtml}</div>`;
+    return `<div class="ost"><div class="ost-h">In other stores</div>${order.map(groupHtml).join('')}${totalHtml}</div>`;
   }
 
   function updateStatsDisplay() {
