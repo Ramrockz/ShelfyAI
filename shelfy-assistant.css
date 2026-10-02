@@ -190,6 +190,28 @@ body.as-radial-open .as-greet, body.as-radial-open .as-hint-tap, body.as-radial-
 .as-card .delivery-row { border: 0; }
 .as-card .delivery-actions { opacity: 0; transition: opacity 0.12s ease; }
 .as-card .delivery-swipe:has(.delivery-row[style*="translateX(-"]) .delivery-actions { opacity: 1; }
+.as-empty { padding: 18px 16px; text-align: center; font-size: 14.5px; color: var(--text-muted); }
+/* One-line answers (asMsgHtml) */
+.as-msg { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.as-msg-icon { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+               background: var(--bg-inner); color: var(--text-muted); }
+.as-msg-icon svg { width: 17px; height: 17px; }
+.as-msg[data-tone="ok"] .as-msg-icon { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+.as-msg[data-tone="deliv"] .as-msg-icon { background: rgba(6, 182, 212, 0.12); color: var(--accent); }
+.as-msg[data-tone="warn"] .as-msg-icon { background: rgba(245, 158, 11, 0.14); color: var(--warning); }
+.as-msg-text { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--text-main); line-height: 1.35; }
+/* "Looking it up…" placeholder rows (asLoadingHint) */
+.as-skel-row { pointer-events: none; }
+.as-skel { position: relative; display: block; height: 12px; border-radius: 6px; background: var(--bg-inner); overflow: hidden; }
+.as-skel-sm { width: 34%; height: 9px; }
+.as-skel-qty { flex-shrink: 0; width: 38px; height: 14px; }
+.as-skel::after { content: ''; position: absolute; inset: 0; width: 40%;
+                  background: linear-gradient(90deg, transparent, var(--bg-panel), transparent);
+                  animation: asSkel 1.4s linear infinite; }
+.as-skel-row:nth-child(3) .as-skel::after { animation-delay: .15s; }
+.as-skel-row:nth-child(4) .as-skel::after { animation-delay: .3s; }
+@keyframes asSkel { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .as-skel::after { animation: none; } }
 .as-noresult { text-align: center; padding: 28px 16px 22px; }
 .as-noresult img { width: 140px; height: auto; opacity: 0.9; margin-bottom: 10px; }
 .as-noresult p { margin: 0; font-size: 14.5px; color: var(--text-muted); }

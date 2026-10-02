@@ -580,7 +580,7 @@
     if (ans.empty != null) {
       html = `<div class="as-noresult"><img src="/cat_no_results.png" alt="" />
         <p>${ans.note ? asEsc(ans.note) : `Nothing found${ans.empty ? ` for “${asEsc(ans.empty)}”` : ''}`}</p></div>`;
-    } else if (!html) html = `<div class="as-empty">${asEsc(ans.say)}</div>`;
+    } else if (!html) html = asMsgHtml(ans.intent === 'reorder' ? 'ok' : ans.intent === 'deliveries' ? 'deliv' : 'info', ans.say);
     res.innerHTML = html;
     asSyncCtas();
   }
@@ -628,12 +628,48 @@
     asSyncCtas();
   }
 
-  function asHint(msg) {
+  // One-line answers with nothing to list ("All good – nothing needs
+  // reordering", "Nothing is on the way", "Search needs a connection", mic
+  // hints): a row with a round icon, styled like the result rows around it,
+  // instead of bare text in the card. tone: ok | deliv | warn | mic | info
+  const AS_MSG_ICONS = {
+    ok: '<path d="M20 6 9 17l-5-5"/>',
+    deliv: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+    warn: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'
+  };
+  function asMsgHtml(tone, text) {
+    const icon = AS_MSG_ICONS[tone] || AS_MSG_ICONS.info;
+    return `<div class="as-msg" data-tone="${tone}" role="status">
+        <span class="as-msg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></span>
+        <span class="as-msg-text">${asEsc(text)}</span>
+      </div>`;
+  }
+
+  function asHint(msg, tone) {
     const box = document.getElementById('asAnswer');
     if (!box) return;
     asShowCard(null);
     box.hidden = false;
-    document.getElementById('asResults').innerHTML = `<div class="as-empty">${asEsc(msg)}</div>`;
+    document.getElementById('asResults').innerHTML = asMsgHtml(tone || 'warn', msg);
+    asSyncCtas();
+  }
+
+  // Waiting on the AI answer (a search-history tap, or a typed question the
+  // local match couldn't answer): placeholder rows shaped like the results
+  // they'll be replaced by, instead of a bare "Let me check…" line.
+  function asLoadingHint() {
+    const box = document.getElementById('asAnswer');
+    if (!box) return;
+    asShowCard(null);
+    box.hidden = false;
+    const row = w => `<div class="as-row as-skel-row" aria-hidden="true">
+        <span class="as-main"><span class="as-skel" style="width:${w}%"></span><span class="as-skel as-skel-sm"></span></span>
+        <span class="as-skel as-skel-qty"></span>
+      </div>`;
+    document.getElementById('asResults').innerHTML =
+      `<div class="as-section" role="status">Looking it up…</div>` + row(62) + row(48) + row(70);
     asSyncCtas();
   }
 
@@ -678,7 +714,7 @@
     let ans = asAnswer(query);
     const wantAI = useAI === true || (useAI === 'fallback' && ans && ans.empty != null);
     if (wantAI && navigator.onLine) {
-      if (useAI === 'fallback') asHint('Let me check…');
+      if (useAI === 'fallback') asLoadingHint();
       asAvatarState('thinking', true);
       const ai = await asAskAI(query);
       asAvatarState('thinking', false);
@@ -892,7 +928,7 @@
     asDictation = true;
     asVoiceHide();
     input.focus();
-    asHint(msg);
+    asHint(msg, 'mic');
   }
 
   function asMic() {
