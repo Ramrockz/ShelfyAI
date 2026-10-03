@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shelfy-v526';
+const CACHE_NAME = 'shelfy-v527';
 
 const STATIC_ASSETS = [
   '/',
@@ -20,7 +20,6 @@ const STATIC_ASSETS = [
   '/analytics',     '/analytics.html',
   '/pricing',       '/pricing.html',
   '/styles.css',
-  '/chat-styles.css',
   '/notifications.css',
   '/auth.js',
   '/theme.js',
@@ -35,7 +34,6 @@ const STATIC_ASSETS = [
   '/inventory-impact.js',
   '/item-insights.js',
   '/order-success.js',
-  '/chat-bot.js',
   '/store-modal.js',
   '/switch-account-modal.js',
   '/pwa-install.js',
