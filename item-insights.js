@@ -18,6 +18,13 @@
     const r = Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
     return r.toLocaleString('en-US', { maximumFractionDigits: d });
   };
+  // "0.03 pcs a day" means nothing for a slow seller -- switch to week / month.
+  const rate = (daily, unit) => {
+    const un = unit ? ' ' + esc(unit) : '';
+    if (daily >= 1) return fmt(daily, 1) + un + ' a day';
+    if (daily * 7 >= 1) return fmt(daily * 7, 1) + un + ' a week';
+    return fmt(daily * 30, 1) + un + ' a month';
+  };
   const money = n => '€' + num(n).toFixed(2);
   const dateTxt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const agoTxt = t => {
@@ -28,8 +35,8 @@
 
   const CAT = `<svg viewBox="14 10 72 83" aria-hidden="true">
       <path d="M17 13 L35 34 H65 L83 13 V78 Q83 90 71 90 H29 Q17 90 17 78 Z" fill="currentColor" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
-      <ellipse cx="37" cy="53" rx="8" ry="8" fill="#fff"/><ellipse cx="63" cy="53" rx="8" ry="8" fill="#fff"/>
-      <path d="M44.6 64.5 h10.8 a1.6 1.6 0 0 1 1.28 2.56 l-4.6 6.13 a2.6 2.6 0 0 1 -4.16 0 l-4.6 -6.13 A1.6 1.6 0 0 1 44.6 64.5 Z" fill="#fff"/>
+      <ellipse cx="37" cy="53" rx="8" ry="8" fill="#06b6d4"/><ellipse cx="63" cy="53" rx="8" ry="8" fill="#06b6d4"/>
+      <path d="M44.6 64.5 h10.8 a1.6 1.6 0 0 1 1.28 2.56 l-4.6 6.13 a2.6 2.6 0 0 1 -4.16 0 l-4.6 -6.13 A1.6 1.6 0 0 1 44.6 64.5 Z" fill="#06b6d4"/>
     </svg>`;
 
   let getIng = () => null;
@@ -69,13 +76,32 @@
       });
     }
 
+    const expIds = [...new Set(rows.filter(r => r.reason === 'expense' && r.ref).map(r => r.ref))];
+    const prices = [];
+    for (let i = 0; i < expIds.length; i += 100) {
+      const { data: ex } = await sb.from('expenses').select('id, expense_date, created_at, vendor, ingredients').in('id', expIds.slice(i, i + 100));
+      (ex || []).forEach(x => {
+        let lines = x.ingredients;
+        if (typeof lines === 'string') { try { lines = JSON.parse(lines); } catch (e) { lines = []; } }
+        (Array.isArray(lines) ? lines : []).filter(l => String(l.ingredient_id) === String(ing.id) && num(l.cost_per_unit) > 0).forEach(l => {
+          prices.push({ t: new Date(x.expense_date || x.created_at).getTime(), price: num(l.cost_per_unit), src: x.vendor || 'Expense' });
+        });
+      });
+    }
+    const { data: costRows } = await sb.from('ingredient_history').select('new_value, changed_at')
+      .eq('ingredient_id', ing.id).eq('field_name', 'cost_per_unit').order('changed_at', { ascending: true });
+    (costRows || []).forEach(r => { if (num(r.new_value) > 0) prices.push({ t: new Date(r.changed_at).getTime(), price: num(r.new_value), src: 'Edited' }); });
+    prices.sort((a, b) => a.t - b.t);
+    // Same price logged twice in a row (expense + the edit it caused) -> keep one.
+    const priceLog = prices.filter((p, i) => !i || Math.abs(p.price - prices[i - 1].price) > 0.004 || p.t - prices[i - 1].t > DAY);
+
     const sups = supRes.data || [];
     const primary = sups.find(s => s.is_primary && num(s.lead_time_days) > 0) || sups.find(s => num(s.lead_time_days) > 0);
     let leadDays = primary ? num(primary.lead_time_days) : num(ing.estimated_delivery);
     let leadSource = primary ? 'supplier' : num(ing.estimated_delivery) > 0 ? 'item' : 'assumed';
     if (!(leadDays > 0)) leadDays = 7;
 
-    return { rows, sales, recipes: recRes.data || [], leadDays, leadSource };
+    return { rows, sales, recipes: recRes.data || [], leadDays, leadSource, priceLog };
   }
 
   // ─── metrics ───────────────────────────────────────────────────────────
@@ -149,6 +175,7 @@
       usage, received, manualUp, manualDown, startLevel, available,
       daily, doh, sellThrough, turnover, avgStock,
       zeroDays: zeroT / DAY, outs, rop, safety, daysToRop, leadDays: d.leadDays, leadSource: d.leadSource,
+      prices: d.priceLog || [],
       last30, prev30, trend, lastUseT: lastUse && lastUse.t, lastInT: lastIn && lastIn.t,
       products: attribute(ing, d, inP)
     };
@@ -186,7 +213,7 @@
       parts.push(`No orders used <b>${esc(ing.name)}</b> in ${perLabel()}.`);
       parts.push(m.qty > 0 ? `${fmt(m.qty)}${u()} are sitting on the shelf${m.cost ? ` – ${money(m.qty * m.cost)} tied up` : ''}.` : 'It’s out of stock, too.');
     } else {
-      parts.push(`You use about <b>${fmt(m.daily, 2)}${u()} a day</b>.`);
+      parts.push(`You use about <b>${rate(m.daily, m.unit)}</b>.`);
       if (m.qty <= 0) parts.push('You’re out of it right now.');
       else parts.push(`At that pace your ${fmt(m.qty)}${u()} last <b>~${fmt(m.doh, 0)} days</b> – until ${dateTxt(new Date(Date.now() + m.doh * DAY))}.`);
       if (m.pending) parts.push('A reorder is already on the way.');
@@ -202,17 +229,17 @@
       val: () => m.daily > 0 ? (m.qty <= 0 ? '0' : '~' + fmt(m.doh, 0)) : '∞',
       sub: () => m.daily > 0 ? (m.qty > 0 ? 'runs out ~' + dateTxt(new Date(Date.now() + m.doh * DAY)) : 'out of stock') : 'not used lately',
       tone: () => m.daily > 0 && m.doh <= m.leadDays ? 'bad' : m.daily > 0 && m.qty <= m.rop ? 'warn' : '',
-      why: () => `How long your current stock lasts at your average daily use: ${fmt(m.qty)}${u()} ÷ ${fmt(m.daily, 2)}${u()} a day. Below your lead time (${fmt(m.leadDays, 0)} days) means you’ll likely run out before a new order arrives.` },
+      why: () => `How long your current stock lasts at your average daily use: ${fmt(m.qty)}${u()} ÷ ${rate(m.daily, m.unit)}. Below your lead time (${fmt(m.leadDays, 0)} days) means you’ll likely run out before a new order arrives.` },
     { key: 'st', label: 'Sell-through',
       val: () => m.sellThrough == null ? '–' : fmt(m.sellThrough * 100, 0) + '%',
       sub: () => m.available > 0 ? `used ${fmt(m.usage)} of ${fmt(m.available)} available` : 'nothing available',
       tone: () => m.sellThrough != null && m.sellThrough < 0.2 && m.qty > 0 ? 'warn' : '',
       why: () => `Share of the stock you had available in ${perLabel()} (what you started with plus what came in) that orders used up. Low means stock is sitting; very high means you’re running lean.` },
-    { key: 'daily', label: 'Daily use',
-      val: () => fmt(m.daily, 2) + u(),
+    { key: 'daily', label: 'Usage',
+      val: () => m.daily > 0 ? rate(m.daily, m.unit).replace(/ a (day|week|month)$/, '<small> /$1</small>') : '0' + u(),
       sub: () => m.trend == null ? `${fmt(m.usage)}${u()} in ${perLabel()}` : `${m.trend >= 0 ? '+' : '−'}${fmt(Math.abs(m.trend) * 100, 0)}% vs previous 30 days`,
       tone: () => '',
-      why: () => `Units orders used per day, on average, over ${perLabel()}. The trend compares the last 30 days with the 30 before (${fmt(m.last30)} vs ${fmt(m.prev30)}${u()}).` },
+      why: () => `How much orders used on average over ${perLabel()} – shown per week or month when it’s less than one a day. The trend compares the last 30 days with the 30 before (${fmt(m.last30)} vs ${fmt(m.prev30)}${u()}).` },
     { key: 'turn', label: 'Turnover',
       val: () => m.turnover == null ? '–' : fmt(m.turnover, 1) + '×',
       sub: () => m.turnover == null ? 'no stock held' : `~${fmt(m.turnover * 365 / m.days, 0)}× a year at this pace`,
@@ -233,6 +260,16 @@
       sub: () => m.cost ? `${fmt(Math.max(0, m.qty))}${u()} × ${money(m.cost)}` : 'no cost set',
       tone: () => '',
       why: () => 'What the stock on your shelf is worth at its cost per unit – money that’s tied up until it’s used.' },
+    { key: 'price', label: 'Purchase price',
+      val: () => m.prices.length ? money(m.prices[m.prices.length - 1].price) : (m.cost ? money(m.cost) : '–'),
+      sub: () => {
+        if (m.prices.length < 2) return m.prices.length ? 'one purchase so far' : 'no purchases recorded';
+        const a = m.prices[0].price, b = m.prices[m.prices.length - 1].price;
+        if (Math.abs(b - a) < 0.005) return 'unchanged since ' + dateTxt(new Date(m.prices[0].t));
+        return `${b > a ? '+' : '−'}${fmt(Math.abs(b - a) / a * 100, 0)}% since ${dateTxt(new Date(m.prices[0].t))}`;
+      },
+      tone: () => m.prices.length > 1 && m.prices[m.prices.length - 1].price > m.prices[0].price * 1.05 ? 'warn' : '',
+      why: () => 'What you paid per unit on your latest expense, compared with the first one I have. Comes from your expenses (and, once cost tracking is on, from edits to the cost).' },
     { key: 'in', label: 'Restocked',
       val: () => (m.received >= 0 ? '+' : '−') + fmt(Math.abs(m.received)) + u(),
       sub: () => 'last ' + agoTxt(m.lastInT),
@@ -274,8 +311,21 @@
       if (m.minStock > m.rop * 1.6) return `It’s on the cautious side: ${fmt(m.minStock)}${u()} vs a suggested ${fmt(m.rop, 0)}${u()}. Fine if you like a buffer – it does tie up more stock.`;
       return `Looks right: ${fmt(m.minStock)}${u()} vs a suggested ${fmt(m.rop, 0)}${u()}.`;
     } },
+    { q: 'How has my cost changed?', a: () => {
+      const p = m.prices;
+      if (!p.length) return 'I don’t have any purchase prices for this item yet – they come from expenses you add.';
+      const lo = Math.min(...p.map(x => x.price)), hi = Math.max(...p.map(x => x.price));
+      const avg = p.reduce((s, x) => s + x.price, 0) / p.length;
+      const head = p.length === 1 ? `Only one purchase so far: ${money(p[0].price)} on ${dateTxt(new Date(p[0].t))}.`
+        : `${p.length} prices since ${dateTxt(new Date(p[0].t))}: lowest <b>${money(lo)}</b>, highest <b>${money(hi)}</b>, average ${money(avg)}.`;
+      return head + '<ul class="ins-list">' + p.slice(-6).reverse().map((x, i, arr) => {
+        const prev = arr[i + 1];
+        const ch = prev && Math.abs(x.price - prev.price) >= 0.005 ? ` <span class="ins-dim">${x.price > prev.price ? '▲' : '▼'}</span>` : '';
+        return `<li><span>${dateTxt(new Date(x.t))} · ${esc(x.src)}</span><b>${money(x.price)}${ch}</b></li>`;
+      }).join('') + '</ul>';
+    } },
     { q: 'How often did it run out?', a: () => m.outs || m.zeroDays > 0
-      ? `In ${perLabel()} it hit zero <b>${m.outs}×</b> and was empty for about ${fmt(m.zeroDays, 1)} days in total.${m.daily > 0 ? ` At ${fmt(m.daily, 2)}${u()} a day that’s roughly ${fmt(m.daily * m.zeroDays, 0)}${u()} you couldn’t have sold.` : ''}`
+      ? `In ${perLabel()} it hit zero <b>${m.outs}×</b> and was empty for about ${fmt(m.zeroDays, 1)} days in total.${m.daily > 0 ? ` At ${rate(m.daily, m.unit)} that’s roughly ${fmt(m.daily * m.zeroDays, 0)}${u()} you couldn’t have sold.` : ''}`
       : `It never ran out in ${perLabel()}.` }
   ];
 
