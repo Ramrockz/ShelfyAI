@@ -2294,13 +2294,15 @@ tr:hover td {
 }
 
 /* ─── Shelfy's take: per-item insights (item-insights.js) ─── */
-.ins-fab { position: fixed; right: 20px; bottom: 24px; z-index: 900; width: 56px; height: 56px; border-radius: 50%;
+.ins-fab { position: fixed; right: 26px; bottom: 96px; z-index: 900; width: 56px; height: 56px; border-radius: 50%;
   border: none; background: var(--accent); color: #0b2530; box-shadow: 0 6px 20px rgba(0,0,0,.22); cursor: pointer;
   display: flex; align-items: center; justify-content: center; transition: transform .15s; }
 .ins-fab:active { transform: scale(.94); }
 .ins-fab-cat svg { width: 30px; height: 30px; display: block; }
 @media (max-width: 768px) { .ins-fab { bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px); right: 16px; width: 52px; height: 52px; } }
 body.ins-open { overflow: hidden; }
+/* display:flex below would otherwise beat the [hidden] attribute and leave an invisible layer over the page */
+.ins-overlay[hidden] { display: none; }
 .ins-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0); display: flex; align-items: flex-end;
   justify-content: center; transition: background .2s; }
 .ins-overlay.in { background: rgba(0,0,0,.45); }
